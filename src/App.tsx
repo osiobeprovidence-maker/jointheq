@@ -189,6 +189,18 @@ function MainApp() {
     }
   };
 
+  if (!persistentUser) {
+    return (
+      <LandingPage
+        onLogin={() => {
+          const saved = localStorage.getItem("q_user");
+          if (saved) setPersistentUser(JSON.parse(saved));
+          setIsLoggedOut(false);
+        }}
+      />
+    );
+  }
+
   if (currentUser === undefined) {
     return (
       <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center">
@@ -199,14 +211,6 @@ function MainApp() {
         />
       </div>
     );
-  }
-
-  if (isLoggedOut || !currentUser) {
-    return <LandingPage onLogin={() => {
-      const saved = localStorage.getItem('q_user');
-      if (saved) setPersistentUser(JSON.parse(saved));
-      setIsLoggedOut(false);
-    }} />;
   }
 
   return (
