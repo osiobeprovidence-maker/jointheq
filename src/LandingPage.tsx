@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useAction, useConvex } from "convex/react";
+import { useMutation, useAction, useConvex, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 
 import { Logo } from './Logo';
@@ -32,14 +32,14 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
   const createUser = useMutation(api.users.createUser);
   const sendEmail = useAction(api.actions.sendVerificationEmail);
   const verifyUser = useMutation(api.users.verifyUser);
-  const getByEmail = useConvex().query(api.users.getByEmail); // Fix: use query instead of mutation if it's a query
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     password: ''
   });
+
+  const user = useQuery(api.users.getByEmail, formData.email ? { email: formData.email } : "skip");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

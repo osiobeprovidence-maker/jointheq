@@ -14,7 +14,7 @@ export function ConsoleLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const adminAuth = useQuery(api.users.adminLogin, { email, password });
+  const adminAuth = useQuery(api.users.adminLogin, (email && password) ? { email, password } : "skip");
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
