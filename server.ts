@@ -9,6 +9,8 @@ import { createServer } from "http";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
+import { Resend } from "resend";
+import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 
@@ -35,6 +37,10 @@ db.exec(`
     referral_code TEXT UNIQUE,
     referred_by INTEGER,
     is_admin BOOLEAN DEFAULT 0,
+    password_hash TEXT,
+    is_verified BOOLEAN DEFAULT 0,
+    verification_token TEXT,
+    verification_token_expires DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -227,6 +233,9 @@ async function startServer() {
     }
   };
 
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const BASE_URL = process.env.NODE_ENV === 'production' ? process.env.PUBLIC_URL : 'http://localhost:3000';
+
   // WebSocket handling
   const clients = new Map<number, WebSocket>();
 
@@ -283,7 +292,86 @@ async function startServer() {
     });
   });
 
-  // API Routes
+  // Auth & Signup Routes
+  app.post("/api/signup", async (req, res) => {
+    const { name, email, phone, password } = req.body;
+
+    try {
+      const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+      if (existing) return res.status(400).json({ error: "Email already registered" });
+
+      const hash = await bcrypt.hash(password, 10);
+      const token = uuidv4();
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+      const referralCode = `Q-${name.split(' ')[0].toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      db.prepare(`
+        INSERT INTO users (full_name, email, phone, password_hash, verification_token, verification_token_expires, referral_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(name, email, phone, hash, token, expires, referralCode);
+
+      // Send Smart Link via Resend
+      const verificationLink = `${BASE_URL}/verify-account?token=${token}`;
+
+      const { error } = await resend.emails.send({
+        from: 'Q Platform <onboarding@resend.dev>', // Use verified domain in prod
+        to: email,
+        subject: 'Verify your Q Account',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #141414;">
+            <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">Welcome to Q, ${name}!</h1>
+            <p style="font-size: 16px; line-height: 1.5; color: #666;">You're almost there. Tap the button below to verify your account and start your journey with Q.</p>
+            <a href="${verificationLink}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: bold; margin: 30px 0;">Verify Account</a>
+            <p style="font-size: 14px; color: #999;">If you didn't create this account, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+            <p style="font-size: 12px; color: #bbb;">© 2026 jointheq. All rights reserved.</p>
+          </div>
+        `
+      });
+
+      if (error) {
+        console.error("Resend Error:", error);
+        // We still created the user, so they can try to re-verify or we can handle it
+      }
+
+      res.json({ success: true, message: "Verification email sent" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/verify-account", (req, res) => {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: "Missing token" });
+
+    const user = db.prepare("SELECT * FROM users WHERE verification_token = ?").get(token) as any;
+
+    if (!user) return res.status(400).json({ error: "Invalid token" });
+    if (new Date(user.verification_token_expires) < new Date()) {
+      return res.status(400).json({ error: "Token expired" });
+    }
+
+    db.prepare("UPDATE users SET is_verified = 1, verification_token = NULL, verification_token_expires = NULL WHERE id = ?").run(user.id);
+
+    // Redirect to login or success page
+    res.redirect("/?verified=true");
+  });
+
+  app.post("/api/user/login", async (req, res) => {
+    const { email, password } = req.body;
+    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as any;
+
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+    if (!user.is_verified) return res.status(403).json({ error: "Please verify your email first" });
+
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) return res.status(401).json({ error: "Invalid credentials" });
+
+    // For demo simplicity, just returning user info
+    // In production, use session or JWT
+    res.json({ success: true, user });
+  });
+
   app.get("/api/user/:id", (req, res) => {
     const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });

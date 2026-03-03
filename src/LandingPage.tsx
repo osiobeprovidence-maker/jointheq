@@ -22,6 +22,10 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
     }
   };
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,14 +33,69 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
     password: ''
   });
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verified') === 'true') {
+      setSuccess('Account verified successfully! You can now log in.');
+      setActiveSection('login');
+      // Clear URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, we'd validate and send to backend here
-    onLogin();
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess('Account created! Please check your email to verify.');
+      } else {
+        setError(data.error || 'Signup failed');
+      }
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await fetch('/api/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // In a real app, store token/user
+        onLogin();
+      } else {
+        setError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      setError('Login error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -49,13 +108,13 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
             <span className="text-lg sm:text-xl font-bold tracking-tight">jointheq</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
-            <button 
+            <button
               onClick={() => setActiveSection('about')}
               className={`text-sm sm:text-base font-semibold transition-colors whitespace-nowrap ${activeSection === 'about' ? 'text-black' : 'text-black/50 hover:text-black'}`}
             >
               About Us
             </button>
-            <button 
+            <button
               onClick={() => setActiveSection('login')}
               className="px-4 py-2 sm:px-6 sm:py-2.5 bg-black text-white rounded-xl font-bold text-sm sm:text-base hover:scale-105 transition-transform shadow-lg shadow-black/10 whitespace-nowrap"
             >
@@ -94,7 +153,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 </motion.div>
 
                 <div className="space-y-8 relative z-10">
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.2, duration: 0.5 }}
@@ -103,8 +162,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                     <ShieldCheck size={16} />
                     <span>Safe & Compliant</span>
                   </motion.div>
-                  
-                  <motion.h1 
+
+                  <motion.h1
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3, duration: 0.5 }}
@@ -114,8 +173,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                     <span className="text-black/40">Stay premium.</span> <br />
                     Spend less.
                   </motion.h1>
-                  
-                  <motion.p 
+
+                  <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4, duration: 0.5 }}
@@ -123,14 +182,14 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                   >
                     Join verified family-plan slots and reduce the cost of your favorite digital services without breaking platform rules.
                   </motion.p>
-                  
-                  <motion.div 
+
+                  <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.5 }}
                     className="flex flex-col sm:flex-row gap-4 pt-4"
                   >
-                    <button 
+                    <button
                       onClick={() => setActiveSection('signup')}
                       className="px-8 py-4 bg-black text-white rounded-2xl font-bold text-lg hover:scale-[1.02] transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 group"
                     >
@@ -139,7 +198,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                     </button>
                   </motion.div>
 
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.5 }}
@@ -158,7 +217,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                   </motion.div>
                 </div>
 
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4, duration: 0.7 }}
@@ -172,14 +231,14 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                         <Users size={20} />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-4">
                       {[
                         { name: 'Netflix Premium', price: '₦1,500', color: 'bg-red-500', users: 3, max: 4 },
                         { name: 'Spotify Duo', price: '₦800', color: 'bg-emerald-500', users: 1, max: 2 },
                         { name: 'YouTube Premium', price: '₦1,200', color: 'bg-red-600', users: 4, max: 5 }
                       ].map((slot, i) => (
-                        <motion.div 
+                        <motion.div
                           key={i}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -235,7 +294,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                   <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2 drop-shadow-md"></div>
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
@@ -246,7 +305,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                     <span className="text-black/30">Exists.</span>
                   </h1>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 }}
@@ -267,7 +326,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               </div>
 
               {/* Core Philosophy */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
@@ -276,7 +335,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                 <div className="relative z-10">
                   <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-16 leading-tight tracking-tight">
-                    Q didn't invent sharing.<br/>
+                    Q didn't invent sharing.<br />
                     <span className="text-white/40">We structured it.</span>
                   </h2>
                   <div className="grid md:grid-cols-3 gap-8 md:gap-12 text-lg font-medium text-white/70 mb-16">
@@ -301,7 +360,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                   </div>
                   <div className="pt-12 border-t border-white/10">
                     <p className="text-2xl md:text-4xl font-bold leading-tight">
-                      Access should be affordable.<br/>
+                      Access should be affordable.<br />
                       <span className="text-white/50">And done properly.</span>
                     </p>
                   </div>
@@ -309,7 +368,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               </motion.div>
 
               {/* HOW IT WORKS */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
@@ -317,7 +376,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 <div className="mb-16 md:flex justify-between items-end">
                   <div>
                     <span className="text-sm font-bold tracking-widest uppercase text-black/40 mb-4 block">How It Works</span>
-                    <h2 className="text-4xl md:text-6xl font-bold tracking-tight">Simple. Structured.<br/>Secure.</h2>
+                    <h2 className="text-4xl md:text-6xl font-bold tracking-tight">Simple. Structured.<br />Secure.</h2>
                   </div>
                 </div>
                 <div className="grid md:grid-cols-3 gap-6 md:gap-8">
@@ -340,7 +399,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               </motion.div>
 
               {/* WHY Q */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
@@ -348,7 +407,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               >
                 <div>
                   <h2 className="text-5xl md:text-7xl font-bold mb-8 leading-[1]">
-                    Built for Structure.<br/>
+                    Built for Structure.<br />
                     <span className="text-black/30">Not Shortcuts.</span>
                   </h2>
                   <p className="text-xl text-black/60 font-medium max-w-md">
@@ -381,7 +440,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               </motion.div>
 
               {/* WHO IT'S FOR */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
@@ -393,28 +452,28 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                 </h2>
                 <div className="grid md:grid-cols-2 gap-8 text-left max-w-4xl mx-auto">
                   <div className="bg-white/5 p-8 rounded-3xl border border-white/10 flex items-start gap-6">
-                    <span className="text-4xl">🎓</span> 
+                    <span className="text-4xl">🎓</span>
                     <div>
                       <h4 className="font-bold text-xl mb-2">Students</h4>
                       <p className="text-white/60">Cutting monthly costs without losing access to essential tools.</p>
                     </div>
                   </div>
                   <div className="bg-white/5 p-8 rounded-3xl border border-white/10 flex items-start gap-6">
-                    <span className="text-4xl">🎨</span> 
+                    <span className="text-4xl">🎨</span>
                     <div>
                       <h4 className="font-bold text-xl mb-2">Creators</h4>
                       <p className="text-white/60">Using premium creative suites daily for their work.</p>
                     </div>
                   </div>
                   <div className="bg-white/5 p-8 rounded-3xl border border-white/10 flex items-start gap-6">
-                    <span className="text-4xl">💼</span> 
+                    <span className="text-4xl">💼</span>
                     <div>
                       <h4 className="font-bold text-xl mb-2">Young Earners</h4>
                       <p className="text-white/60">Optimizing expenses while building their careers.</p>
                     </div>
                   </div>
                   <div className="bg-white/5 p-8 rounded-3xl border border-white/10 flex items-start gap-6">
-                    <span className="text-4xl">🧠</span> 
+                    <span className="text-4xl">🧠</span>
                     <div>
                       <h4 className="font-bold text-xl mb-2">Smart Savers</h4>
                       <p className="text-white/60">People who move intentionally with their finances.</p>
@@ -424,7 +483,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               </motion.div>
 
               {/* FAQ */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
@@ -454,14 +513,14 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
               </motion.div>
 
               {/* FINAL CTA */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
                 className="text-center pt-16 pb-12"
               >
                 <h2 className="text-6xl md:text-8xl font-bold tracking-tighter mb-12 leading-[0.9]">
-                  Stop Paying <br/>
+                  Stop Paying <br />
                   <span className="text-black/30">Solo.</span>
                 </h2>
                 <div className="flex flex-wrap justify-center gap-4 text-xl md:text-2xl font-bold text-black/60 mb-16">
@@ -472,13 +531,13 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                   <span>Stay premium.</span>
                 </div>
                 <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
-                  <button 
+                  <button
                     onClick={() => setActiveSection('signup')}
                     className="px-10 py-5 bg-black text-white rounded-2xl font-bold text-xl hover:scale-[1.02] transition-all shadow-xl shadow-black/10"
                   >
                     Lock My Slot
                   </button>
-                  <button 
+                  <button
                     onClick={() => setActiveSection('signup')}
                     className="px-10 py-5 bg-white border border-black/10 text-black rounded-2xl font-bold text-xl hover:bg-black/5 transition-all"
                   >
@@ -508,15 +567,18 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                   <p className="text-black/60">Log in to access your dashboard</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                {error && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">{error}</div>}
+                {success && <div className="mb-4 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100">{success}</div>}
+
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Email Address</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Mail size={20} />
                       </div>
-                      <input 
-                        type="email" 
+                      <input
+                        type="email"
                         name="email"
                         required
                         value={formData.email}
@@ -532,8 +594,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Lock size={20} />
                       </div>
-                      <input 
-                        type="password" 
+                      <input
+                        type="password"
                         name="password"
                         required
                         value={formData.password}
@@ -543,11 +605,12 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                       />
                     </div>
                   </div>
-                  <button 
+                  <button
                     type="submit"
-                    className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform mt-6"
+                    disabled={isLoading}
+                    className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform mt-6 disabled:opacity-50"
                   >
-                    Log In
+                    {isLoading ? 'Verifying...' : 'Log In'}
                   </button>
                 </form>
 
@@ -577,15 +640,18 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                   <p className="text-black/60">Join the community and start saving</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                {error && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">{error}</div>}
+                {success && <div className="mb-4 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100">{success}</div>}
+
+                <form onSubmit={handleSignup} className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Full Name</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <UserIcon size={20} />
                       </div>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         name="name"
                         required
                         value={formData.name}
@@ -601,8 +667,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Mail size={20} />
                       </div>
-                      <input 
-                        type="email" 
+                      <input
+                        type="email"
                         name="email"
                         required
                         value={formData.email}
@@ -618,8 +684,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Phone size={20} />
                       </div>
-                      <input 
-                        type="tel" 
+                      <input
+                        type="tel"
                         name="phone"
                         required
                         value={formData.phone}
@@ -635,8 +701,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Lock size={20} />
                       </div>
-                      <input 
-                        type="password" 
+                      <input
+                        type="password"
                         name="password"
                         required
                         value={formData.password}
@@ -646,11 +712,12 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
                       />
                     </div>
                   </div>
-                  <button 
+                  <button
                     type="submit"
-                    className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform mt-6"
+                    disabled={isLoading || !!success}
+                    className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform mt-6 disabled:opacity-50"
                   >
-                    Create Account
+                    {isLoading ? 'Creating Circle...' : success ? 'Check Email' : 'Create Account'}
                   </button>
                 </form>
 
@@ -671,7 +738,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
           <span>© 2026 Q</span>
           <span>
             Built by{' '}
-            <span 
+            <span
               onPointerDown={handlePressStart}
               onPointerUp={handlePressEnd}
               onPointerLeave={handlePressEnd}
