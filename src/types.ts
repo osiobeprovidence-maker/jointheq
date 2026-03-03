@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  _id: string;
   email: string;
   phone: string;
   full_name: string;
@@ -10,9 +10,9 @@ export interface User {
   wallet_balance: number;
   boot_balance: number;
   referral_code: string;
-  referred_by?: number;
+  referred_by?: string;
   is_admin: boolean;
-  created_at: string;
+  created_at: number;
 }
 
 export interface Device {
@@ -49,8 +49,8 @@ export interface Campaign {
 }
 
 export interface SlotType {
-  id: number;
-  subscription_id: number;
+  _id: string;
+  subscription_id: string;
   name: string;
   price: number;
   device_limit: number;
@@ -59,7 +59,7 @@ export interface SlotType {
 }
 
 export interface Subscription {
-  id: number;
+  _id: string;
   name: string;
   description: string;
   base_cost: number;
@@ -68,10 +68,10 @@ export interface Subscription {
 }
 
 export interface UserSlot {
-  id: number;
-  group_id: number;
-  slot_type_id: number;
-  user_id: number;
+  _id: string;
+  group_id: string;
+  slot_type_id: string;
+  user_id: string;
   status: string;
   renewal_date: string;
   slot_name: string;

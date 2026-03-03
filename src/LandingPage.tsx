@@ -2,12 +2,13 @@ import { useState, useRef, useEffect, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useAction } from "convex/react";
+import { useMutation, useAction, useConvex } from "convex/react";
 import { api } from "../convex/_generated/api";
 
 import { Logo } from './Logo';
 
 export default function LandingPage({ onLogin }: { onLogin: () => void }) {
+  const convex = useConvex();
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup'>('hero');
   const navigate = useNavigate();
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -31,7 +32,7 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
   const createUser = useMutation(api.users.createUser);
   const sendEmail = useAction(api.actions.sendVerificationEmail);
   const verifyUser = useMutation(api.users.verifyUser);
-  const getByEmail = useMutation(api.users.getByEmail); // Using mutation-like query if needed or handle in login
+  const getByEmail = useConvex().query(api.users.getByEmail); // Fix: use query instead of mutation if it's a query
 
   const [formData, setFormData] = useState({
     name: '',
@@ -79,12 +80,12 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
 
       await createUser({
         email: formData.email,
-        fullName: formData.name,
+        full_name: formData.name,
         phone: formData.phone,
-        passwordHash: formData.password, // Ideally hashed on client or use a secure action
-        verificationToken: token,
-        verificationTokenExpires: expires,
-        referralCode
+        password_hash: formData.password,
+        verification_token: token,
+        verification_token_expires: expires,
+        referral_code: referralCode
       });
 
       await sendEmail({
@@ -109,21 +110,20 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
     setSuccess('');
 
     try {
-      // In a real production app, use Convex Auth. For this demo, we check manually.
-      // Note: getByEmail would be a query, but for simple auth simulation we use current pattern.
-      const user = await fetch(`/api/user/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, password: formData.password })
-      }).then(r => r.json());
+      // Use the login mutation/query from Convex
+      const result = await convex.query(api.users.login, {
+        email: formData.email,
+        password: formData.password
+      });
 
-      if (user.success) {
+      if (result.success && result.user) {
+        localStorage.setItem('q_user', JSON.stringify(result.user));
         onLogin();
       } else {
-        setError(user.error || 'Login failed');
+        setError(result.error || 'Login failed');
       }
-    } catch (err) {
-      setError('Login error. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Login error. Please try again.');
     } finally {
       setIsLoading(false);
     }

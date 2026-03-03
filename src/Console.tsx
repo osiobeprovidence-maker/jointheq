@@ -1,8 +1,10 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Logo } from './Logo';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, LayoutDashboard, Database, TrendingUp, Users as UsersIcon, ChevronRight } from 'lucide-react';
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
 
 export function ConsoleLogin() {
   const [email, setEmail] = useState('');
@@ -12,39 +14,18 @@ export function ConsoleLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if already logged in
-    fetch('/api/console/status')
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          navigate('/console/dashboard');
-        }
-      });
-  }, [navigate]);
+  const adminAuth = useQuery(api.users.adminLogin, { email, password });
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    try {
-      const res = await fetch('/api/console/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        navigate('/console/dashboard');
-      } else {
-        setError(data.error || 'Invalid credentials.');
-      }
-    } catch (err) {
-      setError('Invalid credentials.');
-    } finally {
+    if (adminAuth?.success) {
+      localStorage.setItem('q_console_admin', JSON.stringify(adminAuth.user));
+      navigate('/console/dashboard');
+    } else {
+      setError(adminAuth?.error || 'Invalid credentials or not an admin.');
       setIsLoading(false);
     }
   };
@@ -107,10 +88,9 @@ export function ConsoleLogin() {
 
           <button
             type="submit"
-            disabled={isLoading}
             className="w-full bg-white text-black font-bold rounded-xl px-4 py-3 hover:bg-white/90 transition-all disabled:opacity-50 active:scale-[0.98]"
           >
-            {isLoading ? 'Verifying...' : 'Login'}
+            Login
           </button>
         </form>
 
@@ -123,28 +103,27 @@ export function ConsoleLogin() {
 }
 
 export function ConsoleDashboard() {
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const navigate = useNavigate();
+  const [admin, setAdmin] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/console/status')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.authenticated) {
-          navigate('/console');
-        } else {
-          setIsAdmin(true);
-        }
-      })
-      .catch(() => navigate('/console'));
+    const saved = localStorage.getItem('q_console_admin');
+    if (!saved) {
+      navigate('/console');
+    } else {
+      setAdmin(JSON.parse(saved));
+    }
   }, [navigate]);
 
-  const handleLogout = async () => {
-    await fetch('/api/console/logout', { method: 'POST' });
+  const handleLogout = () => {
+    localStorage.removeItem('q_console_admin');
     navigate('/console');
   };
 
-  if (isAdmin === null) return null;
+  const usersCount = useQuery(api.users.list)?.length || 0;
+  const subsCount = useQuery(api.subscriptions.getActiveSubscriptions)?.length || 0;
+
+  if (!admin) return null;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-6 sm:p-10 font-sans">
@@ -169,8 +148,8 @@ export function ConsoleDashboard() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <StatCard title="Total Users" value="1,284" detail="+12% this week" />
-          <StatCard title="Active Slots" value="452" detail="94% utilization" />
+          <StatCard title="Total Users" value={usersCount.toString()} detail="+12% this week" />
+          <StatCard title="Active Subs" value={subsCount.toString()} detail="Marketplace live" />
           <StatCard title="Revenue (MTD)" value="₦32.4M" detail="+8.2% vs last month" />
         </div>
 
@@ -186,9 +165,9 @@ export function ConsoleDashboard() {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
             <h3 className="text-lg font-bold mb-6">System Health</h3>
             <div className="space-y-6">
-              <HealthItem label="API Endpoints" status="Operational" />
+              <HealthItem label="Convex Endpoints" status="Operational" />
               <HealthItem label="Database Cluster" status="Optimal" />
-              <HealthItem label="WebSocket Server" status="Operational" />
+              <HealthItem label="Real-time Engine" status="Operational" />
             </div>
           </div>
         </div>
@@ -209,7 +188,7 @@ function StatCard({ title, value, detail }: { title: string, value: string, deta
 
 function ActivityItem({ user, action, time }: { user: string, action: string, time: string }) {
   return (
-    <div className="flex items-center justify-between py-1">
+    <div className="flex items-center justify-between py-1 border-b border-white/5 pb-4 last:border-0 last:pb-0">
       <div className="flex flex-col">
         <span className="text-sm font-bold">{user}</span>
         <span className="text-xs text-white/40">{action}</span>
@@ -230,3 +209,4 @@ function HealthItem({ label, status }: { label: string, status: string }) {
     </div>
   );
 }
+

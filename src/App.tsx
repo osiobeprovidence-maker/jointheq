@@ -50,17 +50,19 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [useBootsForPayment, setUseBootsForPayment] = useState(false);
-  const [isLoggedOut, setIsLoggedOut] = useState(true);
+  // State for persistent user
+  const [persistentUser, setPersistentUser] = useState<any>(() => {
+    const saved = localStorage.getItem('q_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isLoggedOut, setIsLoggedOut] = useState(!persistentUser);
 
   // Convex Real-time Queries
-  // For the demo, we'll use the first user as the active user
-  const allUsers = useQuery(api.users.getById, { id: "demo-user-id" as Id<"users"> }); // We'll fix this to find any user
-  const usersList = useQuery(api.users.getByEmail, { email: "demo@jointheq.com" });
-  const currentUser = usersList;
+  const currentUser = useQuery(api.users.getById, persistentUser?._id ? { id: persistentUser._id } : "skip");
 
   const subscriptions = useQuery(api.subscriptions.getActiveSubscriptions) || [];
   const activeSlots = useQuery(api.subscriptions.getSlotsByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
-  const campaigns = useQuery(api.lunar.getLunarMemories) || []; // Using memories as "campaigns" for now or similar
+  const campaigns = useQuery(api.campaigns.list) || [];
   const messages = useQuery(api.messages.getMessages, currentUser ? { user_id: currentUser._id } : "skip") || [];
   const lunarStatus = useQuery(api.lunar.getLunarSubscription, currentUser ? { user_id: currentUser._id } : "skip");
 
@@ -82,6 +84,7 @@ function MainApp() {
   const addDeviceMutation = useMutation(api.devices.addDevice);
   const removeDeviceMutation = useMutation(api.devices.removeDevice);
   const updatePhoneMutation = useMutation(api.users.updatePhone);
+  const updateAllocationMutation = useMutation(api.subscriptions.updateAllocation);
 
   const fundWallet = async (amount: number) => {
     if (!currentUser) return;
@@ -167,9 +170,12 @@ function MainApp() {
     }
   };
 
-  const updateAllocation = (slotId: number | string, val: string) => {
-    console.log("Update allocation:", slotId, val);
-    // TODO: Implement allocation update in Convex
+  const updateAllocation = async (slotId: string, val: string) => {
+    try {
+      await updateAllocationMutation({ id: slotId as Id<"slots">, allocation: val });
+    } catch (error) {
+      console.error("Error updating allocation:", error);
+    }
   };
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -195,12 +201,12 @@ function MainApp() {
     );
   }
 
-  if (isLoggedOut) {
-    return (
-      <LandingPage onLogin={() => {
-        setIsLoggedOut(false);
-      }} />
-    );
+  if (isLoggedOut || !currentUser) {
+    return <LandingPage onLogin={() => {
+      const saved = localStorage.getItem('q_user');
+      if (saved) setPersistentUser(JSON.parse(saved));
+      setIsLoggedOut(false);
+    }} />;
   }
 
   return (
@@ -359,9 +365,9 @@ function MainApp() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {activeSlots.map((slot) => (
                         <ActiveSlotCard
-                          key={slot.id}
+                          key={slot._id}
                           slot={slot}
-                          onUpdateAllocation={(val) => updateAllocation(slot.id, val)}
+                          onUpdateAllocation={(val) => updateAllocation(slot._id, val)}
                         />
                       ))}
                     </div>
@@ -415,7 +421,7 @@ function MainApp() {
 
                 <div className="grid grid-cols-1 gap-10">
                   {subscriptions.map((sub) => (
-                    <section key={sub.id}>
+                    <section key={sub._id}>
                       <div className="flex items-center gap-3 mb-6">
                         <div className="w-12 h-12 bg-white border border-black/5 rounded-2xl flex items-center justify-center shadow-sm">
                           <span className="font-bold text-lg">{sub.name[0]}</span>
@@ -428,9 +434,9 @@ function MainApp() {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {sub.slot_types.map((slot) => (
                           <MarketplaceSlotCard
-                            key={slot.id}
+                            key={slot._id}
                             slot={slot}
-                            onJoin={() => joinSlot(slot.id)}
+                            onJoin={() => joinSlot(slot._id)}
                             userQScore={currentUser?.q_score || 0}
                             useBoots={useBootsForPayment}
                           />
@@ -457,7 +463,7 @@ function MainApp() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {campaigns.map((campaign) => (
-                    <div key={campaign.id} className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+                    <div key={campaign._id} className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm">
                       <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-6 sm:p-10 text-white relative overflow-hidden">
                         <div className="relative z-10">
                           <div className="flex items-center gap-2 mb-4">
@@ -987,7 +993,11 @@ function MainApp() {
                           Logging out will end your current session. You will need to log in again to access your dashboard.
                         </p>
                         <button
-                          onClick={() => setIsLoggedOut(true)}
+                          onClick={() => {
+                            localStorage.removeItem('q_user');
+                            setIsLoggedOut(true);
+                            setPersistentUser(null);
+                          }}
                           className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                         >
                           <LogOut size={20} />
