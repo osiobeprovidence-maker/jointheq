@@ -1,10 +1,11 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Logo } from './Logo';
+import { Logo } from '../components/ui/Logo';
 import { Eye, EyeOff, LayoutDashboard, Database, TrendingUp, Users as UsersIcon, ChevronRight } from 'lucide-react';
 import { useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
+import { auth } from "../lib/auth";
 
 export function ConsoleLogin() {
   const [email, setEmail] = useState('');
@@ -22,7 +23,7 @@ export function ConsoleLogin() {
     setError('');
 
     if (adminAuth?.success) {
-      localStorage.setItem('q_console_admin', JSON.stringify(adminAuth.user));
+      auth.login(adminAuth.user as any);
       navigate('/console/dashboard');
     } else {
       setError(adminAuth?.error || 'Invalid credentials or not an admin.');
@@ -116,8 +117,7 @@ export function ConsoleDashboard() {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('q_console_admin');
-    navigate('/console');
+    auth.logout();
   };
 
   const usersCount = useQuery(api.users.list)?.length || 0;

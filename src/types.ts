@@ -12,6 +12,7 @@ export interface User {
   referral_code: string;
   referred_by?: string;
   is_admin: boolean;
+  role?: string;
   created_at: number;
 }
 
@@ -71,7 +72,7 @@ export interface UserSlot {
   _id: string;
   group_id: string;
   slot_type_id: string;
-  user_id: string;
+  user_id?: string;
   status: string;
   renewal_date: string;
   slot_name: string;

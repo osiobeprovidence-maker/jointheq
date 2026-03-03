@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useAction, useConvex, useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
+import { auth } from "../lib/auth";
+import { Logo } from '../components/ui/Logo';
 
-import { Logo } from './Logo';
-
-export default function LandingPage({ onLogin }: { onLogin: () => void }) {
+export default function LandingPage() {
   const convex = useConvex();
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup'>('hero');
   const navigate = useNavigate();
@@ -117,8 +117,8 @@ export default function LandingPage({ onLogin }: { onLogin: () => void }) {
       });
 
       if (result.success && result.user) {
-        localStorage.setItem('q_user', JSON.stringify(result.user));
-        onLogin();
+        auth.login(result.user as any);
+        navigate("/dashboard");
       } else {
         setError(result.error || 'Login failed');
       }
