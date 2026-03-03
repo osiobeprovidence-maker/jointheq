@@ -188,9 +188,9 @@ if (campaignCount.count === 0) {
     INSERT INTO campaigns (name, description, start_date, end_date, reward_formula, boot_pool_max)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(
-    'Easter Jar 🌸', 
-    'Grow your Easter Jar by inviting friends. Earn 100 Boots per qualified referral.', 
-    new Date().toISOString(), 
+    'Easter Jar 🌸',
+    'Grow your Easter Jar by inviting friends. Earn 100 Boots per qualified referral.',
+    new Date().toISOString(),
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     '100_per_referral',
     500000
@@ -209,8 +209,8 @@ async function startServer() {
     secret: process.env.SESSION_SECRET || 'q-secret-fallback',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-      secure: process.env.NODE_ENV === 'production', 
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -235,7 +235,7 @@ async function startServer() {
 
     ws.on("message", (message) => {
       const data = JSON.parse(message.toString());
-      
+
       if (data.type === "auth") {
         currentUserId = data.userId;
         if (currentUserId) clients.set(currentUserId, ws);
@@ -262,7 +262,7 @@ async function startServer() {
         if (receiverId && clients.has(receiverId)) {
           clients.get(receiverId)?.send(JSON.stringify({ type: "message", data: msg }));
         }
-        
+
         // If from user, notify all admins
         if (!isFromAdmin) {
           const admins = db.prepare("SELECT id FROM users WHERE is_admin = 1").all() as any[];
@@ -319,7 +319,7 @@ async function startServer() {
     const slotType = db.prepare("SELECT * FROM slot_types WHERE id = ?").get(slotTypeId) as any;
 
     if (!user || !slotType) return res.status(404).json({ error: "User or Slot Type not found" });
-    
+
     const totalPrice = slotType.price;
     let bootsToUse = 0;
     let coinsToUse = totalPrice;
@@ -328,7 +328,7 @@ async function startServer() {
       // Logic: 50% Coins + 50% Boots
       bootsToUse = totalPrice / 2;
       coinsToUse = totalPrice / 2;
-      
+
       if (user.boot_balance < bootsToUse) {
         return res.status(400).json({ error: "Insufficient boot balance for 50/50 split" });
       }
@@ -355,16 +355,16 @@ async function startServer() {
         db.prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?").run(coinsToUse, userId);
         db.prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'payment', ?)").run(userId, coinsToUse, `Joined ${slotType.name} (Coins)`);
       }
-      
+
       if (bootsToUse > 0) {
         db.prepare("UPDATE users SET boot_balance = boot_balance - ? WHERE id = ?").run(bootsToUse, userId);
         db.prepare("INSERT INTO boot_transactions (user_id, amount, type, description) VALUES (?, ?, 'payment', ?)").run(userId, -bootsToUse, `Joined ${slotType.name} (Boots)`);
       }
 
       db.prepare("INSERT INTO slots (group_id, slot_type_id, user_id, status, renewal_date) VALUES (?, ?, ?, 'active', ?)").run(
-        group.id, 
-        slotTypeId, 
-        userId, 
+        group.id,
+        slotTypeId,
+        userId,
         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       );
     })();
@@ -497,23 +497,32 @@ async function startServer() {
   // Protect Admin API Routes
   app.use("/api/admin/*", authMiddleware);
 
+  // Server-side protection for console routes (browser requests)
+  app.get("/console/*", (req, res, next) => {
+    if (req.path === "/console" || req.path === "/console/") return next();
+    if (!(req.session as any).admin) {
+      return res.redirect("/console");
+    }
+    next();
+  });
+
   // Lunar Endpoints
   app.get("/api/lunar/status/:userId", (req, res) => {
     const sub = db.prepare("SELECT * FROM lunar_subscriptions WHERE user_id = ?").get(req.params.userId) as any;
     if (!sub) return res.json({ subscribed: false });
-    
+
     const isExpired = new Date(sub.expiry_date) < new Date();
-    res.json({ 
-      subscribed: !isExpired, 
+    res.json({
+      subscribed: !isExpired,
       expiry_date: sub.expiry_date,
-      status: sub.status 
+      status: sub.status
     });
   });
 
   app.post("/api/lunar/subscribe", (req, res) => {
     const { userId } = req.body;
     const price = 1500;
-    
+
     const user = db.prepare("SELECT wallet_balance FROM users WHERE id = ?").get(userId) as any;
     if (!user || user.wallet_balance < price) {
       return res.status(400).json({ error: "Insufficient balance to subscribe to Lunar (₦1,500 required)" });
@@ -522,7 +531,7 @@ async function startServer() {
     db.transaction(() => {
       db.prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?").run(price, userId);
       db.prepare("INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, 'payment', 'Lunar Subscription')").run(userId, price);
-      
+
       const expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       db.prepare(`
         INSERT INTO lunar_subscriptions (user_id, expiry_date) 
