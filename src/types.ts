@@ -79,3 +79,18 @@ export interface UserSlot {
   price: number;
   allocation?: string;
 }
+export interface LunarMemory {
+  _id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  category: string;
+  date: string;
+  created_at: number;
+}
+
+export interface LunarStatus {
+  is_subscribed: boolean;
+  tier: string;
+  expires_at?: number;
+}

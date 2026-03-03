@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Logo } from './Logo';
@@ -23,7 +23,7 @@ export function ConsoleLogin() {
       });
   }, [navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
