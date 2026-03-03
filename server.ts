@@ -6,6 +6,9 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer } from "http";
+import session from "express-session";
+import cookieParser from "cookie-parser";
+import bcrypt from "bcryptjs";
 
 dotenv.config();
 
@@ -201,6 +204,28 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '10mb' }));
+  app.use(cookieParser());
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'q-secret-fallback',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production', 
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
+
+  // Console Auth State
+  const loginAttempts = new Map<string, { count: number, lockUntil: number }>();
+
+  const authMiddleware = (req: any, res: any, next: any) => {
+    if (req.session.admin) {
+      next();
+    } else {
+      res.status(401).json({ error: "Unauthorized" });
+    }
+  };
 
   // WebSocket handling
   const clients = new Map<number, WebSocket>();
@@ -412,27 +437,65 @@ async function startServer() {
 
   app.post("/api/console/login", async (req, res) => {
     const { email, password } = req.body;
+    const ip = req.ip || 'unknown';
     const adminEmail = process.env.SUPER_ADMIN_EMAIL;
     const adminHash = process.env.SUPER_ADMIN_PASSWORD_HASH;
+
+    // Check lock
+    const attempts = loginAttempts.get(ip);
+    if (attempts && attempts.lockUntil > Date.now()) {
+      const remaining = Math.ceil((attempts.lockUntil - Date.now()) / 60000);
+      return res.status(429).json({ error: `Too many attempts. Try again in ${remaining} minutes.` });
+    }
 
     if (!adminEmail || !adminHash) {
       return res.status(500).json({ error: "Server configuration error" });
     }
 
+    const clearAttempts = () => loginAttempts.delete(ip);
+    const incrementAttempts = () => {
+      const current = loginAttempts.get(ip) || { count: 0, lockUntil: 0 };
+      current.count += 1;
+      if (current.count >= 5) {
+        current.lockUntil = Date.now() + 15 * 60 * 1000; // 15 mins
+      }
+      loginAttempts.set(ip, current);
+    };
+
     if (email !== adminEmail) {
+      incrementAttempts();
       return res.status(401).json({ error: "Invalid credentials." });
     }
 
-    const bcrypt = await import('bcryptjs');
     const isValid = await bcrypt.compare(password, adminHash);
 
     if (isValid) {
-      // In a real app, generate a proper JWT. For this demo, a simple token.
-      res.json({ token: "console_admin_token_xyz" });
+      clearAttempts();
+      (req.session as any).admin = { email };
+      res.json({ success: true });
     } else {
+      incrementAttempts();
       res.status(401).json({ error: "Invalid credentials." });
     }
   });
+
+  app.get("/api/console/status", (req, res) => {
+    if ((req.session as any).admin) {
+      res.json({ authenticated: true, user: (req.session as any).admin });
+    } else {
+      res.json({ authenticated: false });
+    }
+  });
+
+  app.post("/api/console/logout", (req, res) => {
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid');
+      res.json({ success: true });
+    });
+  });
+
+  // Protect Admin API Routes
+  app.use("/api/admin/*", authMiddleware);
 
   // Lunar Endpoints
   app.get("/api/lunar/status/:userId", (req, res) => {
