@@ -1,18 +1,35 @@
+export interface HistoryEntry {
+  amount: number;
+  type: string;
+  description: string;
+  created_at: number;
+}
+
+export interface PenaltyEntry {
+  score_penalty: number;
+  boots_penalty: number;
+  type: string;
+  description: string;
+  created_at: number;
+}
+
 export interface User {
   _id: string;
   email: string;
-  phone: string;
+  phone?: string;
   full_name: string;
   q_score: number;
-  consistency_score: number;
-  timeliness_score: number;
-  stability_score: number;
+  q_rank: string;
   wallet_balance: number;
-  boot_balance: number;
+  boots_balance: number;
   referral_code: string;
   referred_by?: string;
+  score_history?: HistoryEntry[];
+  boots_history?: HistoryEntry[];
+  penalty_history?: PenaltyEntry[];
   is_admin: boolean;
   role?: string;
+  is_verified: boolean;
   created_at: number;
 }
 

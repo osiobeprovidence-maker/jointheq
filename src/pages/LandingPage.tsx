@@ -45,6 +45,12 @@ export default function LandingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    const referralFromUrl = params.get('ref');
+
+    if (referralFromUrl && !localStorage.getItem('referred_by')) {
+      localStorage.setItem('referred_by', referralFromUrl);
+    }
+
     if (params.get('verified') === 'true' || token) {
       if (token) {
         setIsLoading(true);
@@ -86,7 +92,8 @@ export default function LandingPage() {
         password_hash: formData.password,
         verification_token: token,
         verification_token_expires: expires,
-        referral_code: referralCode
+        referral_code: referralCode,
+        referred_by_code: localStorage.getItem('referred_by') || undefined
       });
 
       await sendEmail({
@@ -118,13 +125,13 @@ export default function LandingPage() {
 
       if (result.success && result.user) {
         auth.login(result.user as any);
-        
+
         // If not verified, store verification info for Dashboard to show warning
         if (!result.isVerified && result.daysRemaining !== null) {
           localStorage.setItem('verification_days_remaining', String(result.daysRemaining));
           localStorage.setItem('verification_deadline', String(result.verificationDeadline));
         }
-        
+
         navigate("/dashboard");
       } else {
         setError(result.error || 'Login failed');

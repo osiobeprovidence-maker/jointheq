@@ -34,7 +34,7 @@ import { MainLayout } from "../layouts/MainLayout";
 import { UserSlot } from "../types";
 
 export default function DashboardPage() {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [showVerificationWarning, setShowVerificationWarning] = useState(false);
     const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
@@ -44,7 +44,7 @@ export default function DashboardPage() {
     useEffect(() => {
         const storedDays = localStorage.getItem('verification_days_remaining');
         const userData = auth.getCurrentUser();
-        
+
         if (storedDays && userData && !userData.is_verified) {
             setDaysRemaining(parseInt(storedDays, 10));
             setShowVerificationWarning(true);
@@ -59,6 +59,8 @@ export default function DashboardPage() {
     const messages = useQuery(api.messages.getMessages, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const devices = useQuery(api.devices.listByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const chatUsers = useQuery(api.users.list) || [];
+    const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
+    const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -77,12 +79,14 @@ export default function DashboardPage() {
     const removeDeviceMutation = useMutation(api.devices.removeDevice);
     const updatePhoneMutation = useMutation(api.users.updatePhone);
     const updateAllocationMutation = useMutation(api.subscriptions.updateAllocation);
+    const resetQScoresMutation = useMutation(api.users.resetQScores);
 
     const getRank = (score: number) => {
-        if (score >= 85) return 'Elite';
-        if (score >= 70) return 'Priority';
-        if (score >= 50) return 'Standard';
-        return 'Risk';
+        if (score >= 1000) return 'Elite';
+        if (score >= 600) return 'Pro';
+        if (score >= 300) return 'Trusted';
+        if (score >= 100) return 'Explorer';
+        return 'Rookie';
     };
 
     const fundWallet = async (amount: number) => {
@@ -177,6 +181,18 @@ export default function DashboardPage() {
         }
     };
 
+    const resetQRank = async () => {
+        if (!currentUser) return;
+        if (confirm("Setting Q Score to 100 will reset your premium eligibility. Continue?")) {
+            try {
+                await resetQScoresMutation({ userId: currentUser._id });
+                alert("Q Rank reset to 100 successfully!");
+            } catch (error) {
+                console.error("Error resetting Q rank:", error);
+            }
+        }
+    };
+
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -204,7 +220,7 @@ export default function DashboardPage() {
         <MainLayout activeTab={activeTab} setActiveTab={setActiveTab} qScore={currentUser?.q_score || 0}>
             {/* Verification Warning Banner */}
             {showVerificationWarning && daysRemaining !== null && daysRemaining > 0 && (
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center justify-between"
@@ -220,7 +236,7 @@ export default function DashboardPage() {
                             </p>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setShowVerificationWarning(false)}
                         className="text-amber-600 hover:text-amber-800 p-2"
                     >
@@ -253,7 +269,7 @@ export default function DashboardPage() {
                                     </div>
                                     <div>
                                         <div className="text-xs font-semibold uppercase tracking-wider opacity-50">Boots</div>
-                                        <div className="text-xl font-bold">{currentUser?.boot_balance?.toLocaleString() || 0}</div>
+                                        <div className="text-xl font-bold">{currentUser?.boots_balance?.toLocaleString() || 0}</div>
                                     </div>
                                 </div>
                             </div>
@@ -262,7 +278,7 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <StatCard title="Active Slots" value={activeSlots.length.toString()} icon={<Zap size={20} />} color="bg-blue-500" />
                             <StatCard title="Monthly Spend" value={`₦${activeSlots.reduce((acc, s) => acc + s.price, 0).toLocaleString()}`} icon={<TrendingUp size={20} />} color="bg-purple-500" />
-                            <StatCard title="Q Rank" value={getRank(currentUser?.q_score || 0)} icon={<ShieldCheck size={20} />} color="bg-emerald-500" />
+                            <StatCard title="Q Rank" value={currentUser?.q_rank || getRank(currentUser?.q_score || 0)} icon={<ShieldCheck size={20} />} color="bg-emerald-500" />
                         </div>
 
                         <section>
@@ -331,6 +347,175 @@ export default function DashboardPage() {
                     </motion.div>
                 )}
 
+                {activeTab === 'referrals' && (
+                    <motion.div key="referrals" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                        <header>
+                            <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>
+                            <p className="text-black/50 mt-1">Invite friends and earn premium Boots.</p>
+                        </header>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Referral Code Card */}
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm text-center">
+                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                    <Sparkles size={32} />
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">Share the Circle</h3>
+                                <p className="text-black/50 mb-8 max-w-xs mx-auto text-sm">
+                                    When someone joins a slot via your code, you get <span className="text-black font-bold">5 Boots</span> instantly after their payment.
+                                </p>
+                                <div className="p-4 bg-gray-50 border border-black/5 rounded-2xl flex items-center justify-between group">
+                                    <code className="text-lg font-bold tracking-wider">{currentUser?.referral_code}</code>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(`https://jointheq.sbs/?ref=${currentUser?.referral_code}`);
+                                            alert("Link copied!");
+                                        }}
+                                        className="text-sm font-bold text-blue-600 hover:scale-105 transition-transform"
+                                    >
+                                        Copy Link
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Referrer Info */}
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                <h3 className="text-lg font-bold mb-6">Invited By</h3>
+                                {referrer ? (
+                                    <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center font-bold text-emerald-600 shadow-sm">
+                                            {referrer.full_name[0]}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold">{referrer.full_name}</div>
+                                            <div className="text-xs text-emerald-800/50">Verified Member</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-gray-50 border border-dashed border-black/10 rounded-2xl text-center text-sm text-black/40 py-8">
+                                        No one invited you. You're a pioneer!
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Invited People List */}
+                        <section>
+                            <h2 className="text-xl font-bold mb-6">Your Referrals ({invitedUsers.length})</h2>
+                            {invitedUsers.length > 0 ? (
+                                <div className="space-y-4">
+                                    {invitedUsers.map((invited) => (
+                                        <div key={invited._id} className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center font-bold opacity-50">
+                                                    {invited.full_name[0]}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold">{invited.full_name}</div>
+                                                    <div className="text-xs text-black/40">Joined {new Date(invited.created_at).toLocaleDateString()}</div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {invited.is_verified ? (
+                                                    <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-wider border border-emerald-100">Verified</div>
+                                                ) : (
+                                                    <div className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold uppercase tracking-wider border border-amber-100">Pending Verify</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="bg-white border border-dashed border-black/20 rounded-3xl p-12 text-center">
+                                    <p className="text-black/40">You haven't invited anyone yet.</p>
+                                </div>
+                            )}
+                        </section>
+                    </motion.div>
+                )}
+
+                {activeTab === 'history' && (
+                    <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                        <header>
+                            <h1 className="text-3xl font-bold tracking-tight">Activity History</h1>
+                            <p className="text-black/50 mt-1">Track your reputation growth and rewards.</p>
+                        </header>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Score History */}
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                    <ShieldCheck className="text-blue-600" size={20} /> Q Score Log
+                                </h3>
+                                <div className="space-y-4">
+                                    {currentUser?.score_history && currentUser.score_history.length > 0 ? (
+                                        currentUser.score_history.slice().reverse().map((item, i) => (
+                                            <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                                <div>
+                                                    <div className="font-bold text-sm capitalize">{item.type.replace('_', ' ')}</div>
+                                                    <div className="text-xs text-black/40">{item.description}</div>
+                                                </div>
+                                                <div className={`font-bold ${item.amount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                    {item.amount >= 0 ? '+' : ''}{item.amount}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-center text-black/20 py-8">No score history yet.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Boots History */}
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                    <Sparkles className="text-amber-500" size={20} /> Boots Log
+                                </h3>
+                                <div className="space-y-4">
+                                    {currentUser?.boots_history && currentUser.boots_history.length > 0 ? (
+                                        currentUser.boots_history.slice().reverse().map((item, i) => (
+                                            <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                                <div>
+                                                    <div className="font-bold text-sm capitalize">{item.type.replace('_', ' ')}</div>
+                                                    <div className="text-xs text-black/40">{item.description}</div>
+                                                </div>
+                                                <div className={`font-bold ${item.amount >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                                    {item.amount >= 0 ? '+' : ''}{item.amount}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-center text-black/20 py-8">No rewards yet.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Penalties */}
+                        {currentUser?.penalty_history && currentUser.penalty_history.length > 0 && (
+                            <section className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100">
+                                <h3 className="text-xl font-bold text-red-700 mb-6 flex items-center gap-2">
+                                    <X className="text-red-600" size={20} /> Penalty Records
+                                </h3>
+                                <div className="space-y-4">
+                                    {currentUser.penalty_history.slice().reverse().map((item, i) => (
+                                        <div key={i} className="bg-white p-4 rounded-2xl flex items-center justify-between border border-red-100 shadow-sm">
+                                            <div>
+                                                <div className="font-bold text-red-600 text-sm">{item.type}</div>
+                                                <div className="text-xs text-black/50">{item.description}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs font-bold text-red-600">-{item.score_penalty} Score</div>
+                                                <div className="text-xs font-bold text-red-400">-{item.boots_penalty} Boots</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                    </motion.div>
+                )}
+
                 {/* Profile Tab */}
                 {activeTab === 'profile' && (
                     <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
@@ -348,16 +533,21 @@ export default function DashboardPage() {
                                     <p className="text-xs sm:text-sm text-black/50">{currentUser?.email}</p>
                                     <div className="mt-6 inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-100 text-emerald-600 rounded-full text-xs font-bold">
                                         <ShieldCheck size={14} className="sm:w-4 sm:h-4" />
-                                        {getRank(currentUser?.q_score || 0)} Member
+                                        {currentUser?.q_rank || getRank(currentUser?.q_score || 0)} Member
                                     </div>
                                 </div>
                             </div>
                             <div className="lg:col-span-2 space-y-8">
                                 <div className="bg-white border border-black/5 p-8 rounded-[2.5rem] shadow-sm">
                                     <h3 className="text-xl font-bold mb-6 text-red-600">Danger Zone</h3>
-                                    <button onClick={() => auth.logout()} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
-                                        <LogOut size={20} /> Log Out
-                                    </button>
+                                    <div className="space-y-4">
+                                        <button onClick={resetQRank} className="w-full py-4 bg-orange-50 text-orange-600 rounded-2xl font-bold hover:bg-orange-100 transition-colors flex items-center justify-center gap-2">
+                                            <Sparkles size={20} /> Reset Q Rank to 100
+                                        </button>
+                                        <button onClick={() => auth.logout()} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                                            <LogOut size={20} /> Log Out
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

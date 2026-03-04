@@ -12,7 +12,8 @@ import {
     LogOut,
     Menu,
     X,
-    ShieldCheck
+    ShieldCheck,
+    Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { auth } from "../lib/auth";
@@ -30,10 +31,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const user = auth.getCurrentUser();
 
     const getRank = (score: number) => {
-        if (score >= 85) return 'Elite';
-        if (score >= 70) return 'Priority';
-        if (score >= 50) return 'Standard';
-        return 'Risk';
+        if (score >= 1000) return 'Elite';
+        if (score >= 600) return 'Pro';
+        if (score >= 300) return 'Trusted';
+        if (score >= 100) return 'Explorer';
+        return 'Rookie';
     };
 
     const navItems = [
@@ -42,6 +44,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         { id: 'campaigns', label: 'Campaigns', icon: <Sparkles size={20} /> },
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
         { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
+        { id: 'history', label: 'History', icon: <Clock size={20} /> },
         { id: 'support', label: 'Support', icon: <MessageCircle size={20} /> },
         ...(auth.isAdmin() ? [{ id: 'admin', label: 'Admin', icon: <Lock size={20} /> }] : []),
         { id: 'profile', label: 'Profile', icon: <UserIcon size={20} /> },
@@ -82,9 +85,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                         <div className="w-full bg-black/5 h-1.5 rounded-full mt-2 overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
-                                animate={{ width: `${qScore}%` }}
+                                animate={{ width: `${Math.min(100, (qScore / 1000) * 100)}%` }}
                                 className="bg-black h-full"
                             />
+                        </div>
+                        <div className="text-[10px] uppercase tracking-wider font-bold opacity-30 mt-2">
+                            Rank: {getRank(qScore)}
                         </div>
                     </div>
                     <button onClick={() => auth.logout()} className="flex items-center gap-3 w-full p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
