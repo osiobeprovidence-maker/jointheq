@@ -1,0 +1,3 @@
+{"id":1,"name":"Netflix","description":"Premium 4K Streaming","baseCost":8000,"isActive":true}
+{"id":2,"name":"Spotify","description":"Family Plan","baseCost":1500,"isActive":true}
+{"id":3,"name":"YouTube Premium","description":"Family Plan","baseCost":1700,"isActive":true}

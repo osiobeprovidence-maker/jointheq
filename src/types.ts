@@ -70,16 +70,21 @@ export interface SlotType {
   _id: string;
   subscription_id: string;
   name: string;
+  description?: string;
   price: number;
   device_limit: number;
   downloads_enabled: boolean;
   min_q_score: number;
+  capacity: number;
+  features: string[];
+  current_members?: number;
 }
 
 export interface Subscription {
   _id: string;
   name: string;
   description: string;
+  logo_url?: string;
   base_cost: number;
   is_active: boolean;
   slot_types: SlotType[];

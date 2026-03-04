@@ -31,11 +31,13 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import { MainLayout } from "../layouts/MainLayout";
-import { UserSlot } from "../types";
+import { UserSlot, SlotType } from "../types";
+import { Check } from "lucide-react";
 
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
+    const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
     const [showVerificationWarning, setShowVerificationWarning] = useState(false);
     const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
     const user = auth.getCurrentUser();
@@ -80,6 +82,7 @@ export default function DashboardPage() {
     const updatePhoneMutation = useMutation(api.users.updatePhone);
     const updateAllocationMutation = useMutation(api.subscriptions.updateAllocation);
     const resetQScoresMutation = useMutation(api.users.resetQScores);
+    const seedMarketplaceMutation = useMutation(api.subscriptions.seedMarketplace);
 
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
@@ -113,6 +116,7 @@ export default function DashboardPage() {
             });
             if (result.success) {
                 alert("Successfully joined slot!");
+                setCheckoutSlot(null);
                 setActiveTab('dashboard');
             }
         } catch (error: any) {
@@ -317,19 +321,19 @@ export default function DashboardPage() {
                         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                             <div>
                                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Marketplace</h1>
-                                <p className="text-xs sm:text-sm text-black/50 mt-1">Find the perfect slot for your favorite subscriptions.</p>
-                            </div>
-                            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-black/5 shadow-sm overflow-x-auto no-scrollbar">
-                                <button onClick={() => setUseBootsForPayment(false)} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${!useBootsForPayment ? 'bg-black text-white shadow-md' : 'text-black/50 hover:bg-black/5'}`}>100% Coins</button>
-                                <button onClick={() => setUseBootsForPayment(true)} className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${useBootsForPayment ? 'bg-black text-white shadow-md' : 'text-black/50 hover:bg-black/5'}`}>50/50 Split</button>
+                                <p className="text-xs sm:text-sm text-black/50 mt-1">Discover premium subscription slots tailored for you.</p>
                             </div>
                         </header>
                         <div className="grid grid-cols-1 gap-10">
                             {subscriptions.map((sub) => (
                                 <section key={sub._id}>
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-12 h-12 bg-white border border-black/5 rounded-2xl flex items-center justify-center shadow-sm">
-                                            <span className="font-bold text-lg">{sub.name[0]}</span>
+                                        <div className="w-12 h-12 bg-white border border-black/5 rounded-2xl flex items-center justify-center shadow-sm overflow-hidden p-2">
+                                            {sub.logo_url ? (
+                                                <img src={sub.logo_url} alt={sub.name} className="w-full h-full object-contain" />
+                                            ) : (
+                                                <span className="font-bold text-lg">{sub.name[0]}</span>
+                                            )}
                                         </div>
                                         <div>
                                             <h2 className="text-xl font-bold">{sub.name}</h2>
@@ -338,7 +342,12 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {sub.slot_types.map((slot: any) => (
-                                            <MarketplaceSlotCard key={slot._id} slot={slot} onJoin={() => joinSlot(slot._id)} userQScore={currentUser?.q_score || 0} useBoots={useBootsForPayment} />
+                                            <MarketplaceSlotCard
+                                                key={slot._id}
+                                                slot={slot}
+                                                onJoin={() => setCheckoutSlot(slot)}
+                                                userQScore={currentUser?.q_score || 0}
+                                            />
                                         ))}
                                     </div>
                                 </section>
@@ -544,6 +553,9 @@ export default function DashboardPage() {
                                         <button onClick={resetQRank} className="w-full py-4 bg-orange-50 text-orange-600 rounded-2xl font-bold hover:bg-orange-100 transition-colors flex items-center justify-center gap-2">
                                             <Sparkles size={20} /> Reset Q Rank to 100
                                         </button>
+                                        <button onClick={() => seedMarketplaceMutation()} className="w-full py-4 bg-blue-50 text-blue-600 rounded-2xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
+                                            <ShoppingBag size={20} /> Seed Marketplace Data
+                                        </button>
                                         <button onClick={() => auth.logout()} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
                                             <LogOut size={20} /> Log Out
                                         </button>
@@ -553,12 +565,90 @@ export default function DashboardPage() {
                         </div>
                     </motion.div>
                 )}
+                {/* Checkout Modal */}
+                <AnimatePresence>
+                    {checkoutSlot && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setCheckoutSlot(null)}
+                                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+                            >
+                                <div className="p-8">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h2 className="text-2xl font-bold">Checkout</h2>
+                                        <button onClick={() => setCheckoutSlot(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-6 mb-8">
+                                        <div className="bg-gray-50 p-6 rounded-3xl border border-black/5">
+                                            <div className="text-xs font-bold uppercase tracking-wider text-black/30 mb-2">Subscription</div>
+                                            <div className="text-xl font-bold">{checkoutSlot.name}</div>
+                                            <div className="text-sm text-black/50 mt-1">Monthly renewal cycle</div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <label className="text-sm font-bold text-black/50 ml-1">Select Payment Method</label>
+                                            <div
+                                                onClick={() => setUseBootsForPayment(false)}
+                                                className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center justify-between ${!useBootsForPayment ? 'border-black bg-black/5' : 'border-black/5 hover:border-black/20'}`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                                                        <Wallet size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold">100% Coins</div>
+                                                        <div className="text-xs text-black/40">Pay ₦{checkoutSlot.price.toLocaleString()} from your wallet</div>
+                                                    </div>
+                                                </div>
+                                                {!useBootsForPayment && <Check size={20} className="text-black" />}
+                                            </div>
+
+                                            <div
+                                                onClick={() => setUseBootsForPayment(true)}
+                                                className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center justify-between ${useBootsForPayment ? 'border-black bg-black/5' : 'border-black/5 hover:border-black/20'}`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+                                                        <Sparkles size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold">Boots + Coins (50/50)</div>
+                                                        <div className="text-xs text-black/40">₦{(checkoutSlot.price / 2).toLocaleString()} + {(checkoutSlot.price / 2).toLocaleString()} Boots</div>
+                                                    </div>
+                                                </div>
+                                                {useBootsForPayment && <Check size={20} className="text-black" />}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => joinSlot(checkoutSlot._id)}
+                                        className="w-full py-5 bg-black text-white rounded-2xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-black/10"
+                                    >
+                                        Confirm & Pay ₦{useBootsForPayment ? (checkoutSlot.price / 2).toLocaleString() : checkoutSlot.price.toLocaleString()}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </AnimatePresence>
         </MainLayout>
     );
 }
 
-// ... Helpher components like StatCard, ActiveSlotCard etc. from App.tsx ...
 function StatCard({ title, value, icon, color }: { title: string, value: string, icon: ReactNode, color: string }) {
     return (
         <div className="bg-white border border-black/5 p-6 rounded-3xl shadow-sm">
@@ -605,21 +695,52 @@ function ActiveSlotCard({ slot, onUpdateAllocation }: { slot: UserSlot, onUpdate
     );
 }
 
-function MarketplaceSlotCard({ slot, onJoin, userQScore, useBoots }: { slot: any, onJoin: () => void, userQScore: number, useBoots: boolean }) {
+function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: SlotType, onJoin: () => void, userQScore: number }) {
     const isEligible = userQScore >= slot.min_q_score;
+    const capacity = slot.capacity || 5;
+    const joined = slot.current_members || 0;
+
     return (
-        <div className="bg-white border border-black/5 p-4 sm:p-6 rounded-3xl shadow-sm flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-base sm:text-lg">{slot.name}</h3>
-                <div className="text-right">
-                    {useBoots ? (
-                        <div className="text-lg font-bold">₦{(slot.price / 2).toLocaleString()} <span className="text-[10px] opacity-40">Coins</span></div>
-                    ) : (
-                        <div className="text-xl font-bold">₦{slot.price.toLocaleString()}</div>
-                    )}
+        <div className="bg-white border border-black/5 p-6 rounded-[2.5rem] shadow-sm flex flex-col hover:border-black/20 transition-colors">
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h3 className="font-bold text-xl">{slot.name}</h3>
+                    <div className="text-2xl font-bold mt-1">₦{slot.price.toLocaleString()} <span className="text-sm font-normal text-black/30">/ month</span></div>
                 </div>
             </div>
-            <button onClick={onJoin} disabled={!isEligible} className={`w-full py-4 rounded-2xl font-bold ${isEligible ? 'bg-black text-white' : 'bg-black/5 text-black/30'}`}>
+
+            <div className="flex-1 space-y-3 mb-8">
+                {slot.features?.map((feature, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                        <div className="mt-1 w-4 h-4 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Check size={10} className="text-emerald-600" />
+                        </div>
+                        <span className="text-sm text-black/60">{feature}</span>
+                    </div>
+                ))}
+                {!slot.features && (
+                    <p className="text-sm text-black/40 italic">Premium slot with standard benefits</p>
+                )}
+            </div>
+
+            <div className="mb-6 p-4 bg-gray-50 rounded-2xl">
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-black/40 uppercase tracking-tight">Members joined</span>
+                    <span className="text-xs font-bold text-black/60">{joined} / {capacity}</span>
+                </div>
+                <div className="w-full h-2 bg-black/5 rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-black transition-all duration-500"
+                        style={{ width: `${(joined / capacity) * 100}%` }}
+                    />
+                </div>
+            </div>
+
+            <button
+                onClick={onJoin}
+                disabled={!isEligible}
+                className={`w-full py-4 rounded-2xl font-bold transition-transform active:scale-95 ${isEligible ? 'bg-black text-white hover:shadow-lg' : 'bg-black/5 text-black/30'}`}
+            >
                 {isEligible ? 'Join Slot' : `Requires ${slot.min_q_score} Q Score`}
             </button>
         </div>

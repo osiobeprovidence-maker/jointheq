@@ -1,0 +1,2 @@
+{"id":1,"email":"demo@jointheq.com","phone":"+2348012345678","isAdmin":false,"isVerified":false,"fullName":"Demo User","qScore":88,"consistencyScore":100,"timelinessScore":100,"stabilityScore":100,"walletBalance":5000,"bootBalance":350,"referralCode":"Q-DEMO-123","createdAt":1772542462000}
+{"id":2,"email":"admin@jointheq.com","phone":"+2348000000000","isAdmin":true,"isVerified":false,"fullName":"Q Admin","qScore":100,"consistencyScore":100,"timelinessScore":100,"stabilityScore":100,"walletBalance":0,"bootBalance":0,"referralCode":"Q-ADMIN-001","createdAt":1772542462000}

@@ -1,0 +1,5 @@
+{"id":1,"name":"Profile Slot","price":2500,"subscriptionId":1,"deviceLimit":4,"downloadsEnabled":true,"minQScore":70}
+{"id":2,"name":"Download Slot","price":1700,"subscriptionId":1,"deviceLimit":2,"downloadsEnabled":true,"minQScore":50}
+{"id":3,"name":"Streaming Slot","price":1000,"subscriptionId":1,"deviceLimit":2,"downloadsEnabled":false,"minQScore":0}
+{"id":4,"name":"Standard Slot","price":750,"subscriptionId":2,"deviceLimit":1,"downloadsEnabled":true,"minQScore":0}
+{"id":5,"name":"Standard Slot","price":800,"subscriptionId":3,"deviceLimit":1,"downloadsEnabled":true,"minQScore":0}
