@@ -1,5 +1,6 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/auth/AuthGuards";
 import LandingPage from "./pages/LandingPage";
@@ -9,6 +10,7 @@ import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
 export default function App() {
   return (
     <ErrorBoundary>
+      <Toaster position="top-center" />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />

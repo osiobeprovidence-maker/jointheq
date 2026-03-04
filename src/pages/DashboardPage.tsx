@@ -40,6 +40,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import { MainLayout } from "../layouts/MainLayout";
 import { UserSlot, SlotType } from "../types";
+import toast from "react-hot-toast";
 
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
@@ -106,9 +107,9 @@ export default function DashboardPage() {
         try {
             await makeAdminMutation({ email: adminInviteEmail, executorId: currentUser._id });
             setAdminInviteEmail('');
-            alert("Admin added successfully");
+            toast.success("Admin added successfully");
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message);
         }
     };
 
@@ -116,9 +117,9 @@ export default function DashboardPage() {
         if (!currentUser) return;
         try {
             await removeAdminMutation({ userId: adminId, executorId: currentUser._id });
-            alert("Admin removed successfully");
+            toast.success("Admin removed successfully");
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message);
         }
     };
 
@@ -153,12 +154,12 @@ export default function DashboardPage() {
                 use_boots: useBootsForPayment
             });
             if (result.success) {
-                alert("Successfully joined slot!");
+                toast.success("Successfully joined slot!");
                 setCheckoutSlot(null);
                 setActiveTab('dashboard');
             }
         } catch (error: any) {
-            alert(error.message || "Failed to join slot");
+            toast.error(error.message || "Failed to join slot");
         }
     };
 
@@ -207,9 +208,10 @@ export default function DashboardPage() {
         try {
             await updatePhoneMutation({ id: currentUser._id, phone: newPhone });
             setNewPhone('');
-            alert("Phone number updated!");
+            toast.success("Phone number updated!");
         } catch (error) {
             console.error("Error updating phone:", error);
+            toast.error("Error updating phone");
         } finally {
             setIsUpdatingPhone(false);
         }
@@ -228,9 +230,10 @@ export default function DashboardPage() {
         if (confirm("Setting Q Score to 100 will reset your premium eligibility. Continue?")) {
             try {
                 await resetQScoresMutation({ userId: currentUser._id });
-                alert("Q Rank reset to 100 successfully!");
+                toast.success("Q Rank reset to 100 successfully!");
             } catch (error) {
                 console.error("Error resetting Q rank:", error);
+                toast.error("Error resetting Q rank");
             }
         }
     };
@@ -469,7 +472,7 @@ export default function DashboardPage() {
                                     <button
                                         onClick={() => {
                                             navigator.clipboard.writeText(`https://jointheq.sbs/?ref=${currentUser?.referral_code}`);
-                                            alert("Link copied!");
+                                            toast.success("Link copied!");
                                         }}
                                         className="text-sm font-bold text-blue-600 hover:scale-105 transition-transform"
                                     >
@@ -925,7 +928,7 @@ export default function DashboardPage() {
                                         <button
                                             onClick={async () => {
                                                 await seedCampaignsMutation({});
-                                                alert("Dummy campaigns seeded!");
+                                                toast.success("Dummy campaigns seeded!");
                                             }}
                                             className="w-full py-4 bg-purple-50 text-purple-600 rounded-2xl font-bold hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
                                         >
@@ -1020,7 +1023,7 @@ export default function DashboardPage() {
                     )}
                 </AnimatePresence>
             </AnimatePresence>
-        </MainLayout>
+        </MainLayout >
     );
 }
 
