@@ -65,11 +65,11 @@ export default function DashboardPage() {
     const subscriptions = useQuery(api.subscriptions.getActiveSubscriptions) || [];
     const activeSlots = useQuery(api.subscriptions.getSlotsByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const campaigns = useQuery(api.campaigns.list) || [];
-    const messages = useQuery(api.messages.getMessages, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const devices = useQuery(api.devices.listByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const chatUsers = useQuery(api.users.list) || [];
     const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
     const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
+    const adminsList = useQuery(api.users.getAdmins) || [];
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -79,6 +79,10 @@ export default function DashboardPage() {
     const [chatImage, setChatImage] = useState<string | null>(null);
     const [newPhone, setNewPhone] = useState('');
     const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
+    const [adminInviteEmail, setAdminInviteEmail] = useState('');
+
+    const messagesUserId = currentUser?.is_admin ? (selectedChatUserId || currentUser._id) : currentUser?._id;
+    const messages = useQuery(api.messages.getMessages, messagesUserId ? { user_id: messagesUserId } : "skip") || [];
 
     // Mutations
     const joinSlotMutation = useMutation(api.subscriptions.joinSlot);
@@ -94,6 +98,29 @@ export default function DashboardPage() {
     const createCampaignMutation = useMutation(api.campaigns.create);
     const updateCampaignStatusMutation = useMutation(api.campaigns.updateStatus);
     const seedCampaignsMutation = useMutation(api.campaigns.seedDummy);
+    const makeAdminMutation = useMutation(api.users.makeAdmin);
+    const removeAdminMutation = useMutation(api.users.removeAdmin);
+
+    const handleMakeAdmin = async () => {
+        if (!currentUser || !adminInviteEmail) return;
+        try {
+            await makeAdminMutation({ email: adminInviteEmail, executorId: currentUser._id });
+            setAdminInviteEmail('');
+            alert("Admin added successfully");
+        } catch (error: any) {
+            alert(error.message);
+        }
+    };
+
+    const handleRemoveAdmin = async (adminId: Id<"users">) => {
+        if (!currentUser) return;
+        try {
+            await removeAdminMutation({ userId: adminId, executorId: currentUser._id });
+            alert("Admin removed successfully");
+        } catch (error: any) {
+            alert(error.message);
+        }
+    };
 
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
@@ -626,6 +653,125 @@ export default function DashboardPage() {
                     </motion.div>
                 )}
 
+                {activeTab === 'support' && (
+                    <motion.div key="support" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4 h-[calc(100vh-10rem)] min-h-[500px] flex flex-col">
+                        <header>
+                            <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
+                            <p className="text-black/50 mt-1">Get help from the jointheq team.</p>
+                        </header>
+
+                        <div className="flex-1 bg-white border border-black/5 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col md:flex-row">
+                            {currentUser?.is_admin && (
+                                <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-black/5 overflow-y-auto">
+                                    <div className="p-6 border-b border-black/5 sticky top-0 bg-white z-10">
+                                        <h3 className="font-bold text-lg">Chats</h3>
+                                    </div>
+                                    <div className="divide-y divide-black/5">
+                                        {chatUsers.map((u: any) => (
+                                            <button
+                                                key={u._id}
+                                                onClick={() => setSelectedChatUserId(u._id)}
+                                                className={`w-full text-left p-4 hover:bg-black/5 transition-colors flex items-center gap-3 ${selectedChatUserId === u._id ? 'bg-black/5' : ''}`}
+                                            >
+                                                <div className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center font-bold flex-shrink-0">
+                                                    {u.full_name[0]}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-bold truncate">{u.full_name} {u.is_admin && <span className="text-emerald-500 text-xs ml-1">(Admin)</span>}</div>
+                                                    <div className="text-xs text-black/50 truncate">{u.email}</div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex-1 flex flex-col h-full bg-gray-50/50">
+                                {currentUser?.is_admin && !selectedChatUserId ? (
+                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-black/40">
+                                        <MessageCircle size={48} className="mb-4 opacity-20 mx-auto" />
+                                        <p>Select a user from the list to view their messages and reply.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
+                                            {messages.length === 0 ? (
+                                                <div className="m-auto text-center text-black/40 p-8 flex flex-col justify-center items-center">
+                                                    <MessageCircle size={48} className="mb-4 opacity-20" />
+                                                    <p>No messages yet. {currentUser?.is_admin ? 'This user hasn\'t sent any messages.' : 'Send us a message and we will reply as soon as possible.'}</p>
+                                                </div>
+                                            ) : (
+                                                messages.map((msg: any) => {
+                                                    const isMe = msg.sender_id === currentUser._id;
+                                                    return (
+                                                        <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                            <div className={`max-w-[75%] p-4 rounded-[1.5rem] ${isMe ? 'bg-black text-white rounded-br-none' : 'bg-white border border-black/10 text-black rounded-bl-none shadow-sm'}`}>
+                                                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                                                {msg.image_data && (
+                                                                    <img src={msg.image_data} alt="Attached" className="mt-2 rounded-xl max-w-full h-auto" />
+                                                                )}
+                                                                <div className={`text-[10px] mt-2 font-semibold opacity-50 ${isMe ? 'text-right text-white/70' : 'text-left'}`}>
+                                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                        <div className="p-4 bg-white border-t border-black/5 mt-auto">
+                                            <div className="flex items-end gap-2 bg-gray-50 border border-black/5 p-2 rounded-2xl focus-within:ring-2 ring-black/10 transition-shadow">
+                                                <input
+                                                    type="file"
+                                                    id="chat-image"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={handleImageUpload}
+                                                />
+                                                <label htmlFor="chat-image" className="p-3 mb-1 text-black/50 hover:text-black hover:bg-black/5 rounded-xl cursor-pointer transition-colors">
+                                                    <ImageIcon size={20} />
+                                                </label>
+
+                                                <div className="flex-1 flex flex-col">
+                                                    {chatImage && (
+                                                        <div className="relative inline-block m-2">
+                                                            <img src={chatImage} alt="Preview" className="h-16 rounded-lg border border-black/10 w-fit" />
+                                                            <button onClick={() => setChatImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:scale-110 transition-transform shadow-md">
+                                                                <X size={12} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    <textarea
+                                                        value={chatInput}
+                                                        onChange={(e) => setChatInput(e.target.value)}
+                                                        placeholder={currentUser?.is_admin ? "Type your reply..." : "How can we help?"}
+                                                        className="w-full bg-transparent border-none focus:outline-none p-3 resize-none max-h-32 text-sm"
+                                                        rows={1}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault();
+                                                                sendMessage();
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    onClick={sendMessage}
+                                                    disabled={!chatInput.trim() && !chatImage}
+                                                    className="p-3 mb-1 bg-black text-white rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:bg-black/20"
+                                                >
+                                                    <Send size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
                 {activeTab === 'admin' && currentUser?.is_admin && (
                     <motion.div key="admin" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-10 pb-20">
                         <header className="flex items-center justify-between">
@@ -699,6 +845,51 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                         </section>
+
+                        {currentUser.email === 'riderezzy@gmail.com' && (
+                            <section className="bg-white p-10 rounded-[3rem] border border-black/5 shadow-xl">
+                                <h2 className="text-2xl font-bold mb-8">Manage Admins (Super Admin Only)</h2>
+                                <div className="space-y-8">
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                        <input
+                                            type="email"
+                                            placeholder="Enter user email to make admin"
+                                            value={adminInviteEmail}
+                                            onChange={(e) => setAdminInviteEmail(e.target.value)}
+                                            className="flex-1 p-5 bg-gray-50 border border-black/5 rounded-2xl font-bold focus:ring-2 ring-black/5 outline-none"
+                                        />
+                                        <button
+                                            onClick={handleMakeAdmin}
+                                            className="py-5 px-8 bg-black text-white rounded-[1.5rem] font-bold shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform whitespace-nowrap"
+                                        >
+                                            Add Admin
+                                        </button>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-xl font-bold mb-4">Current Admins</h3>
+                                        <div className="space-y-4">
+                                            {adminsList.map((admin: any) => (
+                                                <div key={admin._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 border border-black/5 rounded-2xl gap-4">
+                                                    <div>
+                                                        <div className="font-bold">{admin.full_name} {admin.email === 'riderezzy@gmail.com' && <span className="text-emerald-500 text-sm">(Super Admin)</span>}</div>
+                                                        <div className="text-sm text-black/50">{admin.email}</div>
+                                                    </div>
+                                                    {admin.email !== 'riderezzy@gmail.com' && (
+                                                        <button
+                                                            onClick={() => handleRemoveAdmin(admin._id)}
+                                                            className="text-red-500 font-bold px-4 py-2 hover:bg-red-50 rounded-lg transition-colors border border-red-100"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
                     </motion.div>
                 )}
                 {activeTab === 'profile' && (

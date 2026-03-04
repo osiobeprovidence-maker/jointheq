@@ -286,3 +286,52 @@ export const updateReputation = mutation({
         return { success: true };
     },
 });
+
+export const getAdmins = query({
+    handler: async (ctx) => {
+        return await ctx.db
+            .query("users")
+            .filter((q) => q.eq(q.field("is_admin"), true))
+            .collect();
+    },
+});
+
+export const makeAdmin = mutation({
+    args: { email: v.string(), executorId: v.id("users") },
+    handler: async (ctx, args) => {
+        const executor = await ctx.db.get(args.executorId);
+        if (!executor || executor.email !== 'riderezzy@gmail.com') {
+            throw new Error("Only super admin can make others admin.");
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .unique();
+
+        if (!user) throw new Error("User not found.");
+
+        await ctx.db.patch(user._id, { is_admin: true, role: "admin" });
+        return { success: true };
+    },
+});
+
+export const removeAdmin = mutation({
+    args: { userId: v.id("users"), executorId: v.id("users") },
+    handler: async (ctx, args) => {
+        const executor = await ctx.db.get(args.executorId);
+        if (!executor || executor.email !== 'riderezzy@gmail.com') {
+            throw new Error("Only super admin can remove admins.");
+        }
+
+        const target = await ctx.db.get(args.userId);
+        if (!target) throw new Error("User not found.");
+
+        if (target.email === 'riderezzy@gmail.com') {
+            throw new Error("Cannot remove super admin.");
+        }
+
+        await ctx.db.patch(args.userId, { is_admin: false, role: "user" });
+        return { success: true };
+    },
+});
