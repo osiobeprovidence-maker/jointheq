@@ -11,20 +11,28 @@ import {
     Wallet,
     Sparkles,
     Trophy,
-    ArrowUpRight,
+    Check,
+    Gift,
+    Rocket,
+    Users,
+    Activity,
+    AlertCircle,
+    Calendar,
+    Settings,
+    Shield,
+    User as UserIcon,
+    LogOut,
+    X,
+    Mail,
+    Phone,
     Clock,
-    Tv,
     Smartphone,
     Laptop,
     Monitor,
     Trash2,
-    User as UserIcon,
-    LogOut,
     MessageCircle,
     ImageIcon,
-    Send,
-    X,
-    Mail
+    Send
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -32,7 +40,6 @@ import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import { MainLayout } from "../layouts/MainLayout";
 import { UserSlot, SlotType } from "../types";
-import { Check } from "lucide-react";
 
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
@@ -83,6 +90,9 @@ export default function DashboardPage() {
     const updateAllocationMutation = useMutation(api.subscriptions.updateAllocation);
     const resetQScoresMutation = useMutation(api.users.resetQScores);
     const seedMarketplaceMutation = useMutation(api.subscriptions.seedMarketplace);
+    const participateInCampaignMutation = useMutation(api.campaigns.participate);
+    const createCampaignMutation = useMutation(api.campaigns.create);
+    const updateCampaignStatusMutation = useMutation(api.campaigns.updateStatus);
 
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
@@ -507,7 +517,7 @@ export default function DashboardPage() {
                                     <X className="text-red-600" size={20} /> Penalty Records
                                 </h3>
                                 <div className="space-y-4">
-                                    {currentUser.penalty_history.slice().reverse().map((item, i) => (
+                                    {currentUser?.penalty_history?.slice().reverse().map((item, i) => (
                                         <div key={i} className="bg-white p-4 rounded-2xl flex items-center justify-between border border-red-100 shadow-sm">
                                             <div>
                                                 <div className="font-bold text-red-600 text-sm">{item.type}</div>
@@ -525,7 +535,118 @@ export default function DashboardPage() {
                     </motion.div>
                 )}
 
-                {/* Profile Tab */}
+                {activeTab === 'campaigns' && (
+                    <motion.div key="campaigns" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                        <header>
+                            <h1 className="text-3xl font-bold tracking-tight">Active Campaigns</h1>
+                            <p className="text-black/50 mt-1">Join events to earn exclusive BOOTS and rewards.</p>
+                        </header>
+
+                        {campaigns.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {campaigns.map((camp: any) => (
+                                    <CampaignCard
+                                        key={camp._id}
+                                        campaign={camp}
+                                        onParticipate={() => participateInCampaignMutation({ campaign_id: camp._id, user_id: currentUser._id })}
+                                        userId={currentUser._id}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto">
+                                <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                                    <Rocket size={40} />
+                                </div>
+                                <h2 className="text-2xl font-bold mb-4">No Campaigns Yet</h2>
+                                <p className="text-black/50 mb-8 max-w-md mx-auto leading-relaxed">
+                                    Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
+                                </p>
+                                {currentUser?.is_admin && (
+                                    <button onClick={() => setActiveTab('admin')} className="px-8 py-4 bg-black text-white rounded-2xl font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
+                                        <Plus size={20} /> Create First Campaign
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+
+                {activeTab === 'admin' && currentUser?.is_admin && (
+                    <motion.div key="admin" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-10 pb-20">
+                        <header className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                                    <Shield className="text-blue-600" size={32} /> Admin Control Center
+                                </h1>
+                                <p className="text-black/50 mt-1">Manage platform operations and ecosystem.</p>
+                            </div>
+                        </header>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <button className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-black/10 transition-all text-left group shadow-sm">
+                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <ShoppingBag size={24} />
+                                </div>
+                                <h3 className="font-bold text-lg">Marketplace</h3>
+                                <p className="text-sm text-black/50 mt-2">Manage subscription slots and pricing.</p>
+                            </button>
+                            <button className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-black/10 transition-all text-left group shadow-sm">
+                                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <Zap size={24} />
+                                </div>
+                                <h3 className="font-bold text-lg">Campaigns</h3>
+                                <p className="text-sm text-black/50 mt-2">Create and monitor reward events.</p>
+                            </button>
+                            <button className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-black/10 transition-all text-left group shadow-sm">
+                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                    <Users size={24} />
+                                </div>
+                                <h3 className="font-bold text-lg">Community</h3>
+                                <p className="text-sm text-black/50 mt-2">Support tickets and user bans.</p>
+                            </button>
+                        </div>
+
+                        <section className="bg-white p-10 rounded-[3rem] border border-black/5 shadow-xl">
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-bold">Quick Campaign Creator</h2>
+                                <button className="text-sm font-bold opacity-30">View Analytics</button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="text-sm font-bold text-black/40 ml-1">Campaign Type</label>
+                                    <select className="w-full p-5 bg-gray-50 border border-black/5 rounded-2xl font-bold focus:ring-2 ring-black/5 outline-none">
+                                        <option>Reward Jar (Growth)</option>
+                                        <option>Raffle Ticket (Engagement)</option>
+                                        <option>Referral Storm (Viral)</option>
+                                        <option>Payment Streak (Loyalty)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="text-sm font-bold text-black/40 ml-1">Reward Amount (BOOTS)</label>
+                                    <input type="number" placeholder="e.g. 50" className="w-full p-5 bg-gray-50 border border-black/5 rounded-2xl font-bold focus:ring-2 ring-black/5 outline-none" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <button
+                                        onClick={() => createCampaignMutation({
+                                            name: "Easter Reward Jar",
+                                            type: "jar",
+                                            description: "Help fill the jar by inviting friends to join subscriptions.",
+                                            reward_type: "boots",
+                                            reward_amount: 50,
+                                            start_date: Date.now(),
+                                            end_date: Date.now() + (5 * 24 * 60 * 60 * 1000),
+                                            target_goal: 500
+                                        })}
+                                        className="w-full py-6 bg-black text-white rounded-[1.5rem] font-bold text-lg shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform"
+                                    >
+                                        Launch New Campaign
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </motion.div>
+                )}
                 {activeTab === 'profile' && (
                     <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
@@ -649,6 +770,87 @@ export default function DashboardPage() {
     );
 }
 
+function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onParticipate: () => void, userId: Id<"users"> }) {
+    const participant = useQuery(api.campaigns.getParticipant, { campaign_id: campaign._id, user_id: userId });
+    const isParticipating = !!participant;
+    const progressPercent = (campaign.current_progress / campaign.target_goal) * 100;
+    const daysRemaining = Math.max(0, Math.ceil((campaign.end_date - Date.now()) / (1000 * 60 * 60 * 24)));
+
+    const getIcon = () => {
+        switch (campaign.type) {
+            case 'jar': return <Gift size={24} className="text-amber-500" />;
+            case 'raffle': return <Activity size={24} className="text-blue-500" />;
+            case 'referral_storm': return <Zap size={24} className="text-purple-500" />;
+            case 'streak': return <Calendar size={24} className="text-emerald-500" />;
+            default: return <Rocket size={24} />;
+        }
+    };
+
+    return (
+        <motion.div whileHover={{ y: -5 }} className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col group">
+            <div className="p-8 pb-4 flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors duration-500">
+                        {getIcon()}
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-xl">{campaign.name}</h3>
+                        <div className="text-xs font-bold text-black/30 bg-gray-100 px-2 py-0.5 rounded-md inline-block mt-1 uppercase tracking-tight">
+                            {campaign.type.replace('_', ' ')}
+                        </div>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <div className="text-sm font-bold text-black/20">Reward</div>
+                    <div className="text-xl font-bold flex items-center gap-1">
+                        <Sparkles size={16} className="text-blue-500" /> {campaign.reward_amount}
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-8 pt-0 flex-1">
+                <p className="text-sm text-black/50 mb-8 leading-relaxed">
+                    {campaign.description}
+                </p>
+
+                <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-black/40 uppercase tracking-tighter">Event Progress</span>
+                        <span className="text-xs font-bold">{campaign.current_progress} / {campaign.target_goal}</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progressPercent}%` }}
+                            className="h-full bg-black"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-center gap-2">
+                        <Clock size={16} className="text-black/20" />
+                        <span className="text-sm font-bold text-black/40">{daysRemaining} days left</span>
+                    </div>
+
+                    <button
+                        onClick={onParticipate}
+                        disabled={isParticipating || campaign.status !== 'active'}
+                        className={`flex-1 py-4 rounded-2xl font-bold text-sm transition-all ${isParticipating
+                            ? 'bg-emerald-500 text-white shadow-emerald-200'
+                            : 'bg-black text-white hover:shadow-xl active:scale-95'
+                            }`}
+                    >
+                        {isParticipating ? (
+                            <span className="flex items-center justify-center gap-2"><Check size={16} /> Joined</span>
+                        ) : 'Participate'}
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
 function StatCard({ title, value, icon, color }: { title: string, value: string, icon: ReactNode, color: string }) {
     return (
         <div className="bg-white border border-black/5 p-6 rounded-3xl shadow-sm">
@@ -746,3 +948,6 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: SlotType, onJ
         </div>
     );
 }
+
+function ArrowUpRight({ size, className }: { size?: number, className?: string }) { return <Plus size={size} className={className} style={{ transform: 'rotate(45deg)' }} />; }
+function ClockIcon({ size, className }: { size?: number, className?: string }) { return <Clock size={size} className={className} />; }

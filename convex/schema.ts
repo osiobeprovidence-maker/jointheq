@@ -56,14 +56,25 @@ export default defineSchema({
 
     campaigns: defineTable({
         name: v.string(),
+        type: v.string(), // "jar" | "raffle" | "referral_storm" | "streak"
         description: v.string(),
-        start_date: v.string(),
-        end_date: v.string(),
-        reward_formula: v.string(),
-        boot_pool_max: v.number(),
-        boots_issued: v.number(),
-        status: v.string(),
-    }),
+        reward_type: v.string(), // "boots" | "coins" | "slot"
+        reward_amount: v.number(),
+        start_date: v.number(), // Timestamp
+        end_date: v.number(), // Timestamp
+        target_goal: v.number(),
+        current_progress: v.number(),
+        status: v.string(), // "active" | "paused" | "ended"
+        image_url: v.optional(v.string()),
+    }).index("by_status", ["status"]),
+
+    campaign_participants: defineTable({
+        campaign_id: v.id("campaigns"),
+        user_id: v.id("users"),
+        progress: v.number(),
+        entries: v.number(), // For raffles
+        joined_at: v.number(),
+    }).index("by_campaign", ["campaign_id"]).index("by_user", ["user_id"]),
 
     boot_transactions: defineTable({
         user_id: v.id("users"),
