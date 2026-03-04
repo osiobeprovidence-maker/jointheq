@@ -129,6 +129,13 @@ export default function AdminPanel() {
         slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
     });
 
+    // Workforce admin state
+    const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [showTaskModal, setShowTaskModal] = useState(false);
+    const [inviteForm, setInviteForm] = useState({ email: "", role: "support", work_username: "" });
+    const [taskForm, setTaskForm] = useState({ title: "", description: "", assigned_to: "", deadline: "", priority: "medium", category: "general" });
+
     // Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const stats = useQuery(api.admin.getPlatformStats);
@@ -165,6 +172,24 @@ export default function AdminPanel() {
     const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
     const editCampaignMut = useMutation(api.campaigns.editCampaign);
     const processWithdrawalMut = useMutation(api.campaigns.processWithdrawal);
+    // Workforce Queries
+    const workforceAdmins = useQuery(api.adminWorkforce.getAdminTeam) || [];
+    const invitations = useQuery(api.adminWorkforce.getInvitations) || [];
+    const allAdminTasks = useQuery(api.adminWorkforce.getAllTasks, {}) || [];
+    const adminActivityLogs = useQuery(api.adminWorkforce.getAdminLogs, {}) || [];
+    const performanceMetrics = useQuery(api.adminWorkforce.getPerformanceMetrics) || [];
+    const dailyReport = useQuery(api.adminWorkforce.getDailyReport);
+
+    // Workforce Mutations
+    const createInviteMut = useMutation(api.adminWorkforce.createInvitation);
+    const revokeInviteMut = useMutation(api.adminWorkforce.revokeInvitation);
+    const updateAdminProfileMut = useMutation(api.adminWorkforce.updateAdminProfile);
+    const suspendAdminMut = useMutation(api.adminWorkforce.suspendAdminAccess);
+    const restoreAdminMut = useMutation(api.adminWorkforce.restoreAdminAccess);
+    const removeAdminMut = useMutation(api.adminWorkforce.removeAdmin);
+    const createTaskMut = useMutation(api.adminWorkforce.createTask);
+    const updateTaskMut = useMutation(api.adminWorkforce.updateTask);
+    const deleteTaskMut = useMutation(api.adminWorkforce.deleteTask);
     // Security mutations
     const reviewFlagMut = useMutation(api.fraud.reviewFlag);
     // Campus mutations
@@ -173,6 +198,7 @@ export default function AdminPanel() {
     const updateEventMut = useMutation(api.campus.updateEvent);
 
     const handleSaveCampaign = async () => {
+
         if (!campaignForm.name || !campaignForm.description || !campaignForm.start_date || !campaignForm.end_date) {
             return toast.error('Fill in all required fields');
         }
@@ -1029,51 +1055,386 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ ADMINS ═══ */}
+                        {/* ═══ ADMINS — WORKFORCE CONTROL ROOM ═══ */}
                         {activeTab === "admins" && (
                             <motion.div key="admins" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Admin Team" sub="Manage admin roles and accountability" />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {adminsList.map((admin: any) => (
-                                        <div key={admin._id} className="bg-white rounded-3xl p-6 border border-black/5 hover:shadow-md transition-all">
-                                            <div className="flex items-center gap-4 mb-4">
-                                                <div className="w-14 h-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-xl">
-                                                    {admin.full_name?.[0]}
-                                                </div>
-                                                <div>
-                                                    <div className="font-black text-lg">{admin.full_name}</div>
-                                                    <div className="text-xs text-gray-400">{admin.email}</div>
-                                                    {admin.email === "riderezzy@gmail.com" && (
-                                                        <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black">
-                                                            <Star size={10} /> Super Admin
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div className="text-xs">
-                                                    <span className="text-gray-400">Role: </span>
-                                                    <span className="font-bold capitalize">{admin.admin_role || "Support Admin"}</span>
-                                                </div>
-                                                {currentUser?.email === "riderezzy@gmail.com" && admin.email !== "riderezzy@gmail.com" && (
-                                                    <select
-                                                        defaultValue={admin.admin_role || "support"}
-                                                        onChange={async (e) => {
-                                                            await setAdminRoleMut({ userId: admin._id, role: e.target.value, executorId: currentUser._id });
-                                                            toast.success("Role updated");
-                                                        }}
-                                                        className="text-xs font-bold border border-black/10 rounded-xl px-3 py-1.5 outline-none focus:ring-2 ring-black/10"
-                                                    >
-                                                        <option value="support">Support Admin</option>
-                                                        <option value="operations">Operations Admin</option>
-                                                        <option value="finance">Finance Admin</option>
-                                                        <option value="super">Super Admin</option>
-                                                    </select>
-                                                )}
-                                            </div>
-                                        </div>
+
+                                {/* Sub-tab nav */}
+                                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                                    {(["team", "tasks", "daily", "performance", "audit"] as const).map(sub => (
+                                        <button
+                                            key={sub}
+                                            onClick={() => setAdminSubTab(sub)}
+                                            className={`flex-shrink-0 px-5 py-2 rounded-2xl text-sm font-bold transition-all capitalize ${adminSubTab === sub ? "bg-zinc-900 text-white shadow" : "bg-white text-zinc-500 border border-black/8 hover:border-black/20"}`}
+                                        >
+                                            {sub === "daily" ? "📊 Daily Report" : sub === "tasks" ? "✅ Tasks" : sub === "team" ? "👥 Team" : sub === "performance" ? "📈 Performance" : "🔍 Audit"}
+                                        </button>
                                     ))}
                                 </div>
+
+                                {/* ── TEAM ── */}
+                                {adminSubTab === "team" && (
+                                    <div className="space-y-6">
+                                        <SectionHeader
+                                            title="Admin Team"
+                                            sub="Manage roles, work handles, and access"
+                                            action={currentUser?.admin_role === "super" ? (
+                                                <button
+                                                    onClick={() => setShowInviteModal(true)}
+                                                    className="flex items-center gap-2 px-5 py-2 bg-zinc-900 text-white rounded-2xl text-sm font-bold hover:scale-105 transition-transform"
+                                                >
+                                                    <Plus size={14} /> Invite Admin
+                                                </button>
+                                            ) : null}
+                                        />
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                            {(workforceAdmins as any[]).map((admin: any) => {
+                                                const roleColors: Record<string, string> = {
+                                                    super: "bg-purple-100 text-purple-700",
+                                                    support: "bg-blue-100 text-blue-700",
+                                                    operations: "bg-amber-100 text-amber-700",
+                                                    finance: "bg-emerald-100 text-emerald-700",
+                                                    campaigns: "bg-pink-100 text-pink-700",
+                                                };
+                                                const roleColor = roleColors[admin.admin_role ?? "support"] ?? "bg-zinc-100 text-zinc-600";
+                                                return (
+                                                    <div key={admin._id} className={`bg-white rounded-3xl p-5 border border-black/5 hover:shadow-lg transition-all relative overflow-hidden ${admin.is_admin_suspended ? "opacity-60 ring-2 ring-red-200" : ""}`}>
+                                                        {admin.is_admin_suspended && (
+                                                            <div className="absolute top-3 right-3 px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-[9px] font-black uppercase">Suspended</div>
+                                                        )}
+                                                        <div className="flex items-start gap-3 mb-4">
+                                                            <div className="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0">
+                                                                {admin.full_name?.[0]}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="font-black truncate">{admin.full_name}</div>
+                                                                {admin.work_username && (
+                                                                    <div className="text-xs font-bold text-zinc-400">@{admin.work_username}</div>
+                                                                )}
+                                                                <div className="text-[10px] text-gray-400 truncate">{admin.email}</div>
+                                                                <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${roleColor}`}>
+                                                                    {admin.admin_role === "super" ? "⭐ Super Admin" : (admin.admin_role ?? "support") + " admin"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Performance mini-stats */}
+                                                        <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                                                            <div className="bg-zinc-50 rounded-xl p-2">
+                                                                <div className="font-black text-sm text-zinc-800">{admin.tasks_completed}</div>
+                                                                <div className="text-[9px] text-zinc-400 font-bold">Tasks Done</div>
+                                                            </div>
+                                                            <div className="bg-zinc-50 rounded-xl p-2">
+                                                                <div className={`font-black text-sm ${admin.tasks_overdue > 0 ? "text-red-500" : "text-zinc-800"}`}>{admin.tasks_overdue}</div>
+                                                                <div className="text-[9px] text-zinc-400 font-bold">Overdue</div>
+                                                            </div>
+                                                            <div className="bg-zinc-50 rounded-xl p-2">
+                                                                <div className="font-black text-sm text-zinc-800">{admin.total_actions}</div>
+                                                                <div className="text-[9px] text-zinc-400 font-bold">Actions</div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Super admin controls */}
+                                                        {currentUser?.admin_role === "super" && admin._id !== currentUser._id && (
+                                                            <div className="border-t border-black/5 pt-3 flex flex-wrap gap-2">
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const newHandle = prompt(`Change work username for ${admin.full_name}:`, admin.work_username ?? "");
+                                                                        if (newHandle) {
+                                                                            await updateAdminProfileMut({ target_id: admin._id, updated_by: currentUser._id, work_username: newHandle });
+                                                                            toast.success("Work username updated!");
+                                                                        }
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center gap-1"
+                                                                ><Edit3 size={11} /> Username</button>
+                                                                <select
+                                                                    defaultValue={admin.admin_role || "support"}
+                                                                    onChange={async (e) => {
+                                                                        await updateAdminProfileMut({ target_id: admin._id, updated_by: currentUser._id, admin_role: e.target.value });
+                                                                        toast.success("Role updated");
+                                                                    }}
+                                                                    className="px-2 py-1.5 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold border-0 outline-none"
+                                                                >
+                                                                    <option value="support">Support</option>
+                                                                    <option value="operations">Operations</option>
+                                                                    <option value="finance">Finance</option>
+                                                                    <option value="campaigns">Campaigns</option>
+                                                                    <option value="super">Super Admin</option>
+                                                                </select>
+                                                                {admin.is_admin_suspended ? (
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            await restoreAdminMut({ target_id: admin._id, restored_by: currentUser._id });
+                                                                            toast.success("Access restored");
+                                                                        }}
+                                                                        className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-colors"
+                                                                    >Restore</button>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const reason = prompt("Reason for suspension?");
+                                                                            if (!reason) return;
+                                                                            await suspendAdminMut({ target_id: admin._id, suspended_by: currentUser._id, reason });
+                                                                            toast("Admin access suspended", { icon: "⏸️" });
+                                                                        }}
+                                                                        className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200 transition-colors"
+                                                                    >Suspend</button>
+                                                                )}
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (!confirm(`Permanently remove ${admin.full_name} as admin?`)) return;
+                                                                        await removeAdminMut({ target_id: admin._id, removed_by: currentUser._id });
+                                                                        toast.error("Admin removed");
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 transition-colors"
+                                                                >Remove</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Pending Invitations */}
+                                        {(invitations as any[]).filter((i: any) => i.status === "pending").length > 0 && (
+                                            <div>
+                                                <h3 className="font-black text-sm mb-3 text-gray-400 uppercase tracking-widest">Pending Invitations</h3>
+                                                <div className="bg-white rounded-3xl border border-black/5 divide-y divide-black/5">
+                                                    {(invitations as any[]).filter((i: any) => i.status === "pending").map((inv: any) => (
+                                                        <div key={inv._id} className="p-4 flex items-center justify-between">
+                                                            <div>
+                                                                <div className="font-bold text-sm">{inv.email}</div>
+                                                                <div className="text-xs text-gray-400">@{inv.work_username} · {inv.role} admin · Invited by {inv.invited_by_name}</div>
+                                                                <div className="text-[10px] text-amber-600 mt-0.5">Expires {new Date(inv.expires_at).toLocaleDateString()}</div>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const link = `https://jointheq.com/admin-accept?token=${inv.token}`;
+                                                                        navigator.clipboard.writeText(link);
+                                                                        toast.success("Invite link copied!");
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-zinc-100 rounded-xl text-xs font-bold hover:bg-zinc-200"
+                                                                >Copy Link</button>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        await revokeInviteMut({ invitation_id: inv._id, revoked_by: currentUser!._id });
+                                                                        toast("Invitation revoked");
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200"
+                                                                >Revoke</button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ── TASKS ── */}
+                                {adminSubTab === "tasks" && (
+                                    <div className="space-y-6">
+                                        <SectionHeader
+                                            title="Task Board"
+                                            sub="Assign, track, and manage admin duties"
+                                            action={currentUser?.admin_role === "super" ? (
+                                                <button
+                                                    onClick={() => setShowTaskModal(true)}
+                                                    className="flex items-center gap-2 px-5 py-2 bg-zinc-900 text-white rounded-2xl text-sm font-bold hover:scale-105 transition-transform"
+                                                >
+                                                    <Plus size={14} /> New Task
+                                                </button>
+                                            ) : null}
+                                        />
+
+                                        {/* Kanban columns */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            {(["pending", "in_progress", "completed", "overdue"] as const).map(col => {
+                                                const colTasks = (allAdminTasks as any[]).filter((t: any) => t.status === col);
+                                                const colColors: Record<string, string> = {
+                                                    pending: "bg-zinc-50 border-zinc-200",
+                                                    in_progress: "bg-blue-50 border-blue-200",
+                                                    completed: "bg-emerald-50 border-emerald-200",
+                                                    overdue: "bg-red-50 border-red-200",
+                                                };
+                                                const colHeaders: Record<string, string> = {
+                                                    pending: "⏳ Pending",
+                                                    in_progress: "🔵 In Progress",
+                                                    completed: "✅ Completed",
+                                                    overdue: "🔴 Overdue",
+                                                };
+                                                return (
+                                                    <div key={col} className={`rounded-3xl border p-4 ${colColors[col]}`}>
+                                                        <div className="font-black text-sm mb-3 flex items-center justify-between">
+                                                            <span>{colHeaders[col]}</span>
+                                                            <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-xs font-black shadow-sm">{colTasks.length}</span>
+                                                        </div>
+                                                        <div className="space-y-3">
+                                                            {colTasks.length === 0 ? (
+                                                                <div className="text-center text-xs text-gray-400 py-6">No tasks</div>
+                                                            ) : colTasks.map((task: any) => {
+                                                                const priorityColors: Record<string, string> = {
+                                                                    urgent: "bg-red-100 text-red-700",
+                                                                    high: "bg-orange-100 text-orange-700",
+                                                                    medium: "bg-amber-100 text-amber-700",
+                                                                    low: "bg-zinc-100 text-zinc-600",
+                                                                };
+                                                                return (
+                                                                    <div key={task._id} className="bg-white rounded-2xl p-3 shadow-sm hover:shadow-md transition-all">
+                                                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                                                            <div className="font-bold text-xs leading-tight">{task.title}</div>
+                                                                            <span className={`flex-shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${priorityColors[task.priority] ?? "bg-zinc-100 text-zinc-600"}`}>{task.priority}</span>
+                                                                        </div>
+                                                                        {task.description && <p className="text-[10px] text-gray-400 mb-2 line-clamp-2">{task.description}</p>}
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="text-[10px] text-gray-400">
+                                                                                <span className="font-bold text-zinc-600">@{task.assignee_name}</span>
+                                                                                <span className="mx-1">·</span>
+                                                                                <span>{task.days_until_due > 0 ? `${task.days_until_due}d left` : `${Math.abs(task.days_until_due)}d ago`}</span>
+                                                                            </div>
+                                                                            {task.status !== "completed" && (
+                                                                                <div className="flex gap-1">
+                                                                                    {task.status !== "in_progress" && (
+                                                                                        <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "in_progress" }); toast("Marked in progress", { icon: "🔵" }); }} className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:scale-110 transition-transform" title="Start"><PlayCircle size={11} /></button>
+                                                                                    )}
+                                                                                    <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "completed" }); toast.success("Task complete!"); }} className="p-1 bg-emerald-100 text-emerald-600 rounded-lg hover:scale-110 transition-transform" title="Complete"><CheckCircle2 size={11} /></button>
+                                                                                    {currentUser?.admin_role === "super" && (
+                                                                                        <button onClick={async () => { if (!confirm("Delete task?")) return; await deleteTaskMut({ task_id: task._id, deleted_by: currentUser!._id }); }} className="p-1 bg-red-100 text-red-600 rounded-lg hover:scale-110 transition-transform" title="Delete"><X size={11} /></button>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── DAILY REPORT ── */}
+                                {adminSubTab === "daily" && (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h2 className="text-2xl font-black">Daily Platform Report</h2>
+                                                <p className="text-sm text-gray-400 mt-1">{dailyReport?.date ?? "Loading..."}</p>
+                                            </div>
+                                            <div className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-2xl text-xs font-black flex items-center gap-2">
+                                                <Activity size={14} /> Live
+                                            </div>
+                                        </div>
+
+                                        {dailyReport && (
+                                            <>
+                                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                                    <StatCard label="New Users Today" value={dailyReport.users.new_today} icon={<Users size={18} />} color="bg-blue-500" sub={`vs ${dailyReport.users.new_yesterday} yesterday`} trend={dailyReport.users.trend as any} />
+                                                    <StatCard label="Revenue Today" value={`₦${(dailyReport.revenue.today / 100).toLocaleString()}`} icon={<DollarSign size={18} />} color="bg-emerald-500" sub={`${dailyReport.revenue.transactions_today} transactions`} trend={dailyReport.revenue.trend as any} />
+                                                    <StatCard label="Open Tickets" value={dailyReport.support.open_tickets} icon={<HeadphonesIcon size={18} />} color="bg-amber-500" sub={`${dailyReport.support.resolved_today} resolved today`} />
+                                                    <StatCard label="Security Flags" value={dailyReport.security.open_flags} icon={<ShieldCheck size={18} />} color="bg-red-500" sub={`${dailyReport.security.flags_today} new today`} trend={dailyReport.security.flags_today > 0 ? "down" : "neutral"} />
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div className="bg-white rounded-3xl p-5 border border-black/5">
+                                                        <div className="font-black mb-3 flex items-center gap-2"><Users size={16} /> User Growth</div>
+                                                        <div className="space-y-2 text-sm">
+                                                            <div className="flex justify-between"><span className="text-gray-400">Total Users</span><span className="font-black">{dailyReport.users.total.toLocaleString()}</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-400">New Today</span><span className="font-black text-emerald-600">+{dailyReport.users.new_today}</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-400">Yesterday</span><span className="font-black">+{dailyReport.users.new_yesterday}</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white rounded-3xl p-5 border border-black/5">
+                                                        <div className="font-black mb-3 flex items-center gap-2"><Megaphone size={16} /> Campaigns</div>
+                                                        <div className="space-y-2 text-sm">
+                                                            <div className="flex justify-between"><span className="text-gray-400">Active Campaigns</span><span className="font-black">{dailyReport.campaigns.active}</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-400">Referrals Today</span><span className="font-black text-blue-600">{dailyReport.campaigns.referrals_today}</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white rounded-3xl p-5 border border-black/5">
+                                                        <div className="font-black mb-3 flex items-center gap-2"><Activity size={16} /> Admin Activity</div>
+                                                        <div className="space-y-2 text-sm">
+                                                            <div className="flex justify-between"><span className="text-gray-400">Actions Today</span><span className="font-black">{dailyReport.admin_activity.actions_today}</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-400">New Tickets</span><span className="font-black">{dailyReport.support.new_today}</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-400">Resolved</span><span className="font-black text-emerald-600">{dailyReport.support.resolved_today}</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ── PERFORMANCE ── */}
+                                {adminSubTab === "performance" && (
+                                    <div className="space-y-6">
+                                        <SectionHeader title="Admin Performance" sub="Monthly productivity metrics — who is actually working" />
+                                        <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                            <div className="grid grid-cols-6 p-4 text-[10px] font-black uppercase text-gray-400 border-b border-black/5">
+                                                <span>Admin</span>
+                                                <span className="text-center">Role</span>
+                                                <span className="text-center">Tasks ✅</span>
+                                                <span className="text-center">Overdue 🔴</span>
+                                                <span className="text-center">Tickets</span>
+                                                <span className="text-right">On-Time %</span>
+                                            </div>
+                                            {(performanceMetrics as any[]).map((m: any) => (
+                                                <div key={m.admin_id} className="grid grid-cols-6 p-4 items-center border-b border-black/3 hover:bg-zinc-50 transition-colors">
+                                                    <div>
+                                                        <div className="font-black text-sm">@{m.work_username}</div>
+                                                        <div className="text-[10px] text-gray-400">{m.full_name}</div>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${m.admin_role === "super" ? "bg-purple-100 text-purple-700" : m.admin_role === "finance" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>{m.admin_role}</span>
+                                                    </div>
+                                                    <div className="text-center font-black text-emerald-600">{m.tasks_completed_this_month}</div>
+                                                    <div className={`text-center font-black ${m.tasks_overdue > 0 ? "text-red-500" : "text-gray-400"}`}>{m.tasks_overdue}</div>
+                                                    <div className="text-center font-black text-blue-600">{m.tickets_resolved_this_month}</div>
+                                                    <div className="text-right">
+                                                        <span className={`font-black ${m.on_time_completion_rate >= 80 ? "text-emerald-600" : m.on_time_completion_rate >= 50 ? "text-amber-500" : "text-red-500"}`}>{m.on_time_completion_rate}%</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── AUDIT ── */}
+                                {adminSubTab === "audit" && (
+                                    <div className="space-y-6">
+                                        <SectionHeader title="Activity Audit Log" sub="Every action taken by every admin, in real time" />
+                                        <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                            <div className="divide-y divide-black/3 max-h-[60vh] overflow-y-auto">
+                                                {(adminActivityLogs as any[]).length === 0 ? (
+                                                    <div className="p-12 text-center text-gray-400">
+                                                        <Eye size={32} className="mx-auto mb-3 opacity-20" />
+                                                        <p className="font-bold">No logs yet</p>
+                                                    </div>
+                                                ) : (adminActivityLogs as any[]).map((log: any) => (
+                                                    <div key={log._id} className="p-4 flex items-start gap-3">
+                                                        <div className="w-8 h-8 bg-zinc-100 rounded-xl flex-shrink-0 flex items-center justify-center text-xs font-black text-zinc-600">
+                                                            {log.work_username?.[0]?.toUpperCase() ?? "?"}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="font-black text-sm">@{log.work_username}</span>
+                                                                <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full text-[10px] font-bold">{log.admin_role}</span>
+                                                                <span className="text-xs text-gray-400">{log.action.replace(/_/g, " ")}</span>
+                                                                {log.target_name && <span className="text-xs font-bold text-zinc-700 truncate">→ {log.target_name}</span>}
+                                                            </div>
+                                                            {log.details && <p className="text-[10px] text-gray-400 mt-0.5">{log.details}</p>}
+                                                        </div>
+                                                        <div className="text-[10px] text-gray-400 flex-shrink-0">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {new Date(log.created_at).toLocaleDateString()}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 
@@ -1854,6 +2215,145 @@ export default function AdminPanel() {
                                 >
                                     Add to Campus Q Program
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Invite Admin Modal ── */}
+            <AnimatePresence>
+                {showInviteModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 className="text-xl font-black">Invite Admin</h2>
+                                    <p className="text-xs text-gray-400 mt-1">They will receive an invitation link — valid 48 hours</p>
+                                </div>
+                                <button onClick={() => setShowInviteModal(false)} className="w-9 h-9 bg-zinc-100 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"><X size={16} /></button>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black mb-1.5 text-gray-600">Email Address</label>
+                                    <input type="email" placeholder="jane@company.com" value={inviteForm.email} onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))} className="w-full px-4 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-zinc-900/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black mb-1.5 text-gray-600">Work Username</label>
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-zinc-50 border border-black/8 rounded-2xl">
+                                        <span className="text-gray-400 font-bold">@</span>
+                                        <input type="text" placeholder="support_jane" value={inviteForm.work_username} onChange={e => setInviteForm(f => ({ ...f, work_username: e.target.value.toLowerCase().replace(/\s/g, "_") }))} className="flex-1 bg-transparent text-sm font-bold outline-none" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-1">Format: role_name e.g. support_jane, ops_mike, finance_david</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black mb-1.5 text-gray-600">Admin Role</label>
+                                    <select value={inviteForm.role} onChange={e => setInviteForm(f => ({ ...f, role: e.target.value }))} className="w-full px-4 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-zinc-900/20">
+                                        <option value="support">Support Admin — Tickets & user issues</option>
+                                        <option value="operations">Operations Admin — Marketplace & subscriptions</option>
+                                        <option value="finance">Finance Admin — Payments & withdrawals</option>
+                                        <option value="campaigns">Campaign Admin — Campaigns & campus</option>
+                                    </select>
+                                </div>
+                                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-3">
+                                    <p className="text-xs text-amber-700 font-bold">⚠️ Invitation link expires in 48 hours. The admin sets their password on first login.</p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (!inviteForm.email || !inviteForm.work_username) return toast.error("Fill all fields");
+                                        try {
+                                            const result = await createInviteMut({ email: inviteForm.email, role: inviteForm.role, work_username: inviteForm.work_username, invited_by: currentUser!._id });
+                                            navigator.clipboard.writeText(result.invite_link);
+                                            toast.success("Invitation created! Link copied 🔗");
+                                            setShowInviteModal(false);
+                                            setInviteForm({ email: "", role: "support", work_username: "" });
+                                        } catch (e: any) { toast.error(e.message); }
+                                    }}
+                                    className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black hover:scale-[1.01] transition-transform"
+                                >Send Invitation</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Create Task Modal ── */}
+            <AnimatePresence>
+                {showTaskModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 className="text-xl font-black">Assign Task</h2>
+                                    <p className="text-xs text-gray-400 mt-1">The admin will be notified immediately</p>
+                                </div>
+                                <button onClick={() => setShowTaskModal(false)} className="w-9 h-9 bg-zinc-100 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"><X size={16} /></button>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black mb-1.5 text-gray-600">Task Title *</label>
+                                    <input type="text" placeholder="Review suspicious referrals" value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} className="w-full px-4 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-zinc-900/20" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black mb-1.5 text-gray-600">Description</label>
+                                    <textarea placeholder="What needs to be done, and how..." value={taskForm.description} onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full px-4 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-zinc-900/20 resize-none" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-black mb-1.5 text-gray-600">Assign To *</label>
+                                        <select value={taskForm.assigned_to} onChange={e => setTaskForm(f => ({ ...f, assigned_to: e.target.value }))} className="w-full px-3 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-bold outline-none">
+                                            <option value="">Select admin...</option>
+                                            {(workforceAdmins as any[]).filter((a: any) => a._id !== currentUser?._id).map((a: any) => (
+                                                <option key={a._id} value={a._id}>@{a.work_username ?? a.full_name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black mb-1.5 text-gray-600">Priority</label>
+                                        <select value={taskForm.priority} onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value }))} className="w-full px-3 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-bold outline-none">
+                                            <option value="low">🟢 Low</option>
+                                            <option value="medium">🟡 Medium</option>
+                                            <option value="high">🟠 High</option>
+                                            <option value="urgent">🔴 Urgent</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-black mb-1.5 text-gray-600">Deadline *</label>
+                                        <input type="date" value={taskForm.deadline} min={new Date().toISOString().split("T")[0]} onChange={e => setTaskForm(f => ({ ...f, deadline: e.target.value }))} className="w-full px-3 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-bold outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black mb-1.5 text-gray-600">Category</label>
+                                        <select value={taskForm.category} onChange={e => setTaskForm(f => ({ ...f, category: e.target.value }))} className="w-full px-3 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-bold outline-none">
+                                            <option value="general">General</option>
+                                            <option value="support">Support</option>
+                                            <option value="operations">Operations</option>
+                                            <option value="finance">Finance</option>
+                                            <option value="campaigns">Campaigns</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (!taskForm.title || !taskForm.assigned_to || !taskForm.deadline) return toast.error("Fill title, assignee, and deadline");
+                                        try {
+                                            await createTaskMut({
+                                                title: taskForm.title,
+                                                description: taskForm.description || undefined,
+                                                assigned_to: taskForm.assigned_to as Id<"users">,
+                                                assigned_by: currentUser!._id,
+                                                deadline: new Date(taskForm.deadline).getTime(),
+                                                priority: taskForm.priority,
+                                                category: taskForm.category,
+                                            });
+                                            toast.success("Task assigned! Admin notified 📋");
+                                            setShowTaskModal(false);
+                                            setTaskForm({ title: "", description: "", assigned_to: "", deadline: "", priority: "medium", category: "general" });
+                                        } catch (e: any) { toast.error(e.message); }
+                                    }}
+                                    className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black hover:scale-[1.01] transition-transform"
+                                >Assign Task</button>
                             </div>
                         </motion.div>
                     </motion.div>

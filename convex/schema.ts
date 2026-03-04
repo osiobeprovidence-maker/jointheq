@@ -17,7 +17,10 @@ export default defineSchema({
         is_banned: v.optional(v.boolean()),
         is_fraud_flagged: v.optional(v.boolean()),       // Flagged for suspicious activity
         fraud_review_reason: v.optional(v.string()),     // Why they were flagged
-        admin_role: v.optional(v.string()),
+        admin_role: v.optional(v.string()),              // "super" | "support" | "operations" | "finance" | "campaigns"
+        work_username: v.optional(v.string()),             // Admin work handle e.g. support_jane
+        is_admin_suspended: v.optional(v.boolean()),       // Admin access suspended (not user account)
+        admin_suspended_at: v.optional(v.number()),
         score_history: v.optional(v.array(v.object({
             amount: v.number(), type: v.string(), description: v.string(), created_at: v.number(),
         }))),
@@ -306,5 +309,58 @@ export default defineSchema({
     }).index("by_territory", ["territory_id"])
         .index("by_status", ["status"])
         .index("by_date", ["event_date"]),
-});
+    // ── Admin Workforce System ────────────────────────────────────────────────
+    admin_invitations: defineTable({
+        email: v.string(),
+        role: v.string(),               // "support" | "operations" | "finance" | "campaigns"
+        work_username: v.string(),       // e.g. support_jane
+        invited_by: v.id("users"),
+        token: v.string(),               // Unique invite token
+        status: v.string(),              // "pending" | "accepted" | "expired"
+        expires_at: v.number(),
+        created_at: v.number(),
+        accepted_at: v.optional(v.number()),
+        accepted_by: v.optional(v.id("users")),
+    }).index("by_token", ["token"])
+        .index("by_email", ["email"])
+        .index("by_status", ["status"]),
 
+    admin_tasks: defineTable({
+        title: v.string(),
+        description: v.optional(v.string()),
+        assigned_to: v.id("users"),      // Admin assigned to
+        assigned_by: v.id("users"),      // Super admin who created it
+        deadline: v.number(),
+        priority: v.string(),            // "low" | "medium" | "high" | "urgent"
+        status: v.string(),              // "pending" | "in_progress" | "completed" | "overdue"
+        category: v.optional(v.string()), // "support" | "operations" | "finance" | "campaigns" | "general"
+        notes: v.optional(v.string()),   // Admin progress notes
+        completed_at: v.optional(v.number()),
+        created_at: v.number(),
+    }).index("by_assignee", ["assigned_to"])
+        .index("by_assigner", ["assigned_by"])
+        .index("by_status", ["status"]),
+
+    admin_logs: defineTable({
+        admin_id: v.id("users"),
+        action: v.string(),              // e.g. "approved_withdrawal" | "banned_user" | "created_campaign"
+        target_type: v.optional(v.string()), // "user" | "campaign" | "listing" | "withdrawal" | "ticket"
+        target_id: v.optional(v.string()), // ID of the affected record
+        target_name: v.optional(v.string()), // Human-readable description
+        details: v.optional(v.string()), // Extra context
+        created_at: v.number(),
+    }).index("by_admin", ["admin_id"])
+        .index("by_action", ["action"])
+        .index("by_created", ["created_at"]),
+
+    admin_notifications: defineTable({
+        admin_id: v.id("users"),
+        title: v.string(),
+        message: v.string(),
+        type: v.string(),                // "task_assigned" | "task_overdue" | "task_due_soon" | "general"
+        is_read: v.boolean(),
+        related_task_id: v.optional(v.id("admin_tasks")),
+        created_at: v.number(),
+    }).index("by_admin", ["admin_id"])
+        .index("by_read", ["is_read"]),
+});
