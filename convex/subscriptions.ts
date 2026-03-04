@@ -62,6 +62,7 @@ export const getSlotsByUserId = query({
                     slot_name: slotType?.name,
                     sub_name: sub?.name,
                     price: slotType?.price,
+                    access_type: slotType?.access_type,
                 };
             })
         );
@@ -174,6 +175,48 @@ export const joinSlot = mutation({
                 });
             }
         }
+
+        // Auto-message logic based on access_type
+        let adminUser = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", "riderezzy@gmail.com"))
+            .unique();
+
+        if (!adminUser) {
+            const anyAdmin = await ctx.db.query("users").filter((q) => q.eq(q.field("is_admin"), true)).first();
+            adminUser = anyAdmin || user; // Fallback entirely, shouldn't normally happen
+        }
+
+        const sub = await ctx.db.get(slotType.subscription_id);
+        const subName = sub?.name || "Premium";
+
+        let welcomeMessage = `Welcome to your ${subName} slot!\n\n`;
+
+        switch (slotType.access_type) {
+            case "code_access":
+                welcomeMessage += `To get your access code:\n1. Reply to this chat to request your code\n2. Enjoy 🍿`;
+                break;
+            case "invite_link":
+                welcomeMessage += `To join the Family Plan:\n1. We will send your invite link shortly.\n2. In the meantime, prepare the required address provided in your dashboard.\n3. Reply if you need help!`;
+                break;
+            case "email_invite":
+                welcomeMessage += `To get your email invite:\n1. Reply to this chat with your Google email address.\n2. We will send the family invite shortly.`;
+                break;
+            case "login_with_code":
+                welcomeMessage += `To access your account:\n1. Login using the email shown on your dashboard.\n2. Request the verification code.\n3. Reply to this chat immediately to receive the code!`;
+                break;
+            default:
+                welcomeMessage += `To begin using your subscription:\n1. Please wait for our team to activate your account.\n2. Reply to this chat if you have any questions!`;
+                break;
+        }
+
+        await ctx.db.insert("messages", {
+            sender_id: adminUser._id,
+            receiver_id: user._id,
+            content: welcomeMessage,
+            is_from_admin: true,
+            created_at: Date.now(),
+        });
 
         return { success: true };
     },

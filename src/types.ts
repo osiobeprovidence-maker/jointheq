@@ -78,6 +78,7 @@ export interface SlotType {
   capacity: number;
   features: string[];
   current_members?: number;
+  access_type?: string;
 }
 
 export interface Subscription {
@@ -101,6 +102,7 @@ export interface UserSlot {
   sub_name: string;
   price: number;
   allocation?: string;
+  access_type?: string;
 }
 export interface LunarMemory {
   _id: string;

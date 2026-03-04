@@ -106,6 +106,7 @@ export default defineSchema({
         min_q_score: v.number(),
         capacity: v.optional(v.number()), // Max members for this slot type in a group
         features: v.optional(v.array(v.string())), // Detailed feature list
+        access_type: v.optional(v.string()), // "code_access" | "invite_link" | "email_invite" | "login_with_code"
     }).index("by_subscription", ["subscription_id"]),
 
     groups: defineTable({

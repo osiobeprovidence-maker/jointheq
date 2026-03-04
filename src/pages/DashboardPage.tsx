@@ -337,7 +337,12 @@ export default function DashboardPage() {
                             {activeSlots.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {activeSlots.map((slot) => (
-                                        <ActiveSlotCard key={slot._id} slot={slot} onUpdateAllocation={(val) => updateAllocation(slot._id, val)} />
+                                        <ActiveSlotCard
+                                            key={slot._id}
+                                            slot={slot}
+                                            onUpdateAllocation={(val) => updateAllocation(slot._id, val)}
+                                            onSupportClick={() => setActiveTab('support')}
+                                        />
                                     ))}
                                 </div>
                             ) : (
@@ -1123,32 +1128,143 @@ function StatCard({ title, value, icon, color }: { title: string, value: string,
     );
 }
 
-function ActiveSlotCard({ slot, onUpdateAllocation }: { slot: UserSlot, onUpdateAllocation: (val: string) => void }) {
+function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick }: { slot: UserSlot, onUpdateAllocation: (val: string) => void, onSupportClick: () => void }) {
     const daysLeft = Math.ceil((new Date(slot.renewal_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+    // Formatting date
+    const d = new Date(slot.renewal_date);
+    const formattedRenewal = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
     const [isEditing, setIsEditing] = useState(false);
     const [allocation, setAllocation] = useState(slot.allocation || '');
 
-    return (
-        <motion.div whileHover={{ y: -5 }} className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 rounded-3xl ">
-            <div className="flex items-center justify-between mb-6">
-                <div className="w-12 h-12 bg-[#f4f5f8] rounded-[2rem] flex items-center justify-center font-bold">{slot.sub_name[0]}</div>
-                <div className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-wider">Active</div>
-            </div>
-            <h3 className="font-bold text-lg mb-1">{slot.sub_name}</h3>
-            <p className="text-sm text-gray-500 mb-4">{slot.slot_name}</p>
-            <div className="mb-6">
-                <div className="text-[10px] font-bold uppercase opacity-30 mb-1">Your Allocation</div>
-                {isEditing ? (
-                    <div className="flex gap-2">
-                        <input type="text" value={allocation} onChange={(e) => setAllocation(e.target.value)} className="flex-1 p-2 bg-[#f4f5f8] rounded-lg text-xs" />
-                        <button onClick={() => { onUpdateAllocation(allocation); setIsEditing(false); }} className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-3 py-1 rounded-lg text-xs">Save</button>
+    const renderAccessInstructions = () => {
+        switch (slot.access_type) {
+            case 'code_access':
+                return (
+                    <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
+                        <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex gap-2 items-start"><span className="text-black/30 text-xs mt-0.5">•</span> Click "Open Chat Support"</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 text-xs mt-0.5">•</span> Admin will send your {slot.sub_name} access code</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 text-xs mt-0.5">•</span> Enter the code when prompted on {slot.sub_name}</li>
+                        </ul>
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Rules</div>
+                        <ul className="text-sm space-y-2 text-black/60">
+                            <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Use only your assigned profile</li>
+                            <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not change the account settings</li>
+                            <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not add new profiles</li>
+                        </ul>
                     </div>
-                ) : (
-                    <div className="flex items-center justify-between p-2 bg-[#f4f5f8] rounded-lg">
-                        <span className="text-xs font-medium">{slot.allocation || 'Not set'}</span>
-                        <button onClick={() => setIsEditing(true)} className="text-[10px] font-bold text-blue-600">Edit</button>
+                );
+            case 'invite_link':
+                return (
+                    <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
+                        <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">1.</span> Open Chat Support for your invite link</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">2.</span> Accept the {slot.sub_name} family invitation</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">3.</span> Use your provided home address</li>
+                        </ul>
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Rules</div>
+                        <ul className="text-sm space-y-2 text-black/60">
+                            <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not change family address</li>
+                            <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not leave the plan without notice</li>
+                        </ul>
+                    </div>
+                );
+            case 'email_invite':
+                return (
+                    <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
+                        <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">1.</span> Open Chat Support</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">2.</span> Send your Google email address</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">3.</span> Admin will send a family invite</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">4.</span> Accept the invitation</li>
+                        </ul>
+                    </div>
+                );
+            case 'login_with_code':
+                return (
+                    <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Login Email</div>
+                        <div className="p-2 bg-white rounded-xl text-center font-mono text-sm mb-4 border border-black/5">{slot.sub_name.toLowerCase().replace(/\s/g, '')}@jointheq.com</div>
+
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
+                        <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">1.</span> Login using the email above</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">2.</span> Request verification code</li>
+                            <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">3.</span> Open Chat Support to receive the code</li>
+                        </ul>
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Rules</div>
+                        <ul className="text-sm space-y-2 text-black/60">
+                            <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not change password</li>
+                            <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not remove profiles</li>
+                        </ul>
+                    </div>
+                );
+            default:
+                return (
+                    <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Standard Access</div>
+                        <p className="text-sm text-gray-500">
+                            Open Chat Support to activate your slot or if you need any assistance getting started.
+                        </p>
+                    </div>
+                );
+        }
+    };
+
+    const getAccessMethodName = () => {
+        switch (slot.access_type) {
+            case 'code_access': return "Code Access (via Support)";
+            case 'invite_link': return "Family Invite Link";
+            case 'email_invite': return "Email Invitation";
+            case 'login_with_code': return "Account Login + Verif. Code";
+            default: return "Pending";
+        }
+    }
+
+    return (
+        <motion.div whileHover={{ y: -5 }} className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 rounded-[2rem] flex flex-col h-full">
+            <div className="flex items-center justify-between mb-6">
+                <div className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider">{slot.status}</div>
+                <div className="text-xs font-bold text-gray-400">Renewal: {formattedRenewal}</div>
+            </div>
+
+            <h3 className="font-bold text-xl leading-tight mb-1">{slot.sub_name} Slot</h3>
+            <p className="text-sm text-gray-400 mb-6 pb-6 border-b border-black/5">Plan: {slot.slot_name}</p>
+
+            <div className="mb-4">
+                <div className="text-[10px] font-bold uppercase opacity-30 mb-1">Access Method</div>
+                <div className="text-sm font-semibold text-blue-600">{getAccessMethodName()}</div>
+            </div>
+
+            <div className="flex-1">
+                {renderAccessInstructions()}
+            </div>
+
+            <div className="mt-auto space-y-4">
+                {slot.access_type === 'invite_link' && (
+                    <div className="mb-4">
+                        <div className="text-[10px] font-bold uppercase opacity-30 mb-1">Your Allocation/Address</div>
+                        {isEditing ? (
+                            <div className="flex gap-2">
+                                <input type="text" value={allocation} onChange={(e) => setAllocation(e.target.value)} placeholder="Enter home address" className="flex-1 p-3 bg-[#f4f5f8] rounded-2xl text-xs outline-none" />
+                                <button onClick={() => { onUpdateAllocation(allocation); setIsEditing(false); }} className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-4 py-2 rounded-2xl text-xs font-bold">Save</button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between p-3 bg-[#f4f5f8] rounded-2xl">
+                                <span className="text-xs font-medium">{slot.allocation || 'Address not set'}</span>
+                                <button onClick={() => setIsEditing(true)} className="text-[10px] font-bold text-blue-600 pr-1">Edit</button>
+                            </div>
+                        )}
                     </div>
                 )}
+                <button onClick={onSupportClick} className="w-full py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    <MessageCircle size={16} /> Open Chat Support
+                </button>
             </div>
         </motion.div>
     );
