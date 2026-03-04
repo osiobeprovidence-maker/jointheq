@@ -99,6 +99,16 @@ export default function AdminPanel() {
     const [campusUserId, setCampusUserId] = useState("");
     const [campusName, setCampusName] = useState("");
 
+    // Listing state
+    const [showListingModal, setShowListingModal] = useState(false);
+    const [listingData, setListingData] = useState({
+        subscription_id: "",
+        account_email: "",
+        plan_owner: "",
+        admin_renewal_date: "",
+        slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
+    });
+
     // Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const stats = useQuery(api.admin.getPlatformStats);
@@ -109,6 +119,7 @@ export default function AdminPanel() {
     const recentTxns = useQuery(api.admin.getRecentTransactions) || [];
     const campaigns = useQuery(api.campaigns.list) || [];
     const adminsList = useQuery(api.users.getAdmins) || [];
+    const allSubscriptions = useQuery(api.subscriptions.getMarketplace) || [];
 
     // Mutations
     const suspendUserMut = useMutation(api.admin.suspendUser);
@@ -117,6 +128,28 @@ export default function AdminPanel() {
     const setAdminRoleMut = useMutation(api.admin.setAdminRole);
     const updateTicketMut = useMutation(api.admin.updateTicketStatus);
     const addCampusRepMut = useMutation(api.admin.addCampusRep);
+    const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
+
+    const handleCreateListing = async () => {
+        try {
+            await adminCreateListingMutation({
+                subscription_id: listingData.subscription_id as Id<"subscriptions">,
+                account_email: listingData.account_email,
+                plan_owner: listingData.plan_owner,
+                admin_renewal_date: listingData.admin_renewal_date,
+                slot_types: listingData.slots
+            });
+            toast.success("Listing published to marketplace!", { icon: '🚀' });
+            setShowListingModal(false);
+            setListingData({
+                subscription_id: "", account_email: "", plan_owner: "",
+                admin_renewal_date: "",
+                slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
+            });
+        } catch (error: any) {
+            toast.error(error.message || "Failed to create listing");
+        }
+    };
 
     if (!currentUser?.is_admin) {
         return (
@@ -469,7 +502,18 @@ export default function AdminPanel() {
                         {/* ═══ MARKETPLACE ═══ */}
                         {activeTab === "marketplace" && (
                             <motion.div key="marketplace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Marketplace Management" sub="All subscription platforms and their performance" />
+                                <SectionHeader
+                                    title="Marketplace Management"
+                                    sub="All subscription platforms and their performance"
+                                    action={
+                                        <button
+                                            onClick={() => setShowListingModal(true)}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white rounded-2xl font-bold text-sm hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
+                                        >
+                                            <Plus size={16} /> Create New Listing
+                                        </button>
+                                    }
+                                />
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                     {subBreakdown.map((sub: any) => {
                                         const fillPct = sub.totalSlots > 0 ? Math.round(sub.filledSlots / sub.totalSlots * 100) : 0;
@@ -803,7 +847,193 @@ export default function AdminPanel() {
                 </div>
             </main>
 
+            {/* ── Listing Modal ── */}
+            <AnimatePresence>
+                {showListingModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+                        <motion.div
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                            className="bg-[#f5f5f7] w-full sm:max-w-3xl sm:rounded-[3rem] rounded-t-[3rem] max-h-[90vh] overflow-y-auto shadow-2xl"
+                        >
+                            {/* Modal Header */}
+                            <div className="sticky top-0 z-10 bg-[#f5f5f7] px-8 pt-8 pb-4 border-b border-black/5">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-2xl font-black">Create New Listing</h2>
+                                        <p className="text-sm text-gray-400 mt-1">Add a subscription account to the marketplace</p>
+                                    </div>
+                                    <button onClick={() => setShowListingModal(false)} className="p-3 bg-white rounded-full shadow-sm hover:scale-110 transition-transform">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-8 space-y-6">
+                                {/* Account Info */}
+                                <div className="bg-white rounded-[2.5rem] p-8 space-y-6">
+                                    <h3 className="font-black text-lg flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" /> Account Details
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Subscription Platform</label>
+                                            <select
+                                                value={listingData.subscription_id}
+                                                onChange={e => setListingData({ ...listingData, subscription_id: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            >
+                                                <option value="">Select platform</option>
+                                                {allSubscriptions.map((s: any) => (
+                                                    <option key={s._id} value={s._id}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Renewal Date</label>
+                                            <input
+                                                type="date"
+                                                value={listingData.admin_renewal_date}
+                                                onChange={e => setListingData({ ...listingData, admin_renewal_date: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Email</label>
+                                            <input
+                                                type="email"
+                                                placeholder="e.g. netflix@example.com"
+                                                value={listingData.account_email}
+                                                onChange={e => setListingData({ ...listingData, account_email: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Plan Owner</label>
+                                            <input
+                                                placeholder="e.g. Providence"
+                                                value={listingData.plan_owner}
+                                                onChange={e => setListingData({ ...listingData, plan_owner: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Slot Varieties */}
+                                <div className="bg-white rounded-[2.5rem] p-8">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="font-black text-lg flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" /> Slot Varieties
+                                        </h3>
+                                        <button
+                                            onClick={() => setListingData({
+                                                ...listingData,
+                                                slots: [...listingData.slots, { name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
+                                            })}
+                                            className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-full border border-blue-100 transition-colors"
+                                        >
+                                            + Add Variety
+                                        </button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {listingData.slots.map((slot, index) => (
+                                            <div key={index} className="bg-[#f8f9fa] rounded-2xl p-5 relative group">
+                                                {listingData.slots.length > 1 && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const newSlots = [...listingData.slots];
+                                                            newSlots.splice(index, 1);
+                                                            setListingData({ ...listingData, slots: newSlots });
+                                                        }}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                )}
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Slot Name</label>
+                                                        <input
+                                                            placeholder="e.g. Profile 1"
+                                                            value={slot.name}
+                                                            onChange={e => {
+                                                                const ns = [...listingData.slots];
+                                                                ns[index] = { ...ns[index], name: e.target.value };
+                                                                setListingData({ ...listingData, slots: ns });
+                                                            }}
+                                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price (₦)</label>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="2500"
+                                                            value={slot.price}
+                                                            onChange={e => {
+                                                                const ns = [...listingData.slots];
+                                                                ns[index] = { ...ns[index], price: Number(e.target.value) };
+                                                                setListingData({ ...listingData, slots: ns });
+                                                            }}
+                                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Capacity</label>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="5"
+                                                            value={slot.capacity}
+                                                            onChange={e => {
+                                                                const ns = [...listingData.slots];
+                                                                ns[index] = { ...ns[index], capacity: Number(e.target.value) };
+                                                                setListingData({ ...listingData, slots: ns });
+                                                            }}
+                                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Access Method</label>
+                                                        <select
+                                                            value={slot.access_type}
+                                                            onChange={e => {
+                                                                const ns = [...listingData.slots];
+                                                                ns[index] = { ...ns[index], access_type: e.target.value };
+                                                                setListingData({ ...listingData, slots: ns });
+                                                            }}
+                                                            className="w-full p-3 bg-white rounded-xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
+                                                        >
+                                                            <option value="code_access">Code Access</option>
+                                                            <option value="invite_link">Invite Link</option>
+                                                            <option value="email_invite">Email Invite</option>
+                                                            <option value="login_with_code">Login + Code</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Submit */}
+                                <button
+                                    onClick={handleCreateListing}
+                                    disabled={!listingData.subscription_id || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
+                                    className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-black/10"
+                                >
+                                    🚀 Confirm & Publish to Marketplace
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* ── Campus Rep Modal ── */}
+
             <AnimatePresence>
                 {campusModalOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
