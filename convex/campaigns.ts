@@ -75,3 +75,37 @@ export const participate = mutation({
         });
     },
 });
+
+export const seedDummy = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const existing = await ctx.db.query("campaigns").first();
+        if (existing) return;
+
+        await ctx.db.insert("campaigns", {
+            name: "Easter Reward Jar",
+            type: "jar",
+            description: "Help fill the jar by inviting friends to join subscriptions. Every payment adds to the jar!",
+            reward_type: "boots",
+            reward_amount: 500,
+            start_date: Date.now(),
+            end_date: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14 days
+            target_goal: 1000,
+            current_progress: 150,
+            status: "active",
+        });
+
+        await ctx.db.insert("campaigns", {
+            name: "Viral Referral Storm",
+            type: "referral_storm",
+            description: "The top 3 referrers this week get massive BOOTS boosters!",
+            reward_type: "boots",
+            reward_amount: 1000,
+            start_date: Date.now(),
+            end_date: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+            target_goal: 50,
+            current_progress: 12,
+            status: "active",
+        });
+    },
+});

@@ -93,6 +93,7 @@ export default function DashboardPage() {
     const participateInCampaignMutation = useMutation(api.campaigns.participate);
     const createCampaignMutation = useMutation(api.campaigns.create);
     const updateCampaignStatusMutation = useMutation(api.campaigns.updateStatus);
+    const seedCampaignsMutation = useMutation(api.campaigns.seedDummy);
 
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
@@ -471,7 +472,7 @@ export default function DashboardPage() {
                                         currentUser.score_history.slice().reverse().map((item, i) => (
                                             <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                                                 <div>
-                                                    <div className="font-bold text-sm capitalize">{item.type.replace('_', ' ')}</div>
+                                                    <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
                                                     <div className="text-xs text-black/40">{item.description}</div>
                                                 </div>
                                                 <div className={`font-bold ${item.amount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -495,7 +496,7 @@ export default function DashboardPage() {
                                         currentUser.boots_history.slice().reverse().map((item, i) => (
                                             <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                                                 <div>
-                                                    <div className="font-bold text-sm capitalize">{item.type.replace('_', ' ')}</div>
+                                                    <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
                                                     <div className="text-xs text-black/40">{item.description}</div>
                                                 </div>
                                                 <div className={`font-bold ${item.amount >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
@@ -677,6 +678,15 @@ export default function DashboardPage() {
                                         <button onClick={() => seedMarketplaceMutation()} className="w-full py-4 bg-blue-50 text-blue-600 rounded-2xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
                                             <ShoppingBag size={20} /> Seed Marketplace Data
                                         </button>
+                                        <button
+                                            onClick={async () => {
+                                                await seedCampaignsMutation({});
+                                                alert("Dummy campaigns seeded!");
+                                            }}
+                                            className="w-full py-4 bg-purple-50 text-purple-600 rounded-2xl font-bold hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Sparkles size={20} /> Seed Dummy Campaigns
+                                        </button>
                                         <button onClick={() => auth.logout()} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
                                             <LogOut size={20} /> Log Out
                                         </button>
@@ -796,7 +806,7 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
                     <div>
                         <h3 className="font-bold text-xl">{campaign.name}</h3>
                         <div className="text-xs font-bold text-black/30 bg-gray-100 px-2 py-0.5 rounded-md inline-block mt-1 uppercase tracking-tight">
-                            {campaign.type.replace('_', ' ')}
+                            {campaign.type?.replace('_', ' ') || 'event'}
                         </div>
                     </div>
                 </div>
