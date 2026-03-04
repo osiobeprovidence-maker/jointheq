@@ -48,7 +48,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     ];
 
     return (
-        <div className="min-h-screen bg-[#F5F5F4] text-[#141414] font-sans">
+        <div className="min-h-screen bg-[#FAFAF9] text-[#1A1A1A] font-sans">
             {/* Sidebar / Navigation */}
             <nav className="fixed top-0 left-0 h-full w-64 bg-white border-r border-black/5 hidden lg:flex flex-col p-6 z-50">
                 <div className="flex items-center gap-3 mb-10">

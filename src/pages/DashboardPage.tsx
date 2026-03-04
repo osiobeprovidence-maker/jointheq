@@ -176,7 +176,7 @@ export default function DashboardPage() {
 
     if (currentUser === undefined) {
         return (
-            <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center">
+            <div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center">
                 <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -240,7 +240,7 @@ export default function DashboardPage() {
                                 </div>
                             ) : (
                                 <div className="bg-white border border-dashed border-black/20 rounded-3xl p-12 text-center">
-                                    <div className="w-16 h-16 bg-[#F5F5F4] rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <div className="w-16 h-16 bg-[#FAFAF9] rounded-full flex items-center justify-center mx-auto mb-4">
                                         <ShoppingBag size={24} className="opacity-20" />
                                     </div>
                                     <h3 className="text-lg font-bold mb-2">No active subscriptions</h3>
@@ -351,7 +351,7 @@ function ActiveSlotCard({ slot, onUpdateAllocation }: { slot: UserSlot, onUpdate
     return (
         <motion.div whileHover={{ y: -5 }} className="bg-white border border-black/5 p-6 rounded-3xl shadow-sm">
             <div className="flex items-center justify-between mb-6">
-                <div className="w-12 h-12 bg-[#F5F5F4] rounded-2xl flex items-center justify-center font-bold">{slot.sub_name[0]}</div>
+                <div className="w-12 h-12 bg-[#FAFAF9] rounded-2xl flex items-center justify-center font-bold">{slot.sub_name[0]}</div>
                 <div className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-wider">Active</div>
             </div>
             <h3 className="font-bold text-lg mb-1">{slot.sub_name}</h3>
@@ -360,11 +360,11 @@ function ActiveSlotCard({ slot, onUpdateAllocation }: { slot: UserSlot, onUpdate
                 <div className="text-[10px] font-bold uppercase opacity-30 mb-1">Your Allocation</div>
                 {isEditing ? (
                     <div className="flex gap-2">
-                        <input type="text" value={allocation} onChange={(e) => setAllocation(e.target.value)} className="flex-1 p-2 bg-[#F5F5F4] rounded-lg text-xs" />
+                        <input type="text" value={allocation} onChange={(e) => setAllocation(e.target.value)} className="flex-1 p-2 bg-[#FAFAF9] rounded-lg text-xs" />
                         <button onClick={() => { onUpdateAllocation(allocation); setIsEditing(false); }} className="bg-black text-white px-3 py-1 rounded-lg text-xs">Save</button>
                     </div>
                 ) : (
-                    <div className="flex items-center justify-between p-2 bg-[#F5F5F4] rounded-lg">
+                    <div className="flex items-center justify-between p-2 bg-[#FAFAF9] rounded-lg">
                         <span className="text-xs font-medium">{slot.allocation || 'Not set'}</span>
                         <button onClick={() => setIsEditing(true)} className="text-[10px] font-bold text-blue-600">Edit</button>
                     </div>

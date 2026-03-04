@@ -130,7 +130,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F4] text-[#141414] font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF9] text-[#1A1A1A] font-sans overflow-x-hidden">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 w-full bg-white/80 backdrop-blur-md border-b border-black/5 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
@@ -167,22 +167,6 @@ export default function LandingPage() {
               className="max-w-7xl mx-auto px-6"
             >
               <div className="grid lg:grid-cols-2 gap-16 items-center min-h-[calc(100vh-12rem)] relative">
-                {/* Floating 3D Objects */}
-                <motion.div
-                  animate={{ y: [0, -20, 0], rotate: [0, 5, -5, 0] }}
-                  transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                  className="hidden lg:flex absolute -left-12 top-10 w-24 h-24 rounded-[1.5rem] bg-gradient-to-br from-[#FF8A50] to-[#E64A19] shadow-[inset_-4px_-4px_10px_rgba(0,0,0,0.2),inset_4px_4px_10px_rgba(255,255,255,0.4),0_10px_20px_rgba(230,74,25,0.3)] items-center justify-center text-white font-black text-5xl z-0"
-                >
-                  Q
-                </motion.div>
-                <motion.div
-                  animate={{ y: [0, 20, 0], rotate: [0, -10, 10, 0] }}
-                  transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                  className="hidden lg:flex absolute left-1/2 -top-4 w-20 h-20 rounded-[1.2rem] bg-gradient-to-br from-[#FF8A50] to-[#E64A19] shadow-[inset_-4px_-4px_10px_rgba(0,0,0,0.2),inset_4px_4px_10px_rgba(255,255,255,0.4),0_10px_20px_rgba(230,74,25,0.3)] items-center justify-center z-0"
-                >
-                  <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-white border-b-[12px] border-b-transparent ml-2 drop-shadow-md"></div>
-                </motion.div>
-
                 <div className="space-y-8 relative z-10">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -252,45 +236,46 @@ export default function LandingPage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4, duration: 0.7 }}
-                  className="relative"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-100 to-purple-100 rounded-[3rem] transform rotate-3 scale-105 -z-10" />
-                  <div className="bg-white p-8 rounded-[3rem] shadow-2xl shadow-black/5 border border-black/5">
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="font-bold text-xl">Active Slots</div>
-                      <div className="w-10 h-10 bg-black/5 rounded-full flex items-center justify-center">
-                        <Users size={20} />
+                  <div className="relative">
+                    <div className="absolute inset-x-0 -top-20 -bottom-20 bg-gradient-to-b from-[#F26522]/5 to-transparent blur-3xl -z-10" />
+                    <div className="bg-white p-8 rounded-[3rem] shadow-2xl shadow-black/5 border border-black/5 backdrop-blur-sm bg-white/80">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="font-bold text-xl">Active Slots</div>
+                        <div className="w-10 h-10 bg-black/5 rounded-full flex items-center justify-center">
+                          <Users size={20} />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-4">
-                      {[
-                        { name: 'Netflix Premium', price: '₦1,500', color: 'bg-red-500', users: 3, max: 4 },
-                        { name: 'Spotify Duo', price: '₦800', color: 'bg-emerald-500', users: 1, max: 2 },
-                        { name: 'YouTube Premium', price: '₦1,200', color: 'bg-red-600', users: 4, max: 5 }
-                      ].map((slot, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.6 + (i * 0.1) }}
-                          className="p-4 rounded-2xl border border-black/5 hover:border-black/10 transition-colors flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 ${slot.color} rounded-xl flex items-center justify-center text-white font-bold text-lg`}>
-                              {slot.name[0]}
+                      <div className="space-y-4">
+                        {[
+                          { name: 'Netflix Premium', price: '₦1,500', color: 'bg-red-500', users: 3, max: 4 },
+                          { name: 'Spotify Duo', price: '₦800', color: 'bg-emerald-500', users: 1, max: 2 },
+                          { name: 'YouTube Premium', price: '₦1,200', color: 'bg-red-600', users: 4, max: 5 }
+                        ].map((slot, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 + (i * 0.1) }}
+                            className="p-4 rounded-2xl border border-black/5 hover:border-black/10 transition-colors flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={`w-12 h-12 ${slot.color} rounded-xl flex items-center justify-center text-white font-bold text-lg`}>
+                                {slot.name[0]}
+                              </div>
+                              <div>
+                                <div className="font-bold">{slot.name}</div>
+                                <div className="text-sm text-black/50">{slot.users}/{slot.max} Members</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-bold">{slot.name}</div>
-                              <div className="text-sm text-black/50">{slot.users}/{slot.max} Members</div>
+                            <div className="text-right">
+                              <div className="font-bold">{slot.price}</div>
+                              <div className="text-[10px] uppercase tracking-wider opacity-50 font-bold">/ month</div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold">{slot.price}</div>
-                            <div className="text-[10px] uppercase tracking-wider opacity-50 font-bold">/ month</div>
-                          </div>
-                        </motion.div>
-                      ))}
+                          </motion.div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -309,21 +294,6 @@ export default function LandingPage() {
             >
               {/* Hero Section */}
               <div className="pt-12 md:pt-24 grid md:grid-cols-2 gap-12 items-center relative">
-                {/* Floating 3D Objects */}
-                <motion.div
-                  animate={{ y: [0, -15, 0], rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                  className="hidden lg:flex absolute right-1/2 top-0 w-28 h-28 rounded-[1.8rem] bg-gradient-to-br from-[#FF8A50] to-[#E64A19] shadow-[inset_-4px_-4px_10px_rgba(0,0,0,0.2),inset_4px_4px_10px_rgba(255,255,255,0.4),0_10px_20px_rgba(230,74,25,0.3)] items-center justify-center text-white font-black text-6xl z-0 opacity-80"
-                >
-                  Q
-                </motion.div>
-                <motion.div
-                  animate={{ y: [0, 25, 0], rotate: [0, -15, 15, 0] }}
-                  transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                  className="hidden lg:flex absolute -right-8 bottom-10 w-24 h-24 rounded-[1.5rem] bg-gradient-to-br from-[#FF8A50] to-[#E64A19] shadow-[inset_-4px_-4px_10px_rgba(0,0,0,0.2),inset_4px_4px_10px_rgba(255,255,255,0.4),0_10px_20px_rgba(230,74,25,0.3)] items-center justify-center z-0 opacity-80"
-                >
-                  <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2 drop-shadow-md"></div>
-                </motion.div>
 
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -478,7 +448,7 @@ export default function LandingPage() {
                 className="bg-[#141414] text-white p-10 md:p-20 rounded-[3rem] text-center"
               >
                 <span className="text-sm font-bold tracking-widest uppercase text-white/40 mb-8 block">If You've Ever Said</span>
-                <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-20 italic text-white/90 font-serif">
+                <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-20 italic text-white/90">
                   "Who wants to share this?"
                 </h2>
                 <div className="grid md:grid-cols-2 gap-8 text-left max-w-4xl mx-auto">
