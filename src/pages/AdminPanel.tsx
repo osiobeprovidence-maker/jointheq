@@ -139,7 +139,7 @@ export default function AdminPanel() {
     const recentTxns = useQuery(api.admin.getRecentTransactions) || [];
     const campaigns = useQuery(api.campaigns.getAllAnalytics) || [];
     const adminsList = useQuery(api.users.getAdmins) || [];
-    const allSubscriptions = useQuery(api.subscriptions.getMarketplace) || [];
+    const allSubscriptions = useQuery(api.subscriptions.getAdminMarketplace) || [];
     const campaignAnalytics = useQuery(
         api.campaigns.getAnalytics,
         selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
