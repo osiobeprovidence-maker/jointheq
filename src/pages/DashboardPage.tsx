@@ -251,7 +251,7 @@ export default function DashboardPage() {
 
     if (currentUser === undefined) {
         return (
-            <div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center">
+            <div className="min-h-screen bg-[#f4f5f8] flex items-center justify-center">
                 <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -268,10 +268,10 @@ export default function DashboardPage() {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center justify-between"
+                    className="bg-amber-50 border border-amber-200 rounded-[2rem] p-4 mb-6 flex items-center justify-between"
                 >
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                        <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center">
                             <Mail size={20} />
                         </div>
                         <div>
@@ -296,11 +296,11 @@ export default function DashboardPage() {
                         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight">Welcome back, {currentUser?.full_name || 'User'}</h1>
-                                <p className="text-black/50 mt-1">Here's what's happening with your subscriptions.</p>
+                                <p className="text-gray-500 mt-1">Here's what's happening with your subscriptions.</p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                                <div className="bg-white p-4 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center">
                                         <Wallet size={20} />
                                     </div>
                                     <div>
@@ -308,8 +308,8 @@ export default function DashboardPage() {
                                         <div className="text-xl font-bold">₦{currentUser?.wallet_balance?.toLocaleString() || 0}</div>
                                     </div>
                                 </div>
-                                <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+                                <div className="bg-white p-4 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center">
                                         <Sparkles size={20} />
                                     </div>
                                     <div>
@@ -329,7 +329,7 @@ export default function DashboardPage() {
                         <section>
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold">Your Active Slots</h2>
-                                <button onClick={() => setActiveTab('marketplace')} className="text-sm font-semibold text-black/50 hover:text-black flex items-center gap-1">
+                                <button onClick={() => setActiveTab('marketplace')} className="text-sm font-semibold text-gray-500 hover:text-black flex items-center gap-1">
                                     Browse More <ChevronRight size={16} />
                                 </button>
                             </div>
@@ -342,12 +342,12 @@ export default function DashboardPage() {
                                 </div>
                             ) : (
                                 <div className="bg-white border border-dashed border-black/20 rounded-3xl p-12 text-center">
-                                    <div className="w-16 h-16 bg-[#FAFAF9] rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <div className="w-16 h-16 bg-[#f4f5f8] rounded-full flex items-center justify-center mx-auto mb-4">
                                         <ShoppingBag size={24} className="opacity-20" />
                                     </div>
                                     <h3 className="text-lg font-bold mb-2">No active subscriptions</h3>
-                                    <p className="text-black/50 mb-6 max-w-xs mx-auto">Join a subscription slot to start saving on your favorite premium services.</p>
-                                    <button onClick={() => setActiveTab('marketplace')} className="bg-black text-white px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform">
+                                    <p className="text-gray-500 mb-6 max-w-xs mx-auto">Join a subscription slot to start saving on your favorite premium services.</p>
+                                    <button onClick={() => setActiveTab('marketplace')} className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-6 py-3 rounded-full scale-100 hover:scale-[1.02] font-bold hover:scale-105 transition-transform">
                                         Explore Marketplace
                                     </button>
                                 </div>
@@ -362,14 +362,14 @@ export default function DashboardPage() {
                         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                             <div>
                                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Marketplace</h1>
-                                <p className="text-xs sm:text-sm text-black/50 mt-1">Discover premium subscription slots tailored for you.</p>
+                                <p className="text-xs sm:text-sm text-gray-500 mt-1">Discover premium subscription slots tailored for you.</p>
                             </div>
                         </header>
                         <div className="grid grid-cols-1 gap-10">
                             {subscriptions.map((sub) => (
                                 <section key={sub._id}>
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-12 h-12 bg-white border border-black/5 rounded-2xl flex items-center justify-center shadow-sm overflow-hidden p-2">
+                                        <div className="w-12 h-12 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] flex items-center justify-center  overflow-hidden p-2">
                                             {sub.logo_url ? (
                                                 <img src={sub.logo_url} alt={sub.name} className="w-full h-full object-contain" />
                                             ) : (
@@ -378,7 +378,7 @@ export default function DashboardPage() {
                                         </div>
                                         <div>
                                             <h2 className="text-xl font-bold">{sub.name}</h2>
-                                            <p className="text-sm text-black/50">{sub.description}</p>
+                                            <p className="text-sm text-gray-500">{sub.description}</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -401,12 +401,12 @@ export default function DashboardPage() {
                     <motion.div key="wallet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
                             <h1 className="text-3xl font-bold tracking-tight">Your Wallet</h1>
-                            <p className="text-black/50 mt-1">Manage your funds and premium Boots.</p>
+                            <p className="text-gray-500 mt-1">Manage your funds and premium Boots.</p>
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm text-center">
-                                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  text-center">
+                                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                                     <Wallet size={32} />
                                 </div>
                                 <h3 className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">Available Balance</h3>
@@ -415,33 +415,33 @@ export default function DashboardPage() {
                                 <div className="flex gap-4 max-w-xs mx-auto">
                                     <button
                                         onClick={() => fundWallet(5000)}
-                                        className="flex-1 py-3 bg-black text-white rounded-xl font-bold text-sm hover:scale-105 transition-transform"
+                                        className="flex-1 py-3 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] font-bold text-sm hover:scale-105 transition-transform"
                                     >
                                         Fund ₦5,000
                                     </button>
                                     <button
                                         onClick={() => fundWallet(10000)}
-                                        className="flex-1 py-3 bg-black text-white rounded-xl font-bold text-sm hover:scale-105 transition-transform"
+                                        className="flex-1 py-3 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] font-bold text-sm hover:scale-105 transition-transform"
                                     >
                                         Fund ₦10,000
                                     </button>
                                 </div>
-                                <p className="text-xs text-black/40 mt-6 italic">Paystack integration coming soon.</p>
+                                <p className="text-xs text-gray-400 mt-6 italic">Paystack integration coming soon.</p>
                             </div>
 
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm text-center">
-                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  text-center">
+                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                                     <Sparkles size={32} />
                                 </div>
                                 <h3 className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">Boots Balance</h3>
                                 <div className="text-4xl font-bold mb-8">{currentUser?.boots_balance?.toLocaleString() || 0}</div>
 
-                                <p className="text-sm text-black/50 mb-6 max-w-xs mx-auto">
+                                <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
                                     Earn more Boots by participating in campaigns and referring friends.
                                 </p>
                                 <button
                                     onClick={() => setActiveTab('campaigns')}
-                                    className="px-6 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                                    className="px-6 py-3 bg-blue-50 text-blue-600 rounded-full scale-100 hover:scale-[1.02] font-bold text-sm hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
                                 >
                                     <Zap size={16} /> Earn Boots
                                 </button>
@@ -454,20 +454,20 @@ export default function DashboardPage() {
                     <motion.div key="referrals" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
                             <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>
-                            <p className="text-black/50 mt-1">Invite friends and earn premium Boots.</p>
+                            <p className="text-gray-500 mt-1">Invite friends and earn premium Boots.</p>
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             {/* Referral Code Card */}
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm text-center">
-                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  text-center">
+                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                                     <Sparkles size={32} />
                                 </div>
                                 <h3 className="text-xl font-bold mb-2">Share the Circle</h3>
-                                <p className="text-black/50 mb-8 max-w-xs mx-auto text-sm">
+                                <p className="text-gray-500 mb-8 max-w-xs mx-auto text-sm">
                                     When someone joins a slot via your code, you get <span className="text-black font-bold">5 Boots</span> instantly after their payment.
                                 </p>
-                                <div className="p-4 bg-gray-50 border border-black/5 rounded-2xl flex items-center justify-between group">
+                                <div className="p-4 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] flex items-center justify-between group">
                                     <code className="text-lg font-bold tracking-wider">{currentUser?.referral_code}</code>
                                     <button
                                         onClick={() => {
@@ -482,11 +482,11 @@ export default function DashboardPage() {
                             </div>
 
                             {/* Referrer Info */}
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] ">
                                 <h3 className="text-lg font-bold mb-6">Invited By</h3>
                                 {referrer ? (
-                                    <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
-                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center font-bold text-emerald-600 shadow-sm">
+                                    <div className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-[2rem]">
+                                        <div className="w-12 h-12 bg-white rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center font-bold text-emerald-600 ">
                                             {referrer.full_name[0]}
                                         </div>
                                         <div>
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="p-4 bg-gray-50 border border-dashed border-black/10 rounded-2xl text-center text-sm text-black/40 py-8">
+                                    <div className="p-4 bg-[#fdfdfd] border border-dashed border-black/10 rounded-[2rem] text-center text-sm text-gray-400 py-8">
                                         No one invited you. You're a pioneer!
                                     </div>
                                 )}
@@ -508,14 +508,14 @@ export default function DashboardPage() {
                             {invitedUsers.length > 0 ? (
                                 <div className="space-y-4">
                                     {invitedUsers.map((invited) => (
-                                        <div key={invited._id} className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm flex items-center justify-between">
+                                        <div key={invited._id} className="bg-white p-6 rounded-3xl border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center font-bold opacity-50">
+                                                <div className="w-12 h-12 bg-gray-100 rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center font-bold opacity-50">
                                                     {invited.full_name[0]}
                                                 </div>
                                                 <div>
                                                     <div className="font-bold">{invited.full_name}</div>
-                                                    <div className="text-xs text-black/40">Joined {new Date(invited.created_at).toLocaleDateString()}</div>
+                                                    <div className="text-xs text-gray-400">Joined {new Date(invited.created_at).toLocaleDateString()}</div>
                                                 </div>
                                             </div>
                                             <div>
@@ -530,7 +530,7 @@ export default function DashboardPage() {
                                 </div>
                             ) : (
                                 <div className="bg-white border border-dashed border-black/20 rounded-3xl p-12 text-center">
-                                    <p className="text-black/40">You haven't invited anyone yet.</p>
+                                    <p className="text-gray-400">You haven't invited anyone yet.</p>
                                 </div>
                             )}
                         </section>
@@ -541,22 +541,22 @@ export default function DashboardPage() {
                     <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
                             <h1 className="text-3xl font-bold tracking-tight">Activity History</h1>
-                            <p className="text-black/50 mt-1">Track your reputation growth and rewards.</p>
+                            <p className="text-gray-500 mt-1">Track your reputation growth and rewards.</p>
                         </header>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             {/* Score History */}
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] ">
                                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                                     <ShieldCheck className="text-blue-600" size={20} /> Q Score Log
                                 </h3>
                                 <div className="space-y-4">
                                     {currentUser?.score_history && currentUser.score_history.length > 0 ? (
                                         currentUser.score_history.slice().reverse().map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                            <div key={i} className="flex items-center justify-between p-4 bg-[#fdfdfd] rounded-[2rem]">
                                                 <div>
                                                     <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
-                                                    <div className="text-xs text-black/40">{item.description}</div>
+                                                    <div className="text-xs text-gray-400">{item.description}</div>
                                                 </div>
                                                 <div className={`font-bold ${item.amount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                                     {item.amount >= 0 ? '+' : ''}{item.amount}
@@ -570,17 +570,17 @@ export default function DashboardPage() {
                             </div>
 
                             {/* Boots History */}
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] ">
                                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                                     <Sparkles className="text-amber-500" size={20} /> Boots Log
                                 </h3>
                                 <div className="space-y-4">
                                     {currentUser?.boots_history && currentUser.boots_history.length > 0 ? (
                                         currentUser.boots_history.slice().reverse().map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                            <div key={i} className="flex items-center justify-between p-4 bg-[#fdfdfd] rounded-[2rem]">
                                                 <div>
                                                     <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
-                                                    <div className="text-xs text-black/40">{item.description}</div>
+                                                    <div className="text-xs text-gray-400">{item.description}</div>
                                                 </div>
                                                 <div className={`font-bold ${item.amount >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                                                     {item.amount >= 0 ? '+' : ''}{item.amount}
@@ -596,16 +596,16 @@ export default function DashboardPage() {
 
                         {/* Penalties */}
                         {currentUser?.penalty_history && currentUser.penalty_history.length > 0 && (
-                            <section className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100">
+                            <section className="bg-red-50 p-8 rounded-[2rem] border border-red-100">
                                 <h3 className="text-xl font-bold text-red-700 mb-6 flex items-center gap-2">
                                     <X className="text-red-600" size={20} /> Penalty Records
                                 </h3>
                                 <div className="space-y-4">
                                     {currentUser?.penalty_history?.slice().reverse().map((item, i) => (
-                                        <div key={i} className="bg-white p-4 rounded-2xl flex items-center justify-between border border-red-100 shadow-sm">
+                                        <div key={i} className="bg-white p-4 rounded-[2rem] flex items-center justify-between border border-red-100 ">
                                             <div>
                                                 <div className="font-bold text-red-600 text-sm">{item.type}</div>
-                                                <div className="text-xs text-black/50">{item.description}</div>
+                                                <div className="text-xs text-gray-500">{item.description}</div>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-xs font-bold text-red-600">-{item.score_penalty} Score</div>
@@ -623,7 +623,7 @@ export default function DashboardPage() {
                     <motion.div key="campaigns" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
                             <h1 className="text-3xl font-bold tracking-tight">Active Campaigns</h1>
-                            <p className="text-black/50 mt-1">Join events to earn exclusive BOOTS and rewards.</p>
+                            <p className="text-gray-500 mt-1">Join events to earn exclusive BOOTS and rewards.</p>
                         </header>
 
                         {campaigns.length > 0 ? (
@@ -643,11 +643,11 @@ export default function DashboardPage() {
                                     <Rocket size={40} />
                                 </div>
                                 <h2 className="text-2xl font-bold mb-4">No Campaigns Yet</h2>
-                                <p className="text-black/50 mb-8 max-w-md mx-auto leading-relaxed">
+                                <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
                                     Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
                                 </p>
                                 {currentUser?.is_admin && (
-                                    <button onClick={() => setActiveTab('admin')} className="px-8 py-4 bg-black text-white rounded-2xl font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
+                                    <button onClick={() => setActiveTab('admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
                                         <Plus size={20} /> Create First Campaign
                                     </button>
                                 )}
@@ -660,13 +660,13 @@ export default function DashboardPage() {
                     <motion.div key="support" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4 h-[calc(100vh-10rem)] min-h-[500px] flex flex-col">
                         <header>
                             <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
-                            <p className="text-black/50 mt-1">Get help from the jointheq team.</p>
+                            <p className="text-gray-500 mt-1">Get help from the jointheq team.</p>
                         </header>
 
-                        <div className="flex-1 bg-white border border-black/5 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col md:flex-row">
+                        <div className="flex-1 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem]  overflow-hidden flex flex-col md:flex-row">
                             {currentUser?.is_admin && (
-                                <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-black/5 overflow-y-auto">
-                                    <div className="p-6 border-b border-black/5 sticky top-0 bg-white z-10">
+                                <div className="w-full md:w-80 border-b md:border-b-0 md:border-none shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-y-auto">
+                                    <div className="p-6 border-none shadow-[0_4px_24px_rgba(0,0,0,0.02)] sticky top-0 bg-white z-10">
                                         <h3 className="font-bold text-lg">Chats</h3>
                                     </div>
                                     <div className="divide-y divide-black/5">
@@ -676,12 +676,12 @@ export default function DashboardPage() {
                                                 onClick={() => setSelectedChatUserId(u._id)}
                                                 className={`w-full text-left p-4 hover:bg-black/5 transition-colors flex items-center gap-3 ${selectedChatUserId === u._id ? 'bg-black/5' : ''}`}
                                             >
-                                                <div className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center font-bold flex-shrink-0">
+                                                <div className="w-10 h-10 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center font-bold flex-shrink-0">
                                                     {u.full_name[0]}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="font-bold truncate">{u.full_name} {u.is_admin && <span className="text-emerald-500 text-xs ml-1">(Admin)</span>}</div>
-                                                    <div className="text-xs text-black/50 truncate">{u.email}</div>
+                                                    <div className="text-xs text-gray-500 truncate">{u.email}</div>
                                                 </div>
                                             </button>
                                         ))}
@@ -689,9 +689,9 @@ export default function DashboardPage() {
                                 </div>
                             )}
 
-                            <div className="flex-1 flex flex-col h-full bg-gray-50/50">
+                            <div className="flex-1 flex flex-col h-full bg-[#fdfdfd]/50">
                                 {currentUser?.is_admin && !selectedChatUserId ? (
-                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-black/40">
+                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-400">
                                         <MessageCircle size={48} className="mb-4 opacity-20 mx-auto" />
                                         <p>Select a user from the list to view their messages and reply.</p>
                                     </div>
@@ -699,7 +699,7 @@ export default function DashboardPage() {
                                     <>
                                         <div className="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
                                             {messages.length === 0 ? (
-                                                <div className="m-auto text-center text-black/40 p-8 flex flex-col justify-center items-center">
+                                                <div className="m-auto text-center text-gray-400 p-8 flex flex-col justify-center items-center">
                                                     <MessageCircle size={48} className="mb-4 opacity-20" />
                                                     <p>No messages yet. {currentUser?.is_admin ? 'This user hasn\'t sent any messages.' : 'Send us a message and we will reply as soon as possible.'}</p>
                                                 </div>
@@ -708,10 +708,10 @@ export default function DashboardPage() {
                                                     const isMe = msg.sender_id === currentUser._id;
                                                     return (
                                                         <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                                            <div className={`max-w-[75%] p-4 rounded-[1.5rem] ${isMe ? 'bg-black text-white rounded-br-none' : 'bg-white border border-black/10 text-black rounded-bl-none shadow-sm'}`}>
+                                                            <div className={`max-w-[75%] p-4 rounded-[2rem] ${isMe ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] ' : 'bg-white border border-black/10 text-black  '}`}>
                                                                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                                                                 {msg.image_data && (
-                                                                    <img src={msg.image_data} alt="Attached" className="mt-2 rounded-xl max-w-full h-auto" />
+                                                                    <img src={msg.image_data} alt="Attached" className="mt-2 rounded-full scale-100 hover:scale-[1.02] max-w-full h-auto" />
                                                                 )}
                                                                 <div className={`text-[10px] mt-2 font-semibold opacity-50 ${isMe ? 'text-right text-white/70' : 'text-left'}`}>
                                                                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -723,7 +723,7 @@ export default function DashboardPage() {
                                             )}
                                         </div>
                                         <div className="p-4 bg-white border-t border-black/5 mt-auto">
-                                            <div className="flex items-end gap-2 bg-gray-50 border border-black/5 p-2 rounded-2xl focus-within:ring-2 ring-black/10 transition-shadow">
+                                            <div className="flex items-end gap-2 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-2 rounded-[2rem] focus-within:ring-2 ring-black/10 transition-shadow">
                                                 <input
                                                     type="file"
                                                     id="chat-image"
@@ -731,7 +731,7 @@ export default function DashboardPage() {
                                                     className="hidden"
                                                     onChange={handleImageUpload}
                                                 />
-                                                <label htmlFor="chat-image" className="p-3 mb-1 text-black/50 hover:text-black hover:bg-black/5 rounded-xl cursor-pointer transition-colors">
+                                                <label htmlFor="chat-image" className="p-3 mb-1 text-gray-500 hover:text-black hover:bg-black/5 rounded-full scale-100 hover:scale-[1.02] cursor-pointer transition-colors">
                                                     <ImageIcon size={20} />
                                                 </label>
 
@@ -762,7 +762,7 @@ export default function DashboardPage() {
                                                 <button
                                                     onClick={sendMessage}
                                                     disabled={!chatInput.trim() && !chatImage}
-                                                    className="p-3 mb-1 bg-black text-white rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:bg-black/20"
+                                                    className="p-3 mb-1 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:bg-black/20"
                                                 >
                                                     <Send size={18} />
                                                 </button>
@@ -782,43 +782,43 @@ export default function DashboardPage() {
                                 <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
                                     <Shield className="text-blue-600" size={32} /> Admin Control Center
                                 </h1>
-                                <p className="text-black/50 mt-1">Manage platform operations and ecosystem.</p>
+                                <p className="text-gray-500 mt-1">Manage platform operations and ecosystem.</p>
                             </div>
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <button className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-black/10 transition-all text-left group shadow-sm">
-                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <button className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-black/10 transition-all text-left group ">
+                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-[2rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                                     <ShoppingBag size={24} />
                                 </div>
                                 <h3 className="font-bold text-lg">Marketplace</h3>
-                                <p className="text-sm text-black/50 mt-2">Manage subscription slots and pricing.</p>
+                                <p className="text-sm text-gray-500 mt-2">Manage subscription slots and pricing.</p>
                             </button>
-                            <button className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-black/10 transition-all text-left group shadow-sm">
-                                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <button className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-black/10 transition-all text-left group ">
+                                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-[2rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                                     <Zap size={24} />
                                 </div>
                                 <h3 className="font-bold text-lg">Campaigns</h3>
-                                <p className="text-sm text-black/50 mt-2">Create and monitor reward events.</p>
+                                <p className="text-sm text-gray-500 mt-2">Create and monitor reward events.</p>
                             </button>
-                            <button className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-black/10 transition-all text-left group shadow-sm">
-                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <button className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-black/10 transition-all text-left group ">
+                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-[2rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                                     <Users size={24} />
                                 </div>
                                 <h3 className="font-bold text-lg">Community</h3>
-                                <p className="text-sm text-black/50 mt-2">Support tickets and user bans.</p>
+                                <p className="text-sm text-gray-500 mt-2">Support tickets and user bans.</p>
                             </button>
                         </div>
 
-                        <section className="bg-white p-10 rounded-[3rem] border border-black/5 shadow-xl">
+                        <section className="bg-white p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl">
                             <div className="flex items-center justify-between mb-8">
                                 <h2 className="text-2xl font-bold">Quick Campaign Creator</h2>
                                 <button className="text-sm font-bold opacity-30">View Analytics</button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <label className="text-sm font-bold text-black/40 ml-1">Campaign Type</label>
-                                    <select className="w-full p-5 bg-gray-50 border border-black/5 rounded-2xl font-bold focus:ring-2 ring-black/5 outline-none">
+                                    <label className="text-sm font-bold text-gray-400 ml-1">Campaign Type</label>
+                                    <select className="w-full p-5 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none">
                                         <option>Reward Jar (Growth)</option>
                                         <option>Raffle Ticket (Engagement)</option>
                                         <option>Referral Storm (Viral)</option>
@@ -826,8 +826,8 @@ export default function DashboardPage() {
                                     </select>
                                 </div>
                                 <div className="space-y-4">
-                                    <label className="text-sm font-bold text-black/40 ml-1">Reward Amount (BOOTS)</label>
-                                    <input type="number" placeholder="e.g. 50" className="w-full p-5 bg-gray-50 border border-black/5 rounded-2xl font-bold focus:ring-2 ring-black/5 outline-none" />
+                                    <label className="text-sm font-bold text-gray-400 ml-1">Reward Amount (BOOTS)</label>
+                                    <input type="number" placeholder="e.g. 50" className="w-full p-5 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <button
@@ -841,7 +841,7 @@ export default function DashboardPage() {
                                             end_date: Date.now() + (5 * 24 * 60 * 60 * 1000),
                                             target_goal: 500
                                         })}
-                                        className="w-full py-6 bg-black text-white rounded-[1.5rem] font-bold text-lg shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform"
+                                        className="w-full py-6 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform"
                                     >
                                         Launch New Campaign
                                     </button>
@@ -850,7 +850,7 @@ export default function DashboardPage() {
                         </section>
 
                         {currentUser.email === 'riderezzy@gmail.com' && (
-                            <section className="bg-white p-10 rounded-[3rem] border border-black/5 shadow-xl">
+                            <section className="bg-white p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl">
                                 <h2 className="text-2xl font-bold mb-8">Manage Admins (Super Admin Only)</h2>
                                 <div className="space-y-8">
                                     <div className="flex flex-col sm:flex-row gap-4">
@@ -859,11 +859,11 @@ export default function DashboardPage() {
                                             placeholder="Enter user email to make admin"
                                             value={adminInviteEmail}
                                             onChange={(e) => setAdminInviteEmail(e.target.value)}
-                                            className="flex-1 p-5 bg-gray-50 border border-black/5 rounded-2xl font-bold focus:ring-2 ring-black/5 outline-none"
+                                            className="flex-1 p-5 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none"
                                         />
                                         <button
                                             onClick={handleMakeAdmin}
-                                            className="py-5 px-8 bg-black text-white rounded-[1.5rem] font-bold shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform whitespace-nowrap"
+                                            className="py-5 px-8 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform whitespace-nowrap"
                                         >
                                             Add Admin
                                         </button>
@@ -873,10 +873,10 @@ export default function DashboardPage() {
                                         <h3 className="text-xl font-bold mb-4">Current Admins</h3>
                                         <div className="space-y-4">
                                             {adminsList.map((admin: any) => (
-                                                <div key={admin._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 border border-black/5 rounded-2xl gap-4">
+                                                <div key={admin._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] gap-4">
                                                     <div>
                                                         <div className="font-bold">{admin.full_name} {admin.email === 'riderezzy@gmail.com' && <span className="text-emerald-500 text-sm">(Super Admin)</span>}</div>
-                                                        <div className="text-sm text-black/50">{admin.email}</div>
+                                                        <div className="text-sm text-gray-500">{admin.email}</div>
                                                     </div>
                                                     {admin.email !== 'riderezzy@gmail.com' && (
                                                         <button
@@ -899,16 +899,16 @@ export default function DashboardPage() {
                     <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
                             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">User Profile</h1>
-                            <p className="text-xs sm:text-sm text-black/50 mt-1">Manage your personal information and security.</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your personal information and security.</p>
                         </header>
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div className="lg:col-span-1 space-y-6">
-                                <div className="bg-white border border-black/5 p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] text-center shadow-sm">
-                                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden border-4 border-white shadow-sm">
+                                <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 sm:p-8 rounded-[2rem] sm:rounded-[2rem] text-center ">
+                                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden border-4 border-white ">
                                         <UserIcon size={40} className="sm:w-12 sm:h-12" />
                                     </div>
                                     <h2 className="text-xl sm:text-2xl font-bold">{currentUser?.full_name}</h2>
-                                    <p className="text-xs sm:text-sm text-black/50">{currentUser?.email}</p>
+                                    <p className="text-xs sm:text-sm text-gray-500">{currentUser?.email}</p>
                                     <div className="mt-6 inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-100 text-emerald-600 rounded-full text-xs font-bold">
                                         <ShieldCheck size={14} className="sm:w-4 sm:h-4" />
                                         {currentUser?.q_rank || getRank(currentUser?.q_score || 0)} Member
@@ -916,13 +916,13 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div className="lg:col-span-2 space-y-8">
-                                <div className="bg-white border border-black/5 p-8 rounded-[2.5rem] shadow-sm">
+                                <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-8 rounded-[2rem] ">
                                     <h3 className="text-xl font-bold mb-6 text-red-600">Danger Zone</h3>
                                     <div className="space-y-4">
-                                        <button onClick={resetQRank} className="w-full py-4 bg-orange-50 text-orange-600 rounded-2xl font-bold hover:bg-orange-100 transition-colors flex items-center justify-center gap-2">
+                                        <button onClick={resetQRank} className="w-full py-4 bg-orange-50 text-orange-600 rounded-[2rem] font-bold hover:bg-orange-100 transition-colors flex items-center justify-center gap-2">
                                             <Sparkles size={20} /> Reset Q Rank to 100
                                         </button>
-                                        <button onClick={() => seedMarketplaceMutation()} className="w-full py-4 bg-blue-50 text-blue-600 rounded-2xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
+                                        <button onClick={() => seedMarketplaceMutation()} className="w-full py-4 bg-blue-50 text-blue-600 rounded-[2rem] font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
                                             <ShoppingBag size={20} /> Seed Marketplace Data
                                         </button>
                                         <button
@@ -930,11 +930,11 @@ export default function DashboardPage() {
                                                 await seedCampaignsMutation({});
                                                 toast.success("Dummy campaigns seeded!");
                                             }}
-                                            className="w-full py-4 bg-purple-50 text-purple-600 rounded-2xl font-bold hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
+                                            className="w-full py-4 bg-purple-50 text-purple-600 rounded-[2rem] font-bold hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
                                         >
                                             <Sparkles size={20} /> Seed Dummy Campaigns
                                         </button>
-                                        <button onClick={() => auth.logout()} className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                                        <button onClick={() => auth.logout()} className="w-full py-4 bg-red-50 text-red-600 rounded-[2rem] font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
                                             <LogOut size={20} /> Log Out
                                         </button>
                                     </div>
@@ -958,7 +958,7 @@ export default function DashboardPage() {
                                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+                                className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden"
                             >
                                 <div className="p-8">
                                     <div className="flex items-center justify-between mb-8">
@@ -969,25 +969,25 @@ export default function DashboardPage() {
                                     </div>
 
                                     <div className="space-y-6 mb-8">
-                                        <div className="bg-gray-50 p-6 rounded-3xl border border-black/5">
+                                        <div className="bg-[#fdfdfd] p-6 rounded-3xl border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
                                             <div className="text-xs font-bold uppercase tracking-wider text-black/30 mb-2">Subscription</div>
                                             <div className="text-xl font-bold">{checkoutSlot.name}</div>
-                                            <div className="text-sm text-black/50 mt-1">Monthly renewal cycle</div>
+                                            <div className="text-sm text-gray-500 mt-1">Monthly renewal cycle</div>
                                         </div>
 
                                         <div className="space-y-4">
-                                            <label className="text-sm font-bold text-black/50 ml-1">Select Payment Method</label>
+                                            <label className="text-sm font-bold text-gray-500 ml-1">Select Payment Method</label>
                                             <div
                                                 onClick={() => setUseBootsForPayment(false)}
-                                                className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center justify-between ${!useBootsForPayment ? 'border-black bg-black/5' : 'border-black/5 hover:border-black/20'}`}
+                                                className={`p-5 rounded-[2rem] border-2 cursor-pointer transition-all flex items-center justify-between ${!useBootsForPayment ? 'border-black bg-black/5' : 'border-black/5 hover:border-black/20'}`}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                                                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center">
                                                         <Wallet size={20} />
                                                     </div>
                                                     <div>
                                                         <div className="font-bold">100% Coins</div>
-                                                        <div className="text-xs text-black/40">Pay ₦{checkoutSlot.price.toLocaleString()} from your wallet</div>
+                                                        <div className="text-xs text-gray-400">Pay ₦{checkoutSlot.price.toLocaleString()} from your wallet</div>
                                                     </div>
                                                 </div>
                                                 {!useBootsForPayment && <Check size={20} className="text-black" />}
@@ -995,15 +995,15 @@ export default function DashboardPage() {
 
                                             <div
                                                 onClick={() => setUseBootsForPayment(true)}
-                                                className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center justify-between ${useBootsForPayment ? 'border-black bg-black/5' : 'border-black/5 hover:border-black/20'}`}
+                                                className={`p-5 rounded-[2rem] border-2 cursor-pointer transition-all flex items-center justify-between ${useBootsForPayment ? 'border-black bg-black/5' : 'border-black/5 hover:border-black/20'}`}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+                                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center">
                                                         <Sparkles size={20} />
                                                     </div>
                                                     <div>
                                                         <div className="font-bold">Boots + Coins (50/50)</div>
-                                                        <div className="text-xs text-black/40">₦{(checkoutSlot.price / 2).toLocaleString()} + {(checkoutSlot.price / 2).toLocaleString()} Boots</div>
+                                                        <div className="text-xs text-gray-400">₦{(checkoutSlot.price / 2).toLocaleString()} + {(checkoutSlot.price / 2).toLocaleString()} Boots</div>
                                                     </div>
                                                 </div>
                                                 {useBootsForPayment && <Check size={20} className="text-black" />}
@@ -1013,7 +1013,7 @@ export default function DashboardPage() {
 
                                     <button
                                         onClick={() => joinSlot(checkoutSlot._id)}
-                                        className="w-full py-5 bg-black text-white rounded-2xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-black/10"
+                                        className="w-full py-5 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-black/10"
                                     >
                                         Confirm & Pay ₦{useBootsForPayment ? (checkoutSlot.price / 2).toLocaleString() : checkoutSlot.price.toLocaleString()}
                                     </button>
@@ -1044,10 +1044,10 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
     };
 
     return (
-        <motion.div whileHover={{ y: -5 }} className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col group">
+        <motion.div whileHover={{ y: -5 }} className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden  flex flex-col group">
             <div className="p-8 pb-4 flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors duration-500">
+                    <div className="w-14 h-14 bg-[#fdfdfd] rounded-[2rem] flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors duration-500">
                         {getIcon()}
                     </div>
                     <div>
@@ -1066,13 +1066,13 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
             </div>
 
             <div className="p-8 pt-0 flex-1">
-                <p className="text-sm text-black/50 mb-8 leading-relaxed">
+                <p className="text-sm text-gray-500 mb-8 leading-relaxed">
                     {campaign.description}
                 </p>
 
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-black/40 uppercase tracking-tighter">Event Progress</span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Event Progress</span>
                         <span className="text-xs font-bold">{campaign.current_progress} / {campaign.target_goal}</span>
                     </div>
                     <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -1087,15 +1087,15 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
                 <div className="flex items-center justify-between gap-6">
                     <div className="flex items-center gap-2">
                         <Clock size={16} className="text-black/20" />
-                        <span className="text-sm font-bold text-black/40">{daysRemaining} days left</span>
+                        <span className="text-sm font-bold text-gray-400">{daysRemaining} days left</span>
                     </div>
 
                     <button
                         onClick={onParticipate}
                         disabled={isParticipating || campaign.status !== 'active'}
-                        className={`flex-1 py-4 rounded-2xl font-bold text-sm transition-all ${isParticipating
+                        className={`flex-1 py-4 rounded-[2rem] font-bold text-sm transition-all ${isParticipating
                             ? 'bg-emerald-500 text-white shadow-emerald-200'
-                            : 'bg-black text-white hover:shadow-xl active:scale-95'
+                            : 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] hover:shadow-xl active:scale-95'
                             }`}
                     >
                         {isParticipating ? (
@@ -1110,9 +1110,9 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
 
 function StatCard({ title, value, icon, color }: { title: string, value: string, icon: ReactNode, color: string }) {
     return (
-        <div className="bg-white border border-black/5 p-6 rounded-3xl shadow-sm">
+        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 rounded-3xl ">
             <div className="flex items-center justify-between mb-4">
-                <div className={`w-10 h-10 ${color} text-white rounded-xl flex items-center justify-center`}>
+                <div className={`w-10 h-10 ${color} text-white rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center`}>
                     {icon}
                 </div>
                 <ArrowUpRight size={16} className="text-black/20" />
@@ -1129,22 +1129,22 @@ function ActiveSlotCard({ slot, onUpdateAllocation }: { slot: UserSlot, onUpdate
     const [allocation, setAllocation] = useState(slot.allocation || '');
 
     return (
-        <motion.div whileHover={{ y: -5 }} className="bg-white border border-black/5 p-6 rounded-3xl shadow-sm">
+        <motion.div whileHover={{ y: -5 }} className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 rounded-3xl ">
             <div className="flex items-center justify-between mb-6">
-                <div className="w-12 h-12 bg-[#FAFAF9] rounded-2xl flex items-center justify-center font-bold">{slot.sub_name[0]}</div>
+                <div className="w-12 h-12 bg-[#f4f5f8] rounded-[2rem] flex items-center justify-center font-bold">{slot.sub_name[0]}</div>
                 <div className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-wider">Active</div>
             </div>
             <h3 className="font-bold text-lg mb-1">{slot.sub_name}</h3>
-            <p className="text-sm text-black/50 mb-4">{slot.slot_name}</p>
+            <p className="text-sm text-gray-500 mb-4">{slot.slot_name}</p>
             <div className="mb-6">
                 <div className="text-[10px] font-bold uppercase opacity-30 mb-1">Your Allocation</div>
                 {isEditing ? (
                     <div className="flex gap-2">
-                        <input type="text" value={allocation} onChange={(e) => setAllocation(e.target.value)} className="flex-1 p-2 bg-[#FAFAF9] rounded-lg text-xs" />
-                        <button onClick={() => { onUpdateAllocation(allocation); setIsEditing(false); }} className="bg-black text-white px-3 py-1 rounded-lg text-xs">Save</button>
+                        <input type="text" value={allocation} onChange={(e) => setAllocation(e.target.value)} className="flex-1 p-2 bg-[#f4f5f8] rounded-lg text-xs" />
+                        <button onClick={() => { onUpdateAllocation(allocation); setIsEditing(false); }} className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-3 py-1 rounded-lg text-xs">Save</button>
                     </div>
                 ) : (
-                    <div className="flex items-center justify-between p-2 bg-[#FAFAF9] rounded-lg">
+                    <div className="flex items-center justify-between p-2 bg-[#f4f5f8] rounded-lg">
                         <span className="text-xs font-medium">{slot.allocation || 'Not set'}</span>
                         <button onClick={() => setIsEditing(true)} className="text-[10px] font-bold text-blue-600">Edit</button>
                     </div>
@@ -1160,7 +1160,7 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: SlotType, onJ
     const joined = slot.current_members || 0;
 
     return (
-        <div className="bg-white border border-black/5 p-6 rounded-[2.5rem] shadow-sm flex flex-col hover:border-black/20 transition-colors">
+        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 rounded-[2rem]  flex flex-col hover:border-black/20 transition-colors">
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h3 className="font-bold text-xl">{slot.name}</h3>
@@ -1178,13 +1178,13 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: SlotType, onJ
                     </div>
                 ))}
                 {!slot.features && (
-                    <p className="text-sm text-black/40 italic">Premium slot with standard benefits</p>
+                    <p className="text-sm text-gray-400 italic">Premium slot with standard benefits</p>
                 )}
             </div>
 
-            <div className="mb-6 p-4 bg-gray-50 rounded-2xl">
+            <div className="mb-6 p-4 bg-[#fdfdfd] rounded-[2rem]">
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-black/40 uppercase tracking-tight">Members joined</span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Members joined</span>
                     <span className="text-xs font-bold text-black/60">{joined} / {capacity}</span>
                 </div>
                 <div className="w-full h-2 bg-black/5 rounded-full overflow-hidden">
@@ -1198,7 +1198,7 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: SlotType, onJ
             <button
                 onClick={onJoin}
                 disabled={!isEligible}
-                className={`w-full py-4 rounded-2xl font-bold transition-transform active:scale-95 ${isEligible ? 'bg-black text-white hover:shadow-lg' : 'bg-black/5 text-black/30'}`}
+                className={`w-full py-4 rounded-[2rem] font-bold transition-transform active:scale-95 ${isEligible ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] hover:shadow-lg' : 'bg-black/5 text-black/30'}`}
             >
                 {isEligible ? 'Join Slot' : `Requires ${slot.min_q_score} Q Score`}
             </button>

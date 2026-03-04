@@ -51,9 +51,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     ];
 
     return (
-        <div className="min-h-screen bg-[#FAFAF9] text-[#1A1A1A] font-sans">
+        <div className="min-h-screen bg-[#f4f5f8] text-[#1A1A1A] font-sans">
             {/* Sidebar / Navigation */}
-            <nav className="fixed top-0 left-0 h-full w-64 bg-white border-r border-black/5 hidden lg:flex flex-col p-6 z-50">
+            <nav className="fixed top-0 left-0 h-full w-64 bg-white border-none shadow-[4px_0_24px_rgba(0,0,0,0.02)] hidden lg:flex flex-col p-6 z-50">
                 <div className="flex items-center gap-3 mb-10">
                     <Logo className="w-10 h-10" />
                     <span className="text-xl font-bold tracking-tight">jointheq</span>
@@ -64,9 +64,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all ${activeTab === item.id
-                                ? 'bg-black text-white shadow-lg shadow-black/10'
-                                : 'text-black/50 hover:bg-black/5 hover:text-black'
+                            className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === item.id
+                                ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                : 'text-gray-500 hover:bg-black/5 hover:text-black'
                                 }`}
                         >
                             {item.icon}
@@ -76,7 +76,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                 </div>
 
                 <div className="pt-6 border-t border-black/5">
-                    <div className="bg-[#F5F5F4] p-4 rounded-2xl mb-4">
+                    <div className="bg-[#F5F5F4] p-4 rounded-[2rem] mb-4">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-semibold uppercase tracking-wider opacity-50">Q Score</span>
                             <ShieldCheck size={16} className="text-emerald-500" />
@@ -93,7 +93,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                             Rank: {getRank(qScore)}
                         </div>
                     </div>
-                    <button onClick={() => auth.logout()} className="flex items-center gap-3 w-full p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+                    <button onClick={() => auth.logout()} className="flex items-center gap-3 w-full p-3 text-red-500 hover:bg-red-50 rounded-full scale-100 hover:scale-[1.02] transition-colors">
                         <LogOut size={20} />
                         <span className="font-medium">Logout</span>
                     </button>
@@ -123,22 +123,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="lg:hidden fixed top-16 left-0 w-full bg-white border-b border-black/5 p-4 z-40 space-y-2"
+                        className="lg:hidden fixed top-16 left-0 w-full bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.02)] p-4 z-40 space-y-2"
                     >
                         {navItems.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                                className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all ${activeTab === item.id
-                                    ? 'bg-black text-white shadow-lg shadow-black/10'
-                                    : 'text-black/50 hover:bg-black/5 hover:text-black'
+                                className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === item.id
+                                    ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                    : 'text-gray-500 hover:bg-black/5 hover:text-black'
                                     }`}
                             >
                                 {item.icon}
                                 <span className="font-semibold">{item.label}</span>
                             </button>
                         ))}
-                        <button onClick={() => auth.logout()} className="flex items-center gap-3 w-full p-3 text-red-500 rounded-xl font-bold">
+                        <button onClick={() => auth.logout()} className="flex items-center gap-3 w-full p-3 text-red-500 rounded-full scale-100 hover:scale-[1.02] font-bold">
                             <LogOut size={20} />
                             Logout
                         </button>
