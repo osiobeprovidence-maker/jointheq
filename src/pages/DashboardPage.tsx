@@ -367,6 +367,59 @@ export default function DashboardPage() {
                     </motion.div>
                 )}
 
+                {activeTab === 'wallet' && (
+                    <motion.div key="wallet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                        <header>
+                            <h1 className="text-3xl font-bold tracking-tight">Your Wallet</h1>
+                            <p className="text-black/50 mt-1">Manage your funds and premium Boots.</p>
+                        </header>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm text-center">
+                                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                    <Wallet size={32} />
+                                </div>
+                                <h3 className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">Available Balance</h3>
+                                <div className="text-4xl font-bold mb-8">₦{currentUser?.wallet_balance?.toLocaleString() || 0}</div>
+
+                                <div className="flex gap-4 max-w-xs mx-auto">
+                                    <button
+                                        onClick={() => fundWallet(5000)}
+                                        className="flex-1 py-3 bg-black text-white rounded-xl font-bold text-sm hover:scale-105 transition-transform"
+                                    >
+                                        Fund ₦5,000
+                                    </button>
+                                    <button
+                                        onClick={() => fundWallet(10000)}
+                                        className="flex-1 py-3 bg-black text-white rounded-xl font-bold text-sm hover:scale-105 transition-transform"
+                                    >
+                                        Fund ₦10,000
+                                    </button>
+                                </div>
+                                <p className="text-xs text-black/40 mt-6 italic">Paystack integration coming soon.</p>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm text-center">
+                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                    <Sparkles size={32} />
+                                </div>
+                                <h3 className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">Boots Balance</h3>
+                                <div className="text-4xl font-bold mb-8">{currentUser?.boots_balance?.toLocaleString() || 0}</div>
+
+                                <p className="text-sm text-black/50 mb-6 max-w-xs mx-auto">
+                                    Earn more Boots by participating in campaigns and referring friends.
+                                </p>
+                                <button
+                                    onClick={() => setActiveTab('campaigns')}
+                                    className="px-6 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                                >
+                                    <Zap size={16} /> Earn Boots
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
                 {activeTab === 'referrals' && (
                     <motion.div key="referrals" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>

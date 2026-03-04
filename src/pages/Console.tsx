@@ -108,11 +108,11 @@ export function ConsoleDashboard() {
   const [admin, setAdmin] = useState<any>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('q_console_admin');
-    if (!saved) {
+    const user = auth.getCurrentUser();
+    if (!user || !auth.isAdmin()) {
       navigate('/console');
     } else {
-      setAdmin(JSON.parse(saved));
+      setAdmin(user);
     }
   }, [navigate]);
 
