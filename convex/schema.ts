@@ -15,40 +15,29 @@ export default defineSchema({
         referred_by: v.optional(v.id("users")),
         is_suspended: v.optional(v.boolean()),
         is_banned: v.optional(v.boolean()),
-        admin_role: v.optional(v.string()), // "super" | "support" | "operations" | "finance"
+        is_fraud_flagged: v.optional(v.boolean()),       // Flagged for suspicious activity
+        fraud_review_reason: v.optional(v.string()),     // Why they were flagged
+        admin_role: v.optional(v.string()),
         score_history: v.optional(v.array(v.object({
-            amount: v.number(),
-            type: v.string(),
-            description: v.string(),
-            created_at: v.number(),
+            amount: v.number(), type: v.string(), description: v.string(), created_at: v.number(),
         }))),
         boots_history: v.optional(v.array(v.object({
-            amount: v.number(),
-            type: v.string(),
-            description: v.string(),
-            created_at: v.number(),
+            amount: v.number(), type: v.string(), description: v.string(), created_at: v.number(),
         }))),
         penalty_history: v.optional(v.array(v.object({
-            score_penalty: v.number(),
-            boots_penalty: v.number(),
-            type: v.string(),
-            description: v.string(),
-            created_at: v.number(),
+            score_penalty: v.number(), boots_penalty: v.number(), type: v.string(), description: v.string(), created_at: v.number(),
         }))),
         is_admin: v.boolean(),
-        role: v.optional(v.string()), // "user" | "admin"
+        role: v.optional(v.string()),
         password_hash: v.optional(v.string()),
         is_verified: v.boolean(),
         verification_token: v.optional(v.string()),
         verification_token_expires: v.optional(v.string()),
-        verification_deadline: v.optional(v.number()), // 3-day grace period for email verification
+        verification_deadline: v.optional(v.number()),
         failed_login_attempts: v.optional(v.number()),
-        lockout_until: v.optional(v.number()), // timestamp when user can try again
+        lockout_until: v.optional(v.number()),
         direct_debit_card: v.optional(v.object({
-            last4: v.string(),
-            brand: v.string(),
-            expiry: v.string(),
-            auth_token: v.string(), // Secure token for recurring debit
+            last4: v.string(), brand: v.string(), expiry: v.string(), auth_token: v.string(),
         })),
         created_at: v.number(),
     }).index("by_email", ["email"])
@@ -56,7 +45,8 @@ export default defineSchema({
         .index("by_referral_code", ["referral_code"])
         .index("by_token", ["verification_token"])
         .index("by_referred_by", ["referred_by"])
-        .index("by_username", ["username"]),
+        .index("by_username", ["username"])
+        .index("by_fraud", ["is_fraud_flagged"]),
 
     support_tickets: defineTable({
         user_id: v.id("users"),
@@ -89,25 +79,30 @@ export default defineSchema({
 
     campaigns: defineTable({
         name: v.string(),
-        type: v.optional(v.string()), // "referral" | "engagement" | "campus" | "promotion" | "jar" | "referral_storm" | "streak" | "raffle"
+        type: v.optional(v.string()),
         description: v.string(),
-        about: v.optional(v.string()),           // Long-form about text
-        rules: v.optional(v.array(v.string())),  // List of rules
-        how_it_works: v.optional(v.array(v.string())),  // Step-by-step
-        reward_structure: v.optional(v.string()), // Description of what users earn
-        reward_type: v.optional(v.string()),      // "boots" | "cash" | "subscription"
+        about: v.optional(v.string()),
+        rules: v.optional(v.array(v.string())),
+        how_it_works: v.optional(v.array(v.string())),
+        reward_structure: v.optional(v.string()),
+        reward_type: v.optional(v.string()),
         reward_amount: v.optional(v.number()),
-        referral_boots: v.optional(v.number()),   // BOOTS earned per referral (default 5)
-        commission_months: v.optional(v.number()), // Campus Q: months commission runs (default 3)
+        referral_boots: v.optional(v.number()),
+        commission_months: v.optional(v.number()),
         start_date: v.any(),
         end_date: v.any(),
         target_goal: v.optional(v.number()),
         current_progress: v.optional(v.number()),
-        status: v.string(),                       // "active" | "paused" | "ended" | "archived"
+        status: v.string(),
         image_url: v.optional(v.string()),
         banner_url: v.optional(v.string()),
-        created_by: v.optional(v.id("users")),   // Admin who created it
+        created_by: v.optional(v.id("users")),
         created_at: v.optional(v.number()),
+        // Fraud / limit controls
+        max_boots_per_user_per_day: v.optional(v.number()),  // e.g. 50 BOOTS cap per day
+        max_referrals_per_user_per_day: v.optional(v.number()), // e.g. 10 referrals counted per day
+        max_total_referrals_per_user: v.optional(v.number()), // lifetime cap per user
+        require_payment_for_reward: v.optional(v.boolean()),  // only reward after payment
         // Backward compat
         boot_pool_max: v.optional(v.number()),
         boots_issued: v.optional(v.number()),
@@ -133,15 +128,18 @@ export default defineSchema({
 
     campaign_referrals: defineTable({
         campaign_id: v.id("campaigns"),
-        referrer_id: v.id("users"),               // Who made the referral
-        referred_id: v.id("users"),               // Who was referred
-        status: v.string(),                        // "pending" | "active" | "inactive"
+        referrer_id: v.id("users"),
+        referred_id: v.id("users"),
+        status: v.string(),                        // "pending" | "active" | "inactive" | "suspicious"
+        is_fraud_flagged: v.optional(v.boolean()),
+        fraud_reason: v.optional(v.string()),      // e.g. "same_device" | "same_ip" | "circular"
         commission_earned: v.optional(v.number()),
-        months_remaining: v.optional(v.number()), // For Campus Q 3-month rule
+        months_remaining: v.optional(v.number()),
         created_at: v.number(),
     }).index("by_campaign", ["campaign_id"])
         .index("by_referrer", ["referrer_id"])
-        .index("by_referred", ["referred_id"]),
+        .index("by_referred", ["referred_id"])
+        .index("by_fraud", ["is_fraud_flagged"]),
 
     campaign_withdrawals: defineTable({
         user_id: v.id("users"),
@@ -237,4 +235,76 @@ export default defineSchema({
         description: v.string(),
         created_at: v.number(),
     }).index("by_user", ["user_id"]),
+
+    // ── Fraud & Security ──────────────────────────────────────────────────────
+    user_fingerprints: defineTable({
+        user_id: v.id("users"),
+        device_fingerprint: v.optional(v.string()),  // Browser/device hash
+        ip_address: v.optional(v.string()),
+        user_agent: v.optional(v.string()),
+        created_at: v.number(),
+        last_seen: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
+        .index("by_device", ["device_fingerprint"])
+        .index("by_ip", ["ip_address"]),
+
+    fraud_flags: defineTable({
+        user_id: v.id("users"),
+        type: v.string(),          // "same_device" | "same_ip" | "circular_referral" | "rapid_signup" | "suspicious_withdrawal"
+        severity: v.string(),      // "low" | "medium" | "high"
+        description: v.string(),
+        related_user_ids: v.optional(v.array(v.id("users"))),
+        related_campaign_id: v.optional(v.id("campaigns")),
+        status: v.string(),        // "open" | "reviewing" | "cleared" | "confirmed"
+        reviewed_by: v.optional(v.id("users")),
+        created_at: v.number(),
+        resolved_at: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_type", ["type"]),
+
+    // ── Campus Territory Program ──────────────────────────────────────────────
+    campus_territories: defineTable({
+        campus_name: v.string(),
+        city: v.string(),
+        country: v.string(),
+        leader_id: v.optional(v.id("users")),        // Campus Leader
+        total_users: v.optional(v.number()),
+        total_ambassadors: v.optional(v.number()),
+        total_subscriptions: v.optional(v.number()),
+        is_active: v.boolean(),
+        created_at: v.number(),
+    }).index("by_leader", ["leader_id"]),
+
+    campus_territory_ambassadors: defineTable({
+        territory_id: v.id("campus_territories"),
+        user_id: v.id("users"),
+        role: v.string(),                            // "leader" | "ambassador"
+        referral_count: v.optional(v.number()),
+        total_earned: v.optional(v.number()),
+        is_active: v.boolean(),
+        joined_at: v.number(),
+    }).index("by_territory", ["territory_id"])
+        .index("by_user", ["user_id"]),
+
+    campus_events: defineTable({
+        name: v.string(),
+        territory_id: v.optional(v.id("campus_territories")),
+        campus_name: v.string(),
+        city: v.string(),
+        event_date: v.number(),
+        host_id: v.optional(v.id("users")),          // Campus Leader hosting
+        description: v.optional(v.string()),
+        type: v.string(),                             // "onboarding" | "referral_comp" | "demo" | "meetup"
+        expected_participants: v.optional(v.number()),
+        actual_attendance: v.optional(v.number()),
+        new_users_acquired: v.optional(v.number()),
+        subscriptions_created: v.optional(v.number()),
+        status: v.string(),                           // "upcoming" | "ongoing" | "completed" | "cancelled"
+        created_by: v.optional(v.id("users")),
+        created_at: v.number(),
+    }).index("by_territory", ["territory_id"])
+        .index("by_status", ["status"])
+        .index("by_date", ["event_date"]),
 });
+

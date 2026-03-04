@@ -260,6 +260,11 @@ export const create = mutation({
         image_url: v.optional(v.string()),
         banner_url: v.optional(v.string()),
         created_by: v.optional(v.id("users")),
+        // Fraud / limit controls
+        max_boots_per_user_per_day: v.optional(v.number()),
+        max_referrals_per_user_per_day: v.optional(v.number()),
+        max_total_referrals_per_user: v.optional(v.number()),
+        require_payment_for_reward: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("campaigns", {
@@ -306,7 +311,7 @@ export const updateStatus = mutation({
     },
 });
 
-/** Join a campaign (optionally with a referral code) */
+/** Join a campaign (optionally with a referral code) — with full fraud protection */
 export const participate = mutation({
     args: {
         campaign_id: v.id("campaigns"),
@@ -317,7 +322,13 @@ export const participate = mutation({
         const campaign = await ctx.db.get(args.campaign_id);
         if (!campaign || campaign.status !== "active") throw new Error("Campaign is not active");
 
-        // Check already joined
+        // ── 1. Block fraud-flagged users from earning ──────────────────────────
+        const user = await ctx.db.get(args.user_id);
+        if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Your account has been banned");
+        if (user.is_suspended) throw new Error("Your account is suspended. Contact support.");
+
+        // ── 2. Check already joined ────────────────────────────────────────────
         const existing = await ctx.db
             .query("campaign_participants")
             .withIndex("by_campaign", (q) => q.eq("campaign_id", args.campaign_id))
@@ -325,14 +336,55 @@ export const participate = mutation({
             .first();
         if (existing) return existing._id;
 
-        // Generate referral code
+        // ── 3. Self-referral block ─────────────────────────────────────────────
+        if (args.referrer_id && args.referrer_id === args.user_id) {
+            throw new Error("You cannot refer yourself");
+        }
+
+        // ── 4. Check referrer daily limit ──────────────────────────────────────
+        let effectiveReferrerId = args.referrer_id;
+        if (args.referrer_id) {
+            const dayStart = new Date();
+            dayStart.setHours(0, 0, 0, 0);
+            const maxPerDay = campaign.max_referrals_per_user_per_day ?? 50;
+
+            const todayReferrals = await ctx.db
+                .query("campaign_referrals")
+                .withIndex("by_referrer", (q) => q.eq("referrer_id", args.referrer_id!))
+                .filter((q) =>
+                    q.and(
+                        q.eq(q.field("campaign_id"), args.campaign_id),
+                        q.gte(q.field("created_at"), dayStart.getTime())
+                    )
+                )
+                .collect();
+
+            if (todayReferrals.length >= maxPerDay) {
+                // Don't reward referrer today, but still let user join
+                effectiveReferrerId = undefined;
+            }
+
+            // ── 5. Check lifetime cap ──────────────────────────────────────────
+            if (effectiveReferrerId && campaign.max_total_referrals_per_user) {
+                const totalReferrals = await ctx.db
+                    .query("campaign_referrals")
+                    .withIndex("by_referrer", (q) => q.eq("referrer_id", args.referrer_id!))
+                    .filter((q) => q.eq(q.field("campaign_id"), args.campaign_id))
+                    .collect();
+                if (totalReferrals.length >= campaign.max_total_referrals_per_user) {
+                    effectiveReferrerId = undefined;
+                }
+            }
+        }
+
+        // ── 6. Generate referral code ──────────────────────────────────────────
         const referralCode = `${args.user_id.slice(-6).toUpperCase()}-${args.campaign_id.slice(-4).toUpperCase()}`;
 
-        // Join campaign
+        // ── 7. Join campaign ───────────────────────────────────────────────────
         const participantId = await ctx.db.insert("campaign_participants", {
             campaign_id: args.campaign_id,
             user_id: args.user_id,
-            referrer_id: args.referrer_id,
+            referrer_id: effectiveReferrerId,
             referral_code: referralCode,
             progress: 0,
             entries: 1,
@@ -343,53 +395,142 @@ export const participate = mutation({
             last_active: Date.now(),
         });
 
-        // If referred by someone, credit them 5 BOOTS (or campaign's referral_boots)
-        if (args.referrer_id && args.referrer_id !== args.user_id) {
-            const bootsPerReferral = campaign.referral_boots ?? 5;
+        // ── 8. Credit referral if all checks pass ──────────────────────────────
+        if (effectiveReferrerId) {
+            const referrer = await ctx.db.get(effectiveReferrerId);
+            // Block if referrer is flagged
+            const canReward = !referrer?.is_fraud_flagged && !referrer?.is_suspended;
 
-            // Record the referral
+            // Circular check (non-blocking for now — just detect)
+            const chain: string[] = [effectiveReferrerId];
+            let current: string = effectiveReferrerId;
+            for (let i = 0; i < 8; i++) {
+                const prev = await ctx.db
+                    .query("campaign_referrals")
+                    .withIndex("by_referred", (q) => q.eq("referred_id", current as any))
+                    .filter((q) => q.eq(q.field("campaign_id"), args.campaign_id))
+                    .first();
+                if (!prev) break;
+                chain.push(prev.referrer_id);
+                current = prev.referrer_id;
+            }
+            const isCircular = chain.includes(args.user_id);
+
+            // Determine fraud status for this referral
+            let referralStatus = "active";
+            let isFraudFlagged = false;
+            let fraudReason = "";
+
+            if (isCircular) {
+                referralStatus = "suspicious";
+                isFraudFlagged = true;
+                fraudReason = "circular_referral";
+                // Flag both users
+                for (const uid of [effectiveReferrerId, args.user_id]) {
+                    await ctx.db.insert("fraud_flags", {
+                        user_id: uid as any,
+                        type: "circular_referral",
+                        severity: "high",
+                        description: `Circular referral chain in campaign: ${campaign.name}`,
+                        related_campaign_id: args.campaign_id,
+                        status: "open",
+                        created_at: Date.now(),
+                    });
+                }
+            }
+
+            // Record referral
             await ctx.db.insert("campaign_referrals", {
                 campaign_id: args.campaign_id,
-                referrer_id: args.referrer_id,
+                referrer_id: effectiveReferrerId,
                 referred_id: args.user_id,
-                status: "active",
+                status: referralStatus,
+                is_fraud_flagged: isFraudFlagged,
+                fraud_reason: fraudReason || undefined,
                 commission_earned: 0,
                 months_remaining: campaign.commission_months ?? 3,
                 created_at: Date.now(),
             });
 
-            // Update referrer's participant record
-            const referrerParticipant = await ctx.db
-                .query("campaign_participants")
-                .withIndex("by_campaign", (q) => q.eq("campaign_id", args.campaign_id))
-                .filter((q) => q.eq(q.field("user_id"), args.referrer_id))
-                .first();
+            // Only reward non-fraudulent referrals
+            if (canReward && !isCircular) {
+                const bootsPerReferral = campaign.referral_boots ?? 5;
 
-            if (referrerParticipant) {
-                await ctx.db.patch(referrerParticipant._id, {
-                    referral_count: (referrerParticipant.referral_count ?? 0) + 1,
-                    boots_earned: (referrerParticipant.boots_earned ?? 0) + bootsPerReferral,
-                    last_active: Date.now(),
-                });
-            }
+                // Update referrer participant record
+                const referrerParticipant = await ctx.db
+                    .query("campaign_participants")
+                    .withIndex("by_campaign", (q) => q.eq("campaign_id", args.campaign_id))
+                    .filter((q) => q.eq(q.field("user_id"), effectiveReferrerId as any))
+                    .first();
 
-            // Credit BOOTS to referrer's main account
-            const referrer = await ctx.db.get(args.referrer_id);
-            if (referrer) {
-                await ctx.db.patch(args.referrer_id, {
-                    q_score: (referrer.q_score ?? 0) + bootsPerReferral,
-                });
-                await ctx.db.insert("boot_transactions", {
-                    user_id: args.referrer_id,
-                    amount: bootsPerReferral,
-                    type: "campaign_referral",
-                    description: `Referral bonus from campaign: ${campaign.name}`,
-                    created_at: Date.now(),
-                });
+                if (referrerParticipant) {
+                    const todayBoots = referrerParticipant.boots_earned ?? 0;
+                    const maxBootsToday = campaign.max_boots_per_user_per_day ?? 9999;
+
+                    // Only credit if under daily BOOTS cap
+                    if (todayBoots < maxBootsToday) {
+                        const actualBoots = Math.min(bootsPerReferral, maxBootsToday - todayBoots);
+                        await ctx.db.patch(referrerParticipant._id, {
+                            referral_count: (referrerParticipant.referral_count ?? 0) + 1,
+                            boots_earned: (referrerParticipant.boots_earned ?? 0) + actualBoots,
+                            last_active: Date.now(),
+                        });
+
+                        // Credit to main wallet
+                        if (referrer) {
+                            await ctx.db.patch(effectiveReferrerId, {
+                                boots_balance: (referrer.boots_balance ?? 0) + actualBoots,
+                            });
+                            await ctx.db.insert("boot_transactions", {
+                                user_id: effectiveReferrerId,
+                                amount: actualBoots,
+                                type: "campaign_referral",
+                                description: `Referral bonus from: ${campaign.name}`,
+                                created_at: Date.now(),
+                            });
+                        }
+                    }
+                }
+
+                // Rapid referral detection
+                const windowMs = 30 * 60 * 1000;
+                const recentInWindow = await ctx.db
+                    .query("campaign_referrals")
+                    .withIndex("by_referrer", (q) => q.eq("referrer_id", effectiveReferrerId as any))
+                    .filter((q) =>
+                        q.and(
+                            q.eq(q.field("campaign_id"), args.campaign_id),
+                            q.gte(q.field("created_at"), Date.now() - windowMs)
+                        )
+                    )
+                    .collect();
+
+                if (recentInWindow.length > 10) {
+                    const existingRapidFlag = await ctx.db
+                        .query("fraud_flags")
+                        .withIndex("by_user", (q) => q.eq("user_id", effectiveReferrerId as any))
+                        .filter((q) => q.eq(q.field("type"), "rapid_signup"))
+                        .first();
+                    if (!existingRapidFlag) {
+                        await ctx.db.insert("fraud_flags", {
+                            user_id: effectiveReferrerId as any,
+                            type: "rapid_signup",
+                            severity: "high",
+                            description: `${recentInWindow.length} referrals in 30 minutes — possible bot`,
+                            related_campaign_id: args.campaign_id,
+                            status: "open",
+                            created_at: Date.now(),
+                        });
+                        await ctx.db.patch(effectiveReferrerId as any, {
+                            is_fraud_flagged: true,
+                            fraud_review_reason: "Suspicious rapid referral activity",
+                        });
+                    }
+                }
             }
         }
 
-        // Update campaign progress
+        // ── 9. Update campaign progress ────────────────────────────────────────
         await ctx.db.patch(args.campaign_id, {
             current_progress: (campaign.current_progress ?? 0) + 1,
         });
@@ -412,6 +553,28 @@ export const requestWithdrawal = mutation({
         if (args.amount < 5000) throw new Error("Minimum withdrawal is ₦5,000");
         if (args.amount > 20000) throw new Error("Maximum withdrawal per request is ₦20,000");
 
+        // Block fraud-flagged users until reviewed
+        const user = await ctx.db.get(args.user_id);
+        if (user?.is_fraud_flagged) {
+            throw new Error("Your account requires manual verification before withdrawals. Contact support.");
+        }
+        if (user?.is_suspended || user?.is_banned) {
+            throw new Error("Your account is restricted. Contact support.");
+        }
+
+        // Check weekly limit: max 2 per week
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const thisWeekWithdrawals = await ctx.db
+            .query("campaign_withdrawals")
+            .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
+            .filter((q) => q.gte(q.field("created_at"), weekStart.getTime()))
+            .collect();
+        if (thisWeekWithdrawals.length >= 2) {
+            throw new Error("You can only withdraw twice per week. Try again next week.");
+        }
+
         // Check monthly limit (max 8)
         const monthStart = new Date();
         monthStart.setDate(1);
@@ -431,6 +594,19 @@ export const requestWithdrawal = mutation({
             .first();
         if (!participant || (participant.cash_earned ?? 0) < args.amount) {
             throw new Error("Insufficient campaign earnings");
+        }
+
+        // Flag large withdrawals for review
+        if (args.amount > 15000) {
+            await ctx.db.insert("fraud_flags", {
+                user_id: args.user_id,
+                type: "suspicious_withdrawal",
+                severity: "low",
+                description: `Large withdrawal request: ₦${args.amount.toLocaleString()}`,
+                related_campaign_id: args.campaign_id,
+                status: "open",
+                created_at: Date.now(),
+            });
         }
 
         return await ctx.db.insert("campaign_withdrawals", {

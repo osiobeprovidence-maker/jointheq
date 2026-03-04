@@ -39,6 +39,10 @@ import {
     ChevronDown,
     ArrowDownCircle,
     Users2,
+    AlertTriangle,
+    MapPin,
+    Calendar,
+    Flag,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -48,7 +52,7 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus";
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) {
@@ -141,6 +145,13 @@ export default function AdminPanel() {
         selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
     );
     const withdrawals = useQuery(api.campaigns.getWithdrawals, {}) || [];
+    // Security / Fraud
+    const fraudFlags = useQuery(api.fraud.getFraudFlags, {}) || [];
+    const fraudSummary = useQuery(api.fraud.getFraudSummary);
+    // Campus territories & events
+    const territories = useQuery(api.campus.getTerritories) || [];
+    const campusEvents = useQuery(api.campus.getEvents, {}) || [];
+    const campusOverview = useQuery(api.campus.getCampusOverview);
 
     // Mutations
     const suspendUserMut = useMutation(api.admin.suspendUser);
@@ -154,6 +165,12 @@ export default function AdminPanel() {
     const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
     const editCampaignMut = useMutation(api.campaigns.editCampaign);
     const processWithdrawalMut = useMutation(api.campaigns.processWithdrawal);
+    // Security mutations
+    const reviewFlagMut = useMutation(api.fraud.reviewFlag);
+    // Campus mutations
+    const createTerritoryMut = useMutation(api.campus.createTerritory);
+    const createEventMut = useMutation(api.campus.createEvent);
+    const updateEventMut = useMutation(api.campus.updateEvent);
 
     const handleSaveCampaign = async () => {
         if (!campaignForm.name || !campaignForm.description || !campaignForm.start_date || !campaignForm.end_date) {
@@ -263,6 +280,7 @@ export default function AdminPanel() {
         { id: "marketplace", label: "Marketplace", icon: <ShoppingBag size={18} /> },
         { id: "payments", label: "Payments", icon: <CreditCard size={18} /> },
         { id: "campaigns", label: "Campaigns", icon: <Megaphone size={18} /> },
+        { id: "security", label: "Security", icon: <ShieldCheck size={18} /> },
         { id: "support", label: "Support", icon: <HeadphonesIcon size={18} /> },
         { id: "admins", label: "Admins", icon: <Shield size={18} /> },
         { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} /> },
@@ -305,6 +323,11 @@ export default function AdminPanel() {
                             {item.id === "support" && allTickets.filter(t => t.status === "open").length > 0 && (
                                 <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                                     {allTickets.filter(t => t.status === "open").length}
+                                </span>
+                            )}
+                            {item.id === "security" && (fraudFlags.filter((f: any) => f.status === "open").length) > 0 && (
+                                <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                    {fraudFlags.filter((f: any) => f.status === "open").length}
                                 </span>
                             )}
                         </button>
@@ -1143,7 +1166,312 @@ export default function AdminPanel() {
                                 )}
                             </motion.div>
                         )}
+
+                        {/* ═══ SECURITY ═══ */}
+                        {activeTab === "security" && (
+                            <motion.div key="security" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
+                                <SectionHeader title="Security & Fraud Prevention" sub="Monitor suspicious activity and protect platform integrity" />
+
+                                {/* Fraud Summary Cards */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    <StatCard label="Total Flags" value={fraudSummary?.total_flags ?? 0} icon={<Flag size={18} />} color="bg-red-500" />
+                                    <StatCard label="Open Alerts" value={fraudSummary?.open_flags ?? 0} icon={<AlertTriangle size={18} />} color="bg-red-500" sub="Need review" trend="down" />
+                                    <StatCard label="High Severity" value={fraudSummary?.high_severity ?? 0} icon={<AlertTriangle size={18} />} color="bg-orange-500" />
+                                    <StatCard label="Flagged Users" value={fraudSummary?.flagged_users ?? 0} icon={<Users size={18} />} color="bg-amber-500" />
+                                    <StatCard label="Flagged Referrals" value={fraudSummary?.flagged_referrals ?? 0} icon={<Share2 size={18} />} color="bg-purple-500" />
+                                </div>
+
+                                {/* Fraud by type breakdown */}
+                                {fraudSummary && (
+                                    <div className="bg-white rounded-3xl p-6 border border-black/5">
+                                        <h3 className="font-black mb-4">Fraud Breakdown by Type</h3>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                            {[
+                                                { key: "same_device", label: "Same Device", color: "bg-orange-100 text-orange-700" },
+                                                { key: "same_ip", label: "Same IP", color: "bg-amber-100 text-amber-700" },
+                                                { key: "circular_referral", label: "Circular Ref", color: "bg-red-100 text-red-700" },
+                                                { key: "rapid_signup", label: "Rapid Signup", color: "bg-purple-100 text-purple-700" },
+                                                { key: "suspicious_withdrawal", label: "Suspicious W/D", color: "bg-blue-100 text-blue-700" },
+                                            ].map(t => (
+                                                <div key={t.key} className={`rounded-2xl p-4 text-center ${t.color}`}>
+                                                    <div className="text-2xl font-black">{(fraudSummary.by_type as any)[t.key] ?? 0}</div>
+                                                    <div className="text-[10px] font-bold mt-1">{t.label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Fraud Flags List */}
+                                <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                    <div className="p-6 border-b border-black/5 flex items-center justify-between">
+                                        <div>
+                                            <h3 className="font-black">Fraud Flags</h3>
+                                            <p className="text-xs text-gray-400 mt-0.5">Review and clear or confirm each flag</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {["", "open", "reviewing", "cleared", "confirmed"].map(s => (
+                                                <button key={s} className="px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 hover:bg-zinc-200 transition-colors">
+                                                    {s || "All"}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="divide-y divide-black/3">
+                                        {(fraudFlags as any[]).length === 0 ? (
+                                            <div className="p-12 text-center">
+                                                <ShieldCheck size={32} className="mx-auto mb-3 text-emerald-400" />
+                                                <p className="font-bold text-gray-400">No fraud flags — platform is clean!</p>
+                                            </div>
+                                        ) : (fraudFlags as any[]).map((flag: any) => (
+                                            <div key={flag._id} className="p-5 flex items-start gap-4">
+                                                <div className={`w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center ${flag.severity === "high" ? "bg-red-100" : flag.severity === "medium" ? "bg-orange-100" : "bg-amber-100"}`}>
+                                                    <AlertTriangle size={16} className={flag.severity === "high" ? "text-red-500" : flag.severity === "medium" ? "text-orange-500" : "text-amber-500"} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-black text-sm">{flag.full_name}</span>
+                                                        <span className="text-xs text-gray-400">{flag.email}</span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${flag.severity === "high" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                                                            {flag.severity}
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${flag.status === "open" ? "bg-amber-100 text-amber-700" : flag.status === "confirmed" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                                                            {flag.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full text-[10px] font-bold">{flag.type.replace(/_/g, " ")}</span>
+                                                        <span className="text-xs text-gray-400">{new Date(flag.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-600">{flag.description}</p>
+                                                </div>
+                                                {flag.status === "open" || flag.status === "reviewing" ? (
+                                                    <div className="flex gap-2 flex-shrink-0">
+                                                        <button
+                                                            onClick={async () => {
+                                                                await reviewFlagMut({ flag_id: flag._id, action: "reviewing", reviewer_id: currentUser!._id });
+                                                                toast("Marked as reviewing", { icon: "🔍" });
+                                                            }}
+                                                            className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200 transition-colors"
+                                                        >Review</button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                await reviewFlagMut({ flag_id: flag._id, action: "clear", reviewer_id: currentUser!._id });
+                                                                toast.success("Flag cleared");
+                                                            }}
+                                                            className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-colors"
+                                                        >Clear</button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!confirm("Confirm this fraud flag? This will suspend the user.")) return;
+                                                                await reviewFlagMut({ flag_id: flag._id, action: "confirm", reviewer_id: currentUser!._id });
+                                                                toast.error("Fraud confirmed — user suspended");
+                                                            }}
+                                                            className="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 transition-colors"
+                                                        >Confirm</button>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* ═══ CAMPUS Q (Territories + Events) ═══ */}
+                        {activeTab === "campus" && (
+                            <motion.div key="campus-full" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
+                                <SectionHeader
+                                    title="Campus Q Program"
+                                    sub="Territory management, ambassadors, and events"
+                                    action={
+                                        <button
+                                            onClick={() => {
+                                                const campusName = prompt("Campus name?");
+                                                const city = prompt("City?");
+                                                if (campusName && city) {
+                                                    createTerritoryMut({ campus_name: campusName, city, country: "Nigeria" })
+                                                        .then(() => toast.success(`Territory "${campusName}" created!`))
+                                                        .catch((e: any) => toast.error(e.message));
+                                                }
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-2xl text-xs font-bold hover:scale-105 transition-transform"
+                                        >
+                                            <Plus size={14} /> Add Territory
+                                        </button>
+                                    }
+                                />
+
+                                {/* Campus Overview Stats */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    <StatCard label="Territories" value={campusOverview?.total_territories ?? 0} icon={<MapPin size={18} />} color="bg-blue-500" />
+                                    <StatCard label="Ambassadors" value={campusOverview?.total_ambassadors ?? 0} icon={<Users size={18} />} color="bg-purple-500" />
+                                    <StatCard label="Total Events" value={campusOverview?.total_events ?? 0} icon={<Calendar size={18} />} color="bg-amber-500" />
+                                    <StatCard label="Users Acquired" value={campusOverview?.total_users_acquired ?? 0} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="From events" />
+                                </div>
+
+                                {/* Territories Grid */}
+                                <div>
+                                    <h3 className="font-black text-lg mb-4">Campus Territories</h3>
+                                    {(territories as any[]).length === 0 ? (
+                                        <div className="bg-white rounded-3xl p-12 border border-dashed border-black/20 text-center text-gray-400">
+                                            <MapPin size={32} className="mx-auto mb-3 opacity-20" />
+                                            <p className="font-bold">No territories yet</p>
+                                            <p className="text-xs mt-1">Add campus territories to manage ambassadors and events</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {(territories as any[]).map((t: any) => (
+                                                <div key={t._id} className="bg-white rounded-3xl p-5 border border-black/5 hover:shadow-lg transition-all">
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div>
+                                                            <h4 className="font-black">{t.campus_name}</h4>
+                                                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><MapPin size={10} /> {t.city}, {t.country}</p>
+                                                        </div>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${t.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                                                            {t.is_active ? "Active" : "Inactive"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                                                        <div className="bg-blue-50 rounded-xl p-2">
+                                                            <div className="font-black text-sm text-blue-700">{t.total_users ?? 0}</div>
+                                                            <div className="text-[9px] text-blue-500 font-bold">Users</div>
+                                                        </div>
+                                                        <div className="bg-purple-50 rounded-xl p-2">
+                                                            <div className="font-black text-sm text-purple-700">{t.ambassador_count ?? 0}</div>
+                                                            <div className="text-[9px] text-purple-500 font-bold">Ambassadors</div>
+                                                        </div>
+                                                        <div className="bg-amber-50 rounded-xl p-2">
+                                                            <div className="font-black text-sm text-amber-700">{t.event_count ?? 0}</div>
+                                                            <div className="text-[9px] text-amber-500 font-bold">Events</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="border-t border-black/5 pt-3 flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 bg-zinc-100 rounded-full flex items-center justify-center text-xs font-bold">{t.leader_name?.[0] ?? "?"}</div>
+                                                            <div>
+                                                                <div className="text-xs font-bold">{t.leader_name}</div>
+                                                                <div className="text-[10px] text-gray-400">Campus Leader</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Campus Events */}
+                                <div>
+                                    <SectionHeader
+                                        title="Campus Events"
+                                        sub="Track onboarding events, referral competitions, and meetups"
+                                        action={
+                                            <button
+                                                onClick={async () => {
+                                                    const name = prompt("Event name?");
+                                                    const campusName = prompt("Campus name?");
+                                                    const city = prompt("City?");
+                                                    const dateStr = prompt("Event date? (YYYY-MM-DD)");
+                                                    const type = prompt("Type? (onboarding/referral_comp/demo/meetup)") || "meetup";
+                                                    if (name && campusName && city && dateStr) {
+                                                        try {
+                                                            await createEventMut({
+                                                                name, campus_name: campusName, city,
+                                                                event_date: new Date(dateStr).getTime(),
+                                                                type,
+                                                                created_by: currentUser?._id,
+                                                            });
+                                                            toast.success(`Event "${name}" created!`);
+                                                        } catch (e: any) { toast.error(e.message); }
+                                                    }
+                                                }}
+                                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-2xl text-xs font-bold hover:scale-105 transition-transform"
+                                            >
+                                                <Plus size={14} /> Add Event
+                                            </button>
+                                        }
+                                    />
+                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                        {(campusEvents as any[]).length === 0 ? (
+                                            <div className="p-12 text-center text-gray-400">
+                                                <Calendar size={32} className="mx-auto mb-3 opacity-20" />
+                                                <p className="font-bold">No events yet</p>
+                                            </div>
+                                        ) : (
+                                            <div className="divide-y divide-black/5">
+                                                {(campusEvents as any[]).map((ev: any) => (
+                                                    <div key={ev._id} className="p-5 flex items-center gap-4">
+                                                        <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center ${ev.type === "onboarding" ? "bg-blue-100" : ev.type === "referral_comp" ? "bg-purple-100" : ev.type === "demo" ? "bg-green-100" : "bg-amber-100"}`}>
+                                                            <Calendar size={18} className="text-zinc-700" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-black text-sm">{ev.name}</div>
+                                                            <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
+                                                                <MapPin size={10} />{ev.campus_name}, {ev.city}
+                                                                <span>•</span>
+                                                                <Calendar size={10} />{new Date(ev.event_date).toLocaleDateString()}
+                                                                <span>•</span>
+                                                                Host: {ev.host_name}
+                                                            </div>
+                                                            {ev.status === "completed" && (
+                                                                <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500">
+                                                                    <span>👥 {ev.actual_attendance ?? 0} attended</span>
+                                                                    <span>🆕 {ev.new_users_acquired ?? 0} new users</span>
+                                                                    <span>📦 {ev.subscriptions_created ?? 0} subscriptions</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ev.status === "upcoming" ? "bg-blue-100 text-blue-700" : ev.status === "completed" ? "bg-emerald-100 text-emerald-700" : ev.status === "cancelled" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                                                                {ev.status}
+                                                            </span>
+                                                            {ev.status === "upcoming" && (
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const attendance = prompt("Actual attendance?");
+                                                                        const newUsers = prompt("New users acquired?");
+                                                                        const subs = prompt("Subscriptions created?");
+                                                                        if (attendance !== null) {
+                                                                            await updateEventMut({ id: ev._id, status: "completed", actual_attendance: Number(attendance), new_users_acquired: Number(newUsers || 0), subscriptions_created: Number(subs || 0) });
+                                                                            toast.success("Event marked complete!");
+                                                                        }
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-colors"
+                                                                >Complete</button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Legacy Campus Reps */}
+                                {campusReps.length > 0 && (
+                                    <div>
+                                        <SectionHeader title="Campus Representatives (Legacy)" sub="Original campus rep program members" />
+                                        <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                            <div className="grid grid-cols-4 p-4 text-[10px] uppercase font-black text-gray-400 border-b border-black/5">
+                                                <span>Rep</span><span className="text-center">Campus</span><span className="text-center">Referred</span><span className="text-right">Earned</span>
+                                            </div>
+                                            {campusReps.map((rep: any) => (
+                                                <div key={rep._id} className="grid grid-cols-4 p-4 items-center border-b border-black/3">
+                                                    <div className="font-bold text-sm truncate">{rep.full_name}</div>
+                                                    <div className="flex justify-center items-center gap-1"><GraduationCap size={12} className="text-gray-400" /><span className="text-sm font-bold">{rep.campus_name}</span></div>
+                                                    <div className="text-center font-black">{rep.total_referred}</div>
+                                                    <div className="text-right font-black text-emerald-600">{fmt(rep.total_earned)}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+
                     </AnimatePresence>
+
                 </div>
             </main>
 

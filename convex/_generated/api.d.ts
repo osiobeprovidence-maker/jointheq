@@ -11,8 +11,10 @@
 import type * as actions from "../actions.js";
 import type * as admin from "../admin.js";
 import type * as campaigns from "../campaigns.js";
+import type * as campus from "../campus.js";
 import type * as devices from "../devices.js";
 import type * as email from "../email.js";
+import type * as fraud from "../fraud.js";
 import type * as init from "../init.js";
 import type * as lunar from "../lunar.js";
 import type * as messages from "../messages.js";
@@ -33,8 +35,10 @@ declare const fullApi: ApiFromModules<{
   actions: typeof actions;
   admin: typeof admin;
   campaigns: typeof campaigns;
+  campus: typeof campus;
   devices: typeof devices;
   email: typeof email;
+  fraud: typeof fraud;
   init: typeof init;
   lunar: typeof lunar;
   messages: typeof messages;
