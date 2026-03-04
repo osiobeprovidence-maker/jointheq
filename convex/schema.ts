@@ -40,6 +40,12 @@ export default defineSchema({
         verification_deadline: v.optional(v.number()), // 3-day grace period for email verification
         failed_login_attempts: v.optional(v.number()),
         lockout_until: v.optional(v.number()), // timestamp when user can try again
+        direct_debit_card: v.optional(v.object({
+            last4: v.string(),
+            brand: v.string(),
+            expiry: v.string(),
+            auth_token: v.string(), // Secure token for recurring debit
+        })),
         created_at: v.number(),
     }).index("by_email", ["email"])
         .index("by_phone", ["phone"])
@@ -111,9 +117,12 @@ export default defineSchema({
 
     groups: defineTable({
         subscription_id: v.id("subscriptions"),
-        billing_cycle_start: v.string(),
+        billing_cycle_start: v.string(), // When the ADMIN needs to pay
         status: v.string(),
-    }).index("by_subscription", ["subscription_id"]),
+        account_email: v.optional(v.string()), // The actual account credential email
+        plan_owner: v.optional(v.string()), // Who owns/bought the account
+    }).index("by_subscription", ["subscription_id"])
+        .index("by_billing_cycle", ["billing_cycle_start"]),
 
     slots: defineTable({
         group_id: v.id("groups"),

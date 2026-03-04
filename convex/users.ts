@@ -347,3 +347,20 @@ export const removeAdmin = mutation({
         return { success: true };
     },
 });
+
+export const updateCard = mutation({
+    args: {
+        userId: v.id("users"),
+        cardDetails: v.object({
+            last4: v.string(),
+            brand: v.string(),
+            expiry: v.string(),
+            auth_token: v.string(),
+        })
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.userId, {
+            direct_debit_card: args.cardDetails
+        });
+    },
+});

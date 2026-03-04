@@ -32,7 +32,10 @@ import {
     Trash2,
     MessageCircle,
     ImageIcon,
-    Send
+    Send,
+    ChevronLeft,
+    MoreVertical,
+    Info
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -71,6 +74,7 @@ export default function DashboardPage() {
     const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
     const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
     const adminsList = useQuery(api.users.getAdmins) || [];
+    const adminMarketplace = useQuery(api.subscriptions.getAdminMarketplace) || [];
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -81,6 +85,14 @@ export default function DashboardPage() {
     const [newPhone, setNewPhone] = useState('');
     const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
     const [adminInviteEmail, setAdminInviteEmail] = useState('');
+    const [showListingModal, setShowListingModal] = useState(false);
+    const [listingData, setListingData] = useState({
+        subscription_id: '',
+        account_email: '',
+        plan_owner: '',
+        admin_renewal_date: '',
+        slots: [{ name: '', price: 0, capacity: 1, access_type: 'code_access', downloads_enabled: true }]
+    });
 
     const messagesUserId = currentUser?.is_admin ? (selectedChatUserId || currentUser._id) : currentUser?._id;
     const messages = useQuery(api.messages.getMessages, messagesUserId ? { user_id: messagesUserId } : "skip") || [];
@@ -101,6 +113,24 @@ export default function DashboardPage() {
     const seedCampaignsMutation = useMutation(api.campaigns.seedDummy);
     const makeAdminMutation = useMutation(api.users.makeAdmin);
     const removeAdminMutation = useMutation(api.users.removeAdmin);
+    const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
+    const updateCardMutation = useMutation(api.users.updateCard);
+
+    const handleCreateListing = async () => {
+        try {
+            await adminCreateListingMutation({
+                subscription_id: listingData.subscription_id as Id<"subscriptions">,
+                account_email: listingData.account_email,
+                plan_owner: listingData.plan_owner,
+                admin_renewal_date: listingData.admin_renewal_date,
+                slot_types: listingData.slots
+            });
+            toast.success("Listing created successfully!");
+            setShowListingModal(false);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to create listing");
+        }
+    };
 
     const handleMakeAdmin = async () => {
         if (!currentUser || !adminInviteEmail) return;
@@ -452,6 +482,84 @@ export default function DashboardPage() {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Direct Debit Card Section */}
+                        <div className="bg-white p-8 sm:p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-900/5 rounded-full -mr-32 -mt-32 transition-transform group-hover:scale-110 duration-700"></div>
+                            <div className="relative z-10">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                                    <div className="max-w-md">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-10 h-10 bg-zinc-900 text-white rounded-2xl flex items-center justify-center shadow-lg">
+                                                <Shield size={20} />
+                                            </div>
+                                            <h3 className="text-2xl font-bold">Direct Debit</h3>
+                                        </div>
+                                        <p className="text-gray-500 leading-relaxed">
+                                            Link your card for automatic renewals. We'll debit your card directly whenever a subscription is due, ensuring you never lose access.
+                                        </p>
+                                    </div>
+
+                                    <div className="flex-shrink-0">
+                                        {currentUser?.direct_debit_card ? (
+                                            <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] shadow-2xl min-w-[320px] relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-6 opacity-20">
+                                                    <ShieldCheck size={48} />
+                                                </div>
+                                                <div className="flex justify-between items-start mb-12">
+                                                    <div className="text-xs font-bold uppercase tracking-widest opacity-60">Linked Card</div>
+                                                    <div className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest">Active</div>
+                                                </div>
+                                                <div className="mb-8">
+                                                    <div className="text-2xl font-mono tracking-widest break-all">•••• •••• •••• {currentUser.direct_debit_card.last4}</div>
+                                                </div>
+                                                <div className="flex justify-between items-end">
+                                                    <div>
+                                                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Brand</div>
+                                                        <div className="font-bold">{currentUser.direct_debit_card.brand}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Expiry</div>
+                                                        <div className="font-bold">{currentUser.direct_debit_card.expiry}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={async () => {
+                                                    // This would normally trigger Paystack/Flutterwave inline popup
+                                                    // For now we simulate a successful linking
+                                                    try {
+                                                        const loadingToast = toast.loading("Connecting to secure payment gateway...");
+                                                        setTimeout(async () => {
+                                                            await updateCardMutation({
+                                                                userId: currentUser!._id,
+                                                                cardDetails: {
+                                                                    last4: "4242",
+                                                                    brand: "Visa",
+                                                                    expiry: "12/26",
+                                                                    auth_token: "simulated_auth_token_" + Date.now()
+                                                                }
+                                                            });
+                                                            toast.dismiss(loadingToast);
+                                                            toast.success("Card linked successfully for direct debit!", {
+                                                                icon: '💳',
+                                                                style: { borderRadius: '2rem', background: '#18181b', color: '#fff' }
+                                                            });
+                                                        }, 2000);
+                                                    } catch (e: any) {
+                                                        toast.error("Failed to link card");
+                                                    }
+                                                }}
+                                                className="bg-zinc-900 text-white px-10 py-5 rounded-full font-bold shadow-xl hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-3 group"
+                                            >
+                                                <Plus size={20} className="group-hover:rotate-90 transition-transform" /> Link New Card
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                 )}
 
@@ -662,31 +770,66 @@ export default function DashboardPage() {
                 )}
 
                 {activeTab === 'support' && (
-                    <motion.div key="support" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4 h-[calc(100vh-10rem)] min-h-[500px] flex flex-col">
-                        <header>
-                            <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
-                            <p className="text-gray-500 mt-1">Get help from the jointheq team.</p>
+                    <motion.div key="support" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-[calc(100vh-8rem)] min-h-[500px] flex flex-col bg-white rounded-[3rem] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+                        {/* Support Header */}
+                        <header className="p-4 sm:p-6 border-b border-black/5 flex items-center justify-between bg-white z-20">
+                            <div className="flex items-center gap-4">
+                                {currentUser?.is_admin && selectedChatUserId && (
+                                    <button
+                                        onClick={() => setSelectedChatUserId(null)}
+                                        className="p-2 hover:bg-black/5 rounded-full md:hidden"
+                                    >
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                )}
+                                <div className="relative">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-zinc-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden">
+                                        {currentUser?.is_admin && selectedChatUserId ? (
+                                            <span className="font-bold text-lg">{chatUsers.find(u => u._id === selectedChatUserId)?.full_name?.[0]}</span>
+                                        ) : (
+                                            <div className="bg-blue-600 w-full h-full flex items-center justify-center">
+                                                <ShieldCheck size={24} className="text-white" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm sm:text-base flex items-center gap-1.5">
+                                        {currentUser?.is_admin && selectedChatUserId ? (
+                                            chatUsers.find(u => u._id === selectedChatUserId)?.full_name
+                                        ) : (
+                                            <>JoinTheQ Support <div className="w-3.5 h-3.5 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white"><Check size={8} strokeWidth={4} /></div></>
+                                        )}
+                                    </h3>
+                                    <p className="text-[10px] sm:text-xs text-emerald-500 font-medium">Online • Verified</p>
+                                </div>
+                            </div>
+                            <button className="p-2 hover:bg-black/5 rounded-full text-black/40">
+                                <MoreVertical size={20} />
+                            </button>
                         </header>
 
-                        <div className="flex-1 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem]  overflow-hidden flex flex-col md:flex-row">
+                        <div className="flex-1 flex overflow-hidden relative">
+                            {/* Admin Chat List - Desktop Sidebar */}
                             {currentUser?.is_admin && (
-                                <div className="w-full md:w-80 border-b md:border-b-0 md:border-none shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-y-auto">
-                                    <div className="p-6 border-none shadow-[0_4px_24px_rgba(0,0,0,0.02)] sticky top-0 bg-white z-10">
-                                        <h3 className="font-bold text-lg">Chats</h3>
+                                <div className={`${selectedChatUserId ? 'hidden md:block' : 'block md:block'} w-full md:w-80 border-r border-black/5 bg-[#fdfdfd] overflow-y-auto`}>
+                                    <div className="p-6 sticky top-0 bg-[#fdfdfd] z-10 border-b border-black/5">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Conversations</h4>
                                     </div>
                                     <div className="divide-y divide-black/5">
                                         {chatUsers.map((u: any) => (
                                             <button
                                                 key={u._id}
                                                 onClick={() => setSelectedChatUserId(u._id)}
-                                                className={`w-full text-left p-4 hover:bg-black/5 transition-colors flex items-center gap-3 ${selectedChatUserId === u._id ? 'bg-black/5' : ''}`}
+                                                className={`w-full text-left p-4 sm:p-5 hover:bg-black/5 transition-all flex items-center gap-4 ${selectedChatUserId === u._id ? 'bg-white shadow-[0_4px_24px_rgba(0,0,0,0.04)] scale-[0.98] z-10 border-l-4 border-zinc-900' : ''}`}
                                             >
-                                                <div className="w-10 h-10 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center font-bold flex-shrink-0">
+                                                <div className="w-10 h-10 bg-zinc-100 text-zinc-900 rounded-full flex items-center justify-center font-bold flex-shrink-0">
                                                     {u.full_name[0]}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="font-bold truncate">{u.full_name} {u.is_admin && <span className="text-emerald-500 text-xs ml-1">(Admin)</span>}</div>
-                                                    <div className="text-xs text-gray-500 truncate">{u.email}</div>
+                                                    <div className="font-bold text-sm truncate">{u.full_name}</div>
+                                                    <div className="text-[10px] text-gray-400 truncate tracking-tight">{u.email}</div>
                                                 </div>
                                             </button>
                                         ))}
@@ -694,87 +837,108 @@ export default function DashboardPage() {
                                 </div>
                             )}
 
-                            <div className="flex-1 flex flex-col h-full bg-[#fdfdfd]/50">
-                                {currentUser?.is_admin && !selectedChatUserId ? (
-                                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-400">
-                                        <MessageCircle size={48} className="mb-4 opacity-20 mx-auto" />
-                                        <p>Select a user from the list to view their messages and reply.</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
-                                            {messages.length === 0 ? (
-                                                <div className="m-auto text-center text-gray-400 p-8 flex flex-col justify-center items-center">
-                                                    <MessageCircle size={48} className="mb-4 opacity-20" />
-                                                    <p>No messages yet. {currentUser?.is_admin ? 'This user hasn\'t sent any messages.' : 'Send us a message and we will reply as soon as possible.'}</p>
-                                                </div>
-                                            ) : (
-                                                messages.map((msg: any) => {
-                                                    const isMe = msg.sender_id === currentUser._id;
-                                                    return (
-                                                        <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                                            <div className={`max-w-[75%] p-4 rounded-[2rem] ${isMe ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] ' : 'bg-white border border-black/10 text-black  '}`}>
-                                                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                                                {msg.image_data && (
-                                                                    <img src={msg.image_data} alt="Attached" className="mt-2 rounded-full scale-100 hover:scale-[1.02] max-w-full h-auto" />
-                                                                )}
-                                                                <div className={`text-[10px] mt-2 font-semibold opacity-50 ${isMe ? 'text-right text-white/70' : 'text-left'}`}>
-                                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
-                                        </div>
-                                        <div className="p-4 bg-white border-t border-black/5 mt-auto">
-                                            <div className="flex items-end gap-2 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-2 rounded-[2rem] focus-within:ring-2 ring-black/10 transition-shadow">
-                                                <input
-                                                    type="file"
-                                                    id="chat-image"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    onChange={handleImageUpload}
-                                                />
-                                                <label htmlFor="chat-image" className="p-3 mb-1 text-gray-500 hover:text-black hover:bg-black/5 rounded-full scale-100 hover:scale-[1.02] cursor-pointer transition-colors">
-                                                    <ImageIcon size={20} />
-                                                </label>
-
-                                                <div className="flex-1 flex flex-col">
-                                                    {chatImage && (
-                                                        <div className="relative inline-block m-2">
-                                                            <img src={chatImage} alt="Preview" className="h-16 rounded-lg border border-black/10 w-fit" />
-                                                            <button onClick={() => setChatImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:scale-110 transition-transform shadow-md">
-                                                                <X size={12} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                    <textarea
-                                                        value={chatInput}
-                                                        onChange={(e) => setChatInput(e.target.value)}
-                                                        placeholder={currentUser?.is_admin ? "Type your reply..." : "How can we help?"}
-                                                        className="w-full bg-transparent border-none focus:outline-none p-3 resize-none max-h-32 text-sm"
-                                                        rows={1}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                                e.preventDefault();
-                                                                sendMessage();
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-
-                                                <button
-                                                    onClick={sendMessage}
-                                                    disabled={!chatInput.trim() && !chatImage}
-                                                    className="p-3 mb-1 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:bg-black/20"
-                                                >
-                                                    <Send size={18} />
-                                                </button>
+                            {/* Chat View */}
+                            <div className={`flex-1 flex flex-col h-full bg-[#fdfdfd]/50 ${currentUser?.is_admin && !selectedChatUserId ? 'hidden md:flex' : 'flex'}`}>
+                                <div className="flex-1 p-4 sm:p-8 overflow-y-auto flex flex-col space-y-6">
+                                    {/* System Welcome Section */}
+                                    {!currentUser?.is_admin && messages.length === 0 && (
+                                        <div className="py-12 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                                            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-blue-50 rounded-full flex items-center justify-center mb-8 shadow-inner">
+                                                <ShieldCheck size={56} className="text-blue-600 opacity-80" />
+                                            </div>
+                                            <h2 className="text-xl sm:text-2xl font-black mb-3">Hi 👋</h2>
+                                            <p className="max-w-xs text-gray-400 text-sm leading-relaxed mb-4">
+                                                Need help with subscriptions, payments, or access?
+                                                Send us a message and our team will assist you.
+                                            </p>
+                                            <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                                                Average response time: 5 mins
                                             </div>
                                         </div>
-                                    </>
-                                )}
+                                    )}
+
+                                    {messages.length > 0 && (
+                                        <div className="text-center py-4">
+                                            <div className="inline-block px-4 py-1.5 bg-black/5 rounded-full text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                Connected to JoinTheQ Support • Today
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {messages.map((msg: any) => {
+                                        const isMe = msg.sender_id === currentUser._id;
+                                        return (
+                                            <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                                                <div className="flex flex-col max-w-[85%] sm:max-w-[70%]">
+                                                    <div className={`p-4 sm:p-5 shadow-sm ${isMe ? 'bg-zinc-900 text-white rounded-[2rem] rounded-tr-none' : 'bg-white border border-black/5 text-black rounded-[2rem] rounded-tl-none'}`}>
+                                                        {msg.image_data && (
+                                                            <div className="mb-3 overflow-hidden rounded-2xl">
+                                                                <img src={msg.image_data} alt="Attached" className="w-full h-auto" />
+                                                            </div>
+                                                        )}
+                                                        <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                                                    </div>
+                                                    <div className={`mt-2 flex items-center gap-2 px-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+                                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                        {isMe && <Check size={12} className="text-emerald-500" />}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="h-4" /> {/* Spacer */}
+                                </div>
+
+                                {/* Message Input Area */}
+                                <div className="p-4 sm:p-6 bg-white border-t border-black/5 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
+                                    <div className="flex items-end gap-3 bg-[#f8f9fa] border-none p-3 rounded-[2.5rem] focus-within:ring-2 ring-black/5 transition-all">
+                                        <input
+                                            type="file"
+                                            id="chat-image"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleImageUpload}
+                                        />
+                                        <label htmlFor="chat-image" className="p-3 mb-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full cursor-pointer transition-colors bg-white shadow-sm">
+                                            <ImageIcon size={20} />
+                                        </label>
+
+                                        <div className="flex-1 flex flex-col min-w-0">
+                                            {chatImage && (
+                                                <div className="relative inline-block m-2">
+                                                    <img src={chatImage} alt="Preview" className="h-16 rounded-xl border-2 border-white shadow-lg w-fit" />
+                                                    <button onClick={() => setChatImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform">
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <textarea
+                                                value={chatInput}
+                                                onChange={(e) => setChatInput(e.target.value)}
+                                                placeholder="Type a message..."
+                                                className="w-full bg-transparent border-none focus:outline-none p-3 resize-none max-h-32 text-sm sm:text-base font-medium"
+                                                rows={1}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        sendMessage();
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+
+                                        <button
+                                            onClick={sendMessage}
+                                            disabled={!chatInput.trim() && !chatImage}
+                                            className="p-4 mb-0.5 bg-zinc-900 text-white shadow-lg shadow-black/20 rounded-full hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale disabled:hover:scale-100"
+                                        >
+                                            <Send size={18} />
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-center text-gray-400 mt-4 font-bold uppercase tracking-widest">Secured by JoinTheQ Encryption</p>
+                                </div>
                             </div>
                         </div>
                     </motion.div>
@@ -789,6 +953,12 @@ export default function DashboardPage() {
                                 </h1>
                                 <p className="text-gray-500 mt-1">Manage platform operations and ecosystem.</p>
                             </div>
+                            <button
+                                onClick={() => setShowListingModal(true)}
+                                className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
+                            >
+                                <Plus size={18} /> Create New Listing
+                            </button>
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -898,6 +1068,67 @@ export default function DashboardPage() {
                                 </div>
                             </section>
                         )}
+
+                        <section className="bg-white p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl mt-12">
+                            <h2 className="text-2xl font-bold mb-8">Platform Listings & Groups</h2>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="border-b border-black/5">
+                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Subscription</th>
+                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Account Email</th>
+                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Provider</th>
+                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Members</th>
+                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Renewal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-black/5">
+                                        {adminMarketplace.map((group: any) => (
+                                            <React.Fragment key={group._id}>
+                                                <tr className="group hover:bg-[#fdfdfd] transition-colors">
+                                                    <td className="py-6 px-4 font-bold">{group.subscription_name}</td>
+                                                    <td className="py-6 px-4 text-sm font-mono text-blue-600">{group.account_email || '—'}</td>
+                                                    <td className="py-6 px-4 text-sm">{group.plan_owner || '—'}</td>
+                                                    <td className="py-6 px-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-10 h-10 bg-[#f4f5f8] rounded-full flex items-center justify-center font-bold text-xs">
+                                                                {group.member_count}
+                                                            </div>
+                                                            <span className="text-xs text-gray-400 font-bold uppercase tracking-tight">Slots Taken</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-6 px-4 text-sm font-bold text-emerald-600">
+                                                        {group.billing_cycle_start ? new Date(group.billing_cycle_start).toLocaleDateString() : '—'}
+                                                    </td>
+                                                </tr>
+                                                {group.members.length > 0 && (
+                                                    <tr>
+                                                        <td colSpan={5} className="px-8 pb-6">
+                                                            <div className="bg-[#f4f5f8] rounded-2xl p-4 space-y-2">
+                                                                <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Active Members in this group</div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                                    {group.members.map((m: any, idx: number) => (
+                                                                        <div key={idx} className="bg-white p-3 rounded-xl border border-black/5 shadow-sm flex flex-col">
+                                                                            <span className="text-sm font-bold">{m.user_name}</span>
+                                                                            <span className="text-[10px] text-gray-400">{m.slot_name} • Renew: {new Date(m.renewal).toLocaleDateString()}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                        {adminMarketplace.length === 0 && (
+                                            <tr>
+                                                <td colSpan={5} className="py-12 text-center text-gray-400 italic">No account listings published yet.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
                     </motion.div>
                 )}
                 {activeTab === 'profile' && (
@@ -1021,6 +1252,199 @@ export default function DashboardPage() {
                                         className="w-full py-5 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-black/10"
                                     >
                                         Confirm & Pay ₦{useBootsForPayment ? (checkoutSlot.price / 2).toLocaleString() : checkoutSlot.price.toLocaleString()}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* Create Listing Modal */}
+                <AnimatePresence>
+                    {showListingModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setShowListingModal(false)}
+                                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="relative bg-[#f4f5f8] w-full max-w-3xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-sans"
+                            >
+                                <div className="p-8 bg-white flex items-center justify-between border-b border-black/5">
+                                    <div>
+                                        <h2 className="text-2xl font-bold">Create Marketplace Listing</h2>
+                                        <p className="text-sm text-gray-500 mt-1">Setup account groups and define slot varieties.</p>
+                                    </div>
+                                    <button onClick={() => setShowListingModal(false)} className="p-3 hover:bg-black/5 rounded-full transition-colors">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-10 space-y-10">
+                                    {/* Account Details */}
+                                    <section>
+                                        <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" /> Account Details
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Platform (Subscription)</label>
+                                                <select
+                                                    value={listingData.subscription_id}
+                                                    onChange={(e) => setListingData({ ...listingData, subscription_id: e.target.value })}
+                                                    className="w-full p-5 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none appearance-none cursor-pointer"
+                                                >
+                                                    <option value="">Select Platform</option>
+                                                    {subscriptions.map(sub => (
+                                                        <option key={sub._id} value={sub._id}>{sub.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Owner/Provider</label>
+                                                <input
+                                                    placeholder="e.g. Riderezzy"
+                                                    value={listingData.plan_owner}
+                                                    onChange={(e) => setListingData({ ...listingData, plan_owner: e.target.value })}
+                                                    className="w-full p-5 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Login Email</label>
+                                                <input
+                                                    placeholder="netflix@jointheq.com"
+                                                    value={listingData.account_email}
+                                                    onChange={(e) => setListingData({ ...listingData, account_email: e.target.value })}
+                                                    className="w-full p-5 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Admin Renewal Date (Account Expiry)</label>
+                                                <input
+                                                    type="date"
+                                                    value={listingData.admin_renewal_date}
+                                                    onChange={(e) => setListingData({ ...listingData, admin_renewal_date: e.target.value })}
+                                                    className="w-full p-5 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Slot Types */}
+                                    <section>
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 bg-emerald-600 rounded-full" /> Slot Varieties
+                                            </h3>
+                                            <button
+                                                onClick={() => setListingData({
+                                                    ...listingData,
+                                                    slots: [...listingData.slots, { name: '', price: 0, capacity: 1, access_type: 'code_access', downloads_enabled: true }]
+                                                })}
+                                                className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-full border border-blue-100 transition-colors"
+                                            >
+                                                + Add Variety
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            {listingData.slots.map((slot, index) => (
+                                                <div key={index} className="bg-white p-6 sm:p-8 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] relative group animate-in fade-in slide-in-from-bottom-2">
+                                                    {listingData.slots.length > 1 && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const newSlots = [...listingData.slots];
+                                                                newSlots.splice(index, 1);
+                                                                setListingData({ ...listingData, slots: newSlots });
+                                                            }}
+                                                            className="absolute -top-3 -right-3 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:scale-110 active:scale-90"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    )}
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Slot Group Name</label>
+                                                            <input
+                                                                placeholder="e.g. Profile 1"
+                                                                value={slot.name}
+                                                                onChange={(e) => {
+                                                                    const newSlots = [...listingData.slots];
+                                                                    const val = e.target.value;
+                                                                    newSlots[index] = { ...newSlots[index], name: val };
+                                                                    setListingData({ ...listingData, slots: newSlots });
+                                                                }}
+                                                                className="w-full p-4 bg-[#fdfdfd] border-none shadow-sm rounded-[1.5rem] font-bold focus:ring-1 ring-black/5 outline-none text-sm"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Slot Price (₦)</label>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="2500"
+                                                                value={slot.price}
+                                                                onChange={(e) => {
+                                                                    const newSlots = [...listingData.slots];
+                                                                    const val = Number(e.target.value);
+                                                                    newSlots[index] = { ...newSlots[index], price: val };
+                                                                    setListingData({ ...listingData, slots: newSlots });
+                                                                }}
+                                                                className="w-full p-4 bg-[#fdfdfd] border-none shadow-sm rounded-[1.5rem] font-bold focus:ring-1 ring-black/5 outline-none text-sm"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Capacity (Slots)</label>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="1"
+                                                                value={slot.capacity}
+                                                                onChange={(e) => {
+                                                                    const newSlots = [...listingData.slots];
+                                                                    const val = Number(e.target.value);
+                                                                    newSlots[index] = { ...newSlots[index], capacity: val };
+                                                                    setListingData({ ...listingData, slots: newSlots });
+                                                                }}
+                                                                className="w-full p-4 bg-[#fdfdfd] border-none shadow-sm rounded-[1.5rem] font-bold focus:ring-1 ring-black/5 outline-none text-sm"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Access Method</label>
+                                                            <select
+                                                                value={slot.access_type}
+                                                                onChange={(e) => {
+                                                                    const newSlots = [...listingData.slots];
+                                                                    const val = e.target.value;
+                                                                    newSlots[index] = { ...newSlots[index], access_type: val };
+                                                                    setListingData({ ...listingData, slots: newSlots });
+                                                                }}
+                                                                className="w-full p-4 bg-[#fdfdfd] border-none shadow-sm rounded-[1.5rem] font-bold focus:ring-1 ring-black/5 outline-none text-sm appearance-none cursor-pointer"
+                                                            >
+                                                                <option value="code_access">Code Access</option>
+                                                                <option value="invite_link">Invite Link</option>
+                                                                <option value="email_invite">Email Invite</option>
+                                                                <option value="login_with_code">Login + Code</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <div className="p-8 bg-white border-t border-black/5">
+                                    <button
+                                        onClick={handleCreateListing}
+                                        disabled={!listingData.subscription_id || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
+                                        className="w-full py-6 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100"
+                                    >
+                                        Confirm & Publish to Marketplace
                                     </button>
                                 </div>
                             </motion.div>

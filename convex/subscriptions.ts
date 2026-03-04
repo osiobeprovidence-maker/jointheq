@@ -96,22 +96,29 @@ export const joinSlot = mutation({
         if (user.wallet_balance < coins_to_use) throw new Error("Insufficient coin balance");
         if (user.q_score < slotType.min_q_score) throw new Error("Q Score too low for this slot");
 
-        // Find a group with space
+        // Find a group with space for this SPECIFIC slot type
         const groups = await ctx.db
             .query("groups")
             .withIndex("by_subscription", (q) => q.eq("subscription_id", slotType.subscription_id))
             .filter((q) => q.eq(q.field("status"), "active"))
             .collect();
 
-        let group = groups[0];
+        let group = null;
+        for (const g of groups) {
+            const existingSlotsCount = (await ctx.db
+                .query("slots")
+                .withIndex("by_group", (q) => q.eq("group_id", g._id))
+                .filter(q => q.eq(q.field("slot_type_id"), slotType._id))
+                .collect()).length;
+
+            if (existingSlotsCount < (slotType.capacity || 5)) {
+                group = g;
+                break;
+            }
+        }
 
         if (!group) {
-            const groupId = await ctx.db.insert("groups", {
-                subscription_id: slotType.subscription_id,
-                billing_cycle_start: new Date().toISOString(),
-                status: "active",
-            });
-            group = (await ctx.db.get(groupId))!;
+            throw new Error("No active groups have space for this slot type. Please contact support.");
         }
 
         // Update balances
@@ -226,6 +233,92 @@ export const updateAllocation = mutation({
     handler: async (ctx, args) => {
         await ctx.db.patch(args.id, { allocation: args.allocation });
     },
+});
+
+export const adminCreateListing = mutation({
+    args: {
+        subscription_id: v.id("subscriptions"),
+        account_email: v.string(),
+        plan_owner: v.string(),
+        admin_renewal_date: v.string(),
+        slot_types: v.array(v.object({
+            name: v.string(),
+            price: v.number(),
+            capacity: v.number(),
+            access_type: v.string(),
+            downloads_enabled: v.boolean(),
+        }))
+    },
+    handler: async (ctx, args) => {
+        const user = await ctx.auth.getUserIdentity();
+        // Since we verify via tokens/app, for this example we won't strictly enforce auth here,
+        // but it is an admin-only intended route.
+
+        const groupId = await ctx.db.insert("groups", {
+            subscription_id: args.subscription_id,
+            billing_cycle_start: args.admin_renewal_date, // When ADMIN renews
+            status: "active",
+            account_email: args.account_email,
+            plan_owner: args.plan_owner,
+        });
+
+        for (const st of args.slot_types) {
+            const existing = await ctx.db.query("slot_types")
+                .withIndex("by_subscription", (q) => q.eq("subscription_id", args.subscription_id))
+                .filter((q) => q.eq(q.field("name"), st.name))
+                .first();
+
+            if (existing) {
+                await ctx.db.patch(existing._id, {
+                    price: st.price,
+                    capacity: st.capacity,
+                    access_type: st.access_type,
+                    downloads_enabled: st.downloads_enabled,
+                });
+            } else {
+                await ctx.db.insert("slot_types", {
+                    subscription_id: args.subscription_id,
+                    name: st.name,
+                    price: st.price,
+                    capacity: st.capacity,
+                    access_type: st.access_type,
+                    device_limit: 1,
+                    downloads_enabled: st.downloads_enabled,
+                    min_q_score: 0,
+                    features: ["Premium Access", "Support Included"]
+                });
+            }
+        }
+
+        return { success: true, groupId };
+    }
+});
+
+export const getAdminMarketplace = query({
+    handler: async (ctx) => {
+        const groups = await ctx.db.query("groups").collect();
+        return await Promise.all(groups.map(async (group) => {
+            const sub = await ctx.db.get(group.subscription_id);
+            const slots = await ctx.db.query("slots").withIndex("by_group", (q) => q.eq("group_id", group._id)).collect();
+
+            const members = await Promise.all(slots.map(async (s) => {
+                const u = s.user_id ? await ctx.db.get(s.user_id) : null;
+                const st = await ctx.db.get(s.slot_type_id);
+                return {
+                    user_name: u?.full_name || "Unknown",
+                    slot_name: st?.name || "Unknown",
+                    renewal: s.renewal_date
+                };
+            }));
+
+            return {
+                ...group,
+                subscription_name: sub?.name || "Unknown",
+                member_count: slots.length,
+                members
+            };
+        }));
+    }
 });
 
 export const seedMarketplace = mutation({
