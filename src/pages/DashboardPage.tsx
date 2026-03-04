@@ -748,7 +748,7 @@ export default function DashboardPage() {
                                     <CampaignCard
                                         key={camp._id}
                                         campaign={camp}
-                                        onParticipate={() => currentUser && participateInCampaignMutation({ campaign_id: camp._id, user_id: currentUser._id })}
+                                        onParticipate={() => navigate(`/campaigns/${camp._id}`)}
                                         userId={currentUser?._id}
                                     />
                                 ))}

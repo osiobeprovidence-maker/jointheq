@@ -6,6 +6,7 @@ import { ProtectedRoute } from "./components/auth/AuthGuards";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminPanel from "./pages/AdminPanel";
+import CampaignDetailPage from "./pages/CampaignDetailPage";
 import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
 
 export default function App() {
@@ -33,6 +34,16 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Campaign Detail Page */}
+        <Route
+          path="/campaigns/:campaignId"
+          element={
+            <ProtectedRoute>
+              <CampaignDetailPage />
             </ProtectedRoute>
           }
         />

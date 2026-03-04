@@ -89,29 +89,74 @@ export default defineSchema({
 
     campaigns: defineTable({
         name: v.string(),
-        type: v.optional(v.string()), // "jar" | "raffle" | "referral_storm" | "streak"
+        type: v.optional(v.string()), // "referral" | "engagement" | "campus" | "promotion" | "jar" | "referral_storm" | "streak" | "raffle"
         description: v.string(),
-        reward_type: v.optional(v.string()), // "boots" | "coins" | "slot"
+        about: v.optional(v.string()),           // Long-form about text
+        rules: v.optional(v.array(v.string())),  // List of rules
+        how_it_works: v.optional(v.array(v.string())),  // Step-by-step
+        reward_structure: v.optional(v.string()), // Description of what users earn
+        reward_type: v.optional(v.string()),      // "boots" | "cash" | "subscription"
         reward_amount: v.optional(v.number()),
-        start_date: v.any(), // Support both timestamps and ISO strings
-        end_date: v.any(), // Support both timestamps and ISO strings
+        referral_boots: v.optional(v.number()),   // BOOTS earned per referral (default 5)
+        commission_months: v.optional(v.number()), // Campus Q: months commission runs (default 3)
+        start_date: v.any(),
+        end_date: v.any(),
         target_goal: v.optional(v.number()),
         current_progress: v.optional(v.number()),
-        status: v.string(), // "active" | "paused" | "ended"
+        status: v.string(),                       // "active" | "paused" | "ended" | "archived"
         image_url: v.optional(v.string()),
-        // Old fields for backward compatibility during migration
+        banner_url: v.optional(v.string()),
+        created_by: v.optional(v.id("users")),   // Admin who created it
+        created_at: v.optional(v.number()),
+        // Backward compat
         boot_pool_max: v.optional(v.number()),
         boots_issued: v.optional(v.number()),
         reward_formula: v.optional(v.string()),
-    }).index("by_status", ["status"]),
+    }).index("by_status", ["status"])
+        .index("by_type", ["type"]),
 
     campaign_participants: defineTable({
         campaign_id: v.id("campaigns"),
         user_id: v.id("users"),
+        referrer_id: v.optional(v.id("users")),   // Who referred this participant
+        referral_code: v.optional(v.string()),     // Unique code for sharing
         progress: v.number(),
-        entries: v.number(), // For raffles
+        entries: v.number(),
+        referral_count: v.optional(v.number()),    // How many they referred
+        boots_earned: v.optional(v.number()),      // BOOTS earned in campaign
+        cash_earned: v.optional(v.number()),       // Cash commissions earned
         joined_at: v.number(),
-    }).index("by_campaign", ["campaign_id"]).index("by_user", ["user_id"]),
+        last_active: v.optional(v.number()),
+    }).index("by_campaign", ["campaign_id"])
+        .index("by_user", ["user_id"])
+        .index("by_referrer", ["referrer_id"]),
+
+    campaign_referrals: defineTable({
+        campaign_id: v.id("campaigns"),
+        referrer_id: v.id("users"),               // Who made the referral
+        referred_id: v.id("users"),               // Who was referred
+        status: v.string(),                        // "pending" | "active" | "inactive"
+        commission_earned: v.optional(v.number()),
+        months_remaining: v.optional(v.number()), // For Campus Q 3-month rule
+        created_at: v.number(),
+    }).index("by_campaign", ["campaign_id"])
+        .index("by_referrer", ["referrer_id"])
+        .index("by_referred", ["referred_id"]),
+
+    campaign_withdrawals: defineTable({
+        user_id: v.id("users"),
+        campaign_id: v.id("campaigns"),
+        amount: v.number(),
+        status: v.string(),                        // "pending" | "approved" | "rejected"
+        bank_name: v.optional(v.string()),
+        account_number: v.optional(v.string()),
+        account_name: v.optional(v.string()),
+        admin_note: v.optional(v.string()),
+        created_at: v.number(),
+        processed_at: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_campaign", ["campaign_id"]),
 
     boot_transactions: defineTable({
         user_id: v.id("users"),

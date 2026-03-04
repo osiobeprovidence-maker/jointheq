@@ -14,28 +14,31 @@ import {
     TrendingDown,
     Zap,
     Globe,
-    AlertCircle,
     CheckCircle2,
     Clock,
-    User as UserIcon,
     Ban,
     PauseCircle,
     PlayCircle,
     Plus,
-    ChevronRight,
     Wallet,
     Star,
     Activity,
     RefreshCw,
     GraduationCap,
     Ticket,
-    MoreVertical,
     X,
-    Filter,
     Search,
     DollarSign,
     Shield,
-    Settings,
+    Edit3,
+    Pause,
+    StopCircle,
+    Trophy,
+    Share2,
+    Eye,
+    ChevronDown,
+    ArrowDownCircle,
+    Users2,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -99,6 +102,19 @@ export default function AdminPanel() {
     const [campusUserId, setCampusUserId] = useState("");
     const [campusName, setCampusName] = useState("");
 
+    // Campaign state
+    const [showCampaignModal, setShowCampaignModal] = useState(false);
+    const [editingCampaign, setEditingCampaign] = useState<any>(null);
+    const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+    const [campTab, setCampTab] = useState<'list' | 'analytics' | 'withdrawals'>('list');
+    const [campaignForm, setCampaignForm] = useState({
+        name: '', type: 'referral', description: '', about: '',
+        rules: [''], how_it_works: [''],
+        reward_structure: '', reward_type: 'boots', reward_amount: 0,
+        referral_boots: 5, commission_months: 3,
+        start_date: '', end_date: '', target_goal: 100,
+    });
+
     // Listing state
     const [showListingModal, setShowListingModal] = useState(false);
     const [listingData, setListingData] = useState({
@@ -117,9 +133,14 @@ export default function AdminPanel() {
     const allTickets = useQuery(api.admin.getAllTickets) || [];
     const campusReps = useQuery(api.admin.getCampusReps) || [];
     const recentTxns = useQuery(api.admin.getRecentTransactions) || [];
-    const campaigns = useQuery(api.campaigns.list) || [];
+    const campaigns = useQuery(api.campaigns.getAllAnalytics) || [];
     const adminsList = useQuery(api.users.getAdmins) || [];
     const allSubscriptions = useQuery(api.subscriptions.getMarketplace) || [];
+    const campaignAnalytics = useQuery(
+        api.campaigns.getAnalytics,
+        selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
+    );
+    const withdrawals = useQuery(api.campaigns.getWithdrawals, {}) || [];
 
     // Mutations
     const suspendUserMut = useMutation(api.admin.suspendUser);
@@ -129,6 +150,76 @@ export default function AdminPanel() {
     const updateTicketMut = useMutation(api.admin.updateTicketStatus);
     const addCampusRepMut = useMutation(api.admin.addCampusRep);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
+    const createCampaignMut = useMutation(api.campaigns.create);
+    const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
+    const editCampaignMut = useMutation(api.campaigns.editCampaign);
+    const processWithdrawalMut = useMutation(api.campaigns.processWithdrawal);
+
+    const handleSaveCampaign = async () => {
+        if (!campaignForm.name || !campaignForm.description || !campaignForm.start_date || !campaignForm.end_date) {
+            return toast.error('Fill in all required fields');
+        }
+        try {
+            if (editingCampaign) {
+                await editCampaignMut({
+                    id: editingCampaign._id,
+                    name: campaignForm.name,
+                    description: campaignForm.description,
+                    about: campaignForm.about,
+                    rules: campaignForm.rules.filter(r => r.trim()),
+                    how_it_works: campaignForm.how_it_works.filter(h => h.trim()),
+                    reward_structure: campaignForm.reward_structure,
+                    reward_type: campaignForm.reward_type,
+                    reward_amount: campaignForm.reward_amount,
+                    referral_boots: campaignForm.referral_boots,
+                    target_goal: campaignForm.target_goal,
+                    end_date: new Date(campaignForm.end_date).getTime(),
+                });
+                toast.success('Campaign updated!');
+            } else {
+                await createCampaignMut({
+                    name: campaignForm.name,
+                    type: campaignForm.type,
+                    description: campaignForm.description,
+                    about: campaignForm.about,
+                    rules: campaignForm.rules.filter(r => r.trim()),
+                    how_it_works: campaignForm.how_it_works.filter(h => h.trim()),
+                    reward_structure: campaignForm.reward_structure,
+                    reward_type: campaignForm.reward_type,
+                    reward_amount: campaignForm.reward_amount,
+                    referral_boots: campaignForm.referral_boots ?? 5,
+                    commission_months: campaignForm.commission_months ?? 3,
+                    start_date: new Date(campaignForm.start_date).getTime(),
+                    end_date: new Date(campaignForm.end_date).getTime(),
+                    target_goal: campaignForm.target_goal,
+                    created_by: currentUser!._id,
+                });
+                toast.success('Campaign created! 🚀', { icon: '🎯' });
+            }
+            setShowCampaignModal(false);
+            setEditingCampaign(null);
+            setCampaignForm({ name: '', type: 'referral', description: '', about: '', rules: [''], how_it_works: [''], reward_structure: '', reward_type: 'boots', reward_amount: 0, referral_boots: 5, commission_months: 3, start_date: '', end_date: '', target_goal: 100 });
+        } catch (e: any) { toast.error(e.message); }
+    };
+
+    const openEditCampaign = (camp: any) => {
+        setEditingCampaign(camp);
+        setCampaignForm({
+            name: camp.name, type: camp.type || 'referral',
+            description: camp.description, about: camp.about || '',
+            rules: camp.rules?.length ? camp.rules : [''],
+            how_it_works: camp.how_it_works?.length ? camp.how_it_works : [''],
+            reward_structure: camp.reward_structure || '',
+            reward_type: camp.reward_type || 'boots',
+            reward_amount: camp.reward_amount || 0,
+            referral_boots: camp.referral_boots || 5,
+            commission_months: camp.commission_months || 3,
+            start_date: camp.start_date ? new Date(camp.start_date).toISOString().split('T')[0] : '',
+            end_date: camp.end_date ? new Date(camp.end_date).toISOString().split('T')[0] : '',
+            target_goal: camp.target_goal || 100,
+        });
+        setShowCampaignModal(true);
+    };
 
     const handleCreateListing = async () => {
         try {
@@ -608,33 +699,242 @@ export default function AdminPanel() {
                         {/* ═══ CAMPAIGNS ═══ */}
                         {activeTab === "campaigns" && (
                             <motion.div key="campaigns" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Campaigns & Growth" sub="Platform engagement programs" />
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                    {campaigns.map((camp: any) => (
-                                        <div key={camp._id} className="bg-white rounded-3xl p-6 border border-black/5 hover:shadow-lg transition-all">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center">
-                                                    <Megaphone size={18} className="text-purple-600" />
-                                                </div>
-                                                <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-full ${camp.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                    {camp.status}
-                                                </span>
-                                            </div>
-                                            <h3 className="font-black text-lg mb-1">{camp.name}</h3>
-                                            <p className="text-xs text-gray-400 mb-4 leading-relaxed">{camp.description}</p>
-                                            <div className="flex justify-between text-xs font-bold text-gray-400 pt-4 border-t border-black/5">
-                                                <span>Reward: {camp.reward_amount} {camp.reward_type}</span>
-                                                <span className="capitalize">{camp.type?.replace('_', ' ')}</span>
-                                            </div>
-                                        </div>
+                                <SectionHeader
+                                    title="Campaigns & Growth"
+                                    sub="Create and manage growth programs"
+                                    action={
+                                        <button
+                                            onClick={() => { setEditingCampaign(null); setShowCampaignModal(true); }}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white rounded-2xl font-bold text-sm hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
+                                        >
+                                            <Plus size={16} /> New Campaign
+                                        </button>
+                                    }
+                                />
+
+                                {/* Sub-tabs */}
+                                <div className="flex gap-2">
+                                    {(['list', 'analytics', 'withdrawals'] as const).map(t => (
+                                        <button key={t} onClick={() => setCampTab(t)}
+                                            className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all ${campTab === t ? 'bg-zinc-900 text-white' : 'bg-white text-gray-500 hover:text-black border border-black/5'
+                                                }`}>
+                                            {t === 'withdrawals' ? `Withdrawals (${withdrawals.filter((w: any) => w.status === 'pending').length})` : t}
+                                        </button>
                                     ))}
-                                    {campaigns.length === 0 && (
-                                        <div className="col-span-3 text-center py-16 text-gray-400">
-                                            <Megaphone size={32} className="mx-auto mb-4 opacity-20" />
-                                            <p className="font-bold">No campaigns yet. Create one from the user dashboard admin tab.</p>
-                                        </div>
-                                    )}
                                 </div>
+
+                                {/* LIST */}
+                                {campTab === 'list' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                        {(campaigns as any[]).map((camp: any) => {
+                                            const daysLeft = Math.max(0, Math.ceil((camp.end_date - Date.now()) / 86400000));
+                                            const fillPct = camp.target_goal > 0 ? Math.min(100, Math.round((camp.current_progress ?? 0) / camp.target_goal * 100)) : 0;
+                                            return (
+                                                <div key={camp._id} className="bg-white rounded-3xl p-6 border border-black/5 hover:shadow-lg transition-all group">
+                                                    <div className="flex items-start justify-between mb-4">
+                                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${camp.type === 'campus' ? 'bg-yellow-100' : camp.type === 'referral' ? 'bg-blue-100' : camp.type === 'referral_storm' ? 'bg-purple-100' : 'bg-orange-100'
+                                                            }`}>
+                                                            {camp.type === 'campus' ? <GraduationCap size={18} className="text-yellow-600" /> :
+                                                                camp.type === 'referral' || camp.type === 'referral_storm' ? <Share2 size={18} className="text-blue-600" /> :
+                                                                    <Megaphone size={18} className="text-orange-600" />}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full ${camp.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                                                camp.status === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
+                                                                }`}>{camp.status}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <h3 className="font-black text-base mb-1">{camp.name}</h3>
+                                                    <p className="text-xs text-gray-400 mb-3 leading-relaxed line-clamp-2">{camp.description}</p>
+
+                                                    {/* Metrics */}
+                                                    <div className="grid grid-cols-3 gap-2 mb-4">
+                                                        <div className="bg-[#f8f9fa] rounded-xl p-2 text-center">
+                                                            <div className="font-black text-sm">{camp.participant_count ?? 0}</div>
+                                                            <div className="text-[9px] text-gray-400 font-bold">Joined</div>
+                                                        </div>
+                                                        <div className="bg-[#f8f9fa] rounded-xl p-2 text-center">
+                                                            <div className="font-black text-sm">{camp.referral_count ?? 0}</div>
+                                                            <div className="text-[9px] text-gray-400 font-bold">Referrals</div>
+                                                        </div>
+                                                        <div className="bg-[#f8f9fa] rounded-xl p-2 text-center">
+                                                            <div className="font-black text-sm">{daysLeft}d</div>
+                                                            <div className="text-[9px] text-gray-400 font-bold">Left</div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Progress */}
+                                                    <div className="mb-4">
+                                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1">
+                                                            <span>Progress</span><span>{fillPct}%</span>
+                                                        </div>
+                                                        <div className="h-1.5 bg-black/5 rounded-full">
+                                                            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${fillPct}%` }} />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Admin Controls */}
+                                                    <div className="flex gap-2 pt-4 border-t border-black/5">
+                                                        <button onClick={() => openEditCampaign(camp)}
+                                                            className="flex-1 flex items-center justify-center gap-1 py-2 bg-zinc-100 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
+                                                            <Edit3 size={12} /> Edit
+                                                        </button>
+                                                        <button onClick={() => { setSelectedCampaignId(camp._id); setCampTab('analytics'); }}
+                                                            className="flex-1 flex items-center justify-center gap-1 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">
+                                                            <BarChart3 size={12} /> Analytics
+                                                        </button>
+                                                        {camp.status === 'active' ? (
+                                                            <button onClick={async () => { await updateCampaignStatusMut({ id: camp._id, status: 'paused' }); toast.success('Campaign paused'); }}
+                                                                className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform" title="Pause">
+                                                                <Pause size={14} />
+                                                            </button>
+                                                        ) : camp.status === 'paused' ? (
+                                                            <button onClick={async () => { await updateCampaignStatusMut({ id: camp._id, status: 'active' }); toast.success('Campaign resumed'); }}
+                                                                className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform" title="Resume">
+                                                                <PlayCircle size={14} />
+                                                            </button>
+                                                        ) : null}
+                                                        {camp.status !== 'ended' && (
+                                                            <button onClick={async () => { if (!window.confirm('End this campaign?')) return; await updateCampaignStatusMut({ id: camp._id, status: 'ended' }); toast.success('Campaign ended'); }}
+                                                                className="p-2 bg-red-50 text-red-500 rounded-xl hover:scale-110 transition-transform" title="End">
+                                                                <StopCircle size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {campaigns.length === 0 && (
+                                            <div className="col-span-3 text-center py-20 text-gray-400">
+                                                <Megaphone size={40} className="mx-auto mb-4 opacity-20" />
+                                                <p className="font-black text-lg">No campaigns yet</p>
+                                                <p className="text-sm mt-1">Create your first campaign to start growing the platform.</p>
+                                                <button onClick={() => setShowCampaignModal(true)} className="mt-6 px-6 py-3 bg-zinc-900 text-white rounded-full font-bold text-sm">Create Campaign</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ANALYTICS */}
+                                {campTab === 'analytics' && (
+                                    <div className="space-y-6">
+                                        {/* Campaign selector */}
+                                        <div className="flex items-center gap-3">
+                                            <select
+                                                value={selectedCampaignId ?? ''}
+                                                onChange={e => setSelectedCampaignId(e.target.value)}
+                                                className="p-3 bg-white border border-black/5 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-black/10 min-w-[220px]"
+                                            >
+                                                <option value="">Select campaign</option>
+                                                {(campaigns as any[]).map((c: any) => <option key={c._id} value={c._id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+
+                                        {selectedCampaignId && campaignAnalytics ? (
+                                            <>
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                                    <StatCard label="Participants" value={campaignAnalytics.total_participants} icon={<Users2 size={18} />} color="bg-blue-500" />
+                                                    <StatCard label="Referrals" value={campaignAnalytics.total_referrals} icon={<Share2 size={18} />} color="bg-purple-500" />
+                                                    <StatCard label="BOOTS Sent" value={(campaignAnalytics.total_boots_distributed ?? 0).toLocaleString()} icon={<Zap size={18} />} color="bg-yellow-500" />
+                                                    <StatCard label="Cash Sent" value={fmt(campaignAnalytics.total_cash_distributed ?? 0)} icon={<DollarSign size={18} />} color="bg-emerald-500" />
+                                                </div>
+
+                                                <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                                    <div className="p-6 border-b border-black/5 flex items-center gap-2">
+                                                        <Trophy size={18} className="text-yellow-500" />
+                                                        <h3 className="font-black">Top Referrers</h3>
+                                                    </div>
+                                                    {(campaignAnalytics.top_referrers as any[]).map((rep: any, i: number) => (
+                                                        <div key={rep._id} className="flex items-center justify-between p-4 border-b border-black/3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs ${i === 0 ? 'bg-yellow-400 text-yellow-900' : i === 1 ? 'bg-gray-200 text-gray-700' : i === 2 ? 'bg-orange-200 text-orange-700' : 'bg-zinc-100 text-zinc-500'
+                                                                    }`}>{i + 1}</div>
+                                                                <div>
+                                                                    <div className="font-bold text-sm">{rep.full_name}</div>
+                                                                    <div className="text-[10px] text-gray-400">{rep.email}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="font-black text-sm">{rep.referral_count ?? 0} referrals</div>
+                                                                <div className="text-[10px] text-emerald-600 font-bold">{(rep.boots_earned ?? 0)} BOOTS</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {(campaignAnalytics.top_referrers as any[]).length === 0 && (
+                                                        <div className="p-8 text-center text-gray-400 text-sm">No referrers yet</div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="bg-white rounded-3xl border border-black/5 p-16 text-center text-gray-400">
+                                                <BarChart3 size={40} className="mx-auto mb-4 opacity-20" />
+                                                <p className="font-bold">Select a campaign above to view its analytics</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* WITHDRAWALS */}
+                                {campTab === 'withdrawals' && (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <StatCard label="Pending" value={(withdrawals as any[]).filter((w: any) => w.status === 'pending').length} icon={<Clock size={18} />} color="bg-amber-500" />
+                                            <StatCard label="Approved" value={(withdrawals as any[]).filter((w: any) => w.status === 'approved').length} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" />
+                                            <StatCard label="Rejected" value={(withdrawals as any[]).filter((w: any) => w.status === 'rejected').length} icon={<Ban size={18} />} color="bg-red-500" />
+                                        </div>
+                                        <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                            <div className="grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b">
+                                                <div className="col-span-3">User</div>
+                                                <div className="col-span-2">Campaign</div>
+                                                <div className="col-span-2">Bank Info</div>
+                                                <div className="col-span-2">Amount</div>
+                                                <div className="col-span-1">Status</div>
+                                                <div className="col-span-2">Actions</div>
+                                            </div>
+                                            {(withdrawals as any[]).map((w: any) => (
+                                                <div key={w._id} className="grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01]">
+                                                    <div className="col-span-3">
+                                                        <div className="font-bold text-sm">{w.full_name}</div>
+                                                        <div className="text-[10px] text-gray-400">{w.email}</div>
+                                                    </div>
+                                                    <div className="col-span-2 text-xs font-bold truncate pr-2">{w.campaign_name}</div>
+                                                    <div className="col-span-2">
+                                                        <div className="text-xs font-bold">{w.bank_name}</div>
+                                                        <div className="text-[10px] text-gray-400 font-mono">{w.account_number}</div>
+                                                    </div>
+                                                    <div className="col-span-2 font-black text-emerald-600">{fmt(w.amount)}</div>
+                                                    <div className="col-span-1">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${w.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                            w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+                                                            }`}>{w.status}</span>
+                                                    </div>
+                                                    <div className="col-span-2 flex gap-1">
+                                                        {w.status === 'pending' && (
+                                                            <>
+                                                                <button onClick={async () => { await processWithdrawalMut({ withdrawal_id: w._id, status: 'approved' }); toast.success('Withdrawal approved!'); }}
+                                                                    className="flex-1 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black hover:scale-105 transition-transform">
+                                                                    Approve
+                                                                </button>
+                                                                <button onClick={async () => { await processWithdrawalMut({ withdrawal_id: w._id, status: 'rejected', admin_note: 'Rejected by admin' }); toast.error('Withdrawal rejected'); }}
+                                                                    className="flex-1 py-1.5 bg-red-50 text-red-500 rounded-xl text-[10px] font-black hover:scale-105 transition-transform">
+                                                                    Reject
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {w.status !== 'pending' && <span className="text-[10px] text-gray-400">{w.processed_at ? new Date(w.processed_at).toLocaleDateString() : '—'}</span>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {withdrawals.length === 0 && (
+                                                <div className="p-12 text-center text-gray-400">
+                                                    <ArrowDownCircle size={32} className="mx-auto mb-3 opacity-20" />
+                                                    <p className="font-bold">No withdrawal requests yet</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 
@@ -846,6 +1146,139 @@ export default function AdminPanel() {
                     </AnimatePresence>
                 </div>
             </main>
+
+            {/* ── Campaign Create / Edit Modal ── */}
+            <AnimatePresence>
+                {showCampaignModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+                        <motion.div
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                            className="bg-[#f5f5f7] w-full sm:max-w-2xl sm:rounded-[3rem] rounded-t-[3rem] max-h-[90vh] overflow-y-auto shadow-2xl"
+                        >
+                            <div className="sticky top-0 bg-[#f5f5f7] z-10 px-8 pt-8 pb-4 border-b border-black/5 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-black">{editingCampaign ? 'Edit Campaign' : 'Create Campaign'}</h2>
+                                    <p className="text-sm text-gray-400 mt-1">Build a growth program for the platform</p>
+                                </div>
+                                <button onClick={() => { setShowCampaignModal(false); setEditingCampaign(null); }} className="p-3 bg-white rounded-full shadow-sm hover:scale-110 transition-transform"><X size={20} /></button>
+                            </div>
+
+                            <div className="p-8 space-y-6">
+                                {/* Basic Info */}
+                                <div className="bg-white rounded-[2.5rem] p-8 space-y-5">
+                                    <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full" /> Basic Info</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5 sm:col-span-2">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Campaign Name *</label>
+                                            <input value={campaignForm.name} onChange={e => setCampaignForm({ ...campaignForm, name: e.target.value })} placeholder="e.g. Campus Q Program" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Campaign Type</label>
+                                            <select value={campaignForm.type} onChange={e => setCampaignForm({ ...campaignForm, type: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none">
+                                                <option value="referral">Referral Campaign</option>
+                                                <option value="campus">Campus Campaign</option>
+                                                <option value="engagement">Engagement Campaign</option>
+                                                <option value="promotion">Promotion Campaign</option>
+                                                <option value="referral_storm">Referral Storm</option>
+                                                <option value="jar">Reward Jar</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reward Type</label>
+                                            <select value={campaignForm.reward_type} onChange={e => setCampaignForm({ ...campaignForm, reward_type: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none">
+                                                <option value="boots">BOOTS</option>
+                                                <option value="cash">Cash Commission</option>
+                                                <option value="subscription">Subscription Reward</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reward Amount</label>
+                                            <input type="number" value={campaignForm.reward_amount} onChange={e => setCampaignForm({ ...campaignForm, reward_amount: Number(e.target.value) })} placeholder="500" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">BOOTS per Referral</label>
+                                            <input type="number" value={campaignForm.referral_boots} onChange={e => setCampaignForm({ ...campaignForm, referral_boots: Number(e.target.value) })} placeholder="5" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
+                                        </div>
+                                        {campaignForm.type === 'campus' && (
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Commission Months</label>
+                                                <input type="number" value={campaignForm.commission_months} onChange={e => setCampaignForm({ ...campaignForm, commission_months: Number(e.target.value) })} placeholder="3" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
+                                            </div>
+                                        )}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Start Date *</label>
+                                            <input type="date" value={campaignForm.start_date} onChange={e => setCampaignForm({ ...campaignForm, start_date: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">End Date *</label>
+                                            <input type="date" value={campaignForm.end_date} onChange={e => setCampaignForm({ ...campaignForm, end_date: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
+                                        </div>
+                                        <div className="space-y-1.5 sm:col-span-2">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Target Goal (participants)</label>
+                                            <input type="number" value={campaignForm.target_goal} onChange={e => setCampaignForm({ ...campaignForm, target_goal: Number(e.target.value) })} placeholder="100" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Description & About */}
+                                <div className="bg-white rounded-[2.5rem] p-8 space-y-5">
+                                    <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-purple-500 rounded-full" /> Description & About</h3>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Short Description * (shown on campaign card)</label>
+                                        <textarea rows={2} value={campaignForm.description} onChange={e => setCampaignForm({ ...campaignForm, description: e.target.value })} placeholder="Brief summary of the campaign..." className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">About the Campaign (full explanation)</label>
+                                        <textarea rows={3} value={campaignForm.about} onChange={e => setCampaignForm({ ...campaignForm, about: e.target.value })} placeholder="Full explanation of what this campaign is about..." className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reward Structure</label>
+                                        <textarea rows={2} value={campaignForm.reward_structure} onChange={e => setCampaignForm({ ...campaignForm, reward_structure: e.target.value })} placeholder="What users earn. e.g. 2% per subscription for 3 months. 5 BOOTS per referral." className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none" />
+                                    </div>
+                                </div>
+
+                                {/* Rules */}
+                                <div className="bg-white rounded-[2.5rem] p-8 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-red-500 rounded-full" /> Campaign Rules</h3>
+                                        <button onClick={() => setCampaignForm({ ...campaignForm, rules: [...campaignForm.rules, ''] })} className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">+ Add Rule</button>
+                                    </div>
+                                    {campaignForm.rules.map((rule, i) => (
+                                        <div key={i} className="flex gap-2">
+                                            <div className="w-6 h-6 mt-3.5 flex-shrink-0 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-[10px] font-black">{i + 1}</div>
+                                            <input value={rule} onChange={e => { const r = [...campaignForm.rules]; r[i] = e.target.value; setCampaignForm({ ...campaignForm, rules: r }); }} placeholder={`Rule ${i + 1}`} className="flex-1 p-3 bg-[#f8f9fa] rounded-2xl font-medium outline-none focus:ring-2 ring-black/10 text-sm" />
+                                            {campaignForm.rules.length > 1 && <button onClick={() => { const r = campaignForm.rules.filter((_, ri) => ri !== i); setCampaignForm({ ...campaignForm, rules: r }); }} className="mt-2 p-2 text-red-400 hover:bg-red-50 rounded-full"><X size={14} /></button>}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* How it works */}
+                                <div className="bg-white rounded-[2.5rem] p-8 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full" /> How It Works</h3>
+                                        <button onClick={() => setCampaignForm({ ...campaignForm, how_it_works: [...campaignForm.how_it_works, ''] })} className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">+ Add Step</button>
+                                    </div>
+                                    {campaignForm.how_it_works.map((step, i) => (
+                                        <div key={i} className="flex gap-2">
+                                            <div className="w-6 h-6 mt-3.5 flex-shrink-0 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-[10px] font-black">{i + 1}</div>
+                                            <input value={step} onChange={e => { const h = [...campaignForm.how_it_works]; h[i] = e.target.value; setCampaignForm({ ...campaignForm, how_it_works: h }); }} placeholder={`Step ${i + 1}`} className="flex-1 p-3 bg-[#f8f9fa] rounded-2xl font-medium outline-none focus:ring-2 ring-black/10 text-sm" />
+                                            {campaignForm.how_it_works.length > 1 && <button onClick={() => { const h = campaignForm.how_it_works.filter((_, hi) => hi !== i); setCampaignForm({ ...campaignForm, how_it_works: h }); }} className="mt-2 p-2 text-red-400 hover:bg-red-50 rounded-full"><X size={14} /></button>}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Submit */}
+                                <button onClick={handleSaveCampaign} className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform shadow-xl shadow-black/10">
+                                    {editingCampaign ? '✅ Save Changes' : '🚀 Create Campaign'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ── Listing Modal ── */}
             <AnimatePresence>
