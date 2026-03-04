@@ -56,16 +56,20 @@ export default defineSchema({
 
     campaigns: defineTable({
         name: v.string(),
-        type: v.string(), // "jar" | "raffle" | "referral_storm" | "streak"
+        type: v.optional(v.string()), // "jar" | "raffle" | "referral_storm" | "streak"
         description: v.string(),
-        reward_type: v.string(), // "boots" | "coins" | "slot"
-        reward_amount: v.number(),
-        start_date: v.number(), // Timestamp
-        end_date: v.number(), // Timestamp
-        target_goal: v.number(),
-        current_progress: v.number(),
+        reward_type: v.optional(v.string()), // "boots" | "coins" | "slot"
+        reward_amount: v.optional(v.number()),
+        start_date: v.any(), // Support both timestamps and ISO strings
+        end_date: v.any(), // Support both timestamps and ISO strings
+        target_goal: v.optional(v.number()),
+        current_progress: v.optional(v.number()),
         status: v.string(), // "active" | "paused" | "ended"
         image_url: v.optional(v.string()),
+        // Old fields for backward compatibility during migration
+        boot_pool_max: v.optional(v.number()),
+        boots_issued: v.optional(v.number()),
+        reward_formula: v.optional(v.string()),
     }).index("by_status", ["status"]),
 
     campaign_participants: defineTable({
@@ -100,8 +104,8 @@ export default defineSchema({
         device_limit: v.number(),
         downloads_enabled: v.boolean(),
         min_q_score: v.number(),
-        capacity: v.number(), // Max members for this slot type in a group
-        features: v.array(v.string()), // Detailed feature list
+        capacity: v.optional(v.number()), // Max members for this slot type in a group
+        features: v.optional(v.array(v.string())), // Detailed feature list
     }).index("by_subscription", ["subscription_id"]),
 
     groups: defineTable({

@@ -13,6 +13,7 @@ import type * as campaigns from "../campaigns.js";
 import type * as devices from "../devices.js";
 import type * as email from "../email.js";
 import type * as init from "../init.js";
+import type * as joinTheCampaign from "../joinTheCampaign.js";
 import type * as lunar from "../lunar.js";
 import type * as messages from "../messages.js";
 import type * as migration from "../migration.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   devices: typeof devices;
   email: typeof email;
   init: typeof init;
+  joinTheCampaign: typeof joinTheCampaign;
   lunar: typeof lunar;
   messages: typeof messages;
   migration: typeof migration;

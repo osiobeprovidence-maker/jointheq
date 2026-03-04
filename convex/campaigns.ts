@@ -1,12 +1,18 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+/**
+ * List all campaigns
+ */
 export const list = query({
     handler: async (ctx) => {
         return await ctx.db.query("campaigns").collect();
     },
 });
 
+/**
+ * Get active campaigns
+ */
 export const getActive = query({
     handler: async (ctx) => {
         return await ctx.db
@@ -16,18 +22,28 @@ export const getActive = query({
     },
 });
 
+/**
+ * Get a specific participant record
+ */
 export const getParticipant = query({
-    args: { campaign_id: v.id("campaigns"), user_id: v.id("users") },
+    args: { campaign_id: v.id("campaigns"), user_id: v.any() }, // Make userId any temporarily to be safe
     handler: async (ctx, args) => {
-        return await ctx.db
-            .query("campaign_participants")
-            .withIndex("by_campaign", (q) => q.eq("campaign_id", args.campaign_id))
-            .filter((q) => q.eq(q.field("user_id"), args.user_id))
-            .first();
+        if (!args.user_id) return null;
+        try {
+            return await ctx.db
+                .query("campaign_participants")
+                .withIndex("by_campaign", (q) => q.eq("campaign_id", args.campaign_id))
+                .filter((q) => q.eq(q.field("user_id"), args.user_id))
+                .first();
+        } catch (e) {
+            return null;
+        }
     },
 });
 
-// Admin Mutations
+/**
+ * Create a new campaign (Admin)
+ */
 export const create = mutation({
     args: {
         name: v.string(),
@@ -35,8 +51,8 @@ export const create = mutation({
         description: v.string(),
         reward_type: v.string(),
         reward_amount: v.number(),
-        start_date: v.number(),
-        end_date: v.number(),
+        start_date: v.any(),
+        end_date: v.any(),
         target_goal: v.number(),
     },
     handler: async (ctx, args) => {
@@ -48,6 +64,9 @@ export const create = mutation({
     },
 });
 
+/**
+ * Update campaign status (Admin)
+ */
 export const updateStatus = mutation({
     args: { id: v.id("campaigns"), status: v.string() },
     handler: async (ctx, args) => {
@@ -55,6 +74,9 @@ export const updateStatus = mutation({
     },
 });
 
+/**
+ * Join a campaign
+ */
 export const participate = mutation({
     args: { campaign_id: v.id("campaigns"), user_id: v.id("users") },
     handler: async (ctx, args) => {
@@ -64,7 +86,7 @@ export const participate = mutation({
             .filter((q) => q.eq(q.field("user_id"), args.user_id))
             .first();
 
-        if (existing) throw new Error("Already participating");
+        if (existing) return existing._id;
 
         return await ctx.db.insert("campaign_participants", {
             campaign_id: args.campaign_id,
@@ -76,11 +98,17 @@ export const participate = mutation({
     },
 });
 
+/**
+ * Seed dummy campaigns to fix migration issues
+ */
 export const seedDummy = mutation({
     args: {},
     handler: async (ctx) => {
-        const existing = await ctx.db.query("campaigns").first();
-        if (existing) return;
+        // Clear OLD incompatible campaigns first
+        const oldCamps = await ctx.db.query("campaigns").collect();
+        for (const c of oldCamps) {
+            await ctx.db.delete(c._id);
+        }
 
         await ctx.db.insert("campaigns", {
             name: "Easter Reward Jar",
@@ -89,7 +117,7 @@ export const seedDummy = mutation({
             reward_type: "boots",
             reward_amount: 500,
             start_date: Date.now(),
-            end_date: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14 days
+            end_date: Date.now() + (14 * 24 * 60 * 60 * 1000),
             target_goal: 1000,
             current_progress: 150,
             status: "active",
@@ -102,7 +130,7 @@ export const seedDummy = mutation({
             reward_type: "boots",
             reward_amount: 1000,
             start_date: Date.now(),
-            end_date: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+            end_date: Date.now() + (7 * 24 * 60 * 60 * 1000),
             target_goal: 50,
             current_progress: 12,
             status: "active",

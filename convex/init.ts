@@ -18,6 +18,8 @@ export const seed = mutation({
                 device_limit: 4,
                 downloads_enabled: true,
                 min_q_score: 70,
+                capacity: 4,
+                features: ["4K Streaming", "Unlimited Downloads", "Mobile & Tablet", "Ad-Free Experience"]
             });
             await ctx.db.insert("slot_types", {
                 subscription_id: netflixId,
@@ -26,6 +28,8 @@ export const seed = mutation({
                 device_limit: 2,
                 downloads_enabled: true,
                 min_q_score: 50,
+                capacity: 2,
+                features: ["HD Streaming", "Limited Downloads", "Mobile & Tablet", "Ad-Free Experience"]
             });
             await ctx.db.insert("slot_types", {
                 subscription_id: netflixId,
@@ -34,6 +38,8 @@ export const seed = mutation({
                 device_limit: 2,
                 downloads_enabled: false,
                 min_q_score: 0,
+                capacity: 5,
+                features: ["SD Streaming", "No Downloads", "Mobile Only", "Ad-Free Experience"]
             });
 
             const spotifyId = await ctx.db.insert("subscriptions", {
@@ -49,6 +55,8 @@ export const seed = mutation({
                 device_limit: 1,
                 downloads_enabled: true,
                 min_q_score: 0,
+                capacity: 6,
+                features: ["Ad-Free Music", "Offline Playback", "Unlimited Skips", "Very High Quality Audio"]
             });
 
             const youtubeId = await ctx.db.insert("subscriptions", {
@@ -64,20 +72,31 @@ export const seed = mutation({
                 device_limit: 1,
                 downloads_enabled: true,
                 min_q_score: 0,
+                capacity: 6,
+                features: ["Ad-Free Videos", "Background Play", "YouTube Music Premium", "Video Downloads"]
             });
         }
 
         // 2. Seed Campaigns
-        const campCount = await ctx.db.query("campaigns").collect();
-        if (campCount.length === 0) {
+        const campaigns = await ctx.db.query("campaigns").collect();
+        // If we have campaigns with the OLD schema (missing target_goal), clear them
+        const needsClear = campaigns.some(c => !c.target_goal);
+
+        if (campaigns.length === 0 || needsClear) {
+            for (const c of campaigns) {
+                await ctx.db.delete(c._id);
+            }
+
             await ctx.db.insert("campaigns", {
-                name: "Easter Jar 🌸",
-                description: "Grow your Easter Jar by inviting friends. Earn 100 Boots per qualified referral.",
-                start_date: new Date().toISOString(),
-                end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                reward_formula: "100_per_referral",
-                boot_pool_max: 500000,
-                boots_issued: 0,
+                name: "Easter Reward Jar",
+                type: "jar",
+                description: "Help fill the jar by inviting friends to join subscriptions. Every payment adds to the jar!",
+                reward_type: "boots",
+                reward_amount: 500,
+                start_date: Date.now(),
+                end_date: Date.now() + (14 * 24 * 60 * 60 * 1000),
+                target_goal: 1000,
+                current_progress: 150,
                 status: "active",
             });
         }
@@ -92,12 +111,10 @@ export const seed = mutation({
                 email: "demo@jointheq.com",
                 full_name: "Demo User",
                 phone: "+2348000000000",
-                q_score: 85,
-                consistency_score: 90,
-                timeliness_score: 80,
-                stability_score: 95,
+                q_score: 100,
+                q_rank: "Explorer",
                 wallet_balance: 5000,
-                boot_balance: 200,
+                boots_balance: 200,
                 referral_code: "DEMO123",
                 is_admin: true,
                 is_verified: true,

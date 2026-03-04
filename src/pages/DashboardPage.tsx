@@ -549,8 +549,8 @@ export default function DashboardPage() {
                                     <CampaignCard
                                         key={camp._id}
                                         campaign={camp}
-                                        onParticipate={() => participateInCampaignMutation({ campaign_id: camp._id, user_id: currentUser._id })}
-                                        userId={currentUser._id}
+                                        onParticipate={() => currentUser && participateInCampaignMutation({ campaign_id: camp._id, user_id: currentUser._id })}
+                                        userId={currentUser?._id}
                                     />
                                 ))}
                             </div>
@@ -780,8 +780,8 @@ export default function DashboardPage() {
     );
 }
 
-function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onParticipate: () => void, userId: Id<"users"> }) {
-    const participant = useQuery(api.campaigns.getParticipant, { campaign_id: campaign._id, user_id: userId });
+function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onParticipate: () => void, userId: Id<"users"> | undefined }) {
+    const participant = useQuery(api.campaigns.getParticipant, userId ? { campaign_id: campaign._id, user_id: userId } : "skip");
     const isParticipating = !!participant;
     const progressPercent = (campaign.current_progress / campaign.target_goal) * 100;
     const daysRemaining = Math.max(0, Math.ceil((campaign.end_date - Date.now()) / (1000 * 60 * 60 * 24)));
