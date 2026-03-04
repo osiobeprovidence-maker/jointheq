@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // QUERIES
@@ -212,8 +213,8 @@ export const getWithdrawals = query({
 
         return await Promise.all(
             results.map(async (w: any) => {
-                const user = await ctx.db.get(w.user_id);
-                const campaign = await ctx.db.get(w.campaign_id);
+                const user = (await ctx.db.get(w.user_id as Id<"users">)) as any;
+                const campaign = (await ctx.db.get(w.campaign_id as Id<"campaigns">)) as any;
                 return {
                     ...w,
                     full_name: user?.full_name ?? "Unknown",

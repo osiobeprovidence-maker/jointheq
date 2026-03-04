@@ -121,7 +121,7 @@ export default function LandingPage() {
 
     try {
       const result = await login({
-        email: formData.email,
+        identifier: formData.email, // using the same state field for now
         password: formData.password
       });
 
@@ -589,19 +589,19 @@ export default function LandingPage() {
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold mb-2">Email Address</label>
+                    <label className="block text-sm font-bold mb-2">Email or Username</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Mail size={20} />
                       </div>
                       <input
-                        type="email"
+                        type="text"
                         name="email"
                         required
                         value={formData.email}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                        placeholder="you@example.com"
+                        placeholder="you@email.com or username"
                       />
                     </div>
                   </div>

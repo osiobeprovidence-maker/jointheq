@@ -18,6 +18,7 @@ export interface User {
   email: string;
   phone?: string;
   full_name: string;
+  username?: string;
   q_score: number;
   q_rank: string;
   wallet_balance: number;

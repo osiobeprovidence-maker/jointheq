@@ -130,8 +130,11 @@ export default function DashboardPage() {
 
     const handleCreateListing = async () => {
         try {
+            const selectedSub = subscriptions.find(s => s._id === listingData.subscription_id);
+            if (!selectedSub && !listingData.subscription_id) return toast.error("Please select a platform");
+
             await adminCreateListingMutation({
-                subscription_id: listingData.subscription_id as Id<"subscriptions">,
+                platform_name: selectedSub ? selectedSub.name : listingData.subscription_id,
                 account_email: listingData.account_email,
                 plan_owner: listingData.plan_owner,
                 admin_renewal_date: listingData.admin_renewal_date,

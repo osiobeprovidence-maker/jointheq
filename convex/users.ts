@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { awardReputation } from "./reputation";
+import bcrypt from "bcryptjs";
 
 export const getByEmail = query({
     args: { email: v.string() },
@@ -114,6 +115,7 @@ export const createUser = mutation({
 
         const userId = await ctx.db.insert("users", {
             ...userArgs,
+            password_hash: bcrypt.hashSync(args.password_hash, 10),
             username: normalizedUsername,
             referred_by: referredById,
             q_score: 0,
@@ -164,12 +166,21 @@ export const updatePhone = mutation({
 });
 
 export const login = mutation({
-    args: { email: v.string(), password: v.string() },
+    args: { identifier: v.string(), password: v.string() },
     handler: async (ctx, args) => {
-        const user = await ctx.db
+        // Try to find by email first
+        let user = await ctx.db
             .query("users")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .withIndex("by_email", (q) => q.eq("email", args.identifier.toLowerCase()))
             .unique();
+
+        // If not found, try by username
+        if (!user) {
+            user = await ctx.db
+                .query("users")
+                .withIndex("by_username", (q) => q.eq("username", args.identifier.toLowerCase()))
+                .unique();
+        }
 
         if (!user) return { success: false, error: "Invalid credentials" };
 
@@ -205,9 +216,20 @@ export const login = mutation({
             }
         }
 
-        // Check password (in production, use bcrypt.compare)
-        // For now, simple check - you should implement proper password hashing
-        const isPasswordValid = user.password_hash === args.password; // Replace with bcrypt in production
+        // Check password using bcrypt with fallback for plain text
+        let isPasswordValid = false;
+        if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
+            isPasswordValid = bcrypt.compareSync(args.password, user.password_hash);
+        } else {
+            // Fallback for plain text passwords
+            isPasswordValid = user.password_hash === args.password;
+            // Upgrade password to hash if it was plain text and valid
+            if (isPasswordValid) {
+                await ctx.db.patch(user._id, {
+                    password_hash: bcrypt.hashSync(args.password, 10)
+                });
+            }
+        }
 
         if (!isPasswordValid) {
             // Increment failed attempts
@@ -271,15 +293,31 @@ export const login = mutation({
 });
 
 export const adminLogin = query({
-    args: { email: v.string(), password: v.string() },
+    args: { identifier: v.string(), password: v.string() },
     handler: async (ctx, args) => {
-        const user = await ctx.db
+        // Try to find by email first
+        let user = await ctx.db
             .query("users")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .withIndex("by_email", (q) => q.eq("email", args.identifier.toLowerCase()))
             .unique();
 
+        // If not found, try by username
+        if (!user) {
+            user = await ctx.db
+                .query("users")
+                .withIndex("by_username", (q) => q.eq("username", args.identifier.toLowerCase()))
+                .unique();
+        }
+
         if (user && user.is_admin) {
-            if (user.password_hash === args.password) {
+            let isPasswordValid = false;
+            if (user.password_hash?.startsWith("$2a$") || user.password_hash?.startsWith("$2b$")) {
+                isPasswordValid = bcrypt.compareSync(args.password, user.password_hash);
+            } else {
+                isPasswordValid = user.password_hash === args.password;
+            }
+
+            if (isPasswordValid) {
                 return { success: true, user };
             } else {
                 return { success: false, error: "Invalid password" };

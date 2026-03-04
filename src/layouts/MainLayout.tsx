@@ -54,9 +54,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         <div className="min-h-screen bg-[#f4f5f8] text-[#1A1A1A] font-sans">
             {/* Sidebar / Navigation */}
             <nav className="fixed top-0 left-0 h-full w-64 bg-white border-none shadow-[4px_0_24px_rgba(0,0,0,0.02)] hidden lg:flex flex-col p-6 z-50">
-                <div className="flex items-center gap-3 mb-10">
+                <div className="flex items-center gap-3 mb-2">
                     <Logo className="w-10 h-10" />
                     <span className="text-xl font-bold tracking-tight">jointheq</span>
+                </div>
+                <div className="mb-10 px-1">
+                    <div className="text-xs font-bold text-black/30 bg-black/5 px-2 py-0.5 rounded-md inline-block uppercase tracking-tight">
+                        @{user?.username || 'member'}
+                    </div>
                 </div>
 
                 <div className="space-y-2 flex-1">

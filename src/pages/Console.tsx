@@ -15,7 +15,7 @@ export function ConsoleLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const adminAuth = useQuery(api.users.adminLogin, (email && password) ? { email, password } : "skip");
+  const adminAuth = useQuery(api.users.adminLogin, (email && password) ? { identifier: email, password } : "skip");
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -46,10 +46,10 @@ export function ConsoleLogin() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-white/50 px-1">Email</label>
+            <label className="text-xs font-medium text-white/50 px-1">Email or Username</label>
             <input
-              type="email"
-              placeholder="admin@jointheq.com"
+              type="text"
+              placeholder="admin@email.com or handle"
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-all focus:ring-1 focus:ring-white/20"
