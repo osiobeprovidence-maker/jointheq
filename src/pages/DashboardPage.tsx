@@ -1,5 +1,5 @@
 
-import React, { useState, ChangeEvent, Key, ReactNode } from "react";
+import React, { useState, useEffect, ChangeEvent, Key, ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
     Zap,
@@ -23,7 +23,8 @@ import {
     MessageCircle,
     ImageIcon,
     Send,
-    X
+    X,
+    Mail
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -35,7 +36,20 @@ import { UserSlot } from "../types";
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
+    const [showVerificationWarning, setShowVerificationWarning] = useState(false);
+    const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
     const user = auth.getCurrentUser();
+
+    // Check for verification warning on mount
+    useEffect(() => {
+        const storedDays = localStorage.getItem('verification_days_remaining');
+        const userData = auth.getCurrentUser();
+        
+        if (storedDays && userData && !userData.is_verified) {
+            setDaysRemaining(parseInt(storedDays, 10));
+            setShowVerificationWarning(true);
+        }
+    }, []);
 
     // Convex Real-time Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
@@ -188,6 +202,33 @@ export default function DashboardPage() {
 
     return (
         <MainLayout activeTab={activeTab} setActiveTab={setActiveTab} qScore={currentUser?.q_score || 0}>
+            {/* Verification Warning Banner */}
+            {showVerificationWarning && daysRemaining !== null && daysRemaining > 0 && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center justify-between"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                            <Mail size={20} />
+                        </div>
+                        <div>
+                            <p className="font-bold text-amber-800">Verify your email</p>
+                            <p className="text-sm text-amber-700">
+                                You have <span className="font-bold">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''}</span> remaining to verify your email. Check your inbox for the magic link.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => setShowVerificationWarning(false)}
+                        className="text-amber-600 hover:text-amber-800 p-2"
+                    >
+                        <X size={20} />
+                    </button>
+                </motion.div>
+            )}
+
             <AnimatePresence mode="wait">
                 {activeTab === 'dashboard' && (
                     <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">

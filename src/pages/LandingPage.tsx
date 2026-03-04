@@ -2,14 +2,13 @@ import { useState, useRef, useEffect, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useAction, useConvex, useQuery } from "convex/react";
+import { useMutation, useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { auth } from "../lib/auth";
 import { Logo } from '../components/ui/Logo';
 import { FloatingQ } from '../components/FloatingQ';
 
 export default function LandingPage() {
-  const convex = useConvex();
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup'>('hero');
   const navigate = useNavigate();
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -33,6 +32,7 @@ export default function LandingPage() {
   const createUser = useMutation(api.users.createUser);
   const sendEmail = useAction(api.actions.sendVerificationEmail);
   const verifyUser = useMutation(api.users.verifyUser);
+  const login = useMutation(api.users.login);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -111,14 +111,20 @@ export default function LandingPage() {
     setSuccess('');
 
     try {
-      // Use the login mutation/query from Convex
-      const result = await convex.query(api.users.login, {
+      const result = await login({
         email: formData.email,
         password: formData.password
       });
 
       if (result.success && result.user) {
         auth.login(result.user as any);
+        
+        // If not verified, store verification info for Dashboard to show warning
+        if (!result.isVerified && result.daysRemaining !== null) {
+          localStorage.setItem('verification_days_remaining', String(result.daysRemaining));
+          localStorage.setItem('verification_deadline', String(result.verificationDeadline));
+        }
+        
         navigate("/dashboard");
       } else {
         setError(result.error || 'Login failed');
@@ -168,16 +174,6 @@ export default function LandingPage() {
               className="max-w-7xl mx-auto px-6"
             >
               <div className="grid lg:grid-cols-2 gap-16 items-center min-h-[calc(100vh-12rem)] relative">
-                {/* Floating Q - Premium Balloon Effect */}
-                <motion.div 
-                  className="absolute -top-20 right-0 lg:right-20 z-20 pointer-events-none"
-                  initial={{ opacity: 0, scale: 0.8, y: 50 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: 0.6, duration: 0.8, type: "spring" }}
-                >
-                  <FloatingQ />
-                </motion.div>
-
                 <div className="space-y-8 relative z-10">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}

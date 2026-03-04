@@ -20,6 +20,8 @@ export const auth = {
 
     logout: () => {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('verification_days_remaining');
+        localStorage.removeItem('verification_deadline');
         window.location.href = "/";
     },
 
