@@ -122,12 +122,15 @@ export default function AdminPanel() {
     // Listing state
     const [showListingModal, setShowListingModal] = useState(false);
     const [listingData, setListingData] = useState({
-        subscription_id: "",
+        platform_name: "",
         account_email: "",
         plan_owner: "",
         admin_renewal_date: "",
         slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
     });
+    // Slot editing state
+    const [editingSlot, setEditingSlot] = useState<any>(null);  // { slot_type_id, name, price, capacity, access_type }
+    const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
     // Workforce admin state
     const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
@@ -168,6 +171,8 @@ export default function AdminPanel() {
     const updateTicketMut = useMutation(api.admin.updateTicketStatus);
     const addCampusRepMut = useMutation(api.admin.addCampusRep);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
+    const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
+    const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
     const createCampaignMut = useMutation(api.campaigns.create);
     const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
     const editCampaignMut = useMutation(api.campaigns.editCampaign);
@@ -267,7 +272,7 @@ export default function AdminPanel() {
     const handleCreateListing = async () => {
         try {
             await adminCreateListingMutation({
-                subscription_id: listingData.subscription_id as Id<"subscriptions">,
+                platform_name: listingData.platform_name,
                 account_email: listingData.account_email,
                 plan_owner: listingData.plan_owner,
                 admin_renewal_date: listingData.admin_renewal_date,
@@ -276,7 +281,7 @@ export default function AdminPanel() {
             toast.success("Listing published to marketplace!", { icon: '🚀' });
             setShowListingModal(false);
             setListingData({
-                subscription_id: "", account_email: "", plan_owner: "",
+                platform_name: "", account_email: "", plan_owner: "",
                 admin_renewal_date: "",
                 slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
             });
@@ -644,7 +649,7 @@ export default function AdminPanel() {
                             <motion.div key="marketplace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader
                                     title="Marketplace Management"
-                                    sub="All subscription platforms and their performance"
+                                    sub="All subscription listings — tap a card to manage slots"
                                     action={
                                         <button
                                             onClick={() => setShowListingModal(true)}
@@ -654,54 +659,207 @@ export default function AdminPanel() {
                                         </button>
                                     }
                                 />
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                    {subBreakdown.map((sub: any) => {
-                                        const fillPct = sub.totalSlots > 0 ? Math.round(sub.filledSlots / sub.totalSlots * 100) : 0;
-                                        return (
-                                            <div key={sub._id} className="bg-white rounded-3xl p-6 border border-black/5 hover:shadow-lg transition-all">
-                                                <div className="flex items-center gap-4 mb-6">
-                                                    {sub.logo_url ? (
-                                                        <img src={sub.logo_url} alt={sub.name} className="w-12 h-12 rounded-2xl object-contain" />
-                                                    ) : (
-                                                        <div className="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center font-black text-xl">{sub.name[0]}</div>
-                                                    )}
-                                                    <div>
-                                                        <div className="font-black text-lg">{sub.name}</div>
-                                                        <div className="text-xs text-gray-400">{sub.description}</div>
-                                                    </div>
+
+                                {allSubscriptions.length === 0 ? (
+                                    <div className="text-center py-20 text-gray-400">
+                                        <ShoppingBag size={40} className="mx-auto mb-3 opacity-20" />
+                                        <p className="font-bold">No listings yet</p>
+                                        <p className="text-sm mt-1">Click "Create New Listing" to add one</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {(allSubscriptions as any[]).map((group: any) => {
+                                            const isExpanded = expandedGroup === group._id;
+                                            const filledSlots = group.members?.length ?? 0;
+                                            return (
+                                                <div key={group._id} className="bg-white rounded-3xl border border-black/5 overflow-hidden hover:shadow-lg transition-all">
+                                                    {/* Card header — clickable to expand */}
+                                                    <button
+                                                        onClick={() => setExpandedGroup(isExpanded ? null : group._id)}
+                                                        className="w-full p-5 flex items-center justify-between text-left"
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0">
+                                                                {group.subscription_name?.[0] ?? "?"}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-black text-base">{group.subscription_name}</div>
+                                                                <div className="text-xs text-gray-400">
+                                                                    {group.account_email} · Owner: {group.plan_owner}
+                                                                </div>
+                                                                <div className="text-[10px] text-amber-600 font-bold mt-0.5">
+                                                                    Renews {group.billing_cycle_start}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="text-right">
+                                                                <div className="font-black text-sm text-emerald-600">{filledSlots} Members</div>
+                                                                <div className="text-[10px] text-gray-400">{group.slot_types?.length ?? 0} slot types</div>
+                                                            </div>
+                                                            <ChevronDown size={18} className={`text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Expanded slot management panel */}
+                                                    <AnimatePresence>
+                                                        {isExpanded && (
+                                                            <motion.div
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.2 }}
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <div className="border-t border-black/5 p-5 space-y-4 bg-zinc-50">
+                                                                    {/* Slot types list */}
+                                                                    <div>
+                                                                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Slot Types</p>
+                                                                        <div className="space-y-2">
+                                                                            {(group.slot_types ?? []).length === 0 ? (
+                                                                                <p className="text-xs text-gray-400 text-center py-3">No slot types defined</p>
+                                                                            ) : (group.slot_types as any[]).map((st: any) => (
+                                                                                <div key={st._id} className="bg-white rounded-2xl p-4">
+                                                                                    {editingSlot?._id === st._id ? (
+                                                                                        /* Inline edit form */
+                                                                                        <div className="space-y-3">
+                                                                                            <div className="grid grid-cols-2 gap-3">
+                                                                                                <div>
+                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Name</label>
+                                                                                                    <input
+                                                                                                        value={editingSlot.name}
+                                                                                                        onChange={e => setEditingSlot({ ...editingSlot, name: e.target.value })}
+                                                                                                        className="w-full mt-1 px-3 py-2 bg-zinc-50 border border-black/8 rounded-xl text-sm font-bold outline-none"
+                                                                                                    />
+                                                                                                </div>
+                                                                                                <div>
+                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Price (₦)</label>
+                                                                                                    <input
+                                                                                                        type="number"
+                                                                                                        value={editingSlot.price}
+                                                                                                        onChange={e => setEditingSlot({ ...editingSlot, price: Number(e.target.value) })}
+                                                                                                        className="w-full mt-1 px-3 py-2 bg-zinc-50 border border-black/8 rounded-xl text-sm font-bold outline-none"
+                                                                                                    />
+                                                                                                </div>
+                                                                                                <div>
+                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Capacity</label>
+                                                                                                    <input
+                                                                                                        type="number"
+                                                                                                        value={editingSlot.capacity}
+                                                                                                        onChange={e => setEditingSlot({ ...editingSlot, capacity: Number(e.target.value) })}
+                                                                                                        className="w-full mt-1 px-3 py-2 bg-zinc-50 border border-black/8 rounded-xl text-sm font-bold outline-none"
+                                                                                                    />
+                                                                                                </div>
+                                                                                                <div>
+                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Access</label>
+                                                                                                    <select
+                                                                                                        value={editingSlot.access_type}
+                                                                                                        onChange={e => setEditingSlot({ ...editingSlot, access_type: e.target.value })}
+                                                                                                        className="w-full mt-1 px-3 py-2 bg-zinc-50 border border-black/8 rounded-xl text-sm font-bold outline-none"
+                                                                                                    >
+                                                                                                        <option value="code_access">Code Access</option>
+                                                                                                        <option value="invite_link">Invite Link</option>
+                                                                                                        <option value="email_invite">Email Invite</option>
+                                                                                                        <option value="login_with_code">Login + Code</option>
+                                                                                                    </select>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div className="flex gap-2 pt-1">
+                                                                                                <button
+                                                                                                    onClick={async () => {
+                                                                                                        try {
+                                                                                                            await adminUpdateSlotMut({
+                                                                                                                slot_type_id: editingSlot._id,
+                                                                                                                name: editingSlot.name,
+                                                                                                                price: editingSlot.price,
+                                                                                                                capacity: editingSlot.capacity,
+                                                                                                                access_type: editingSlot.access_type,
+                                                                                                            });
+                                                                                                            toast.success("Slot updated!");
+                                                                                                            setEditingSlot(null);
+                                                                                                        } catch (e: any) { toast.error(e.message); }
+                                                                                                    }}
+                                                                                                    className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-black hover:scale-105 transition-transform"
+                                                                                                >Save Changes</button>
+                                                                                                <button
+                                                                                                    onClick={() => setEditingSlot(null)}
+                                                                                                    className="px-4 py-2 bg-zinc-100 rounded-xl text-xs font-bold"
+                                                                                                >Cancel</button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        /* Display row */
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <div>
+                                                                                                <div className="font-black text-sm">{st.name}</div>
+                                                                                                <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
+                                                                                                    <span className="font-bold text-emerald-600">₦{st.price?.toLocaleString()}</span>
+                                                                                                    <span>·</span>
+                                                                                                    <span>Capacity: {st.capacity}</span>
+                                                                                                    <span>·</span>
+                                                                                                    <span className="capitalize">{st.access_type?.replace(/_/g, " ")}</span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div className="flex gap-2">
+                                                                                                <button
+                                                                                                    onClick={() => setEditingSlot({ ...st })}
+                                                                                                    className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:scale-110 transition-transform"
+                                                                                                    title="Edit slot"
+                                                                                                ><Edit3 size={13} /></button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Members inside this group */}
+                                                                    {(group.members ?? []).length > 0 && (
+                                                                        <div>
+                                                                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Current Members</p>
+                                                                            <div className="space-y-1.5">
+                                                                                {(group.members as any[]).map((m: any, i: number) => (
+                                                                                    <div key={i} className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <div className="w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center text-[10px] font-black">{m.user_name?.[0]}</div>
+                                                                                            <span className="text-sm font-bold">{m.user_name}</span>
+                                                                                        </div>
+                                                                                        <div className="text-xs text-gray-400">
+                                                                                            <span className="font-bold text-zinc-600">{m.slot_name}</span>
+                                                                                            {m.renewal && <span> · Renews {m.renewal}</span>}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Delete listing */}
+                                                                    <div className="pt-2 border-t border-black/5">
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                if (!confirm(`Delete the entire "${group.subscription_name}" listing and all its slots?`)) return;
+                                                                                try {
+                                                                                    await adminDeleteGroupMut({ group_id: group._id });
+                                                                                    toast("Listing deleted", { icon: "🗑️" });
+                                                                                    setExpandedGroup(null);
+                                                                                } catch (e: any) { toast.error(e.message); }
+                                                                            }}
+                                                                            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 transition-colors"
+                                                                        >
+                                                                            <X size={13} /> Delete Entire Listing
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
                                                 </div>
-                                                <div className="grid grid-cols-3 gap-4 mb-4">
-                                                    <div className="text-center">
-                                                        <div className="text-lg font-black">{sub.totalGroups}</div>
-                                                        <div className="text-[10px] text-gray-400 uppercase font-bold">Groups</div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <div className="text-lg font-black text-emerald-600">{sub.filledSlots}</div>
-                                                        <div className="text-[10px] text-gray-400 uppercase font-bold">Filled</div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <div className="text-lg font-black text-blue-500">{sub.availableSlots}</div>
-                                                        <div className="text-[10px] text-gray-400 uppercase font-bold">Open</div>
-                                                    </div>
-                                                </div>
-                                                <div className="mb-4">
-                                                    <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1.5">
-                                                        <span>Fill Rate</span>
-                                                        <span>{fillPct}%</span>
-                                                    </div>
-                                                    <div className="h-2 bg-black/5 rounded-full overflow-hidden">
-                                                        <div className={`h-full rounded-full transition-all ${fillPct > 80 ? 'bg-emerald-500' : fillPct > 50 ? 'bg-blue-500' : 'bg-amber-400'}`}
-                                                            style={{ width: `${fillPct}%` }} />
-                                                    </div>
-                                                </div>
-                                                <div className="pt-4 border-t border-black/5 flex justify-between items-center">
-                                                    <div className="text-xs text-gray-400">Est. Revenue</div>
-                                                    <div className="font-black text-emerald-600">{fmt(sub.estimatedRevenue)}</div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 
@@ -2000,18 +2158,16 @@ export default function AdminPanel() {
                                         <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" /> Account Details
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Subscription Platform</label>
-                                            <select
-                                                value={listingData.subscription_id}
-                                                onChange={e => setListingData({ ...listingData, subscription_id: e.target.value })}
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Subscription Platform Name</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Netflix, Spotify, YouTube Premium"
+                                                value={listingData.platform_name}
+                                                onChange={e => setListingData({ ...listingData, platform_name: e.target.value })}
                                                 className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
-                                            >
-                                                <option value="">Select platform</option>
-                                                {allSubscriptions.map((s: any) => (
-                                                    <option key={s._id} value={s._id}>{s.name}</option>
-                                                ))}
-                                            </select>
+                                            />
+                                            <p className="text-[10px] text-gray-400 ml-1">Type the name exactly as you want it to appear. A new platform entry will be created automatically.</p>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Renewal Date</label>
@@ -2143,7 +2299,7 @@ export default function AdminPanel() {
                                 {/* Submit */}
                                 <button
                                     onClick={handleCreateListing}
-                                    disabled={!listingData.subscription_id || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
+                                    disabled={!listingData.platform_name || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
                                     className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-black/10"
                                 >
                                     🚀 Confirm & Publish to Marketplace

@@ -235,9 +235,10 @@ export const updateAllocation = mutation({
     },
 });
 
+/** Admin creates a new listing — accepts platform name as free text, auto-creates subscription row */
 export const adminCreateListing = mutation({
     args: {
-        subscription_id: v.id("subscriptions"),
+        platform_name: v.string(),         // e.g. "Netflix", "Spotify"
         account_email: v.string(),
         plan_owner: v.string(),
         admin_renewal_date: v.string(),
@@ -250,76 +251,113 @@ export const adminCreateListing = mutation({
         }))
     },
     handler: async (ctx, args) => {
-        const user = await ctx.auth.getUserIdentity();
-        // Since we verify via tokens/app, for this example we won't strictly enforce auth here,
-        // but it is an admin-only intended route.
+        // Find or create the subscription row by name (case-insensitive)
+        const existing = await ctx.db.query("subscriptions")
+            .filter(q => q.eq(q.field("name"), args.platform_name))
+            .first();
+
+        let subscriptionId = existing?._id;
+        if (!subscriptionId) {
+            subscriptionId = await ctx.db.insert("subscriptions", {
+                name: args.platform_name,
+                description: `${args.platform_name} subscription`,
+                is_active: true,
+                base_cost: 0,
+            });
+        }
 
         const groupId = await ctx.db.insert("groups", {
-            subscription_id: args.subscription_id,
-            billing_cycle_start: args.admin_renewal_date, // When ADMIN renews
+            subscription_id: subscriptionId,
+            billing_cycle_start: args.admin_renewal_date,
             status: "active",
             account_email: args.account_email,
             plan_owner: args.plan_owner,
         });
 
         for (const st of args.slot_types) {
-            const existing = await ctx.db.query("slot_types")
-                .withIndex("by_subscription", (q) => q.eq("subscription_id", args.subscription_id))
-                .filter((q) => q.eq(q.field("name"), st.name))
-                .first();
-
-            if (existing) {
-                await ctx.db.patch(existing._id, {
-                    price: st.price,
-                    capacity: st.capacity,
-                    access_type: st.access_type,
-                    downloads_enabled: st.downloads_enabled,
-                });
-            } else {
-                await ctx.db.insert("slot_types", {
-                    subscription_id: args.subscription_id,
-                    name: st.name,
-                    price: st.price,
-                    capacity: st.capacity,
-                    access_type: st.access_type,
-                    device_limit: 1,
-                    downloads_enabled: st.downloads_enabled,
-                    min_q_score: 0,
-                    features: ["Premium Access", "Support Included"]
-                });
-            }
+            await ctx.db.insert("slot_types", {
+                subscription_id: subscriptionId,
+                name: st.name,
+                price: st.price,
+                capacity: st.capacity,
+                access_type: st.access_type,
+                device_limit: 1,
+                downloads_enabled: st.downloads_enabled,
+                min_q_score: 0,
+                features: ["Premium Access", "Support Included"]
+            });
         }
 
         return { success: true, groupId };
     }
 });
 
+/** Update a slot_type (price, capacity, access_type, name) */
+export const adminUpdateSlotType = mutation({
+    args: {
+        slot_type_id: v.id("slot_types"),
+        name: v.optional(v.string()),
+        price: v.optional(v.number()),
+        capacity: v.optional(v.number()),
+        access_type: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const { slot_type_id, ...patch } = args;
+        const filtered = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
+        await ctx.db.patch(slot_type_id, filtered);
+    }
+});
+
+/** Delete an entire group listing (and its slots) */
+export const adminDeleteGroup = mutation({
+    args: { group_id: v.id("groups") },
+    handler: async (ctx, args) => {
+        // Delete all slots inside this group
+        const slots = await ctx.db.query("slots")
+            .withIndex("by_group", q => q.eq("group_id", args.group_id))
+            .collect();
+        await Promise.all(slots.map(s => ctx.db.delete(s._id)));
+        await ctx.db.delete(args.group_id);
+    }
+});
+
+/** Get full marketplace data for admin: groups + members + slot_types for inline management */
 export const getAdminMarketplace = query({
     handler: async (ctx) => {
         const groups = await ctx.db.query("groups").collect();
         return await Promise.all(groups.map(async (group) => {
             const sub = await ctx.db.get(group.subscription_id);
-            const slots = await ctx.db.query("slots").withIndex("by_group", (q) => q.eq("group_id", group._id)).collect();
+            const slots = await ctx.db.query("slots")
+                .withIndex("by_group", q => q.eq("group_id", group._id))
+                .collect();
+            const slotTypes = await ctx.db.query("slot_types")
+                .withIndex("by_subscription", q => q.eq("subscription_id", group.subscription_id))
+                .collect();
 
             const members = await Promise.all(slots.map(async (s) => {
                 const u = s.user_id ? await ctx.db.get(s.user_id) : null;
                 const st = await ctx.db.get(s.slot_type_id);
                 return {
-                    user_name: u?.full_name || "Unknown",
-                    slot_name: st?.name || "Unknown",
-                    renewal: s.renewal_date
+                    slot_id: s._id,
+                    user_name: u?.full_name ?? "Empty Slot",
+                    user_id: s.user_id,
+                    slot_name: st?.name ?? "Unknown",
+                    slot_type_id: s.slot_type_id,
+                    renewal: s.renewal_date,
                 };
             }));
 
             return {
                 ...group,
-                subscription_name: sub?.name || "Unknown",
+                subscription_name: sub?.name ?? "Unknown",
                 member_count: slots.length,
-                members
+                members,
+                slot_types: slotTypes,
             };
         }));
     }
 });
+
 
 export const seedMarketplace = mutation({
     handler: async (ctx) => {
