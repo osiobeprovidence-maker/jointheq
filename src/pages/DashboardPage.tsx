@@ -35,9 +35,11 @@ import {
     Send,
     ChevronLeft,
     MoreVertical,
-    Info
+    Info,
+    ExternalLink
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
@@ -46,6 +48,7 @@ import { UserSlot, SlotType } from "../types";
 import toast from "react-hot-toast";
 
 export default function DashboardPage() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -953,12 +956,20 @@ export default function DashboardPage() {
                                 </h1>
                                 <p className="text-gray-500 mt-1">Manage platform operations and ecosystem.</p>
                             </div>
-                            <button
-                                onClick={() => setShowListingModal(true)}
-                                className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
-                            >
-                                <Plus size={18} /> Create New Listing
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => navigate('/admin')}
+                                    className="border border-black/10 bg-white text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
+                                >
+                                    <ExternalLink size={16} /> Full Admin Panel
+                                </button>
+                                <button
+                                    onClick={() => setShowListingModal(true)}
+                                    className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
+                                >
+                                    <Plus size={18} /> Create New Listing
+                                </button>
+                            </div>
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -6,12 +6,16 @@ export default defineSchema({
         email: v.string(),
         phone: v.optional(v.string()),
         full_name: v.string(),
+        username: v.optional(v.string()),
         q_score: v.number(),
         q_rank: v.string(),
         wallet_balance: v.number(),
         boots_balance: v.number(),
         referral_code: v.string(),
         referred_by: v.optional(v.id("users")),
+        is_suspended: v.optional(v.boolean()),
+        is_banned: v.optional(v.boolean()),
+        admin_role: v.optional(v.string()), // "super" | "support" | "operations" | "finance"
         score_history: v.optional(v.array(v.object({
             amount: v.number(),
             type: v.string(),
@@ -51,7 +55,30 @@ export default defineSchema({
         .index("by_phone", ["phone"])
         .index("by_referral_code", ["referral_code"])
         .index("by_token", ["verification_token"])
-        .index("by_referred_by", ["referred_by"]),
+        .index("by_referred_by", ["referred_by"])
+        .index("by_username", ["username"]),
+
+    support_tickets: defineTable({
+        user_id: v.id("users"),
+        category: v.string(), // "billing" | "access" | "account" | "other"
+        subject: v.string(),
+        status: v.string(), // "open" | "in_progress" | "resolved" | "escalated"
+        assigned_admin_id: v.optional(v.id("users")),
+        created_at: v.number(),
+        updated_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_admin", ["assigned_admin_id"]),
+
+    campus_reps: defineTable({
+        user_id: v.id("users"),
+        campus_name: v.string(),
+        commission_rate: v.number(), // default 0.02 (2%)
+        total_referred: v.number(),
+        total_earned: v.number(),
+        is_active: v.boolean(),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"]),
 
     devices: defineTable({
         user_id: v.id("users"),

@@ -9,6 +9,7 @@
  */
 
 import type * as actions from "../actions.js";
+import type * as admin from "../admin.js";
 import type * as campaigns from "../campaigns.js";
 import type * as devices from "../devices.js";
 import type * as email from "../email.js";
@@ -30,6 +31,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   actions: typeof actions;
+  admin: typeof admin;
   campaigns: typeof campaigns;
   devices: typeof devices;
   email: typeof email;

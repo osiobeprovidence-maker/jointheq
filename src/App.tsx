@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/auth/AuthGuards";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
+import AdminPanel from "./pages/AdminPanel";
 import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
 
 export default function App() {
@@ -26,7 +27,17 @@ export default function App() {
           }
         />
 
-        {/* Admin Routes */}
+        {/* Admin Panel - Full Control Center */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Routes (Console) */}
         <Route
           path="/console/dashboard"
           element={
