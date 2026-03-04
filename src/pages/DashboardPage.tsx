@@ -36,7 +36,10 @@ import {
     ChevronLeft,
     MoreVertical,
     Info,
-    ExternalLink
+    ExternalLink,
+    Hash,
+    Edit3,
+    CheckCircle2
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
@@ -118,6 +121,12 @@ export default function DashboardPage() {
     const removeAdminMutation = useMutation(api.users.removeAdmin);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
     const updateCardMutation = useMutation(api.users.updateCard);
+    const updateUsernameMutation = useMutation(api.users.updateUsername);
+
+    // Username edit state
+    const [editingUsername, setEditingUsername] = useState(false);
+    const [usernameInput, setUsernameInput] = useState('');
+    const [usernameLoading, setUsernameLoading] = useState(false);
 
     const handleCreateListing = async () => {
         try {
@@ -1156,6 +1165,52 @@ export default function DashboardPage() {
                                     </div>
                                     <h2 className="text-xl sm:text-2xl font-bold">{currentUser?.full_name}</h2>
                                     <p className="text-xs sm:text-sm text-gray-500">{currentUser?.email}</p>
+
+                                    {/* Username display + edit */}
+                                    {editingUsername ? (
+                                        <div className="mt-3 flex items-center gap-2 justify-center">
+                                            <div className="flex items-center gap-1 bg-zinc-100 rounded-xl px-3 py-2">
+                                                <span className="text-gray-400 font-bold text-sm">@</span>
+                                                <input
+                                                    autoFocus
+                                                    value={usernameInput}
+                                                    onChange={e => setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                                    className="bg-transparent text-sm font-bold outline-none w-28"
+                                                    placeholder="new_handle"
+                                                    maxLength={30}
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!usernameInput || usernameInput.length < 3) return toast.error("Min 3 characters");
+                                                    setUsernameLoading(true);
+                                                    try {
+                                                        await updateUsernameMutation({ userId: currentUser!._id, username: usernameInput });
+                                                        toast.success(`Username set to @${usernameInput}`);
+                                                        setEditingUsername(false);
+                                                    } catch (e: any) { toast.error(e.message); }
+                                                    finally { setUsernameLoading(false); }
+                                                }}
+                                                disabled={usernameLoading}
+                                                className="p-2 bg-zinc-900 text-white rounded-xl hover:scale-110 transition-transform disabled:opacity-50"
+                                            ><CheckCircle2 size={16} /></button>
+                                            <button onClick={() => setEditingUsername(false)} className="p-2 bg-zinc-100 rounded-xl hover:scale-110 transition-transform"><X size={16} /></button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => { setUsernameInput(currentUser?.username ?? ''); setEditingUsername(true); }}
+                                            className="mt-3 flex items-center gap-1.5 mx-auto text-sm font-bold text-gray-400 hover:text-zinc-900 transition-colors group"
+                                        >
+                                            <Hash size={14} className="group-hover:text-zinc-900" />
+                                            {currentUser?.username ? (
+                                                <span className="text-zinc-700">@{currentUser.username}</span>
+                                            ) : (
+                                                <span className="text-gray-400 italic">Set username</span>
+                                            )}
+                                            <Edit3 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </button>
+                                    )}
+
                                     <div className="mt-6 inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-100 text-emerald-600 rounded-full text-xs font-bold">
                                         <ShieldCheck size={14} className="sm:w-4 sm:h-4" />
                                         {currentUser?.q_rank || getRank(currentUser?.q_score || 0)} Member

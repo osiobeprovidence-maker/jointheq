@@ -12,6 +12,16 @@ export const getByEmail = query({
     },
 });
 
+export const getByUsername = query({
+    args: { username: v.string() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("users")
+            .withIndex("by_username", (q) => q.eq("username", args.username.toLowerCase()))
+            .unique();
+    },
+});
+
 export const getById = query({
     args: { id: v.id("users") },
     handler: async (ctx, args) => {
@@ -39,6 +49,7 @@ export const createUser = mutation({
     args: {
         email: v.string(),
         full_name: v.string(),
+        username: v.string(),
         phone: v.optional(v.string()),
         password_hash: v.string(),
         verification_token: v.string(),
@@ -77,6 +88,19 @@ export const createUser = mutation({
             throw new Error("Referral code already exists");
         }
 
+        // Check for duplicate username
+        const normalizedUsername = args.username.toLowerCase().replace(/[^a-z0-9_]/g, "");
+        if (!normalizedUsername || normalizedUsername.length < 3) {
+            throw new Error("Username must be at least 3 characters (letters, numbers, underscores only)");
+        }
+        const existingUsername = await ctx.db
+            .query("users")
+            .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
+            .unique();
+        if (existingUsername) {
+            throw new Error("Username already taken — try another");
+        }
+
         let referredById: any = undefined;
         if (referred_by_code) {
             const referrer = await ctx.db
@@ -90,6 +114,7 @@ export const createUser = mutation({
 
         const userId = await ctx.db.insert("users", {
             ...userArgs,
+            username: normalizedUsername,
             referred_by: referredById,
             q_score: 0,
             q_rank: "Rookie",
@@ -101,7 +126,7 @@ export const createUser = mutation({
             is_admin: false,
             role: "user",
             is_verified: false,
-            verification_deadline: Date.now() + 3 * 24 * 60 * 60 * 1000, // 3 days from now
+            verification_deadline: Date.now() + 3 * 24 * 60 * 60 * 1000,
             created_at: Date.now(),
         });
         return userId;
@@ -364,3 +389,26 @@ export const updateCard = mutation({
         });
     },
 });
+
+export const updateUsername = mutation({
+    args: { userId: v.id("users"), username: v.string() },
+    handler: async (ctx, args) => {
+        const normalized = args.username.toLowerCase().replace(/[^a-z0-9_]/g, "");
+        if (!normalized || normalized.length < 3) {
+            throw new Error("Username must be at least 3 characters (letters, numbers, underscores)");
+        }
+        if (normalized.length > 30) {
+            throw new Error("Username cannot exceed 30 characters");
+        }
+        const existing = await ctx.db
+            .query("users")
+            .withIndex("by_username", q => q.eq("username", normalized))
+            .unique();
+        if (existing && existing._id !== args.userId) {
+            throw new Error("Username already taken — try another");
+        }
+        await ctx.db.patch(args.userId, { username: normalized });
+        return { username: normalized };
+    },
+});
+
