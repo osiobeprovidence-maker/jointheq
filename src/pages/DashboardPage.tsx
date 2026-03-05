@@ -521,7 +521,7 @@ export default function DashboardPage() {
                                     <MarketplaceSlotCard
                                         key={slot._id}
                                         slot={slot}
-                                        onJoin={() => setCheckoutSlot(slot)}
+                                        onJoin={() => setCheckoutSlot(slot as unknown as SlotType)}
                                         userQScore={currentUser?.q_score || 0}
                                     />
                                 ))}
@@ -1855,6 +1855,19 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
     const capacity = slot.capacity || 4;
     const joined = slot.current_members || 0;
     const isPopular = slot.sub_name === "Netflix" || slot.sub_name === "Spotify";
+    const fallbackOwnerAvatars = [
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Kairo",
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Mina",
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Tobi",
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Zara",
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Nox",
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Ari",
+    ];
+    const ownerName = ((slot.owner_name as string | undefined) || "admin").trim().replace(/^@+/, "") || "admin";
+    const ownerProfileImage = ((slot.owner_profile_image_url as string | undefined) || "").trim();
+    const ownerHash = ownerName.split("").reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+    const ownerFallbackAvatar = fallbackOwnerAvatars[ownerHash % fallbackOwnerAvatars.length];
+    const useBlackFallback = !ownerProfileImage && ownerName.toLowerCase() === "admin";
 
     return (
         <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-7 rounded-[2.5rem] flex flex-col hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-black/5">
@@ -1887,9 +1900,15 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
             {/* Owner Info */}
             <div className="flex items-center gap-2 mb-6">
                 <div className="w-6 h-6 bg-zinc-100 rounded-full flex items-center justify-center overflow-hidden border border-white">
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 opacity-20" />
+                    {ownerProfileImage ? (
+                        <img src={ownerProfileImage} alt={ownerName} className="w-full h-full object-cover" />
+                    ) : useBlackFallback ? (
+                        <div className="w-full h-full bg-black" />
+                    ) : (
+                        <img src={ownerFallbackAvatar} alt={ownerName} className="w-full h-full object-cover" />
+                    )}
                 </div>
-                <span className="text-xs font-bold text-black/40 tracking-tight">Owner: <span className="text-black/80">@{slot.owner_name}</span></span>
+                <span className="text-xs font-bold text-black/40 tracking-tight">Owner: <span className="text-black/80">{ownerName}</span></span>
             </div>
 
             {/* Features (Hidden or truncated for cleaner look) */}
@@ -1932,10 +1951,10 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
                 onClick={onJoin}
                 disabled={!isEligible || joined === capacity}
                 className={`w-full py-4.5 rounded-[2rem] font-black text-sm transition-all active:scale-[0.98] ${!isEligible
-                        ? 'bg-black/5 text-black/20 cursor-not-allowed'
-                        : joined === capacity
-                            ? 'bg-red-50 text-red-500 border border-red-100'
-                            : 'bg-zinc-900 text-white shadow-xl shadow-black/10 hover:shadow-2xl hover:bg-black'
+                    ? 'bg-black/5 text-black/20 cursor-not-allowed'
+                    : joined === capacity
+                        ? 'bg-red-50 text-red-500 border border-red-100'
+                        : 'bg-zinc-900 text-white shadow-xl shadow-black/10 hover:shadow-2xl hover:bg-black'
                     }`}
             >
                 {joined === capacity ? 'Sold Out' : isEligible ? 'Join Slot' : `Lv.${slot.min_q_score} Required`}

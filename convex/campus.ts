@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CAMPUS TERRITORIES
@@ -281,14 +282,15 @@ export const submitCampusApplication = mutation({
 export const getCampusApplications = query({
     args: { status: v.optional(v.string()) },
     handler: async (ctx, { status }) => {
-        let q = ctx.db.query("campus_applications");
+        let apps;
         if (status) {
-            q = q.withIndex("by_status", q => q.eq("status", status));
+            apps = await ctx.db.query("campus_applications").withIndex("by_status", q => q.eq("status", status)).collect();
+        } else {
+            apps = await ctx.db.query("campus_applications").collect();
         }
-        const apps = await q.collect();
 
         return await Promise.all(apps.map(async app => {
-            const user = await ctx.db.get(app.user_id);
+            const user = await ctx.db.get(app.user_id as Id<"users">);
             return {
                 ...app,
                 user_name: user?.full_name ?? "Unknown",

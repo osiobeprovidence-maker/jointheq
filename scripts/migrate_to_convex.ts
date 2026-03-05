@@ -15,12 +15,12 @@ async function migrate() {
     // 1. Users
     const sqliteUsers = db.prepare("SELECT * FROM users").all();
     console.log(`Found ${sqliteUsers.length} users in SQLite.`);
-    const userMapping = await client.mutation("migration:importUsers", { users: sqliteUsers }) as Record<number, string>;
+    const userMapping = await client.mutation("migration:importUsers" as any, { users: sqliteUsers }) as Record<number, string>;
     console.log("Users imported.");
 
     // 2. Subscriptions
     const sqliteSubs = db.prepare("SELECT * FROM subscriptions").all();
-    const subMapping = await client.mutation("migration:importSubscriptions", { subscriptions: sqliteSubs }) as Record<number, string>;
+    const subMapping = await client.mutation("migration:importSubscriptions" as any, { subscriptions: sqliteSubs }) as Record<number, string>;
     console.log("Subscriptions imported.");
 
     // 3. Slot Types
@@ -28,7 +28,7 @@ async function migrate() {
         ...st,
         subscription_id: subMapping[st.subscription_id]
     }));
-    const slotTypeMapping = await client.mutation("migration:importSlotTypes", { slot_types: sqliteSlotTypes }) as Record<number, string>;
+    const slotTypeMapping = await client.mutation("migration:importSlotTypes" as any, { slot_types: sqliteSlotTypes }) as Record<number, string>;
     console.log("Slot types imported.");
 
     // 4. Groups
@@ -36,12 +36,12 @@ async function migrate() {
         ...g,
         subscription_id: subMapping[g.subscription_id]
     }));
-    const groupMapping = await client.mutation("migration:importGroups", { groups: sqliteGroups }) as Record<number, string>;
+    const groupMapping = await client.mutation("migration:importGroups" as any, { groups: sqliteGroups }) as Record<number, string>;
     console.log("Groups imported.");
 
     // 5. Campaigns
     const sqliteCampaigns = db.prepare("SELECT * FROM campaigns").all();
-    await client.mutation("migration:importGeneric", { table: "campaigns", records: sqliteCampaigns });
+    await client.mutation("migration:importGeneric" as any, { table: "campaigns", records: sqliteCampaigns });
     console.log("Campaigns imported.");
 
     // 6. Devices
@@ -49,7 +49,7 @@ async function migrate() {
         ...d,
         user_id: userMapping[d.user_id]
     }));
-    await client.mutation("migration:importGeneric", { table: "devices", records: sqliteDevices });
+    await client.mutation("migration:importGeneric" as any, { table: "devices", records: sqliteDevices });
     console.log("Devices imported.");
 
     // 7. Slots
@@ -59,7 +59,7 @@ async function migrate() {
         group_id: groupMapping[s.group_id],
         slot_type_id: slotTypeMapping[s.slot_type_id]
     }));
-    await client.mutation("migration:importGeneric", { table: "slots", records: sqliteSlots });
+    await client.mutation("migration:importGeneric" as any, { table: "slots", records: sqliteSlots });
     console.log("Slots imported.");
 
     // 8. Messages
@@ -68,7 +68,7 @@ async function migrate() {
         sender_id: userMapping[m.sender_id],
         receiver_id: m.receiver_id ? userMapping[m.receiver_id] : undefined
     }));
-    await client.mutation("migration:importGeneric", { table: "messages", records: sqliteMessages });
+    await client.mutation("migration:importGeneric" as any, { table: "messages", records: sqliteMessages });
     console.log("Messages imported.");
 
     // 9. Lunar Memories
@@ -76,7 +76,7 @@ async function migrate() {
         ...m,
         added_by: userMapping[m.added_by]
     }));
-    await client.mutation("migration:importGeneric", { table: "lunar_memories", records: sqliteMemories });
+    await client.mutation("migration:importGeneric" as any, { table: "lunar_memories", records: sqliteMemories });
     console.log("Lunar memories imported.");
 
     // 10. Lunar Subscriptions
@@ -84,7 +84,7 @@ async function migrate() {
         ...ls,
         user_id: userMapping[ls.user_id]
     }));
-    await client.mutation("migration:importGeneric", { table: "lunar_subscriptions", records: sqliteLunarSubs });
+    await client.mutation("migration:importGeneric" as any, { table: "lunar_subscriptions", records: sqliteLunarSubs });
     console.log("Lunar subscriptions imported.");
 
     // 11. Transactions
@@ -92,7 +92,7 @@ async function migrate() {
         ...t,
         user_id: userMapping[t.user_id]
     }));
-    await client.mutation("migration:importGeneric", { table: "transactions", records: sqliteTransactions });
+    await client.mutation("migration:importGeneric" as any, { table: "transactions", records: sqliteTransactions });
     console.log("Transactions imported.");
 
     // 12. Boot Transactions
@@ -100,7 +100,7 @@ async function migrate() {
         ...bt,
         user_id: userMapping[bt.user_id]
     }));
-    await client.mutation("migration:importGeneric", { table: "boot_transactions", records: sqliteBootTransactions });
+    await client.mutation("migration:importGeneric" as any, { table: "boot_transactions", records: sqliteBootTransactions });
     console.log("Boot transactions imported.");
 
     console.log("Migration completed successfully!");
