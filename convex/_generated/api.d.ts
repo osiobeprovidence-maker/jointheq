@@ -23,6 +23,7 @@ import type * as migration from "../migration.js";
 import type * as migrations from "../migrations.js";
 import type * as reputation from "../reputation.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as support from "../support.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   reputation: typeof reputation;
   subscriptions: typeof subscriptions;
+  support: typeof support;
   transactions: typeof transactions;
   users: typeof users;
 }>;

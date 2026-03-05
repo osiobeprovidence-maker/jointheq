@@ -364,4 +364,25 @@ export default defineSchema({
         created_at: v.number(),
     }).index("by_admin", ["admin_id"])
         .index("by_read", ["is_read"]),
+
+    // ── Support Chat System ──────────────────────────────────────────────────
+    support_conversations: defineTable({
+        user_id: v.id("users"),
+        assigned_admin_id: v.optional(v.id("users")),
+        status: v.string(), // "open" | "closed"
+        last_message_at: v.number(),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_admin", ["assigned_admin_id"])
+        .index("by_last_message", ["last_message_at"]),
+
+    support_messages: defineTable({
+        conversation_id: v.id("support_conversations"),
+        sender_id: v.id("users"),
+        sender_role: v.string(), // "user" | "admin"
+        content: v.string(),
+        image_url: v.optional(v.string()), // For attach screenshot
+        created_at: v.number(),
+    }).index("by_conversation", ["conversation_id"]),
 });

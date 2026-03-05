@@ -50,6 +50,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security";
@@ -1148,68 +1149,8 @@ export default function AdminPanel() {
                         {/* ═══ SUPPORT ═══ */}
                         {activeTab === "support" && (
                             <motion.div key="support" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Support Tickets" sub="Manage user issues and escalations" />
-                                <div className="grid grid-cols-3 gap-4 mb-6">
-                                    <StatCard label="Open" value={allTickets.filter(t => t.status === "open").length} icon={<Clock size={18} />} color="bg-orange-500" />
-                                    <StatCard label="In Progress" value={allTickets.filter(t => t.status === "in_progress").length} icon={<Activity size={18} />} color="bg-blue-500" />
-                                    <StatCard label="Resolved" value={allTickets.filter(t => t.status === "resolved").length} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" />
-                                </div>
-                                <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                    {allTickets.length === 0 ? (
-                                        <div className="p-16 text-center text-gray-400">
-                                            <Ticket size={32} className="mx-auto mb-3 opacity-20" />
-                                            <p className="font-bold">No support tickets yet.</p>
-                                            <p className="text-xs mt-1">Tickets are auto-created when users submit support requests.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b">
-                                                <div className="col-span-3">User</div>
-                                                <div className="col-span-3">Subject</div>
-                                                <div className="col-span-2">Category</div>
-                                                <div className="col-span-2">Status</div>
-                                                <div className="col-span-2">Actions</div>
-                                            </div>
-                                            {allTickets.map((ticket: any) => (
-                                                <div key={ticket._id} className="grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01]">
-                                                    <div className="col-span-3">
-                                                        <div className="font-bold text-sm">{ticket.username}</div>
-                                                        <div className="text-[10px] text-gray-400">{ticket.user_email}</div>
-                                                    </div>
-                                                    <div className="col-span-3 text-sm font-medium truncate pr-4">{ticket.subject}</div>
-                                                    <div className="col-span-2">
-                                                        <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full text-[9px] font-bold capitalize">{ticket.category}</span>
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ticket.status === 'open' ? 'bg-orange-100 text-orange-600' : ticket.status === 'resolved' ? 'bg-emerald-100 text-emerald-600' : ticket.status === 'escalated' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-                                                            {ticket.status.replace('_', ' ')}
-                                                        </span>
-                                                    </div>
-                                                    <div className="col-span-2 flex gap-1">
-                                                        {ticket.status !== "resolved" && (
-                                                            <button
-                                                                onClick={() => updateTicketMut({ ticketId: ticket._id, status: "resolved", adminId: currentUser!._id })}
-                                                                className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
-                                                                title="Resolve"
-                                                            >
-                                                                <CheckCircle2 size={13} />
-                                                            </button>
-                                                        )}
-                                                        {ticket.status === "open" && (
-                                                            <button
-                                                                onClick={() => updateTicketMut({ ticketId: ticket._id, status: "in_progress", adminId: currentUser!._id })}
-                                                                className="p-1.5 bg-blue-50 text-blue-600 rounded-xl hover:scale-110 transition-transform"
-                                                                title="Take it"
-                                                            >
-                                                                <HeadphonesIcon size={13} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </>
-                                    )}
-                                </div>
+                                <SectionHeader title="Support Chat" sub="Real-time assistance for users" />
+                                <SupportChatAdmin adminId={currentUser!._id} />
                             </motion.div>
                         )}
 
