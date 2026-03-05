@@ -63,7 +63,10 @@ export default function LandingPage() {
     try {
       const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const referralCode = `Q-${formData.name.split(' ')[0].toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const referredByCode = new URLSearchParams(window.location.search)
+        .get('ref')
+        ?.trim()
+        .toUpperCase();
       const usernameBase = (formData.name || formData.email.split('@')[0])
         .toLowerCase()
         .replace(/[^a-z0-9_]/g, "")
@@ -78,7 +81,7 @@ export default function LandingPage() {
         password_hash: formData.password,
         verification_token: token,
         verification_token_expires: expires,
-        referral_code: referralCode
+        referred_by_code: referredByCode || undefined
       });
 
       await sendEmail({
