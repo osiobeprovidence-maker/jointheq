@@ -8,6 +8,7 @@ import DashboardPage from "./pages/DashboardPage";
 import AdminPanel from "./pages/AdminPanel";
 import CampaignDetailPage from "./pages/CampaignDetailPage";
 import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
+import CampusDashboardPage from "./pages/CampusDashboardPage";
 
 export default function App() {
   return (
@@ -44,6 +45,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CampaignDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/campus-dashboard"
+          element={
+            <ProtectedRoute>
+              <CampusDashboardPage />
             </ProtectedRoute>
           }
         />

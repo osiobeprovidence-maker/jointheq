@@ -316,8 +316,72 @@ export const reviewCampusApplication = mutation({
             updated_at: Date.now(),
         });
 
-        // If approved, optionally do something like notify user or add to a territory
-        // For now, just updating the status is enough.
+        if (status === "approved") {
+            // Create a record in campus_reps
+            const existingRep = await ctx.db
+                .query("campus_reps")
+                .withIndex("by_user", q => q.eq("user_id", app.user_id))
+                .first();
+
+            if (!existingRep) {
+                await ctx.db.insert("campus_reps", {
+                    user_id: app.user_id,
+                    campus_name: app.university,
+                    commission_rate: 0.02, // 2% default
+                    total_referred: 0,
+                    total_earned: 0,
+                    is_active: true,
+                    created_at: Date.now(),
+                });
+            }
+
+            // Also check for territory and add as ambassador
+            let territory = await ctx.db
+                .query("campus_territories")
+                .filter(q => q.eq(q.field("campus_name"), app.university))
+                .first();
+
+            if (!territory) {
+                // Auto-create territory if it doesn't exist
+                const territoryId = await ctx.db.insert("campus_territories", {
+                    campus_name: app.university,
+                    city: "Unknown", // Admin can update later
+                    country: "Nigeria",
+                    is_active: true,
+                    created_at: Date.now(),
+                });
+
+                await ctx.db.insert("campus_territory_ambassadors", {
+                    territory_id: territoryId,
+                    user_id: app.user_id,
+                    role: "ambassador",
+                    referral_count: 0,
+                    total_earned: 0,
+                    is_active: true,
+                    joined_at: Date.now(),
+                });
+            } else {
+                // Add to existing territory if not already there
+                const existingAmb = await ctx.db
+                    .query("campus_territory_ambassadors")
+                    .withIndex("by_territory", q => q.eq("territory_id", territory._id))
+                    .filter(q => q.eq(q.field("user_id"), app.user_id))
+                    .first();
+
+                if (!existingAmb) {
+                    await ctx.db.insert("campus_territory_ambassadors", {
+                        territory_id: territory._id,
+                        user_id: app.user_id,
+                        role: "ambassador",
+                        referral_count: 0,
+                        total_earned: 0,
+                        is_active: true,
+                        joined_at: Date.now(),
+                    });
+                }
+            }
+        }
+
         return applicationId;
     },
 });
