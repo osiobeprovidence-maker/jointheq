@@ -165,6 +165,7 @@ export default function AdminPanel() {
     const territories = useQuery(api.campus.getTerritories) || [];
     const campusEvents = useQuery(api.campus.getEvents, {}) || [];
     const campusOverview = useQuery(api.campus.getCampusOverview);
+    const campusApplications = useQuery(api.campus.getCampusApplications, {}) || [];
 
     // Mutations
     const suspendUserMut = useMutation(api.admin.suspendUser);
@@ -204,6 +205,7 @@ export default function AdminPanel() {
     const createTerritoryMut = useMutation(api.campus.createTerritory);
     const createEventMut = useMutation(api.campus.createEvent);
     const updateEventMut = useMutation(api.campus.updateEvent);
+    const reviewCampusApplicationMut = useMutation(api.campus.reviewCampusApplication);
 
     const handleSaveCampaign = async () => {
 
@@ -1604,95 +1606,6 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ CAMPUS Q ═══ */}
-                        {activeTab === "campus" && (
-                            <motion.div key="campus" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader
-                                    title="Campus Q Program"
-                                    sub="Student ambassadors earning commissions for referrals"
-                                    action={
-                                        <button
-                                            onClick={() => setCampusModalOpen(true)}
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white rounded-2xl font-bold text-sm hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
-                                        >
-                                            <Plus size={16} /> Add Campus Rep
-                                        </button>
-                                    }
-                                />
-
-                                {/* Commission Structure */}
-                                <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-3xl p-8 text-white">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <GraduationCap size={24} className="text-yellow-400" />
-                                        <h3 className="text-xl font-black">Campus Q Commission Structure</h3>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                                        {[
-                                            { name: "Netflix Premium", commission: 308 },
-                                            { name: "Spotify", commission: 90 },
-                                            { name: "Apple Music", commission: 90 },
-                                            { name: "Prime Video", commission: 120 },
-                                            { name: "YouTube Premium", commission: 96 },
-                                            { name: "YouTube Music", commission: 90 },
-                                            { name: "Crunchyroll", commission: 100 },
-                                            { name: "Canva", commission: 240 },
-                                            { name: "CapCut", commission: 500 },
-                                            { name: "ChatGPT Go", commission: 200 },
-                                        ].map(item => (
-                                            <div key={item.name} className="bg-white/10 rounded-2xl p-4">
-                                                <div className="text-xs text-white/60 mb-1">{item.name}</div>
-                                                <div className="font-black text-yellow-400">₦{item.commission}</div>
-                                                <div className="text-[10px] text-white/40">per referral</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-xs text-white/40 mt-4">* Commissions are 2% of slot price, paid monthly as long as referred user remains subscribed.</p>
-                                </div>
-
-                                {/* Reps List */}
-                                {campusReps.length === 0 ? (
-                                    <div className="bg-white rounded-3xl border border-black/5 p-16 text-center text-gray-400">
-                                        <GraduationCap size={32} className="mx-auto mb-4 opacity-20" />
-                                        <p className="font-bold mb-2">No campus reps yet.</p>
-                                        <p className="text-xs">Add student ambassadors to grow JoinTheQ across campuses.</p>
-                                    </div>
-                                ) : (
-                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                        <div className="grid grid-cols-6 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b">
-                                            <div className="col-span-2">Rep</div>
-                                            <div>Campus</div>
-                                            <div className="text-center">Referred</div>
-                                            <div className="text-center">Status</div>
-                                            <div className="text-right">Earned</div>
-                                        </div>
-                                        {campusReps.map((rep: any) => (
-                                            <div key={rep._id} className="grid grid-cols-6 items-center p-4 border-b border-black/3 hover:bg-black/[0.01]">
-                                                <div className="col-span-2 flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm">
-                                                        {rep.full_name?.[0]}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-sm">{rep.full_name}</div>
-                                                        <div className="text-[10px] text-gray-400">{rep.email}</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <GraduationCap size={12} className="text-gray-400" />
-                                                    <span className="text-sm font-bold">{rep.campus_name}</span>
-                                                </div>
-                                                <div className="text-center font-black">{rep.total_referred}</div>
-                                                <div className="flex justify-center">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${rep.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
-                                                        {rep.is_active ? "Active" : "Inactive"}
-                                                    </span>
-                                                </div>
-                                                <div className="text-right font-black text-emerald-600">{fmt(rep.total_earned)}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </motion.div>
-                        )}
 
                         {/* ═══ SECURITY ═══ */}
                         {activeTab === "security" && (
@@ -1837,6 +1750,64 @@ export default function AdminPanel() {
                                     <StatCard label="Users Acquired" value={campusOverview?.total_users_acquired ?? 0} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="From events" />
                                 </div>
 
+                                {/* Campus Applications Review */}
+                                {campusApplications.filter((a: any) => a.status === "pending").length > 0 && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="font-black text-lg flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 bg-amber-500 rounded-full" /> Pending Applications
+                                                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">{campusApplications.filter((a: any) => a.status === "pending").length}</span>
+                                            </h3>
+                                        </div>
+                                        <div className="bg-white rounded-[2.5rem] border border-black/5 overflow-hidden">
+                                            <div className="divide-y divide-black/5">
+                                                {campusApplications.filter((a: any) => a.status === "pending").map((app: any) => (
+                                                    <div key={app._id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-zinc-50 transition-colors">
+                                                        <div className="flex items-start gap-4">
+                                                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0">
+                                                                {app.user_name?.[0]}
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-black text-sm">{app.user_name}</span>
+                                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-zinc-100 px-2 py-0.5 rounded-full">{app.university}</span>
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-400 mb-2">{app.user_email} • {app.social_handle || "No social handle"}</div>
+                                                                <p className="text-xs text-zinc-600 leading-relaxed max-w-lg">
+                                                                    <span className="font-bold text-zinc-400 uppercase text-[9px] tracking-tighter">Reason:</span> {app.reason}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 self-end md:self-center">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!confirm(`Approve ${app.user_name}'s application?`)) return;
+                                                                    try {
+                                                                        await reviewCampusApplicationMut({ applicationId: app._id, status: "approved", adminId: currentUser!._id });
+                                                                        toast.success("Application approved!");
+                                                                    } catch (e: any) { toast.error(e.message); }
+                                                                }}
+                                                                className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-black hover:bg-emerald-100 transition-all border border-emerald-100"
+                                                            >Approve</button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    const reason = prompt("Enter rejection reason (optional):");
+                                                                    if (reason === null) return;
+                                                                    try {
+                                                                        await reviewCampusApplicationMut({ applicationId: app._id, status: "rejected", adminId: currentUser!._id });
+                                                                        toast.error("Application rejected");
+                                                                    } catch (e: any) { toast.error(e.message); }
+                                                                }}
+                                                                className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-xs font-black hover:bg-red-100 transition-all border border-red-100"
+                                                            >Reject</button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Territories Grid */}
                                 <div>
                                     <h3 className="font-black text-lg mb-4">Campus Territories</h3>
@@ -1975,25 +1946,79 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Legacy Campus Reps */}
-                                {campusReps.length > 0 && (
-                                    <div>
-                                        <SectionHeader title="Campus Representatives (Legacy)" sub="Original campus rep program members" />
+                                {/* Commission Structure */}
+                                <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-3xl p-8 text-white">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <GraduationCap size={24} className="text-yellow-400" />
+                                        <h3 className="text-xl font-black">Campus Q Commission Structure</h3>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                                        {[
+                                            { name: "Netflix Premium", commission: 308 },
+                                            { name: "Spotify", commission: 90 },
+                                            { name: "Apple Music", commission: 90 },
+                                            { name: "Prime Video", commission: 120 },
+                                            { name: "YouTube Premium", commission: 96 },
+                                            { name: "YouTube Music", commission: 90 },
+                                            { name: "Crunchyroll", commission: 100 },
+                                            { name: "Canva", commission: 240 },
+                                            { name: "CapCut", commission: 500 },
+                                            { name: "ChatGPT Go", commission: 200 },
+                                        ].map(item => (
+                                            <div key={item.name} className="bg-white/10 rounded-2xl p-4">
+                                                <div className="text-xs text-white/60 mb-1">{item.name}</div>
+                                                <div className="font-black text-yellow-400">₦{item.commission}</div>
+                                                <div className="text-[10px] text-white/40">per referral</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-white/40 mt-4">* Commissions are 2% of slot price, paid monthly as long as referred user remains subscribed.</p>
+                                </div>
+
+                                {/* Reps List */}
+                                <div className="space-y-4">
+                                    <SectionHeader title="Campus Representatives" sub="Active program members" />
+                                    {campusReps.length === 0 ? (
+                                        <div className="bg-white rounded-3xl border border-black/5 p-16 text-center text-gray-400">
+                                            <GraduationCap size={32} className="mx-auto mb-4 opacity-20" />
+                                            <p className="font-bold">No campus reps yet.</p>
+                                        </div>
+                                    ) : (
                                         <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                            <div className="grid grid-cols-4 p-4 text-[10px] uppercase font-black text-gray-400 border-b border-black/5">
-                                                <span>Rep</span><span className="text-center">Campus</span><span className="text-center">Referred</span><span className="text-right">Earned</span>
+                                            <div className="grid grid-cols-6 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b">
+                                                <div className="col-span-2">Rep</div>
+                                                <div>Campus</div>
+                                                <div className="text-center">Referred</div>
+                                                <div className="text-center">Status</div>
+                                                <div className="text-right">Earned</div>
                                             </div>
                                             {campusReps.map((rep: any) => (
-                                                <div key={rep._id} className="grid grid-cols-4 p-4 items-center border-b border-black/3">
-                                                    <div className="font-bold text-sm truncate">{rep.full_name}</div>
-                                                    <div className="flex justify-center items-center gap-1"><GraduationCap size={12} className="text-gray-400" /><span className="text-sm font-bold">{rep.campus_name}</span></div>
+                                                <div key={rep._id} className="grid grid-cols-6 items-center p-4 border-b border-black/3 hover:bg-black/[0.01]">
+                                                    <div className="col-span-2 flex items-center gap-3">
+                                                        <div className="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm">
+                                                            {rep.full_name?.[0]}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-sm">{rep.full_name}</div>
+                                                            <div className="text-[10px] text-gray-400">{rep.email}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <GraduationCap size={12} className="text-gray-400" />
+                                                        <span className="text-sm font-bold">{rep.campus_name}</span>
+                                                    </div>
                                                     <div className="text-center font-black">{rep.total_referred}</div>
+                                                    <div className="flex justify-center">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${rep.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
+                                                            {rep.is_active ? "Active" : "Inactive"}
+                                                        </span>
+                                                    </div>
                                                     <div className="text-right font-black text-emerald-600">{fmt(rep.total_earned)}</div>
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </motion.div>
                         )}
 

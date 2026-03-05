@@ -241,3 +241,95 @@ export const getCampusOverview = query({
         };
     },
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAMPUS APPLICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Submit a new campus application */
+export const submitCampusApplication = mutation({
+    args: {
+        userId: v.id("users"),
+        university: v.string(),
+        social_handle: v.optional(v.string()),
+        reason: v.string(),
+    },
+    handler: async (ctx, args) => {
+        // Check if user already has a pending application
+        const existing = await ctx.db
+            .query("campus_applications")
+            .withIndex("by_user", q => q.eq("user_id", args.userId))
+            .filter(q => q.eq(q.field("status"), "pending"))
+            .first();
+
+        if (existing) {
+            throw new Error("You already have a pending application.");
+        }
+
+        return await ctx.db.insert("campus_applications", {
+            user_id: args.userId,
+            university: args.university,
+            social_handle: args.social_handle,
+            reason: args.reason,
+            status: "pending",
+            created_at: Date.now(),
+        });
+    },
+});
+
+/** Get all campus applications for admin review */
+export const getCampusApplications = query({
+    args: { status: v.optional(v.string()) },
+    handler: async (ctx, { status }) => {
+        let q = ctx.db.query("campus_applications");
+        if (status) {
+            q = q.withIndex("by_status", q => q.eq("status", status));
+        }
+        const apps = await q.collect();
+
+        return await Promise.all(apps.map(async app => {
+            const user = await ctx.db.get(app.user_id);
+            return {
+                ...app,
+                user_name: user?.full_name ?? "Unknown",
+                user_email: user?.email ?? "",
+                user_username: user?.username ?? "",
+            };
+        }));
+    },
+});
+
+/** Review a campus application */
+export const reviewCampusApplication = mutation({
+    args: {
+        applicationId: v.id("campus_applications"),
+        adminId: v.id("users"),
+        status: v.string(), // "approved" | "rejected"
+    },
+    handler: async (ctx, { applicationId, adminId, status }) => {
+        const app = await ctx.db.get(applicationId);
+        if (!app) throw new Error("Application not found");
+
+        await ctx.db.patch(applicationId, {
+            status,
+            reviewed_by: adminId,
+            updated_at: Date.now(),
+        });
+
+        // If approved, optionally do something like notify user or add to a territory
+        // For now, just updating the status is enough.
+        return applicationId;
+    },
+});
+
+/** Get the current user's campus application */
+export const getMyCampusApplication = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, { userId }) => {
+        return await ctx.db
+            .query("campus_applications")
+            .withIndex("by_user", q => q.eq("user_id", userId))
+            .order("desc")
+            .first();
+    },
+});

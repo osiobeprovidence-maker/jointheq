@@ -55,6 +55,8 @@ import { MainLayout } from "../layouts/MainLayout";
 import { UserSlot, SlotType } from "../types";
 import toast from "react-hot-toast";
 import SupportChatUser from "../components/chat/SupportChatUser";
+import CampusJoinCard from "../components/campus/CampusJoinCard";
+import CampusApplicationModal from "../components/campus/CampusApplicationModal";
 
 export default function DashboardPage() {
     const navigate = useNavigate();
@@ -106,6 +108,7 @@ export default function DashboardPage() {
         admin_renewal_date: '',
         slots: [{ name: '', price: 0, capacity: 1, access_type: 'code_access', downloads_enabled: true }]
     });
+    const [campusModalOpen, setCampusModalOpen] = useState(false);
 
     const messagesUserId = currentUser?.is_admin ? (selectedChatUserId || currentUser._id) : currentUser?._id;
     const messages = useQuery(api.messages.getMessages, messagesUserId ? { user_id: messagesUserId } : "skip") || [];
@@ -765,32 +768,50 @@ export default function DashboardPage() {
                         </header>
 
                         {campaigns.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {campaigns.map((camp: any) => (
-                                    <CampaignCard
-                                        key={camp._id}
-                                        campaign={camp}
-                                        onParticipate={() => navigate(`/campaigns/${camp._id}`)}
-                                        userId={currentUser?._id}
-                                    />
-                                ))}
+                            <div className="flex flex-col gap-8">
+                                <CampusJoinCard
+                                    userId={currentUser._id}
+                                    onApply={() => setCampusModalOpen(true)}
+                                />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {campaigns.map((camp: any) => (
+                                        <CampaignCard
+                                            key={camp._id}
+                                            campaign={camp}
+                                            onParticipate={() => navigate(`/campaigns/${camp._id}`)}
+                                            userId={currentUser?._id}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         ) : (
-                            <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto">
-                                <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                                    <Rocket size={40} />
+                            <div className="flex flex-col gap-8">
+                                <CampusJoinCard
+                                    userId={currentUser._id}
+                                    onApply={() => setCampusModalOpen(true)}
+                                />
+                                <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
+                                    <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                                        <Rocket size={40} />
+                                    </div>
+                                    <h2 className="text-2xl font-bold mb-4">No Campaigns Yet</h2>
+                                    <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
+                                        Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
+                                    </p>
+                                    {currentUser?.is_admin && (
+                                        <button onClick={() => setActiveTab('admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
+                                            <Plus size={20} /> Create First Campaign
+                                        </button>
+                                    )}
                                 </div>
-                                <h2 className="text-2xl font-bold mb-4">No Campaigns Yet</h2>
-                                <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
-                                    Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
-                                </p>
-                                {currentUser?.is_admin && (
-                                    <button onClick={() => setActiveTab('admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
-                                        <Plus size={20} /> Create First Campaign
-                                    </button>
-                                )}
                             </div>
                         )}
+
+                        <CampusApplicationModal
+                            isOpen={campusModalOpen}
+                            onClose={() => setCampusModalOpen(false)}
+                            userId={currentUser._id}
+                        />
                     </motion.div>
                 )}
 

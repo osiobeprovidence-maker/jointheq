@@ -385,4 +385,17 @@ export default defineSchema({
         image_url: v.optional(v.string()), // For attach screenshot
         created_at: v.number(),
     }).index("by_conversation", ["conversation_id"]),
+
+    // ── Campus Applications ──────────────────────────────────────────────────
+    campus_applications: defineTable({
+        user_id: v.id("users"),
+        university: v.string(),
+        reason: v.string(),
+        social_handle: v.optional(v.string()), // e.g. Instagram/Twitter
+        status: v.string(), // "pending" | "approved" | "rejected"
+        reviewed_by: v.optional(v.id("users")),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"]),
 });
