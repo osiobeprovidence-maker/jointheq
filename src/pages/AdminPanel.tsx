@@ -43,6 +43,7 @@ import {
     MapPin,
     Calendar,
     Flag,
+    Menu,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -102,6 +103,7 @@ export default function AdminPanel() {
     const navigate = useNavigate();
     const user = auth.getCurrentUser();
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [campusModalOpen, setCampusModalOpen] = useState(false);
     const [campusUserId, setCampusUserId] = useState("");
@@ -392,10 +394,88 @@ export default function AdminPanel() {
                     <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center font-black">Q</div>
                     <span className="font-black text-sm">Admin Control</span>
                 </div>
-                <button onClick={() => navigate("/dashboard")} className="p-2 bg-white/10 rounded-xl">
-                    <ArrowLeft size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setMobileMenuOpen((prev) => !prev)}
+                        className="p-2 bg-white/10 rounded-xl"
+                        aria-label={mobileMenuOpen ? "Close admin menu" : "Open admin menu"}
+                    >
+                        {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+                    </button>
+                    <button onClick={() => navigate("/dashboard")} className="p-2 bg-white/10 rounded-xl" aria-label="Switch to user mode">
+                        <ArrowLeft size={18} />
+                    </button>
+                </div>
             </div>
+
+            {/* ── Mobile Hamburger Menu ── */}
+            <AnimatePresence>
+                {mobileMenuOpen && (
+                    <>
+                        <motion.button
+                            type="button"
+                            aria-label="Close menu overlay"
+                            className="md:hidden fixed inset-0 bg-black/40 z-40"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setMobileMenuOpen(false)}
+                        />
+                        <motion.aside
+                            className="md:hidden fixed top-14 left-0 bottom-0 w-[88%] max-w-[320px] bg-zinc-950 text-white z-50 p-4 flex flex-col"
+                            initial={{ x: "-100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "-100%" }}
+                            transition={{ type: "spring", stiffness: 260, damping: 28 }}
+                        >
+                            <div className="p-2 border-b border-white/10 mb-3">
+                                <div className="text-[10px] text-white/50 uppercase tracking-widest">Navigation</div>
+                                <div className="text-sm font-black mt-1">Admin Control</div>
+                            </div>
+                            <nav className="flex-1 space-y-1 overflow-y-auto">
+                                {navItems.map(item => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            setActiveTab(item.id);
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === item.id
+                                            ? 'bg-white text-zinc-900'
+                                            : 'text-white/70 hover:text-white hover:bg-white/10'
+                                            }`}
+                                    >
+                                        {item.icon}
+                                        {item.label}
+                                        {item.id === "support" && allTickets.filter(t => t.status === "open").length > 0 && (
+                                            <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                                {allTickets.filter(t => t.status === "open").length}
+                                            </span>
+                                        )}
+                                        {item.id === "security" && (fraudFlags.filter((f: any) => f.status === "open").length) > 0 && (
+                                            <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                                {fraudFlags.filter((f: any) => f.status === "open").length}
+                                            </span>
+                                        )}
+                                    </button>
+                                ))}
+                            </nav>
+
+                            <div className="pt-3 border-t border-white/10 mt-3">
+                                <div className="flex items-center gap-3 px-2 py-2">
+                                    <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                        {currentUser?.full_name?.[0]}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-xs font-bold truncate">{currentUser?.full_name}</div>
+                                        <div className="text-[10px] text-white/40 capitalize">{currentUser?.admin_role || "Super Admin"}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.aside>
+                    </>
+                )}
+            </AnimatePresence>
 
             {/* ── Main Content ── */}
             <main className="flex-1 md:ml-64 mt-14 md:mt-0 min-h-screen">
@@ -414,19 +494,6 @@ export default function AdminPanel() {
                             {currentUser?.full_name?.[0]}
                         </div>
                     </div>
-                </div>
-
-                {/* Mobile Nav bubbles */}
-                <div className="md:hidden overflow-x-auto flex gap-2 p-3 bg-white border-b border-black/5">
-                    {navItems.map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${activeTab === item.id ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600'}`}
-                        >
-                            {item.icon} {item.label}
-                        </button>
-                    ))}
                 </div>
 
                 <div className="p-4 sm:p-6 md:p-8">
