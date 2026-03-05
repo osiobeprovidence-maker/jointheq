@@ -2,6 +2,11 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { awardReputation } from "./reputation";
 
+const normalizeOwnerName = (owner?: string) => {
+    const cleaned = (owner || "").trim().replace(/^@+/, "");
+    return cleaned || "admin";
+};
+
 export const getActiveSubscriptions = query({
     handler: async (ctx) => {
         const subs = await ctx.db
@@ -38,7 +43,7 @@ export const getActiveSubscriptions = query({
                         return {
                             ...st,
                             current_members,
-                            owner_name: group?.plan_owner || "admin",
+                            owner_name: normalizeOwnerName(group?.plan_owner),
                             sub_name: sub.name,
                             sub_logo: sub.logo_url
                         };
@@ -257,6 +262,8 @@ export const adminCreateListing = mutation({
         }))
     },
     handler: async (ctx, args) => {
+        const normalizedPlanOwner = normalizeOwnerName(args.plan_owner);
+
         // Find or create the subscription row by name (case-insensitive)
         const existing = await ctx.db.query("subscriptions")
             .filter(q => q.eq(q.field("name"), args.platform_name))
@@ -277,7 +284,7 @@ export const adminCreateListing = mutation({
             billing_cycle_start: args.admin_renewal_date,
             status: "active",
             account_email: args.account_email,
-            plan_owner: args.plan_owner,
+            plan_owner: normalizedPlanOwner,
         });
 
         for (const st of args.slot_types) {

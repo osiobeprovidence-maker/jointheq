@@ -277,10 +277,11 @@ export default function AdminPanel() {
 
     const handleCreateListing = async () => {
         try {
+            const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
             await adminCreateListingMutation({
                 platform_name: listingData.platform_name,
                 account_email: listingData.account_email,
-                plan_owner: listingData.plan_owner,
+                plan_owner: normalizedPlanOwner,
                 admin_renewal_date: listingData.admin_renewal_date,
                 slot_types: listingData.slots
             });
@@ -742,6 +743,7 @@ export default function AdminPanel() {
                                         {(allSubscriptions as any[]).map((group: any) => {
                                             const isExpanded = expandedGroup === group._id;
                                             const filledSlots = group.members?.length ?? 0;
+                                            const displayOwner = (group.plan_owner || "admin").trim().replace(/^@+/, "") || "admin";
                                             return (
                                                 <div key={group._id} className="bg-white rounded-3xl border border-black/5 overflow-hidden hover:shadow-lg transition-all">
                                                     {/* Card header — clickable to expand */}
@@ -756,7 +758,7 @@ export default function AdminPanel() {
                                                             <div>
                                                                 <div className="font-black text-base">{group.subscription_name}</div>
                                                                 <div className="text-xs text-gray-400">
-                                                                    {group.account_email} · Owner: {group.plan_owner}
+                                                                    {group.account_email} · Owner: {displayOwner}
                                                                 </div>
                                                                 <div className="text-[10px] text-amber-600 font-bold mt-0.5">
                                                                     Renews {group.billing_cycle_start}

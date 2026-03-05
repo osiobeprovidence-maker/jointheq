@@ -175,11 +175,12 @@ export default function DashboardPage() {
         try {
             const selectedSub = subscriptions.find(s => s._id === listingData.subscription_id);
             if (!selectedSub && !listingData.subscription_id) return toast.error("Please select a platform");
+            const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
 
             await adminCreateListingMutation({
                 platform_name: selectedSub ? selectedSub.name : listingData.subscription_id,
                 account_email: listingData.account_email,
-                plan_owner: listingData.plan_owner,
+                plan_owner: normalizedPlanOwner,
                 admin_renewal_date: listingData.admin_renewal_date,
                 slot_types: listingData.slots
             });
