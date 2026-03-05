@@ -19,6 +19,7 @@ export interface User {
   phone?: string;
   full_name: string;
   username?: string;
+  university?: string;
   q_score: number;
   q_rank: string;
   wallet_balance: number;

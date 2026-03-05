@@ -36,10 +36,15 @@ import {
     ChevronLeft,
     MoreVertical,
     Info,
-    ExternalLink,
-    Hash,
-    Edit3,
-    CheckCircle2
+    CheckCircle2,
+    Copy,
+    ExternalLink as LinkIcon,
+    Award,
+    TrendingUp as ChartIcon,
+    DollarSign,
+    Users as TeamIcon,
+    Target,
+    Edit
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
@@ -81,6 +86,7 @@ export default function DashboardPage() {
     const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
     const adminsList = useQuery(api.users.getAdmins) || [];
     const adminMarketplace = useQuery(api.subscriptions.getAdminMarketplace) || [];
+    const campusRepInfo = useQuery(api.users.getCampusRep, currentUser ? { userId: currentUser._id } : "skip");
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -122,10 +128,13 @@ export default function DashboardPage() {
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
     const updateCardMutation = useMutation(api.users.updateCard);
     const updateUsernameMutation = useMutation(api.users.updateUsername);
+    const updateProfileMutation = useMutation(api.users.updateProfile);
 
     // Username edit state
     const [editingUsername, setEditingUsername] = useState(false);
     const [usernameInput, setUsernameInput] = useState('');
+    const [fullNameInput, setFullNameInput] = useState('');
+    const [universityInput, setUniversityInput] = useState('');
     const [usernameLoading, setUsernameLoading] = useState(false);
 
     const handleCreateListing = async () => {
@@ -973,7 +982,7 @@ export default function DashboardPage() {
                                     onClick={() => navigate('/admin')}
                                     className="border border-black/10 bg-white text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
                                 >
-                                    <ExternalLink size={16} /> Full Admin Panel
+                                    <LinkIcon size={16} /> Full Admin Panel
                                 </button>
                                 <button
                                     onClick={() => setShowListingModal(true)}
@@ -1155,97 +1164,400 @@ export default function DashboardPage() {
                     </motion.div>
                 )}
                 {activeTab === 'profile' && (
-                    <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        <header>
-                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">User Profile</h1>
-                            <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your personal information and security.</p>
-                        </header>
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div className="lg:col-span-1 space-y-6">
-                                <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 sm:p-8 rounded-[2rem] sm:rounded-[2rem] text-center ">
-                                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden border-4 border-white ">
-                                        <UserIcon size={40} className="sm:w-12 sm:h-12" />
-                                    </div>
-                                    <h2 className="text-xl sm:text-2xl font-bold">{currentUser?.full_name}</h2>
-                                    <p className="text-xs sm:text-sm text-gray-500">{currentUser?.email}</p>
+                    <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="max-w-2xl mx-auto space-y-10 pb-20">
+                        {/* 1. Profile Identity Card */}
+                        <div className="bg-white border-none shadow-[0_20px_50px_rgba(0,0,0,0.04)] p-10 rounded-[3rem] text-center relative overflow-hidden group">
+                            {/* Decorative background gradient */}
+                            <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-50 to-purple-50 opacity-50 group-hover:opacity-100 transition-opacity" />
 
-                                    {/* Username display + edit */}
-                                    {editingUsername ? (
-                                        <div className="mt-3 flex items-center gap-2 justify-center">
-                                            <div className="flex items-center gap-1 bg-zinc-100 rounded-xl px-3 py-2">
-                                                <span className="text-gray-400 font-bold text-sm">@</span>
-                                                <input
-                                                    autoFocus
-                                                    value={usernameInput}
-                                                    onChange={e => setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                                                    className="bg-transparent text-sm font-bold outline-none w-28"
-                                                    placeholder="new_handle"
-                                                    maxLength={30}
-                                                />
-                                            </div>
-                                            <button
-                                                onClick={async () => {
-                                                    if (!usernameInput || usernameInput.length < 3) return toast.error("Min 3 characters");
-                                                    setUsernameLoading(true);
-                                                    try {
-                                                        await updateUsernameMutation({ userId: currentUser!._id, username: usernameInput });
-                                                        toast.success(`Username set to @${usernameInput}`);
-                                                        setEditingUsername(false);
-                                                    } catch (e: any) { toast.error(e.message); }
-                                                    finally { setUsernameLoading(false); }
-                                                }}
-                                                disabled={usernameLoading}
-                                                className="p-2 bg-zinc-900 text-white rounded-xl hover:scale-110 transition-transform disabled:opacity-50"
-                                            ><CheckCircle2 size={16} /></button>
-                                            <button onClick={() => setEditingUsername(false)} className="p-2 bg-zinc-100 rounded-xl hover:scale-110 transition-transform"><X size={16} /></button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => { setUsernameInput(currentUser?.username ?? ''); setEditingUsername(true); }}
-                                            className="mt-3 flex items-center gap-1.5 mx-auto text-sm font-bold text-gray-400 hover:text-zinc-900 transition-colors group"
-                                        >
-                                            <Hash size={14} className="group-hover:text-zinc-900" />
-                                            {currentUser?.username ? (
-                                                <span className="text-zinc-700">@{currentUser.username}</span>
-                                            ) : (
-                                                <span className="text-gray-400 italic">Set username</span>
-                                            )}
-                                            <Edit3 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </button>
-                                    )}
-
-                                    <div className="mt-6 inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-100 text-emerald-600 rounded-full text-xs font-bold">
-                                        <ShieldCheck size={14} className="sm:w-4 sm:h-4" />
-                                        {currentUser?.q_rank || getRank(currentUser?.q_score || 0)} Member
-                                    </div>
+                            <div className="relative pt-4">
+                                <div className="w-28 h-28 bg-zinc-900 text-white shadow-2xl rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden border-4 border-white">
+                                    <UserIcon size={48} />
                                 </div>
-                            </div>
-                            <div className="lg:col-span-2 space-y-8">
-                                <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-8 rounded-[2rem] ">
-                                    <h3 className="text-xl font-bold mb-6 text-red-600">Danger Zone</h3>
-                                    <div className="space-y-4">
-                                        <button onClick={resetQRank} className="w-full py-4 bg-orange-50 text-orange-600 rounded-[2rem] font-bold hover:bg-orange-100 transition-colors flex items-center justify-center gap-2">
-                                            <Sparkles size={20} /> Reset Q Rank to 100
-                                        </button>
-                                        <button onClick={() => seedMarketplaceMutation()} className="w-full py-4 bg-blue-50 text-blue-600 rounded-[2rem] font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
-                                            <ShoppingBag size={20} /> Seed Marketplace Data
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                await seedCampaignsMutation({});
-                                                toast.success("Dummy campaigns seeded!");
-                                            }}
-                                            className="w-full py-4 bg-purple-50 text-purple-600 rounded-[2rem] font-bold hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <Sparkles size={20} /> Seed Dummy Campaigns
-                                        </button>
-                                        <button onClick={() => auth.logout()} className="w-full py-4 bg-red-50 text-red-600 rounded-[2rem] font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
-                                            <LogOut size={20} /> Log Out
-                                        </button>
+                                <h2 className="text-3xl font-bold tracking-tight text-zinc-900">{currentUser?.full_name}</h2>
+                                <button
+                                    onClick={() => {
+                                        setUsernameInput(currentUser?.username ?? '');
+                                        setFullNameInput(currentUser?.full_name ?? '');
+                                        setUniversityInput(currentUser?.university ?? '');
+                                        setEditingUsername(true);
+                                    }}
+                                    className="mt-2 text-lg font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                                >
+                                    @{currentUser?.username || 'set_username'}
+                                </button>
+                                <p className="text-gray-400 text-sm mt-2 font-medium">
+                                    {currentUser?.university ? `${currentUser.university} • ` : ''}
+                                    Member since {new Date(currentUser?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </p>
+
+                                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                                    <div className="px-4 py-1.5 bg-zinc-900 text-white rounded-full text-xs font-bold flex items-center gap-2">
+                                        <Shield size={12} /> Verified Member
                                     </div>
+                                    {invitedUsers.length >= 10 && (
+                                        <div className="px-4 py-1.5 bg-amber-100 text-amber-600 rounded-full text-xs font-bold flex items-center gap-2">
+                                            <Trophy size={12} /> Top Referrer
+                                        </div>
+                                    )}
+                                    {currentUser?.role === 'admin' && (
+                                        <div className="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-full text-xs font-bold flex items-center gap-2">
+                                            <ShieldCheck size={12} /> Campus Rep
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
+
+                        {/* 2. Action Buttons */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button
+                                onClick={() => {
+                                    setUsernameInput(currentUser?.username ?? '');
+                                    setFullNameInput(currentUser?.full_name ?? '');
+                                    setUniversityInput(currentUser?.university ?? '');
+                                    setEditingUsername(true);
+                                }}
+                                className="w-full py-5 bg-zinc-900 text-white shadow-xl rounded-[2.5rem] font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform active:scale-95"
+                            >
+                                <Edit size={20} /> Edit Profile
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const link = `joinq.com/r/${currentUser?.username || 'join'}`;
+                                    navigator.clipboard.writeText(link);
+                                    toast.success("Referral link copied!");
+                                }}
+                                className="w-full py-5 bg-white border border-black/5 text-zinc-900 shadow-sm rounded-[2.5rem] font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
+                            >
+                                <LinkIcon size={20} /> Generate Invite Link
+                            </button>
+                        </div>
+
+                        {/* 9. Campus Rep Panel (Conditional) */}
+                        {campusRepInfo && (
+                            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+                                <div className="relative">
+                                    <div className="flex items-center gap-3 mb-8">
+                                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                            <Shield size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold">Campus Q Ambassador</h3>
+                                            <p className="text-blue-100 text-sm">{campusRepInfo.campus_name}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                        <div>
+                                            <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Referred</div>
+                                            <div className="text-2xl font-black">{campusRepInfo.total_referred}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Commission</div>
+                                            <div className="text-2xl font-black">2%</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Earned</div>
+                                            <div className="text-2xl font-black">₦{campusRepInfo.total_earned.toLocaleString()}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Rank</div>
+                                            <div className="text-2xl font-black">#3</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 12. Level Progress Meter (Add-on) */}
+                        <div className="bg-white border-none shadow-[0_20px_50px_rgba(0,0,0,0.04)] p-10 rounded-[3rem]">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 className="text-lg font-bold">Campus Q Status</h3>
+                                    <p className="text-sm text-gray-500">Tier {getRank(currentUser?.q_score || 0)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-2xl font-black text-blue-600">{currentUser?.q_score}</span>
+                                    <span className="text-xs font-bold text-gray-400 block uppercase pt-1">Q Score</span>
+                                </div>
+                            </div>
+                            <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden mb-3">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(100, ((currentUser?.q_score || 0) / 1000) * 100)}%` }}
+                                    className="h-full bg-blue-600 rounded-full"
+                                />
+                            </div>
+                            <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <span>Recruit</span>
+                                <span>Connector</span>
+                                <span>Campus Plug</span>
+                                <span>Campus Leader</span>
+                            </div>
+                        </div>
+
+                        {/* 3 & 4. Performance Stats & Indicators */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <StatCard
+                                title="Referrals"
+                                value={invitedUsers.length.toString()}
+                                icon={<TeamIcon size={20} />}
+                                color="bg-blue-500"
+                            />
+                            <StatCard
+                                title="BOOTS Earned"
+                                value={currentUser?.boots_balance?.toLocaleString() || '0'}
+                                icon={<Sparkles size={20} />}
+                                color="bg-purple-500"
+                            />
+                            <StatCard
+                                title="Active Subs"
+                                value={activeSlots.length.toString()}
+                                icon={<ShoppingBag size={20} />}
+                                color="bg-zinc-900"
+                            />
+                            <StatCard
+                                title="Success Rate"
+                                value="78%"
+                                icon={<Target size={20} />}
+                                color="bg-emerald-500"
+                            />
+                        </div>
+
+                        {/* 5. Earnings Section */}
+                        <div className="bg-zinc-900 text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl" />
+                            <h3 className="text-lg font-bold mb-8 opacity-60">Earnings Overview</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                                <div>
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Total Earned</div>
+                                    <div className="text-2xl font-bold text-emerald-400">₦{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Pending</div>
+                                    <div className="text-2xl font-bold text-blue-400">₦6,000</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Available</div>
+                                    <div className="text-2xl font-bold">₦{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+                            <button
+                                disabled={(currentUser?.wallet_balance || 0) < 5000}
+                                className="w-full py-5 bg-white text-zinc-900 rounded-[2.5rem] font-bold hover:scale-[1.01] transition-transform disabled:opacity-30"
+                            >
+                                {(currentUser?.wallet_balance || 0) < 5000 ? "Minimum withdrawal ₦5,000" : "Withdraw Funds"}
+                            </button>
+                        </div>
+
+                        {/* 6. Campaign Participation */}
+                        <section>
+                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 px-2">
+                                <Award size={20} className="text-purple-600" /> Active Campaigns
+                            </h3>
+                            <div className="space-y-4">
+                                {campaigns.filter(c => c.status === 'active').slice(0, 2).map((c: any) => (
+                                    <div key={c._id} className="bg-white p-6 rounded-[2.5rem] shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center">
+                                                <Target size={24} />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold">{c.name}</div>
+                                                <div className="text-xs text-emerald-500 font-bold">Active Participation</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-xs font-bold text-gray-400 uppercase">Rank</div>
+                                            <div className="font-black text-xl">#7</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* 7. Referral Tracking */}
+                        <section>
+                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 px-2">
+                                <TeamIcon size={20} className="text-blue-600" /> Friends Referred
+                            </h3>
+                            <div className="bg-white rounded-[3rem] overflow-hidden shadow-sm">
+                                {invitedUsers.map((u: any, i) => (
+                                    <div key={i} className={`p-6 flex items-center justify-between ${i !== invitedUsers.length - 1 ? 'border-b border-black/5' : ''}`}>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-xs">
+                                                {u.full_name[0]}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-sm">@{u.username || u.full_name.split(' ')[0].toLowerCase()}</div>
+                                                <div className="text-[10px] text-gray-400 font-bold uppercase">Joined 2 days ago</div>
+                                            </div>
+                                        </div>
+                                        <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase">
+                                            Active
+                                        </div>
+                                    </div>
+                                ))}
+                                {invitedUsers.length === 0 && (
+                                    <div className="p-10 text-center text-gray-400 italic text-sm">No referrals yet. Share your link to start earning!</div>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* 8. Active Subscriptions */}
+                        <section>
+                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 px-2">
+                                <ShoppingBag size={20} className="text-zinc-900" /> Active Subscriptions
+                            </h3>
+                            <div className="space-y-4">
+                                {activeSlots.map((slot: any) => (
+                                    <div key={slot._id} className="bg-white p-8 rounded-[3rem] shadow-sm flex items-center justify-between">
+                                        <div className="flex items-center gap-5">
+                                            <div className="w-14 h-14 bg-zinc-100 rounded-[2rem] flex items-center justify-center">
+                                                <ShoppingBag size={28} />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-lg">{slot.sub_name}</div>
+                                                <div className="text-sm text-gray-400 font-medium">Renewal: {new Date(slot.renewal_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                            </div>
+                                        </div>
+                                        <div className="w-10 h-10 bg-zinc-50 rounded-full flex items-center justify-center">
+                                            <ChevronRight size={20} className="text-gray-300" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* 10 & 11. Settings & Security */}
+                        <div className="space-y-8 pt-10">
+                            <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-10 rounded-[3rem]">
+                                <h3 className="text-xl font-bold mb-8 flex items-center gap-2">
+                                    <Settings size={20} /> Settings & Security
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[2rem] hover:bg-gray-100 transition-colors cursor-pointer group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-zinc-900 transition-colors">
+                                                <Mail size={18} />
+                                            </div>
+                                            <span className="font-bold text-gray-600">Email Address</span>
+                                        </div>
+                                        <span className="text-sm text-gray-400 mr-2">{currentUser?.email}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[2rem] hover:bg-gray-100 transition-colors cursor-pointer group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-zinc-900 transition-colors">
+                                                <Shield size={18} />
+                                            </div>
+                                            <span className="font-bold text-gray-600">Two-Factor Auth</span>
+                                        </div>
+                                        <span className="text-xs font-bold text-emerald-500 bg-emerald-100 px-3 py-1 rounded-full mr-2">Enabled</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[2rem] hover:bg-gray-100 transition-colors cursor-pointer group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-zinc-900 transition-colors">
+                                                <Smartphone size={18} />
+                                            </div>
+                                            <span className="font-bold text-gray-600">Login Devices</span>
+                                        </div>
+                                        <span className="text-sm text-gray-400 mr-2">{devices.length} Devices</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-red-50 p-10 rounded-[3rem] border border-red-100">
+                                <h3 className="text-xl font-bold mb-6 text-red-600">Danger Zone</h3>
+                                <div className="space-y-4">
+                                    <button onClick={resetQRank} className="w-full py-5 bg-white text-red-600 rounded-[2.5rem] font-bold hover:bg-red-600 hover:text-white transition-all border border-red-200 shadow-sm flex items-center justify-center gap-2">
+                                        <Activity size={20} /> Reset Account Q Rank
+                                    </button>
+                                    <button onClick={() => auth.logout()} className="w-full py-5 bg-zinc-900 text-white rounded-[2.5rem] font-bold hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2">
+                                        <LogOut size={20} /> Log Out Securely
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Username Edit Modal */}
+                        <AnimatePresence>
+                            {editingUsername && (
+                                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingUsername(false)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                                    <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative bg-white w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden p-10 max-h-[90vh] overflow-y-auto">
+                                        <h3 className="text-2xl font-black mb-2">Edit Profile</h3>
+                                        <p className="text-gray-400 text-sm mb-8 leading-relaxed">Update your public identity and campus details.</p>
+                                        <div className="space-y-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+                                                <div className="flex items-center gap-3 bg-zinc-100 rounded-[2rem] px-6 py-5 focus-within:ring-2 ring-blue-600/20 transition-all">
+                                                    <input
+                                                        value={fullNameInput}
+                                                        onChange={e => setFullNameInput(e.target.value)}
+                                                        className="bg-transparent text-lg font-bold outline-none w-full"
+                                                        placeholder="Your full name"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Universal Handle</label>
+                                                <div className="flex items-center gap-3 bg-zinc-100 rounded-[2rem] px-6 py-5 focus-within:ring-2 ring-blue-600/20 transition-all">
+                                                    <span className="text-zinc-900 font-black text-xl">@</span>
+                                                    <input
+                                                        value={usernameInput}
+                                                        onChange={e => setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                                        className="bg-transparent text-xl font-black outline-none w-full"
+                                                        placeholder="riderezzy"
+                                                        maxLength={30}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">University / Campus</label>
+                                                <div className="flex items-center gap-3 bg-zinc-100 rounded-[2rem] px-6 py-5 focus-within:ring-2 ring-blue-600/20 transition-all">
+                                                    <input
+                                                        value={universityInput}
+                                                        onChange={e => setUniversityInput(e.target.value)}
+                                                        className="bg-transparent text-lg font-bold outline-none w-full"
+                                                        placeholder="e.g. UNILAG"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-gray-400 ml-4 italic">Important for Campus Q rewards.</p>
+                                            </div>
+
+                                            <div className="flex gap-4 pt-4">
+                                                <button onClick={() => setEditingUsername(false)} className="flex-1 py-5 bg-gray-100 text-gray-600 rounded-[2rem] font-bold hover:bg-gray-200 transition-colors">Cancel</button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!usernameInput || usernameInput.length < 3) return toast.error("Min 3 characters for username");
+                                                        setUsernameLoading(true);
+                                                        try {
+                                                            await updateUsernameMutation({ userId: currentUser!._id, username: usernameInput });
+                                                            await updateProfileMutation({
+                                                                userId: currentUser!._id,
+                                                                full_name: fullNameInput,
+                                                                university: universityInput
+                                                            });
+                                                            toast.success("Profile updated successfully!");
+                                                            setEditingUsername(false);
+                                                        } catch (e: any) { toast.error(e.message); }
+                                                        finally { setUsernameLoading(false); }
+                                                    }}
+                                                    disabled={usernameLoading}
+                                                    className="flex-[2] py-5 bg-zinc-900 text-white rounded-[2rem] font-bold shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                                >
+                                                    {usernameLoading ? "Saving..." : "Save Changes"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
                 )}
                 {/* Checkout Modal */}

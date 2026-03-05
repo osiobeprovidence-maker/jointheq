@@ -450,3 +450,22 @@ export const updateUsername = mutation({
     },
 });
 
+export const updateProfile = mutation({
+    args: { userId: v.id("users"), full_name: v.optional(v.string()), university: v.optional(v.string()) },
+    handler: async (ctx, args) => {
+        const { userId, ...patch } = args;
+        await ctx.db.patch(userId, patch);
+        return { success: true };
+    },
+});
+
+export const getCampusRep = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("campus_reps")
+            .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+            .unique();
+    },
+});
+

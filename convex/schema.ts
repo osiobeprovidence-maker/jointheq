@@ -42,6 +42,7 @@ export default defineSchema({
         direct_debit_card: v.optional(v.object({
             last4: v.string(), brand: v.string(), expiry: v.string(), auth_token: v.string(),
         })),
+        university: v.optional(v.string()), // For campus program
         created_at: v.number(),
     }).index("by_email", ["email"])
         .index("by_phone", ["phone"])
