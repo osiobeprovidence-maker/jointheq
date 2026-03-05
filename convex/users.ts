@@ -489,7 +489,12 @@ export const updateUsername = mutation({
 });
 
 export const updateProfile = mutation({
-    args: { userId: v.id("users"), full_name: v.optional(v.string()), university: v.optional(v.string()) },
+    args: {
+        userId: v.id("users"),
+        full_name: v.optional(v.string()),
+        university: v.optional(v.string()),
+        profile_image_url: v.optional(v.string())
+    },
     handler: async (ctx, args) => {
         const { userId, ...patch } = args;
         await ctx.db.patch(userId, patch);

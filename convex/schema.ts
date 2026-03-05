@@ -32,6 +32,7 @@ export default defineSchema({
         }))),
         is_admin: v.boolean(),
         role: v.optional(v.string()),
+        profile_image_url: v.optional(v.string()),
         password_hash: v.optional(v.string()),
         is_verified: v.boolean(),
         verification_token: v.optional(v.string()),

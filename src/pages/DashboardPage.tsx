@@ -60,6 +60,11 @@ import CampusApplicationModal from "../components/campus/CampusApplicationModal"
 
 export default function DashboardPage() {
     const navigate = useNavigate();
+    const recommendedAvatars = [
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Nova",
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
+        "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
+    ];
     const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -141,7 +146,30 @@ export default function DashboardPage() {
     const [usernameInput, setUsernameInput] = useState('');
     const [fullNameInput, setFullNameInput] = useState('');
     const [universityInput, setUniversityInput] = useState('');
+    const [profileImagePreview, setProfileImagePreview] = useState('');
     const [usernameLoading, setUsernameLoading] = useState(false);
+
+    const handleProfileImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please select an image file");
+            return;
+        }
+
+        const maxSizeBytes = 2 * 1024 * 1024;
+        if (file.size > maxSizeBytes) {
+            toast.error("Image too large. Max size is 2MB");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setProfileImagePreview((reader.result as string) || "");
+        };
+        reader.readAsDataURL(file);
+    };
 
     const handleCreateListing = async () => {
         try {
@@ -872,7 +900,15 @@ export default function DashboardPage() {
 
                             <div className="relative pt-4">
                                 <div className="w-28 h-28 bg-zinc-900 text-white shadow-2xl rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden border-4 border-white">
-                                    <UserIcon size={48} />
+                                    {currentUser?.profile_image_url ? (
+                                        <img
+                                            src={currentUser.profile_image_url}
+                                            alt={currentUser.full_name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <UserIcon size={48} />
+                                    )}
                                 </div>
                                 <h2 className="text-3xl font-bold tracking-tight text-zinc-900">{currentUser?.full_name}</h2>
                                 <button
@@ -880,6 +916,7 @@ export default function DashboardPage() {
                                         setUsernameInput(currentUser?.username ?? '');
                                         setFullNameInput(currentUser?.full_name ?? '');
                                         setUniversityInput(currentUser?.university ?? '');
+                                        setProfileImagePreview(currentUser?.profile_image_url ?? '');
                                         setEditingUsername(true);
                                     }}
                                     className="mt-2 text-lg font-bold text-blue-600 hover:text-blue-700 transition-colors"
@@ -916,6 +953,7 @@ export default function DashboardPage() {
                                     setUsernameInput(currentUser?.username ?? '');
                                     setFullNameInput(currentUser?.full_name ?? '');
                                     setUniversityInput(currentUser?.university ?? '');
+                                    setProfileImagePreview(currentUser?.profile_image_url ?? '');
                                     setEditingUsername(true);
                                 }}
                                 className="w-full py-5 bg-zinc-900 text-white shadow-xl rounded-[2.5rem] font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform active:scale-95"
@@ -1190,6 +1228,42 @@ export default function DashboardPage() {
                                         <h3 className="text-2xl font-black mb-2">Edit Profile</h3>
                                         <p className="text-gray-400 text-sm mb-8 leading-relaxed">Update your public identity and campus details.</p>
                                         <div className="space-y-6">
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Profile Photo</label>
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                                    <div className="w-20 h-20 rounded-full overflow-hidden bg-zinc-100 border border-black/10 flex items-center justify-center">
+                                                        {profileImagePreview ? (
+                                                            <img src={profileImagePreview} alt="Profile preview" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <UserIcon size={28} className="text-zinc-500" />
+                                                        )}
+                                                    </div>
+                                                    <label className="inline-flex items-center justify-center px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-bold cursor-pointer hover:opacity-90 transition-opacity">
+                                                        Upload Photo
+                                                        <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setProfileImagePreview('')}
+                                                        className="px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl text-sm font-bold hover:bg-zinc-200 transition-colors"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-3 pt-1">
+                                                    {recommendedAvatars.map((avatar) => (
+                                                        <button
+                                                            key={avatar}
+                                                            type="button"
+                                                            onClick={() => setProfileImagePreview(avatar)}
+                                                            className={`rounded-2xl border p-1 transition-all ${profileImagePreview === avatar ? 'border-zinc-900 shadow-sm' : 'border-black/10 hover:border-black/30'}`}
+                                                        >
+                                                            <img src={avatar} alt="Recommended avatar" className="w-full aspect-square rounded-xl object-cover" />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
                                                 <div className="flex items-center gap-3 bg-zinc-100 rounded-[2rem] px-6 py-5 focus-within:ring-2 ring-blue-600/20 transition-all">
@@ -1240,7 +1314,8 @@ export default function DashboardPage() {
                                                             await updateProfileMutation({
                                                                 userId: currentUser!._id,
                                                                 full_name: fullNameInput,
-                                                                university: universityInput
+                                                                university: universityInput,
+                                                                profile_image_url: profileImagePreview || undefined
                                                             });
                                                             toast.success("Profile updated successfully!");
                                                             setEditingUsername(false);
