@@ -144,6 +144,7 @@ export default function AdminPanel() {
 
     // Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
+    const isSuperAdmin = currentUser?.admin_role === "super" || currentUser?.email === "riderezzy@gmail.com";
     const stats = useQuery(api.admin.getPlatformStats);
     const subBreakdown = useQuery(api.admin.getSubscriptionBreakdown) || [];
     const allUsers = useQuery(api.admin.getAllUsers) || [];
@@ -1246,7 +1247,7 @@ export default function AdminPanel() {
                                         <SectionHeader
                                             title="Admin Team"
                                             sub="Manage roles, work handles, and access"
-                                            action={currentUser?.admin_role === "super" ? (
+                                            action={isSuperAdmin ? (
                                                 <button
                                                     onClick={() => setShowInviteModal(true)}
                                                     className="flex items-center gap-2 px-5 py-2 bg-zinc-900 text-white rounded-2xl text-sm font-bold hover:scale-105 transition-transform"
@@ -1304,7 +1305,7 @@ export default function AdminPanel() {
                                                         </div>
 
                                                         {/* Super admin controls */}
-                                                        {currentUser?.admin_role === "super" && admin._id !== currentUser._id && (
+                                                        {isSuperAdmin && admin._id !== currentUser._id && (
                                                             <div className="border-t border-black/5 pt-3 flex flex-wrap gap-2">
                                                                 <button
                                                                     onClick={async () => {
@@ -1407,7 +1408,7 @@ export default function AdminPanel() {
                                         <SectionHeader
                                             title="Task Board"
                                             sub="Assign, track, and manage admin duties"
-                                            action={currentUser?.admin_role === "super" ? (
+                                            action={isSuperAdmin ? (
                                                 <button
                                                     onClick={() => setShowTaskModal(true)}
                                                     className="flex items-center gap-2 px-5 py-2 bg-zinc-900 text-white rounded-2xl text-sm font-bold hover:scale-105 transition-transform"
@@ -1468,7 +1469,7 @@ export default function AdminPanel() {
                                                                                         <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "in_progress" }); toast("Marked in progress", { icon: "🔵" }); }} className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:scale-110 transition-transform" title="Start"><PlayCircle size={11} /></button>
                                                                                     )}
                                                                                     <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "completed" }); toast.success("Task complete!"); }} className="p-1 bg-emerald-100 text-emerald-600 rounded-lg hover:scale-110 transition-transform" title="Complete"><CheckCircle2 size={11} /></button>
-                                                                                    {currentUser?.admin_role === "super" && (
+                                                                                    {isSuperAdmin && (
                                                                                         <button onClick={async () => { if (!confirm("Delete task?")) return; await deleteTaskMut({ task_id: task._id, deleted_by: currentUser!._id }); }} className="p-1 bg-red-100 text-red-600 rounded-lg hover:scale-110 transition-transform" title="Delete"><X size={11} /></button>
                                                                                     )}
                                                                                 </div>

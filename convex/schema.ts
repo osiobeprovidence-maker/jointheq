@@ -172,6 +172,7 @@ export default defineSchema({
         name: v.string(),
         description: v.string(),
         logo_url: v.optional(v.string()), // URL for brand logo
+        category: v.optional(v.string()), // "Streaming" | "Music" | "Design" | "AI" | "Productivity"
         base_cost: v.number(),
         is_active: v.boolean(),
     }),

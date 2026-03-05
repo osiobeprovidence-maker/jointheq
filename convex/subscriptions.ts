@@ -35,7 +35,13 @@ export const getActiveSubscriptions = query({
                             current_members = slots.length;
                         }
 
-                        return { ...st, current_members };
+                        return {
+                            ...st,
+                            current_members,
+                            owner_name: group?.plan_owner || "admin",
+                            sub_name: sub.name,
+                            sub_logo: sub.logo_url
+                        };
                     })
                 );
 
@@ -366,6 +372,7 @@ export const seedMarketplace = mutation({
             name: "Netflix",
             description: "Stream your favorite movies and shows",
             is_active: true,
+            category: "Streaming",
             base_cost: 0,
             logo_url: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg"
         });
@@ -423,6 +430,7 @@ export const seedMarketplace = mutation({
             name: "Spotify",
             description: "Music for everyone",
             is_active: true,
+            category: "Music",
             base_cost: 0,
             logo_url: "https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg"
         });
@@ -441,6 +449,69 @@ export const seedMarketplace = mutation({
                 "Offline downloads",
                 "Family plan membership"
             ]
+        });
+
+        // YouTube
+        const youtubeId = await ctx.db.insert("subscriptions", {
+            name: "YouTube",
+            description: "Ad-free videos and music",
+            is_active: true,
+            category: "Streaming",
+            base_cost: 0,
+            logo_url: "https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png"
+        });
+
+        await ctx.db.insert("slot_types", {
+            subscription_id: youtubeId,
+            name: "YouTube Premium Slot",
+            price: 1100,
+            device_limit: 1,
+            downloads_enabled: true,
+            min_q_score: 0,
+            capacity: 6,
+            features: ["Ad-free YouTube", "YouTube Music Premium", "Offline downloads", "Background play"]
+        });
+
+        // Canva
+        const canvaId = await ctx.db.insert("subscriptions", {
+            name: "Canva",
+            description: "Design anything",
+            is_active: true,
+            category: "Design",
+            base_cost: 0,
+            logo_url: "https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_logo_2021.svg"
+        });
+
+        await ctx.db.insert("slot_types", {
+            subscription_id: canvaId,
+            name: "Canva Pro Team Slot",
+            price: 1500,
+            device_limit: 5,
+            downloads_enabled: true,
+            min_q_score: 0,
+            capacity: 5,
+            features: ["100M+ premium assets", "Magic Resize", "Brand Kit", "Background Remover"]
+        });
+
+        // ChatGPT
+        const chatgptId = await ctx.db.insert("subscriptions", {
+            name: "ChatGPT",
+            description: "The most capable AI",
+            is_active: true,
+            category: "AI",
+            base_cost: 0,
+            logo_url: "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"
+        });
+
+        await ctx.db.insert("slot_types", {
+            subscription_id: chatgptId,
+            name: "ChatGPT Plus Slot",
+            price: 3500,
+            device_limit: 1,
+            downloads_enabled: false,
+            min_q_score: 0,
+            capacity: 2,
+            features: ["GPT-4o access", "DALL-E image generation", "Advanced Data Analysis", "Custom GPTs"]
         });
     }
 });

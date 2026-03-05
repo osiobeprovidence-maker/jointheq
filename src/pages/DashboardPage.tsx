@@ -60,7 +60,7 @@ import CampusApplicationModal from "../components/campus/CampusApplicationModal"
 
 export default function DashboardPage() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'admin'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
     const [showVerificationWarning, setShowVerificationWarning] = useState(false);
@@ -109,6 +109,8 @@ export default function DashboardPage() {
         slots: [{ name: '', price: 0, capacity: 1, access_type: 'code_access', downloads_enabled: true }]
     });
     const [campusModalOpen, setCampusModalOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState('All');
 
     const messagesUserId = currentUser?.is_admin ? (selectedChatUserId || currentUser._id) : currentUser?._id;
     const messages = useQuery(api.messages.getMessages, messagesUserId ? { user_id: messagesUserId } : "skip") || [];
@@ -320,7 +322,17 @@ export default function DashboardPage() {
     }
 
     return (
-        <MainLayout activeTab={activeTab} setActiveTab={setActiveTab} qScore={currentUser?.q_score || 0}>
+        <MainLayout
+            activeTab={activeTab}
+            setActiveTab={(tab: string) => {
+                if (tab === 'admin') {
+                    navigate('/admin');
+                    return;
+                }
+                setActiveTab(tab as typeof activeTab);
+            }}
+            qScore={currentUser?.q_score || 0}
+        >
             {/* Verification Warning Banner */}
             {showVerificationWarning && daysRemaining !== null && daysRemaining > 0 && (
                 <motion.div
@@ -422,40 +434,56 @@ export default function DashboardPage() {
                 {/* ... Other tabs (Marketplace, Wallet, Referrals, Campaigns, Profile, Support) ... */}
                 {activeTab === 'marketplace' && (
                     <motion.div key="marketplace" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                            <div>
-                                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Marketplace</h1>
-                                <p className="text-xs sm:text-sm text-gray-500 mt-1">Discover premium subscription slots tailored for you.</p>
+                        <div>
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Marketplace</h1>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1">Discover premium subscription slots tailored for you.</p>
+                        </div>
+
+                        {/* Search & Filter */}
+                        <div className="space-y-4">
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-gray-400 group-focus-within:text-black transition-colors">
+                                    <ShoppingBag size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Search subscriptions..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-white/50 backdrop-blur-sm border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] py-5 pl-14 pr-6 rounded-[2rem] font-medium focus:ring-2 focus:ring-black/5 transition-all outline-none"
+                                />
                             </div>
-                        </header>
-                        <div className="grid grid-cols-1 gap-10">
-                            {subscriptions.map((sub) => (
-                                <section key={sub._id}>
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-12 h-12 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] flex items-center justify-center  overflow-hidden p-2">
-                                            {sub.logo_url ? (
-                                                <img src={sub.logo_url} alt={sub.name} className="w-full h-full object-contain" />
-                                            ) : (
-                                                <span className="font-bold text-lg">{sub.name[0]}</span>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <h2 className="text-xl font-bold">{sub.name}</h2>
-                                            <p className="text-sm text-gray-500">{sub.description}</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {sub.slot_types.map((slot: any) => (
-                                            <MarketplaceSlotCard
-                                                key={slot._id}
-                                                slot={slot}
-                                                onJoin={() => setCheckoutSlot(slot)}
-                                                userQScore={currentUser?.q_score || 0}
-                                            />
-                                        ))}
-                                    </div>
-                                </section>
-                            ))}
+
+                            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                                {['All', 'Streaming', 'Music', 'Design', 'AI', 'Productivity'].map((filter) => (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setActiveFilter(filter)}
+                                        className={`px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeFilter === filter ? 'bg-zinc-900 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-black/5'}`}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Marketplace Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {subscriptions
+                                .flatMap(sub => sub.slot_types.map(st => ({ ...st, category: sub.category })))
+                                .filter(slot => {
+                                    const matchesSearch = slot.name.toLowerCase().includes(searchQuery.toLowerCase()) || slot.sub_name.toLowerCase().includes(searchQuery.toLowerCase());
+                                    const matchesFilter = activeFilter === 'All' || (slot.category === activeFilter);
+                                    return matchesSearch && matchesFilter;
+                                })
+                                .map((slot) => (
+                                    <MarketplaceSlotCard
+                                        key={slot._id}
+                                        slot={slot}
+                                        onJoin={() => setCheckoutSlot(slot)}
+                                        userQScore={currentUser?.q_score || 0}
+                                    />
+                                ))}
                         </div>
                     </motion.div>
                 )}
@@ -799,7 +827,7 @@ export default function DashboardPage() {
                                         Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
                                     </p>
                                     {currentUser?.is_admin && (
-                                        <button onClick={() => setActiveTab('admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
+                                        <button onClick={() => navigate('/admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
                                             <Plus size={20} /> Create First Campaign
                                         </button>
                                     )}
@@ -820,202 +848,6 @@ export default function DashboardPage() {
                         <div className="max-w-4xl mx-auto">
                             <SupportChatUser userId={currentUser._id} />
                         </div>
-                    </motion.div>
-                )}
-
-                {activeTab === 'admin' && currentUser?.is_admin && (
-                    <motion.div key="admin" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-10 pb-20">
-                        <header className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                                    <Shield className="text-blue-600" size={32} /> Admin Control Center
-                                </h1>
-                                <p className="text-gray-500 mt-1">Manage platform operations and ecosystem.</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => navigate('/admin')}
-                                    className="border border-black/10 bg-white text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
-                                >
-                                    <LinkIcon size={16} /> Full Admin Panel
-                                </button>
-                                <button
-                                    onClick={() => setShowListingModal(true)}
-                                    className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform"
-                                >
-                                    <Plus size={18} /> Create New Listing
-                                </button>
-                            </div>
-                        </header>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <button className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-black/10 transition-all text-left group ">
-                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-[2rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                    <ShoppingBag size={24} />
-                                </div>
-                                <h3 className="font-bold text-lg">Marketplace</h3>
-                                <p className="text-sm text-gray-500 mt-2">Manage subscription slots and pricing.</p>
-                            </button>
-                            <button className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-black/10 transition-all text-left group ">
-                                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-[2rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                    <Zap size={24} />
-                                </div>
-                                <h3 className="font-bold text-lg">Campaigns</h3>
-                                <p className="text-sm text-gray-500 mt-2">Create and monitor reward events.</p>
-                            </button>
-                            <button className="bg-white p-8 rounded-[2rem] border-2 border-transparent hover:border-black/10 transition-all text-left group ">
-                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-[2rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                    <Users size={24} />
-                                </div>
-                                <h3 className="font-bold text-lg">Community</h3>
-                                <p className="text-sm text-gray-500 mt-2">Support tickets and user bans.</p>
-                            </button>
-                        </div>
-
-                        <section className="bg-white p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-2xl font-bold">Quick Campaign Creator</h2>
-                                <button className="text-sm font-bold opacity-30">View Analytics</button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <label className="text-sm font-bold text-gray-400 ml-1">Campaign Type</label>
-                                    <select className="w-full p-5 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none">
-                                        <option>Reward Jar (Growth)</option>
-                                        <option>Raffle Ticket (Engagement)</option>
-                                        <option>Referral Storm (Viral)</option>
-                                        <option>Payment Streak (Loyalty)</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-4">
-                                    <label className="text-sm font-bold text-gray-400 ml-1">Reward Amount (BOOTS)</label>
-                                    <input type="number" placeholder="e.g. 50" className="w-full p-5 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none" />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <button
-                                        onClick={() => createCampaignMutation({
-                                            name: "Easter Reward Jar",
-                                            type: "jar",
-                                            description: "Help fill the jar by inviting friends to join subscriptions.",
-                                            reward_type: "boots",
-                                            reward_amount: 50,
-                                            start_date: Date.now(),
-                                            end_date: Date.now() + (5 * 24 * 60 * 60 * 1000),
-                                            target_goal: 500
-                                        })}
-                                        className="w-full py-6 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform"
-                                    >
-                                        Launch New Campaign
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-
-                        {currentUser.email === 'riderezzy@gmail.com' && (
-                            <section className="bg-white p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl">
-                                <h2 className="text-2xl font-bold mb-8">Manage Admins (Super Admin Only)</h2>
-                                <div className="space-y-8">
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        <input
-                                            type="email"
-                                            placeholder="Enter user email to make admin"
-                                            value={adminInviteEmail}
-                                            onChange={(e) => setAdminInviteEmail(e.target.value)}
-                                            className="flex-1 p-5 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none"
-                                        />
-                                        <button
-                                            onClick={handleMakeAdmin}
-                                            className="py-5 px-8 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold shadow-xl shadow-black/10 hover:scale-[1.01] transition-transform whitespace-nowrap"
-                                        >
-                                            Add Admin
-                                        </button>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-xl font-bold mb-4">Current Admins</h3>
-                                        <div className="space-y-4">
-                                            {adminsList.map((admin: any) => (
-                                                <div key={admin._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[#fdfdfd] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] gap-4">
-                                                    <div>
-                                                        <div className="font-bold">{admin.full_name} {admin.email === 'riderezzy@gmail.com' && <span className="text-emerald-500 text-sm">(Super Admin)</span>}</div>
-                                                        <div className="text-sm text-gray-500">{admin.email}</div>
-                                                    </div>
-                                                    {admin.email !== 'riderezzy@gmail.com' && (
-                                                        <button
-                                                            onClick={() => handleRemoveAdmin(admin._id)}
-                                                            className="text-red-500 font-bold px-4 py-2 hover:bg-red-50 rounded-lg transition-colors border border-red-100"
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-                        )}
-
-                        <section className="bg-white p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl mt-12">
-                            <h2 className="text-2xl font-bold mb-8">Platform Listings & Groups</h2>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="border-b border-black/5">
-                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Subscription</th>
-                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Account Email</th>
-                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Provider</th>
-                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Members</th>
-                                            <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase">Renewal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5">
-                                        {adminMarketplace.map((group: any) => (
-                                            <React.Fragment key={group._id}>
-                                                <tr className="group hover:bg-[#fdfdfd] transition-colors">
-                                                    <td className="py-6 px-4 font-bold">{group.subscription_name}</td>
-                                                    <td className="py-6 px-4 text-sm font-mono text-blue-600">{group.account_email || '—'}</td>
-                                                    <td className="py-6 px-4 text-sm">{group.plan_owner || '—'}</td>
-                                                    <td className="py-6 px-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-10 h-10 bg-[#f4f5f8] rounded-full flex items-center justify-center font-bold text-xs">
-                                                                {group.member_count}
-                                                            </div>
-                                                            <span className="text-xs text-gray-400 font-bold uppercase tracking-tight">Slots Taken</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-6 px-4 text-sm font-bold text-emerald-600">
-                                                        {group.billing_cycle_start ? new Date(group.billing_cycle_start).toLocaleDateString() : '—'}
-                                                    </td>
-                                                </tr>
-                                                {group.members.length > 0 && (
-                                                    <tr>
-                                                        <td colSpan={5} className="px-8 pb-6">
-                                                            <div className="bg-[#f4f5f8] rounded-2xl p-4 space-y-2">
-                                                                <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Active Members in this group</div>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                                    {group.members.map((m: any, idx: number) => (
-                                                                        <div key={idx} className="bg-white p-3 rounded-xl border border-black/5 shadow-sm flex flex-col">
-                                                                            <span className="text-sm font-bold">{m.user_name}</span>
-                                                                            <span className="text-[10px] text-gray-400">{m.slot_name} • Renew: {new Date(m.renewal).toLocaleDateString()}</span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        ))}
-                                        {adminMarketplace.length === 0 && (
-                                            <tr>
-                                                <td colSpan={5} className="py-12 text-center text-gray-400 italic">No account listings published yet.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
                     </motion.div>
                 )}
                 {activeTab === 'profile' && (
@@ -1930,42 +1762,79 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick }: { slot: Us
     );
 }
 
-function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: SlotType, onJoin: () => void, userQScore: number }) {
-    const isEligible = userQScore >= slot.min_q_score;
-    const capacity = slot.capacity || 5;
+function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: () => void, userQScore: number }) {
+    const isEligible = userQScore >= (slot.min_q_score || 0);
+    const capacity = slot.capacity || 4;
     const joined = slot.current_members || 0;
+    const isPopular = slot.sub_name === "Netflix" || slot.sub_name === "Spotify";
 
     return (
-        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 rounded-[2rem]  flex flex-col hover:border-black/20 transition-colors">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h3 className="font-bold text-xl">{slot.name}</h3>
-                    <div className="text-2xl font-bold mt-1">₦{slot.price.toLocaleString()} <span className="text-sm font-normal text-black/30">/ month</span></div>
-                </div>
-            </div>
-
-            <div className="flex-1 space-y-3 mb-8">
-                {slot.features?.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                        <div className="mt-1 w-4 h-4 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Check size={10} className="text-emerald-600" />
-                        </div>
-                        <span className="text-sm text-black/60">{feature}</span>
+        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-7 rounded-[2.5rem] flex flex-col hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-black/5">
+            {/* Header with Logo */}
+            <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-[#f4f5f8] rounded-2xl flex items-center justify-center overflow-hidden p-2.5">
+                        {slot.sub_logo ? (
+                            <img src={slot.sub_logo} alt={slot.sub_name} className="w-full h-full object-contain" />
+                        ) : (
+                            <div className="w-full h-full bg-zinc-900 rounded-lg flex items-center justify-center text-white font-black text-xs">
+                                {slot.sub_name?.[0]}
+                            </div>
+                        )}
                     </div>
-                ))}
-                {!slot.features && (
-                    <p className="text-sm text-gray-400 italic">Premium slot with standard benefits</p>
-                )}
+                    <div>
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="font-black text-base">{slot.sub_name}</h3>
+                            {isPopular && (
+                                <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-black flex items-center gap-1">
+                                    🔥 Popular
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-xs text-black/40 font-bold">{slot.name}</div>
+                    </div>
+                </div>
             </div>
 
-            <div className="mb-6 p-4 bg-[#fdfdfd] rounded-[2rem]">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Members joined</span>
-                    <span className="text-xs font-bold text-black/60">{joined} / {capacity}</span>
+            {/* Owner Info */}
+            <div className="flex items-center gap-2 mb-6">
+                <div className="w-6 h-6 bg-zinc-100 rounded-full flex items-center justify-center overflow-hidden border border-white">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 opacity-20" />
                 </div>
-                <div className="w-full h-2 bg-black/5 rounded-full overflow-hidden">
+                <span className="text-xs font-bold text-black/40 tracking-tight">Owner: <span className="text-black/80">@{slot.owner_name}</span></span>
+            </div>
+
+            {/* Features (Hidden or truncated for cleaner look) */}
+            <div className="flex-1 space-y-2 mb-8">
+                <div className="text-[10px] font-black uppercase tracking-widest text-black/20 mb-3">Subscription Benefits</div>
+                <div className="grid grid-cols-1 gap-2">
+                    {(slot.features || ["Premium Slot", "Instant Access"]).slice(0, 3).map((feature: string, i: number) => (
+                        <div key={i} className="flex items-center gap-2">
+                            <div className="w-1 h-1 bg-black/20 rounded-full" />
+                            <span className="text-xs text-black/60 font-medium">{feature}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Pricing Section */}
+            <div className="mb-8">
+                <div className="text-[10px] font-black uppercase tracking-widest text-black/20 mb-1">Profile Slot</div>
+                <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black">₦{slot.price.toLocaleString()}</span>
+                    <span className="text-xs font-bold text-black/30">/ month</span>
+                </div>
+            </div>
+
+            {/* Capacity Section */}
+            <div className="mb-8 p-5 bg-[#fdfdfd] rounded-[2rem] border border-black/5">
+                <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-black/40">Members Joined</span>
+                    <span className="text-xs font-black">{joined} / {capacity}</span>
+                </div>
+                <div className="w-full h-2.5 bg-black/[0.03] rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-black transition-all duration-500"
+                        className={`h-full transition-all duration-700 rounded-full ${joined === capacity ? 'bg-red-500' : 'bg-zinc-900'}`}
                         style={{ width: `${(joined / capacity) * 100}%` }}
                     />
                 </div>
@@ -1973,10 +1842,15 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: SlotType, onJ
 
             <button
                 onClick={onJoin}
-                disabled={!isEligible}
-                className={`w-full py-4 rounded-[2rem] font-bold transition-transform active:scale-95 ${isEligible ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] hover:shadow-lg' : 'bg-black/5 text-black/30'}`}
+                disabled={!isEligible || joined === capacity}
+                className={`w-full py-4.5 rounded-[2rem] font-black text-sm transition-all active:scale-[0.98] ${!isEligible
+                        ? 'bg-black/5 text-black/20 cursor-not-allowed'
+                        : joined === capacity
+                            ? 'bg-red-50 text-red-500 border border-red-100'
+                            : 'bg-zinc-900 text-white shadow-xl shadow-black/10 hover:shadow-2xl hover:bg-black'
+                    }`}
             >
-                {isEligible ? 'Join Slot' : `Requires ${slot.min_q_score} Q Score`}
+                {joined === capacity ? 'Sold Out' : isEligible ? 'Join Slot' : `Lv.${slot.min_q_score} Required`}
             </button>
         </div>
     );

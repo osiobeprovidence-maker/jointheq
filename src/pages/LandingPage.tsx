@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -10,19 +10,6 @@ import { Logo } from '../components/ui/Logo';
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup'>('hero');
   const navigate = useNavigate();
-  const pressTimer = useRef<NodeJS.Timeout | null>(null);
-
-  const handlePressStart = () => {
-    pressTimer.current = setTimeout(() => {
-      navigate('/console');
-    }, 2000);
-  };
-
-  const handlePressEnd = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-    }
-  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -750,16 +737,7 @@ export default function LandingPage() {
         <div className="flex flex-col items-center gap-1">
           <span>© 2026 Q</span>
           <span>
-            Built by{' '}
-            <span
-              onPointerDown={handlePressStart}
-              onPointerUp={handlePressEnd}
-              onPointerLeave={handlePressEnd}
-              onContextMenu={(e) => e.preventDefault()}
-              className="select-none cursor-default"
-            >
-              CuratedbyQteam
-            </span>
+            Built by CuratedbyQteam
           </span>
         </div>
       </footer>
