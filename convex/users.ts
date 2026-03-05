@@ -55,38 +55,71 @@ export const createUser = mutation({
         password_hash: v.string(),
         verification_token: v.string(),
         verification_token_expires: v.string(),
-        referral_code: v.string(),
+        referral_code: v.optional(v.string()),
         referred_by_code: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const { referred_by_code, ...userArgs } = args;
+        const normalizedEmail = args.email.trim().toLowerCase();
+        const normalizedPhone = args.phone?.trim();
+        const normalizedReferredByCode = args.referred_by_code?.trim().toUpperCase();
+
+        const referralBase = (
+            args.full_name.split(" ")[0] ||
+            normalizedEmail.split("@")[0] ||
+            "USER"
+        )
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "")
+            .slice(0, 10) || "USER";
+
+        const sanitizeReferralCode = (code: string) =>
+            code.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
+
+        const buildFallbackReferralCode = () =>
+            `Q-${referralBase}-${Math.floor(100000 + Math.random() * 900000)}`;
+
         // Check for duplicate email
         const existingEmail = await ctx.db
             .query("users")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
             .unique();
         if (existingEmail) {
             throw new Error("Email already registered");
         }
 
         // Check for duplicate phone if provided
-        if (args.phone) {
+        if (normalizedPhone) {
             const existingPhone = await ctx.db
                 .query("users")
-                .withIndex("by_phone", (q) => q.eq("phone", args.phone))
+                .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
                 .unique();
             if (existingPhone) {
                 throw new Error("Phone number already registered");
             }
         }
 
-        // Check for duplicate referral code
-        const existingReferral = await ctx.db
-            .query("users")
-            .withIndex("by_referral_code", (q) => q.eq("referral_code", args.referral_code))
-            .unique();
-        if (existingReferral) {
-            throw new Error("Referral code already exists");
+        // Resolve a unique referral code server-side to avoid signup failures from collisions.
+        let resolvedReferralCode = args.referral_code
+            ? sanitizeReferralCode(args.referral_code)
+            : buildFallbackReferralCode();
+
+        let referralCollisionChecks = 0;
+        while (referralCollisionChecks < 10) {
+            const existingReferral = await ctx.db
+                .query("users")
+                .withIndex("by_referral_code", (q) => q.eq("referral_code", resolvedReferralCode))
+                .unique();
+
+            if (!existingReferral) {
+                break;
+            }
+
+            resolvedReferralCode = buildFallbackReferralCode();
+            referralCollisionChecks += 1;
+        }
+
+        if (referralCollisionChecks >= 10) {
+            throw new Error("Unable to generate referral code. Please try again.");
         }
 
         // Check for duplicate username
@@ -103,10 +136,10 @@ export const createUser = mutation({
         }
 
         let referredById: any = undefined;
-        if (referred_by_code) {
+        if (normalizedReferredByCode) {
             const referrer = await ctx.db
                 .query("users")
-                .withIndex("by_referral_code", (q) => q.eq("referral_code", referred_by_code))
+                .withIndex("by_referral_code", (q) => q.eq("referral_code", normalizedReferredByCode))
                 .unique();
             if (referrer) {
                 referredById = referrer._id;
@@ -114,7 +147,12 @@ export const createUser = mutation({
         }
 
         const userId = await ctx.db.insert("users", {
-            ...userArgs,
+            email: normalizedEmail,
+            full_name: args.full_name,
+            phone: normalizedPhone,
+            verification_token: args.verification_token,
+            verification_token_expires: args.verification_token_expires,
+            referral_code: resolvedReferralCode,
             password_hash: bcrypt.hashSync(args.password_hash, 10),
             username: normalizedUsername,
             referred_by: referredById,

@@ -656,6 +656,71 @@ export const processWithdrawal = mutation({
     },
 });
 
+/** Buy a raffle ticket (user) */
+export const buyRaffleTicket = mutation({
+    args: {
+        user_id: v.id("users"),
+        campaign_id: v.id("campaigns"),
+        ticket_count: v.number(),
+        cost_per_ticket: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const campaign = await ctx.db.get(args.campaign_id);
+        if (!campaign || campaign.status !== "active") throw new Error("Campaign is not active");
+        if (campaign.type !== "raffle") throw new Error("This is not a raffle campaign");
+
+        const user = await ctx.db.get(args.user_id);
+        if (!user) throw new Error("User not found");
+
+        const totalCost = args.ticket_count * args.cost_per_ticket;
+        if (user.wallet_balance < totalCost) throw new Error("Insufficient wallet balance");
+
+        // Deduct from wallet
+        await ctx.db.patch(args.user_id, {
+            wallet_balance: user.wallet_balance - totalCost,
+        });
+
+        // Record transaction
+        await ctx.db.insert("transactions", {
+            user_id: args.user_id,
+            amount: -totalCost,
+            type: "raffle_ticket",
+            description: `Bought ${args.ticket_count} ticket(s) for ${campaign.name}`,
+            created_at: Date.now(),
+        });
+
+        // Update participant entries
+        const participant = await ctx.db
+            .query("campaign_participants")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", args.campaign_id))
+            .filter((q) => q.eq(q.field("user_id"), args.user_id))
+            .first();
+
+        if (participant) {
+            await ctx.db.patch(participant._id, {
+                entries: (participant.entries ?? 0) + args.ticket_count,
+            });
+        } else {
+            const referralCode = `${args.user_id.slice(-6).toUpperCase()}-${args.campaign_id.slice(-4).toUpperCase()}`;
+            await ctx.db.insert("campaign_participants", {
+                campaign_id: args.campaign_id,
+                user_id: args.user_id,
+                referral_code: referralCode,
+                progress: 0,
+                entries: args.ticket_count,
+                joined_at: Date.now(),
+            });
+        }
+
+        // Update campaign progress
+        await ctx.db.patch(args.campaign_id, {
+            current_progress: (campaign.current_progress ?? 0) + args.ticket_count,
+        });
+
+        return { success: true };
+    },
+});
+
 /** Seed dummy campaigns for testing */
 export const seedDummy = mutation({
     args: {},
@@ -719,6 +784,26 @@ export const seedDummy = mutation({
             end_date: Date.now() + (7 * 24 * 60 * 60 * 1000),
             target_goal: 50,
             current_progress: 12,
+            status: "active",
+            created_at: Date.now(),
+        });
+
+        await ctx.db.insert("campaigns", {
+            name: "Easter Raffle Draw",
+            type: "raffle",
+            description: "Buy tickets for a chance to win ₦50,000 cash prize! Each ticket is just ₦100.",
+            about: "The grand Easter raffle. 10 lucky winners will be selected at the end of the campaign. The more tickets you have, the higher your chances!",
+            rules: ["Tickets are non-refundable", "Winners announced on April 20th", "Must be a registered user to participate"],
+            how_it_works: ["Join the campaign", "Buy as many tickets as you want", "Wait for the draw date", "Check your notifications for results"],
+            reward_structure: "Grand Prize: ₦50,000 | 2nd Place: ₦25,000 | 3rd-10th: 1000 BOOTS each.",
+            reward_type: "cash",
+            reward_amount: 50000,
+            referral_boots: 0,
+            commission_months: 0,
+            start_date: Date.now(),
+            end_date: Date.now() + (21 * 24 * 60 * 60 * 1000),
+            target_goal: 5000,
+            current_progress: 240,
             status: "active",
             created_at: Date.now(),
         });

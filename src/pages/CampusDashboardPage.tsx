@@ -18,11 +18,11 @@ import {
     Award,
     Clock
 } from "lucide-react";
-import { useUser } from "@clerk/clerk-react";
+import { auth } from "../lib/auth";
 
 export default function CampusDashboardPage() {
     const navigate = useNavigate();
-    const { user } = useUser();
+    const user = auth.getCurrentUser();
 
     // Auth Check: Find existing user in Convex
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");

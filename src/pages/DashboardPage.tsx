@@ -1602,14 +1602,14 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
 
                     <button
                         onClick={onParticipate}
-                        disabled={isParticipating || campaign.status !== 'active'}
+                        disabled={campaign.status !== 'active'}
                         className={`flex-1 py-4 rounded-[2rem] font-bold text-sm transition-all ${isParticipating
-                            ? 'bg-emerald-500 text-white shadow-emerald-200'
+                            ? 'bg-zinc-100 text-zinc-600'
                             : 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] hover:shadow-xl active:scale-95'
                             }`}
                     >
                         {isParticipating ? (
-                            <span className="flex items-center justify-center gap-2"><Check size={16} /> Joined</span>
+                            <span className="flex items-center justify-center gap-2"><Activity size={16} /> Manage Task</span>
                         ) : 'Participate'}
                     </button>
                 </div>
