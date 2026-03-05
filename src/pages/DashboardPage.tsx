@@ -454,7 +454,20 @@ export default function DashboardPage() {
                                 />
                             </div>
 
-                            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                            <select
+                                value={activeFilter}
+                                onChange={(e) => setActiveFilter(e.target.value)}
+                                className="md:hidden w-full bg-white border border-black/10 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                aria-label="Filter marketplace categories"
+                            >
+                                {['All', 'Streaming', 'Music', 'Design', 'AI', 'Productivity'].map((filter) => (
+                                    <option key={filter} value={filter}>
+                                        {filter}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                                 {['All', 'Streaming', 'Music', 'Design', 'AI', 'Productivity'].map((filter) => (
                                     <button
                                         key={filter}
