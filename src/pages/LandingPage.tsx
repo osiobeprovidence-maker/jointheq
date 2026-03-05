@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle, Hash } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { auth } from "../lib/auth";
 import { Logo } from '../components/ui/Logo';
-import { FloatingQ } from '../components/FloatingQ';
 
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup'>('hero');
@@ -35,7 +34,6 @@ export default function LandingPage() {
   const login = useMutation(api.users.login);
   const [formData, setFormData] = useState({
     name: '',
-    username: '',
     email: '',
     phone: '',
     password: ''
@@ -46,12 +44,6 @@ export default function LandingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
-    const referralFromUrl = params.get('ref');
-
-    if (referralFromUrl && !localStorage.getItem('referred_by')) {
-      localStorage.setItem('referred_by', referralFromUrl);
-    }
-
     if (params.get('verified') === 'true' || token) {
       if (token) {
         setIsLoading(true);
@@ -89,13 +81,11 @@ export default function LandingPage() {
       await createUser({
         email: formData.email,
         full_name: formData.name,
-        username: formData.username,
         phone: formData.phone,
         password_hash: formData.password,
         verification_token: token,
         verification_token_expires: expires,
-        referral_code: referralCode,
-        referred_by_code: localStorage.getItem('referred_by') || undefined
+        referral_code: referralCode
       });
 
       await sendEmail({
@@ -121,19 +111,19 @@ export default function LandingPage() {
 
     try {
       const result = await login({
-        identifier: formData.email, // using the same state field for now
+        identifier: formData.email,
         password: formData.password
       });
 
       if (result.success && result.user) {
         auth.login(result.user as any);
-
+        
         // If not verified, store verification info for Dashboard to show warning
         if (!result.isVerified && result.daysRemaining !== null) {
           localStorage.setItem('verification_days_remaining', String(result.daysRemaining));
           localStorage.setItem('verification_deadline', String(result.verificationDeadline));
         }
-
+        
         navigate("/dashboard");
       } else {
         setError(result.error || 'Login failed');
@@ -589,19 +579,19 @@ export default function LandingPage() {
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold mb-2">Email or Username</label>
+                    <label className="block text-sm font-bold mb-2">Email Address</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Mail size={20} />
                       </div>
                       <input
-                        type="text"
+                        type="email"
                         name="email"
                         required
                         value={formData.email}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                        placeholder="you@email.com or username"
+                        placeholder="you@example.com"
                       />
                     </div>
                   </div>
@@ -677,26 +667,6 @@ export default function LandingPage() {
                         placeholder="John Doe"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2">Username</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
-                        <Hash size={20} />
-                      </div>
-                      <input
-                        type="text"
-                        name="username"
-                        required
-                        value={formData.username}
-                        onChange={e => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
-                        className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                        placeholder="john_doe"
-                        minLength={3}
-                        maxLength={30}
-                      />
-                    </div>
-                    <p className="text-[11px] text-black/40 mt-1.5 ml-1">Letters, numbers, underscores only. Min 3 chars. This is your public Q handle.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-2">Email Address</label>
