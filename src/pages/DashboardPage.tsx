@@ -1018,62 +1018,15 @@ export default function DashboardPage() {
 
                 {activeTab === 'campaigns' && (
                     <motion.div key="campaigns" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        {currentUser?.is_admin ? (
-                            <>
-                                <header>
-                                    <h1 className="text-3xl font-bold tracking-tight">Active Campaigns</h1>
-                                    <p className="text-gray-500 mt-1">Join events to earn exclusive BOOTS and rewards.</p>
-                                </header>
-
-                                {campaigns.length > 0 ? (
-                                    <div className="flex flex-col gap-8">
-                                        <CampusJoinCard
-                                            userId={currentUser._id}
-                                            onApply={() => setCampusModalOpen(true)}
-                                        />
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            {campaigns.map((camp: any) => (
-                                                <CampaignCard
-                                                    key={camp._id}
-                                                    campaign={camp}
-                                                    onParticipate={() => navigate(`/campaigns/${camp._id}`)}
-                                                    userId={currentUser?._id}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col gap-8">
-                                        <CampusJoinCard
-                                            userId={currentUser._id}
-                                            onApply={() => setCampusModalOpen(true)}
-                                        />
-                                        <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
-                                            <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                                                <Rocket size={40} />
-                                            </div>
-                                            <h2 className="text-2xl font-bold mb-4">No Campaigns Yet</h2>
-                                            <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
-                                                Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
-                                            </p>
-                                            <button onClick={() => navigate('/admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
-                                                <Plus size={20} /> Create First Campaign
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
-                                <div className="w-20 h-20 bg-zinc-100 text-zinc-700 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                                    <Rocket size={40} />
-                                </div>
-                                <h2 className="text-2xl font-bold mb-4">Campaigns Coming Soon</h2>
-                                <p className="text-gray-500 max-w-md mx-auto leading-relaxed">
-                                    Campaigns for users are coming soon. We are preparing rewards and events for you.
-                                </p>
+                        <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
+                            <div className="w-20 h-20 bg-zinc-100 text-zinc-700 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                                <Rocket size={40} />
                             </div>
-                        )}
+                            <h2 className="text-2xl font-bold mb-4">Campaigns Coming Soon</h2>
+                            <p className="text-gray-500 max-w-md mx-auto leading-relaxed">
+                                Campaigns are temporarily unavailable on this dashboard. We are preparing rewards and events for you.
+                            </p>
+                        </div>
 
                         <CampusApplicationModal
                             isOpen={campusModalOpen}
