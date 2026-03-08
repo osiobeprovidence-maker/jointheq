@@ -95,6 +95,7 @@ export default function DashboardPage() {
     const adminsList = useQuery(api.users.getAdmins) || [];
     const adminMarketplace = useQuery(api.subscriptions.getAdminMarketplace) || [];
     const campusRepInfo = useQuery(api.users.getCampusRep, currentUser ? { userId: currentUser._id } : "skip");
+    const transactions = useQuery(api.transactions.getTransactions, currentUser ? { user_id: currentUser._id } : "skip") || [];
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -116,6 +117,25 @@ export default function DashboardPage() {
     const [campusModalOpen, setCampusModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+
+    // Wallet State
+    const [fundAmount, setFundAmount] = useState<string>('');
+    const [bootsModalOpen, setBootsModalOpen] = useState(false);
+
+    const handleFundSubmit = () => {
+        const amount = Number(fundAmount.replace(/,/g, ''));
+        if (isNaN(amount) || amount < 1000) {
+            toast.error("Minimum funding amount is ₦1,000");
+            return;
+        }
+        if (amount > 100000) {
+            toast.error("Maximum funding amount is ₦100,000");
+            return;
+        }
+        fundWallet(amount);
+        setFundAmount('');
+        toast.success(`₦${amount.toLocaleString()} funded successfully!`);
+    };
 
     const messagesUserId = currentUser?.is_admin ? (selectedChatUserId || currentUser._id) : currentUser?._id;
     const messages = useQuery(api.messages.getMessages, messagesUserId ? { user_id: messagesUserId } : "skip") || [];
@@ -533,131 +553,297 @@ export default function DashboardPage() {
                 {activeTab === 'wallet' && (
                     <motion.div key="wallet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
-                            <h1 className="text-3xl font-bold tracking-tight">Your Wallet</h1>
-                            <p className="text-gray-500 mt-1">Manage your funds and premium Boots.</p>
+                            <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
+                            <p className="text-gray-500 mt-1">Manage your funds and rewards.</p>
                         </header>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  text-center">
-                                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                                    <Wallet size={32} />
-                                </div>
-                                <h3 className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">Available Balance</h3>
-                                <div className="text-4xl font-bold mb-8">₦{currentUser?.wallet_balance?.toLocaleString() || 0}</div>
+                        {/* 1. WALLET BALANCE SECTION */}
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.06)] overflow-hidden relative">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
 
-                                <div className="flex gap-4 max-w-xs mx-auto">
-                                    <button
-                                        onClick={() => fundWallet(5000)}
-                                        className="flex-1 py-3 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] font-bold text-sm hover:scale-105 transition-transform"
-                                    >
-                                        Fund ₦5,000
-                                    </button>
-                                    <button
-                                        onClick={() => fundWallet(10000)}
-                                        className="flex-1 py-3 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full scale-100 hover:scale-[1.02] font-bold text-sm hover:scale-105 transition-transform"
-                                    >
-                                        Fund ₦10,000
-                                    </button>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-6 italic">Paystack integration coming soon.</p>
+                            <div className="text-center mb-8">
+                                <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-2">Available Balance</h3>
+                                <motion.div
+                                    key={currentUser?.wallet_balance}
+                                    animate={{ scale: [1, 1.05, 1] }}
+                                    transition={{ duration: 0.3 }}
+                                    className="text-5xl font-extrabold text-zinc-900 tracking-tight"
+                                >
+                                    ₦{(currentUser?.wallet_balance || 0).toLocaleString()}
+                                </motion.div>
                             </div>
 
-                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  text-center">
-                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                                    <Sparkles size={32} />
+                            <div className="border-t border-gray-100 pt-8 max-w-sm mx-auto">
+                                <h4 className="text-sm font-bold text-center mb-4">Fund Wallet</h4>
+                                <div className="relative mb-4">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <span className="text-gray-500 font-bold">₦</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter Amount"
+                                        value={fundAmount}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val) {
+                                                setFundAmount(Number(val).toLocaleString());
+                                            } else {
+                                                setFundAmount('');
+                                            }
+                                        }}
+                                        className="w-full bg-gray-50 border-none rounded-2xl py-4 pl-10 pr-4 font-bold text-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                                    />
                                 </div>
-                                <h3 className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">Boots Balance</h3>
-                                <div className="text-4xl font-bold mb-8">{currentUser?.boots_balance?.toLocaleString() || 0}</div>
 
-                                <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
-                                    Earn more Boots by participating in campaigns and referring friends.
-                                </p>
+                                <div className="flex flex-wrap gap-2 justify-center mb-6">
+                                    {['1,000', '5,000', '10,000', '20,000'].map(amt => (
+                                        <button
+                                            key={amt}
+                                            onClick={() => setFundAmount(amt)}
+                                            className="px-4 py-2 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl hover:bg-emerald-100 transition-colors"
+                                        >
+                                            ₦{amt}
+                                        </button>
+                                    ))}
+                                </div>
+
                                 <button
-                                    onClick={() => setActiveTab('campaigns')}
-                                    className="px-6 py-3 bg-blue-50 text-blue-600 rounded-full scale-100 hover:scale-[1.02] font-bold text-sm hover:bg-blue-100 transition-colors inline-flex items-center gap-2"
+                                    onClick={handleFundSubmit}
+                                    className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all"
                                 >
-                                    <Zap size={16} /> Earn Boots
+                                    Fund Wallet
                                 </button>
                             </div>
                         </div>
 
-                        {/* Direct Debit Card Section */}
-                        <div className="bg-white p-8 sm:p-10 rounded-[3rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-xl relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-900/5 rounded-full -mr-32 -mt-32 transition-transform group-hover:scale-110 duration-700"></div>
-                            <div className="relative z-10">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                                    <div className="max-w-md">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-10 h-10 bg-zinc-900 text-white rounded-2xl flex items-center justify-center shadow-lg">
-                                                <Shield size={20} />
-                                            </div>
-                                            <h3 className="text-2xl font-bold">Direct Debit</h3>
-                                        </div>
-                                        <p className="text-gray-500 leading-relaxed">
-                                            Link your card for automatic renewals. We'll debit your card directly whenever a subscription is due, ensuring you never lose access.
-                                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* 2. BOOTS WALLET (GAMIFIED REWARDS) */}
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(37,99,235,0.08)] relative overflow-hidden">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-sm font-bold uppercase tracking-widest text-blue-800/60">Boots Balance</h3>
+                                        <button onClick={() => setBootsModalOpen(true)} className="text-blue-500 hover:text-blue-700 transition-colors">
+                                            <Info size={16} />
+                                        </button>
                                     </div>
+                                    <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center text-blue-500 shadow-sm backdrop-blur-sm">
+                                        <Sparkles size={18} />
+                                    </div>
+                                </div>
 
-                                    <div className="flex-shrink-0">
+                                <motion.div
+                                    key={currentUser?.boots_balance}
+                                    animate={{ scale: [1, 1.1, 1], filter: ["hue-rotate(0deg)", "hue-rotate(90deg)", "hue-rotate(0deg)"] }}
+                                    transition={{ duration: 0.5 }}
+                                    className="text-4xl font-extrabold text-blue-900 mb-6"
+                                >
+                                    {(currentUser?.boots_balance || 0).toLocaleString()} BOOTS
+                                </motion.div>
+
+                                <div className="mb-6">
+                                    <div className="flex justify-between text-xs font-bold text-blue-800/60 mb-2">
+                                        <span>Next reward at 100 BOOTS</span>
+                                        <span>{Math.min((currentUser?.boots_balance || 0), 100)}/100</span>
+                                    </div>
+                                    <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min(((currentUser?.boots_balance || 0) / 100) * 100, 100)}%` }}
+                                            className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setActiveTab('referrals')}
+                                        className="flex-1 py-3 bg-white text-blue-600 font-bold text-sm rounded-xl shadow-sm hover:shadow-md transition-all"
+                                    >
+                                        Earn Boots
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('marketplace')}
+                                        className="flex-1 py-3 bg-blue-600 text-white font-bold text-sm rounded-xl shadow-inner hover:bg-blue-700 transition-all"
+                                    >
+                                        Use Boots
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 3. LINKED CARD FOR AUTO PAYMENTS */}
+                            <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group flex flex-col justify-between">
+                                <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors"></div>
+
+                                <div className="relative z-10 z-[2]">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div>
+                                            <h3 className="text-xl font-bold mb-1">Auto Payment Card</h3>
+                                            <p className="text-zinc-400 text-xs leading-relaxed max-w-[200px]">
+                                                Link your card to enable automatic subscription renewals.
+                                            </p>
+                                        </div>
                                         {currentUser?.direct_debit_card ? (
-                                            <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] shadow-2xl min-w-[320px] relative overflow-hidden">
-                                                <div className="absolute top-0 right-0 p-6 opacity-20">
-                                                    <ShieldCheck size={48} />
-                                                </div>
-                                                <div className="flex justify-between items-start mb-12">
-                                                    <div className="text-xs font-bold uppercase tracking-widest opacity-60">Linked Card</div>
-                                                    <div className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase tracking-widest">Active</div>
-                                                </div>
-                                                <div className="mb-8">
-                                                    <div className="text-2xl font-mono tracking-widest break-all">•••• •••• •••• {currentUser.direct_debit_card.last4}</div>
-                                                </div>
-                                                <div className="flex justify-between items-end">
-                                                    <div>
-                                                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Brand</div>
-                                                        <div className="font-bold">{currentUser.direct_debit_card.brand}</div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Expiry</div>
-                                                        <div className="font-bold">{currentUser.direct_debit_card.expiry}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-500/30">Active</div>
                                         ) : (
-                                            <button
-                                                onClick={async () => {
-                                                    // This would normally trigger Paystack/Flutterwave inline popup
-                                                    // For now we simulate a successful linking
-                                                    try {
-                                                        const loadingToast = toast.loading("Connecting to secure payment gateway...");
-                                                        setTimeout(async () => {
-                                                            await updateCardMutation({
-                                                                userId: currentUser!._id,
-                                                                cardDetails: {
-                                                                    last4: "4242",
-                                                                    brand: "Visa",
-                                                                    expiry: "12/26",
-                                                                    auth_token: "simulated_auth_token_" + Date.now()
-                                                                }
-                                                            });
-                                                            toast.dismiss(loadingToast);
-                                                            toast.success("Card linked successfully for direct debit!", {
-                                                                icon: '💳',
-                                                                style: { borderRadius: '2rem', background: '#18181b', color: '#fff' }
-                                                            });
-                                                        }, 2000);
-                                                    } catch (e: any) {
-                                                        toast.error("Failed to link card");
-                                                    }
-                                                }}
-                                                className="bg-zinc-900 text-white px-10 py-5 rounded-full font-bold shadow-xl hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-3 group"
-                                            >
-                                                <Plus size={20} className="group-hover:rotate-90 transition-transform" /> Link New Card
-                                            </button>
+                                            <ShieldCheck size={24} className="opacity-50" />
                                         )}
                                     </div>
+
+                                    {currentUser?.direct_debit_card ? (
+                                        <div className="mb-6 bg-white/5 p-5 rounded-2xl border border-white/10 backdrop-blur-sm">
+                                            <div className="text-xl font-mono tracking-widest break-all mb-4">•••• •••• •••• {currentUser.direct_debit_card.last4}</div>
+                                            <div className="flex justify-between items-end">
+                                                <div>
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Brand</div>
+                                                    <div className="font-bold text-sm">{currentUser.direct_debit_card.brand}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Expiry</div>
+                                                    <div className="font-bold text-sm">{currentUser.direct_debit_card.expiry}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="mb-6 flex-1 flex items-center justify-center">
+                                            <p className="text-zinc-500 text-sm font-medium italic">No card linked yet</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3 relative z-10">
+                                    {currentUser?.direct_debit_card ? (
+                                        <>
+                                            <button className="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/20 transition-all border border-white/5">
+                                                Manage Card
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const loadingToast = toast.loading("Securely connecting to payment gateway...");
+                                                    setTimeout(async () => {
+                                                        await updateCardMutation({
+                                                            userId: currentUser!._id,
+                                                            cardDetails: { last4: "4242", brand: "Visa", expiry: "12/26", auth_token: "simulated_auth_token_" + Date.now() }
+                                                        });
+                                                        toast.dismiss(loadingToast);
+                                                        toast.success("Card linked automatically!", { icon: '💳' });
+                                                    }, 2000);
+                                                } catch (e: any) {
+                                                    toast.error("Failed to link card");
+                                                }
+                                            }}
+                                            className="w-full py-3 bg-white text-zinc-900 font-bold text-sm rounded-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Plus size={16} /> Link Card
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
+
+                        {/* 4. TRANSACTION HISTORY */}
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
+                            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                                <Activity className="text-gray-400" size={20} /> Recent Activity
+                            </h3>
+
+                            <div className="space-y-4">
+                                {transactions && transactions.length > 0 ? (
+                                    transactions.slice(0, 5).map((tx, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100/50 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'funding' ? 'bg-emerald-100 text-emerald-600' :
+                                                    tx.type === 'payment' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                                    }`}>
+                                                    {tx.type === 'funding' ? <Plus size={16} /> : tx.type === 'payment' ? <Zap size={16} /> : <Sparkles size={16} />}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-sm capitalize">{tx.description || tx.type.replace('_', ' ')}</div>
+                                                    <div className="text-xs text-gray-400">{new Date(tx.created_at).toLocaleDateString()}</div>
+                                                </div>
+                                            </div>
+                                            <div className={`font-bold ${tx.type === 'funding' ? 'text-emerald-600' : tx.type === 'payment' ? 'text-zinc-900' : 'text-blue-600'}`}>
+                                                {tx.type === 'funding' ? '+' : tx.type === 'payment' ? '-' : ''}₦{(tx.amount || 0).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                        No recent activity to show.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* BOOTS Info Modal */}
+                        <AnimatePresence>
+                            {bootsModalOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                    onClick={() => setBootsModalOpen(false)}
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                                        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                                        onClick={e => e.stopPropagation()}
+                                        className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative"
+                                    >
+                                        <button
+                                            onClick={() => setBootsModalOpen(false)}
+                                            className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors"
+                                        >
+                                            <X size={20} />
+                                        </button>
+
+                                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mb-6">
+                                            <Sparkles size={28} />
+                                        </div>
+
+                                        <h2 className="text-2xl font-bold mb-2 text-zinc-900">What are BOOTS?</h2>
+                                        <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                                            BOOTS are reward points you earn on JoinTheQ for being an active community member.
+                                        </p>
+
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h4 className="font-bold text-sm mb-3 flex items-center gap-2 text-emerald-600">
+                                                    <Plus size={16} /> Ways to earn BOOTS
+                                                </h4>
+                                                <ul className="text-sm text-gray-600 space-y-2">
+                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Inviting friends</li>
+                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Participating in campaigns</li>
+                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Completing campus ambassador missions</li>
+                                                </ul>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="font-bold text-sm mb-3 flex items-center gap-2 text-blue-600">
+                                                    <Check size={16} /> Ways to use BOOTS
+                                                </h4>
+                                                <ul className="text-sm text-gray-600 space-y-2">
+                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Subscription discounts</li>
+                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Special campaigns</li>
+                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Exclusive giveaways</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => setBootsModalOpen(false)}
+                                            className="w-full mt-8 py-4 bg-zinc-900 text-white font-bold rounded-2xl hover:scale-[1.02] active:scale-95 transition-transform"
+                                        >
+                                            Got it!
+                                        </button>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
                 )}
 
@@ -832,48 +1018,60 @@ export default function DashboardPage() {
 
                 {activeTab === 'campaigns' && (
                     <motion.div key="campaigns" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        <header>
-                            <h1 className="text-3xl font-bold tracking-tight">Active Campaigns</h1>
-                            <p className="text-gray-500 mt-1">Join events to earn exclusive BOOTS and rewards.</p>
-                        </header>
+                        {currentUser?.is_admin ? (
+                            <>
+                                <header>
+                                    <h1 className="text-3xl font-bold tracking-tight">Active Campaigns</h1>
+                                    <p className="text-gray-500 mt-1">Join events to earn exclusive BOOTS and rewards.</p>
+                                </header>
 
-                        {campaigns.length > 0 ? (
-                            <div className="flex flex-col gap-8">
-                                <CampusJoinCard
-                                    userId={currentUser._id}
-                                    onApply={() => setCampusModalOpen(true)}
-                                />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {campaigns.map((camp: any) => (
-                                        <CampaignCard
-                                            key={camp._id}
-                                            campaign={camp}
-                                            onParticipate={() => navigate(`/campaigns/${camp._id}`)}
-                                            userId={currentUser?._id}
+                                {campaigns.length > 0 ? (
+                                    <div className="flex flex-col gap-8">
+                                        <CampusJoinCard
+                                            userId={currentUser._id}
+                                            onApply={() => setCampusModalOpen(true)}
                                         />
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col gap-8">
-                                <CampusJoinCard
-                                    userId={currentUser._id}
-                                    onApply={() => setCampusModalOpen(true)}
-                                />
-                                <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
-                                    <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                                        <Rocket size={40} />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {campaigns.map((camp: any) => (
+                                                <CampaignCard
+                                                    key={camp._id}
+                                                    campaign={camp}
+                                                    onParticipate={() => navigate(`/campaigns/${camp._id}`)}
+                                                    userId={currentUser?._id}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
-                                    <h2 className="text-2xl font-bold mb-4">No Campaigns Yet</h2>
-                                    <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
-                                        Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
-                                    </p>
-                                    {currentUser?.is_admin && (
-                                        <button onClick={() => navigate('/admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
-                                            <Plus size={20} /> Create First Campaign
-                                        </button>
-                                    )}
+                                ) : (
+                                    <div className="flex flex-col gap-8">
+                                        <CampusJoinCard
+                                            userId={currentUser._id}
+                                            onApply={() => setCampusModalOpen(true)}
+                                        />
+                                        <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
+                                            <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                                                <Rocket size={40} />
+                                            </div>
+                                            <h2 className="text-2xl font-bold mb-4">No Campaigns Yet</h2>
+                                            <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
+                                                Campaigns are special events where you can earn BOOTS, rewards, and exclusive subscription deals. Check back soon for new opportunities to participate.
+                                            </p>
+                                            <button onClick={() => navigate('/admin')} className="px-8 py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto">
+                                                <Plus size={20} /> Create First Campaign
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
+                                <div className="w-20 h-20 bg-zinc-100 text-zinc-700 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                                    <Rocket size={40} />
                                 </div>
+                                <h2 className="text-2xl font-bold mb-4">Campaigns Coming Soon</h2>
+                                <p className="text-gray-500 max-w-md mx-auto leading-relaxed">
+                                    Campaigns for users are coming soon. We are preparing rewards and events for you.
+                                </p>
                             </div>
                         )}
 
