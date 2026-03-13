@@ -378,6 +378,10 @@ export default function DashboardPage() {
                     navigate('/admin');
                     return;
                 }
+                if (tab === 'migrate') {
+                    navigate('/migrate');
+                    return;
+                }
                 setActiveTab(tab as typeof activeTab);
             }}
             qScore={currentUser?.q_score || 0}

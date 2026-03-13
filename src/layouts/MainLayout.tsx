@@ -41,6 +41,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
+        { id: 'migrate', label: 'Migrate Account', icon: <ShieldCheck size={20} /> },
         { id: 'campaigns', label: 'Campaigns', icon: <Sparkles size={20} /> },
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
         { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
