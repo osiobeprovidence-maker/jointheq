@@ -2,18 +2,53 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
+export const generateUniqueAmount = mutation({
+  args: {
+    base_amount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    let attempts = 0;
+    while (attempts < 50) {
+      const randomExtra = Math.floor(Math.random() * (99 - 10 + 1)) + 10;
+      const uniqueAmount = args.base_amount + randomExtra;
+
+      // Check if any "Awaiting Review" request already has this unique amount
+      const existing = await ctx.db
+        .query("manual_funding_requests")
+        .withIndex("by_unique_amount", (q) => 
+          q.eq("unique_amount", uniqueAmount).eq("status", "Awaiting Review")
+        )
+        .first();
+
+      if (!existing) return uniqueAmount;
+      attempts++;
+    }
+    throw new Error("Unable to generate a unique amount. Please try again later.");
+  },
+});
+
+export const generateUploadUrl = mutation(async (ctx) => {
+  return await ctx.storage.generateUploadUrl();
+});
+
 export const submitManualFunding = mutation({
   args: {
     user_id: v.id("users"),
-    amount: v.number(),
+    base_amount: v.number(),
+    unique_amount: v.number(),
     sender_name: v.string(),
+    bank_name: v.optional(v.string()),
+    screenshot_id: v.optional(v.string()),
     reference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("manual_funding_requests", {
       user_id: args.user_id,
-      amount: args.amount,
+      base_amount: args.base_amount,
+      unique_amount: args.unique_amount,
       sender_name: args.sender_name,
+      bank_name: args.bank_name,
+      screenshot_id: args.screenshot_id,
       reference: args.reference,
       status: "Awaiting Review",
       created_at: Date.now(),
@@ -64,9 +99,9 @@ export const approveFunding = mutation({
     const user = await ctx.db.get(request.user_id);
     if (!user) throw new Error("User not found");
 
-    // Credit user wallet
+    // Credit user wallet with BASE AMOUNT (not unique amount)
     await ctx.db.patch(request.user_id, {
-      wallet_balance: (user.wallet_balance || 0) + request.amount,
+      wallet_balance: (user.wallet_balance || 0) + request.base_amount,
     });
 
     // Update request status
@@ -80,9 +115,9 @@ export const approveFunding = mutation({
     // Add to transactions
     await ctx.db.insert("transactions", {
       user_id: request.user_id,
-      amount: request.amount,
+      amount: request.base_amount,
       type: "funding",
-      description: `Manual Wallet Funding (Approved by Admin)`,
+      description: `Manual Wallet Funding (Ref: ${request.unique_amount})`,
       created_at: Date.now(),
     });
 

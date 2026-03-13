@@ -422,8 +422,11 @@ export default defineSchema({
 
     manual_funding_requests: defineTable({
         user_id: v.id("users"),
-        amount: v.number(),
+        base_amount: v.number(), // The actual amount to credit (e.g., 5000)
+        unique_amount: v.number(), // The unique amount to send (e.g., 5013)
         sender_name: v.string(),
+        bank_name: v.optional(v.string()), // The bank the user sent from
+        screenshot_id: v.optional(v.string()), // Storage ID for transfer proof
         reference: v.optional(v.string()),
         status: v.string(), // "Awaiting Review" | "Approved" | "Rejected"
         admin_note: v.optional(v.string()),
@@ -431,5 +434,6 @@ export default defineSchema({
         processed_at: v.optional(v.number()),
         processed_by: v.optional(v.id("users")),
     }).index("by_user", ["user_id"])
-        .index("by_status", ["status"]),
+        .index("by_status", ["status"])
+        .index("by_unique_amount", ["unique_amount", "status"]),
 });

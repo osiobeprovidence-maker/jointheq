@@ -595,8 +595,10 @@ export default function DashboardPage() {
                                                     <Banknote size={24} />
                                                 </div>
                                                 <div>
-                                                    <div className="font-black text-lg">₦{req.amount.toLocaleString()}</div>
-                                                    <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Awaiting Admin Review</div>
+                                                    <div className="font-black text-lg text-indigo-600">₦{req.unique_amount.toLocaleString()}</div>
+                                                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                                        Sent for ₦{req.base_amount.toLocaleString()} Credit
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="text-xs font-medium text-amber-700 bg-amber-100/50 px-4 py-2 rounded-full border border-amber-200 italic">
