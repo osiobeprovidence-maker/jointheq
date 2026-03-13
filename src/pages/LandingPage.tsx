@@ -151,7 +151,7 @@ export default function LandingPage() {
               onClick={() => navigate('/migrate')}
               className="text-sm sm:text-base font-semibold text-black/50 hover:text-black transition-colors whitespace-nowrap"
             >
-              Migrate
+              Migrate Account
             </button>
             <button
               onClick={() => setActiveSection('login')}

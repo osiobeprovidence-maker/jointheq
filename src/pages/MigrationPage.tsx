@@ -20,6 +20,10 @@ import {
   ShieldCheck
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useQuery } from "convex/react";
+import { auth } from "../lib/auth";
+import { MainLayout } from "../layouts/MainLayout";
+import { useNavigate } from "react-router-dom";
 
 const PLATFORMS = ["Netflix", "Spotify", "Canva", "ChatGPT", "Other"];
 const ROLES = ["Group Manager", "Member"];
@@ -34,6 +38,10 @@ const DEVICE_TYPES = [
 ];
 
 export default function MigrationPage() {
+  const navigate = useNavigate();
+  const user = auth.getCurrentUser();
+  const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as any } : "skip");
+  
   const [formData, setFormData] = useState({
     email: "",
     phone: "",
@@ -95,63 +103,78 @@ export default function MigrationPage() {
     }
   };
 
+
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#FAFAF9] text-zinc-900 flex items-center justify-center p-6">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full text-center space-y-6 bg-white p-10 rounded-[2.5rem] border border-black/5 shadow-2xl shadow-black/5"
-        >
-          <div className="flex justify-center">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="text-emerald-600" size={48} />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Migration Successful!</h1>
-          <p className="text-zinc-500 text-lg">
-            Your subscription has been successfully migrated to Q. Your group assignment will be completed shortly.
-          </p>
-          <button 
-            onClick={() => window.location.href = "/"}
-            className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 group shadow-lg shadow-black/10"
+      <MainLayout
+        activeTab="migrate"
+        setActiveTab={(tab) => navigate('/dashboard')}
+        qScore={currentUser?.q_score || 0}
+      >
+        <div className="flex items-center justify-center py-20 px-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-md w-full text-center space-y-6 bg-white p-10 rounded-[2.5rem] border border-black/5 shadow-2xl shadow-black/5"
           >
-            Go to Home Screen
-            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-          </button>
-        </motion.div>
-      </div>
+            <div className="flex justify-center">
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="text-emerald-600" size={48} />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Migration Successful!</h1>
+            <p className="text-zinc-500 text-lg">
+              Your subscription has been successfully migrated to Q. Your group assignment will be completed shortly.
+            </p>
+            <button 
+              onClick={() => window.location.href = "/dashboard"}
+              className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 group shadow-lg shadow-black/10"
+            >
+              Go to Dashboard
+              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </motion.div>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-zinc-900 font-sans">
-      {/* Header */}
-      <div className="pt-20 pb-12 px-6 text-center space-y-4">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-black/5 border border-black/5 rounded-full text-zinc-600 text-sm font-bold mb-4"
-        >
-          <ShieldCheck size={16} className="text-emerald-500" />
-          Secure Account Migration
-        </motion.div>
-        <motion.h1 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-4xl md:text-6xl font-black tracking-tight"
-        >
-          Migrate Your <span className="text-zinc-400">Subscription</span>
-        </motion.h1>
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="max-w-lg mx-auto text-zinc-500 leading-relaxed font-medium"
-        >
-          If you are already using a shared subscription through Q offline, you can migrate your account here so it can be managed on the platform.
-        </motion.p>
-      </div>
+    <MainLayout
+      activeTab="migrate"
+      setActiveTab={(tab) => {
+        if (tab === 'migrate') return;
+        navigate('/dashboard');
+      }}
+      qScore={currentUser?.q_score || 0}
+    >
+      <div className="min-h-screen bg-[#FAFAF9] text-zinc-900 font-sans">
+        {/* Header */}
+        <div className="pt-10 pb-12 px-6 text-center space-y-4">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-black/5 border border-black/5 rounded-full text-zinc-600 text-sm font-bold mb-4"
+          >
+            <ShieldCheck size={16} className="text-emerald-500" />
+            Secure Migration
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-4xl md:text-5xl font-black tracking-tight"
+          >
+            Migrate <span className="text-zinc-400">Account</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="max-w-lg mx-auto text-zinc-500 leading-relaxed font-medium"
+          >
+            If you are already using a shared subscription through Q offline, you can migrate your account here so it can be managed on the platform.
+          </motion.p>
+        </div>
 
       {/* Form Container */}
       <div className="max-w-2xl mx-auto px-6 pb-24">
@@ -410,5 +433,6 @@ export default function MigrationPage() {
         </motion.form>
       </div>
     </div>
+    </MainLayout>
   );
 }
