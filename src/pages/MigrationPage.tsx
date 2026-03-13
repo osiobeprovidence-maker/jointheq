@@ -26,17 +26,8 @@ import { auth } from "../lib/auth";
 import { MainLayout } from "../layouts/MainLayout";
 import { useNavigate } from "react-router-dom";
 
-const PLATFORMS = ["Netflix", "Spotify", "Canva", "ChatGPT", "Other"];
-const ROLES = ["Group Manager", "Member"];
-const DEVICE_COUNTS = ["1 device", "2 devices", "3 devices", "4 devices", "5 devices", "6+ devices"];
-const DEVICE_TYPES = [
-  { label: "Phone", icon: <Smartphone size={18} /> },
-  { label: "Laptop / PC", icon: <Laptop size={18} /> },
-  { label: "Tablet", icon: <Tablet size={18} /> },
-  { label: "Smart TV", icon: <Tv size={18} /> },
-  { label: "Game Console", icon: <Gamepad size={18} /> },
-  { label: "Other", icon: <MoreHorizontal size={18} /> }
-];
+const PLATFORMS = ["Netflix Premium", "Spotify", "Apple Music", "VPN", "CapCut", "AI Tools", "Other"];
+const DEVICE_COUNTS = ["1", "2", "3", "4+"];
 
 export default function MigrationPage() {
   const navigate = useNavigate();
@@ -44,17 +35,11 @@ export default function MigrationPage() {
   const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as any } : "skip");
   
   const [formData, setFormData] = useState({
-    email: "",
-    phone: "",
-    platform: "Netflix",
-    custom_platform: "",
+    platform: "Netflix Premium",
     profile_name: "",
     payment_day: 1,
     last_payment_date: "",
-    role: "Member",
-    group_size: "",
-    device_count: "1 device",
-    device_types: [] as string[]
+    device_count: "1",
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -64,35 +49,22 @@ export default function MigrationPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleDeviceTypeToggle = (type: string) => {
-    setFormData(prev => {
-      const types = prev.device_types.includes(type)
-        ? prev.device_types.filter(t => t !== type)
-        : [...prev.device_types, type];
-      return { ...prev, device_types: types };
-    });
+    setFormData(prev => ({ ...prev, [name]: name === "payment_day" ? Number(value) : value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return toast.error("Please login to migrate your slot");
+    
     setLoading(true);
     try {
-      const platformToSubmit = formData.platform === "Other" ? formData.custom_platform : formData.platform;
-      
-      if (formData.platform === "Other" && !formData.custom_platform) {
-        toast.error("Please specify your subscription name");
-        setLoading(false);
-        return;
-      }
-
       await submitMigration({
-        ...formData,
-        platform: platformToSubmit,
-        payment_day: Number(formData.payment_day),
-        group_size: formData.group_size ? Number(formData.group_size) : undefined
+        user_id: user._id as any,
+        platform: formData.platform,
+        profile_name: formData.profile_name,
+        payment_day: formData.payment_day,
+        last_payment_date: formData.last_payment_date,
+        device_count: formData.device_count,
       });
       setSubmitted(true);
       toast.success("Migration submitted successfully!");
@@ -104,12 +76,11 @@ export default function MigrationPage() {
     }
   };
 
-
   if (submitted) {
     return (
       <MainLayout
         activeTab="migrate"
-        setActiveTab={(tab) => navigate('/dashboard')}
+        setActiveTab={() => navigate('/dashboard')}
         qScore={currentUser?.q_score || 0}
       >
         <div className="flex items-center justify-center py-20 px-6">
@@ -123,13 +94,13 @@ export default function MigrationPage() {
                 <CheckCircle2 className="text-emerald-600" size={48} />
               </div>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Migration Successful!</h1>
-            <p className="text-zinc-500 text-lg">
-              Your subscription has been successfully migrated to Q. Your group assignment will be completed shortly.
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Migration Successful!</h1>
+            <p className="text-zinc-500 text-lg font-medium">
+              We've received your request! Our team will verify your slot and assign you to your subscription group shortly.
             </p>
             <button 
               onClick={() => window.location.href = "/dashboard"}
-              className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 group shadow-lg shadow-black/10"
+              className="w-full py-5 bg-black text-white font-black rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 group shadow-lg shadow-black/10"
             >
               Go to Dashboard
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -149,7 +120,7 @@ export default function MigrationPage() {
       }}
       qScore={currentUser?.q_score || 0}
     >
-      <div className="text-zinc-900 font-sans">
+      <div className="text-zinc-900 font-sans pb-24">
         {/* Navigation / Back Button */}
         <div className="max-w-2xl mx-auto px-6 pt-6">
           <button 
@@ -168,30 +139,46 @@ export default function MigrationPage() {
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-black/5 border border-black/5 rounded-full text-zinc-600 text-sm font-bold mb-4"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-4"
           >
-            <ShieldCheck size={16} className="text-emerald-500" />
-            Secure Migration
+            <ShieldCheck size={14} className="text-indigo-500" />
+            Verified Migration Portal
           </motion.div>
           <motion.h1 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-4xl md:text-5xl font-black tracking-tight"
           >
-            Migrate <span className="text-zinc-400">Account</span>
+            Migrate <span className="text-zinc-300 underline decoration-zinc-100 underline-offset-8">Subscription</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="max-w-lg mx-auto text-zinc-500 leading-relaxed font-medium"
+            className="max-w-lg mx-auto text-zinc-500 leading-relaxed font-medium mt-6"
           >
-            If you are already using a shared subscription through Q offline, you can migrate your account here so it can be managed on the platform.
+            Offline Q member? Migrate your existing slot here to manage it directly on the platform.
           </motion.p>
         </div>
 
       {/* Form Container */}
-      <div className="max-w-2xl mx-auto px-6 pb-24">
+      <div className="max-w-2xl mx-auto px-6">
+        <motion.div
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="bg-indigo-600 p-8 rounded-[3rem] text-white mb-8 shadow-2xl shadow-indigo-100 flex items-center gap-6"
+        >
+           <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+              <ShieldCheck size={24} />
+           </div>
+           <div className="space-y-1">
+              <h4 className="font-black text-sm uppercase tracking-tight">Identity Linked</h4>
+              <p className="text-[11px] font-bold text-indigo-100 uppercase tracking-tight opacity-80 leading-relaxed">
+                Your account info ({currentUser?.email}) is already linked. Just tell us which subscription you are using.
+              </p>
+           </div>
+        </motion.div>
+
         <motion.form 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -199,247 +186,108 @@ export default function MigrationPage() {
           onSubmit={handleSubmit}
           className="space-y-10 bg-white p-8 md:p-14 rounded-[3rem] border border-black/5 shadow-xl shadow-black/[0.02]"
         >
-          {/* Section 1: Contact Info */}
-          <div className="space-y-8">
-            <h2 className="text-2xl font-bold flex items-center gap-3">
+          {/* Subscription Details */}
+          <div className="space-y-10">
+            <h2 className="text-2xl font-black flex items-center gap-4">
               <span className="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-sm font-black">1</span>
-              Contact Information
-            </h2>
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-zinc-400 ml-1">Email Address</label>
-                <div className="relative group">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
-                  <input
-                    required
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="name@example.com"
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium placeholder:text-zinc-300"
-                  />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-zinc-400 ml-1">Phone Number</label>
-                <div className="relative group">
-                  <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
-                  <input
-                    required
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+234..."
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium placeholder:text-zinc-300"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-zinc-100" />
-
-          {/* Section 2: Subscription Details */}
-          <div className="space-y-8">
-            <h2 className="text-2xl font-bold flex items-center gap-3">
-              <span className="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-sm font-black">2</span>
               Subscription Details
             </h2>
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-zinc-400 ml-1">Subscription Platform</label>
-                <div className="relative">
-                  <select
-                    name="platform"
-                    value={formData.platform}
-                    onChange={handleChange}
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 appearance-none focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
-                  >
-                    {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={20} />
-                </div>
-              </div>
-
-              {formData.platform === "Other" ? (
-                <div className="space-y-3">
-                  <label className="text-sm font-bold text-zinc-400 ml-1">Specify Subscription</label>
-                  <input
-                    required
-                    type="text"
-                    name="custom_platform"
-                    value={formData.custom_platform}
-                    onChange={handleChange}
-                    placeholder="e.g. Crunchyroll"
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label className="text-sm font-bold text-zinc-400 ml-1">Profile Name on Account</label>
-                  <input
-                    required
-                    type="text"
-                    name="profile_name"
-                    value={formData.profile_name}
-                    onChange={handleChange}
-                    placeholder="e.g. Netflix profile name"
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
-                  />
-                </div>
-              )}
-            </div>
-
-            {formData.platform === "Other" && (
-               <div className="space-y-3">
-               <label className="text-sm font-bold text-zinc-400 ml-1">Profile Name on Account</label>
-               <input
-                 required
-                 type="text"
-                 name="profile_name"
-                 value={formData.profile_name}
-                 onChange={handleChange}
-                 placeholder="e.g. Profil name used"
-                 className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
-               />
-             </div>
-            )}
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-zinc-400 ml-1">Monthly Payment Day</label>
-                <div className="relative group">
-                  <input
-                    required
-                    type="number"
-                    min="1"
-                    max="31"
-                    name="payment_day"
-                    value={formData.payment_day}
-                    onChange={handleChange}
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
-                  />
-                  <div className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">th</div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-zinc-400 ml-1">Last Payment Date</label>
-                <div className="relative group">
-                  <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
-                  <input
-                    required
-                    type="date"
-                    name="last_payment_date"
-                    value={formData.last_payment_date}
-                    onChange={handleChange}
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-zinc-100" />
-
-          {/* Section 3: Group & Devices */}
-          <div className="space-y-8">
-            <h2 className="text-2xl font-bold flex items-center gap-3">
-              <span className="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-sm font-black">3</span>
-              Group & Device Info
-            </h2>
             
-            <div className="space-y-4">
-              <label className="text-sm font-bold text-zinc-400 ml-1">Role in Subscription</label>
-              <div className="grid grid-cols-2 gap-4">
-                {ROLES.map(role => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => setFormData(p => ({ ...p, role }))}
-                    className={`py-5 rounded-2xl border-2 transition-all font-bold text-sm ${
-                      formData.role === role 
-                      ? "bg-black border-black text-white shadow-lg shadow-black/10" 
-                      : "bg-[#F4F5F8] border-transparent text-zinc-400 hover:bg-[#EBECF0]"
-                    }`}
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="space-y-8">
+               <div className="space-y-4">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Subscription Platform</label>
+                  <div className="relative">
+                     <select
+                        name="platform"
+                        value={formData.platform}
+                        onChange={handleChange}
+                        className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 px-6 appearance-none focus:ring-4 focus:ring-indigo-100 outline-none transition-all font-black text-zinc-800"
+                     >
+                        {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+                     </select>
+                     <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={20} />
+                  </div>
+               </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-zinc-400 ml-1">Group Size (Optional)</label>
-                <div className="relative group">
-                  <Users className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
+               <div className="space-y-4">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Profile Name on Account</label>
                   <input
-                    type="number"
-                    name="group_size"
-                    value={formData.group_size}
-                    onChange={handleChange}
-                    placeholder="Total members"
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
+                     required
+                     type="text"
+                     name="profile_name"
+                     value={formData.profile_name}
+                     onChange={handleChange}
+                     placeholder="e.g. Netflix profile name"
+                     className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 px-6 focus:ring-4 focus:ring-indigo-100 outline-none transition-all font-black placeholder:text-zinc-300"
                   />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-zinc-400 ml-1">Connected Devices</label>
-                <div className="relative">
-                  <select
-                    name="device_count"
-                    value={formData.device_count}
-                    onChange={handleChange}
-                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 appearance-none focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
-                  >
-                    {DEVICE_COUNTS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={20} />
-                </div>
-              </div>
-            </div>
+               </div>
 
-            <div className="space-y-4">
-              <label className="text-sm font-bold text-zinc-400 ml-1">Device Types (Optional)</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {DEVICE_TYPES.map(type => (
-                  <button
-                    key={type.label}
-                    type="button"
-                    onClick={() => handleDeviceTypeToggle(type.label)}
-                    className={`flex items-center gap-3 p-5 rounded-2xl border-2 transition-all group ${
-                      formData.device_types.includes(type.label)
-                      ? "bg-zinc-900 border-zinc-900 text-white shadow-lg shadow-black/5"
-                      : "bg-[#F4F5F8] border-transparent text-zinc-400 hover:bg-[#EBECF0]"
-                    }`}
-                  >
-                    <span className={formData.device_types.includes(type.label) ? "text-white" : "text-zinc-300 group-hover:text-zinc-500"}>
-                      {type.icon}
-                    </span>
-                    <span className="text-sm font-bold">{type.label}</span>
-                  </button>
-                ))}
-              </div>
+               <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1 text-xs">Payment Day (1-31)</label>
+                     <div className="relative group">
+                        <input
+                           required
+                           type="number"
+                           min="1"
+                           max="31"
+                           name="payment_day"
+                           value={formData.payment_day}
+                           onChange={handleChange}
+                           className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 px-6 focus:ring-4 focus:ring-indigo-100 outline-none transition-all font-black text-center text-xl"
+                        />
+                     </div>
+                  </div>
+                  <div className="space-y-4">
+                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Last Payment Date</label>
+                     <div className="relative group">
+                        <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
+                        <input
+                           required
+                           type="date"
+                           name="last_payment_date"
+                           value={formData.last_payment_date}
+                           onChange={handleChange}
+                           className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-4 focus:ring-indigo-100 outline-none transition-all font-black"
+                        />
+                     </div>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Number of Devices Used</label>
+                  <div className="grid grid-cols-4 gap-3">
+                     {DEVICE_COUNTS.map(d => (
+                        <button
+                           key={d}
+                           type="button"
+                           onClick={() => setFormData(p => ({ ...p, device_count: d }))}
+                           className={`py-5 rounded-2xl border-2 transition-all font-black text-sm ${
+                              formData.device_count === d 
+                              ? "bg-black border-black text-white shadow-xl shadow-black/10" 
+                              : "bg-[#f4f5f8] border-transparent text-zinc-400 hover:bg-[#EBECF0]"
+                           }`}
+                        >
+                           {d}
+                        </button>
+                     ))}
+                  </div>
+               </div>
             </div>
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
             disabled={loading}
             type="submit"
-            className="w-full py-6 bg-black text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed text-xl mt-12"
+            className="w-full py-6 bg-black text-white font-black rounded-[2.5rem] shadow-2xl shadow-black/10 hover:shadow-black/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed text-xl mt-12"
           >
             {loading ? (
-              <>
-                <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                Processing...
-              </>
+              <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                Complete Migration
+                Migrate Subscription
                 <ArrowRight size={24} />
               </>
             )}

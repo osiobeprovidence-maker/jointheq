@@ -3,58 +3,31 @@ import { mutation, query } from "./_generated/server";
 
 export const submitMigration = mutation({
     args: {
-        email: v.string(),
-        phone: v.string(),
+        user_id: v.id("users"),
         platform: v.string(),
         profile_name: v.string(),
         payment_day: v.number(),
         last_payment_date: v.string(),
-        role: v.string(),
-        group_size: v.optional(v.number()),
         device_count: v.string(),
-        device_types: v.array(v.string()),
     },
     handler: async (ctx, args) => {
-        // 1. Check if user exists
-        let user = await ctx.db
-            .query("users")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
-            .unique();
-
-        let userId;
-        if (!user) {
-            // Create a new user record
-            userId = await ctx.db.insert("users", {
-                email: args.email,
-                phone: args.phone,
-                full_name: args.profile_name, // fallback to profile name
-                q_score: 0,
-                q_rank: "Bronze",
-                wallet_balance: 0,
-                boots_balance: 0,
-                referral_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
-                is_admin: false,
-                is_verified: false,
-                created_at: Date.now(),
-            });
-        } else {
-            userId = user._id;
-        }
+        // 1. Get user details for snapshotting
+        const user = await ctx.db.get(args.user_id);
+        if (!user) throw new Error("User not found");
 
         // 2. Create the migrated subscription record
         const migrationId = await ctx.db.insert("migrated_subscriptions", {
-            user_id: userId,
-            email: args.email,
-            phone: args.phone,
+            user_id: args.user_id,
+            email: user.email,
+            phone: user.phone || "Not Set",
             platform: args.platform,
             profile_name: args.profile_name,
             payment_day: args.payment_day,
             last_payment_date: args.last_payment_date,
-            role: args.role,
-            group_size: args.group_size,
+            role: "Member", // Default to Member for migrated users
             device_count: args.device_count,
-            device_types: args.device_types,
-            status: "Migrated – Pending Group Assignment",
+            device_types: [], // Deprecated in favor of device_count string
+            status: "Migrated Slot",
             created_at: Date.now(),
         });
 
@@ -89,8 +62,11 @@ export const updateMigrationStatus = mutation({
     args: {
         id: v.id("migrated_subscriptions"),
         status: v.string(),
+        assigned_group: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        await ctx.db.patch(args.id, { status: args.status });
+        const patch: any = { status: args.status };
+        if (args.assigned_group) patch.assigned_group = args.assigned_group;
+        await ctx.db.patch(args.id, patch);
     },
 });

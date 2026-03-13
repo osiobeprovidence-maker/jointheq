@@ -323,6 +323,7 @@ export default function AdminPanel() {
         { id: "admins", label: "Admins", icon: <Shield size={18} /> },
         { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} /> },
         { id: "review_payments" as any, label: "Review Payments", icon: <Wallet size={18} /> },
+        { id: "user_listings" as any, label: "User Listings", icon: <Layers size={18} /> },
         { id: "migrations" as any, label: "Migrations", icon: <RefreshCw size={18} /> },
     ];
 
@@ -357,6 +358,8 @@ export default function AdminPanel() {
                                     navigate("/admin/migrations");
                                 } else if (item.id as any === "review_payments") {
                                     navigate("/admin/payments");
+                                } else if (item.id as any === "user_listings") {
+                                    navigate("/admin/listings");
                                 } else {
                                     setActiveTab(item.id);
                                 }
@@ -455,6 +458,8 @@ export default function AdminPanel() {
                                                 navigate("/admin/migrations");
                                             } else if (item.id as any === "review_payments") {
                                                 navigate("/admin/payments");
+                                            } else if (item.id as any === "user_listings") {
+                                                navigate("/admin/listings");
                                             } else {
                                                 setActiveTab(item.id);
                                                 setMobileMenuOpen(false);

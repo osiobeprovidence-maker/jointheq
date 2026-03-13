@@ -415,6 +415,7 @@ export default defineSchema({
         device_count: v.string(),
         device_types: v.array(v.string()),
         status: v.string(),
+        assigned_group: v.optional(v.string()),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_status", ["status"])
@@ -436,4 +437,25 @@ export default defineSchema({
     }).index("by_user", ["user_id"])
         .index("by_status", ["status"])
         .index("by_unique_amount", ["unique_amount", "status"]),
+
+    subscription_owner_listings: defineTable({
+        owner_id: v.id("users"),
+        platform: v.string(), // "Netflix Premium" | "Spotify Family" | "Apple Music Family" | "VPN" | "CapCut" | "AI Tools"
+        email: v.string(),
+        password: v.string(),
+        renewal_date: v.string(),
+        status: v.string(), // "Pending Review" | "Active" | "Rejected" | "Payout Hold"
+        admin_note: v.optional(v.string()),
+        
+        // Revenue parameters (set by admin during approval)
+        total_slots: v.number(),
+        price_per_slot: v.optional(v.number()),
+        owner_payout_amount: v.optional(v.number()), // Monthly amount sent to owner wallet
+        
+        // Management
+        group_id: v.optional(v.id("groups")), // Linked to the actual marketplace group
+        created_at: v.number(),
+        updated_at: v.number(),
+    }).index("by_owner", ["owner_id"])
+      .index("by_status", ["status"]),
 });

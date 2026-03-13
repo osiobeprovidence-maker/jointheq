@@ -18,10 +18,12 @@ import {
   ExternalLink
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
-const PLATFORMS = ["All", "Netflix", "Spotify", "Canva", "ChatGPT", "Other"];
-const STATUSES = ["All", "Migrated – Pending Group Assignment", "In Review", "Assigned to Group"];export default function AdminMigrationPage() {
+const PLATFORMS = ["All", "Netflix Premium", "Spotify", "Apple Music", "VPN", "CapCut", "AI Tools", "Other"];
+const STATUSES = ["All", "Migrated Slot", "In Review", "Assigned to Group"];
+
+export default function AdminMigrationPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState({
     platform: "All",
@@ -36,10 +38,18 @@ const STATUSES = ["All", "Migrated – Pending Group Assignment", "In Review", "
   });
 
   const updateStatus = useMutation(api.migrated_subscriptions.updateMigrationStatus);
+  const [groupAssignments, setGroupAssignments] = useState<Record<string, string>>({});
 
   const handleAssign = async (id: any) => {
+    const groupName = groupAssignments[id];
+    if (!groupName) return toast.error("Please enter a group name");
+    
     try {
-      await updateStatus({ id, status: "Assigned to Group" });
+      await updateStatus({ 
+        id, 
+        status: "Assigned to Group",
+        assigned_group: groupName
+      });
       toast.success("User assigned to group successfully!");
     } catch (e) {
       toast.error("Failed to update status");
@@ -47,12 +57,12 @@ const STATUSES = ["All", "Migrated – Pending Group Assignment", "In Review", "
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F5F8] text-zinc-900 font-sans">
+    <div className="min-h-screen bg-[#F4F5F8] text-zinc-900 font-sans pb-20">
       {/* Header */}
       <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => window.location.href = "/admin"} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
+            <button onClick={() => navigate("/admin")} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
               <ArrowLeft size={20} />
             </button>
             <div>
@@ -158,15 +168,16 @@ const STATUSES = ["All", "Migrated – Pending Group Assignment", "In Review", "
                     {/* User & Platform */}
                     <div className="flex items-center gap-5 min-w-[320px]">
                       <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-black text-2xl shadow-lg ${
-                        sub.platform === 'Netflix' ? 'bg-red-50 text-red-500' :
-                        sub.platform === 'Spotify' ? 'bg-emerald-50 text-emerald-500' :
+                        sub.platform.includes('Netflix') ? 'bg-red-50 text-red-500' :
+                        sub.platform.includes('Spotify') ? 'bg-emerald-50 text-emerald-500' :
+                        sub.platform.includes('Apple') ? 'bg-zinc-900 text-white' :
                         sub.platform === 'Canva' ? 'bg-blue-50 text-blue-500' :
                         sub.platform === 'ChatGPT' ? 'bg-violet-50 text-violet-500' :
                         'bg-zinc-50 text-zinc-400'
                       }`}>
                         {sub.platform[0]}
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 text-left">
                         <h3 className="font-black text-lg tracking-tight">{sub.profile_name}</h3>
                         <div className="flex flex-col gap-1">
                           <span className="flex items-center gap-2 text-xs font-bold text-zinc-400"><Mail size={12} /> {sub.email}</span>
@@ -176,7 +187,7 @@ const STATUSES = ["All", "Migrated – Pending Group Assignment", "In Review", "
                     </div>
 
                     {/* Subscription Specs */}
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8 w-full lg:w-auto">
+                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8 w-full lg:w-auto text-left">
                       <div className="space-y-1.5">
                         <p className="text-[10px] uppercase font-black text-zinc-300 tracking-widest">Platform</p>
                         <p className="font-bold text-zinc-600">{sub.platform}</p>
@@ -190,48 +201,51 @@ const STATUSES = ["All", "Migrated – Pending Group Assignment", "In Review", "
                         <p className="font-bold text-zinc-600 flex items-center gap-2"><Calendar size={14} className="text-zinc-300" /> {sub.last_payment_date}</p>
                       </div>
                       <div className="space-y-1.5">
-                        <p className="text-[10px] uppercase font-black text-zinc-300 tracking-widest">Role</p>
-                        <p className={`font-bold ${sub.role === 'Group Manager' ? 'text-blue-500' : 'text-zinc-500'}`}>
-                          {sub.role}
+                        <p className="text-[10px] uppercase font-black text-zinc-300 tracking-widest">Status</p>
+                        <p className={`font-bold ${sub.status === 'Assigned to Group' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                          {sub.status}
                         </p>
                       </div>
                     </div>
 
-                    {/* Devices */}
-                    <div className="lg:w-48 space-y-3">
-                       <p className="text-[10px] uppercase font-black text-zinc-300 tracking-widest">Usage</p>
+                    {/* Usage */}
+                    <div className="lg:w-32 space-y-3 text-left">
+                       <p className="text-[10px] uppercase font-black text-zinc-300 tracking-widest">Devices</p>
                        <div className="flex items-center gap-2 font-bold text-zinc-600">
                          <Monitor size={16} className="text-zinc-400" />
                          {sub.device_count}
                        </div>
-                       <div className="flex flex-wrap gap-2">
-                         {sub.device_types.map(t => (
-                           <span key={t} className="text-[9px] px-2 py-0.5 bg-[#F4F5F8] rounded-lg text-zinc-400 font-bold uppercase tracking-tight">
-                             {t}
-                           </span>
-                         ))}
-                       </div>
                     </div>
 
                     {/* Status & Actions */}
-                    <div className="lg:w-64 space-y-4 w-full">
-                      <div className={`text-[10px] font-black py-2.5 px-4 rounded-xl border flex items-center gap-2 uppercase tracking-widest ${
-                        sub.status === 'Assigned to Group' 
-                        ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
-                        : 'bg-amber-50 border-amber-100 text-amber-600'
-                      }`}>
-                        {sub.status === 'Assigned to Group' ? <CheckCircle size={14} /> : <Clock size={14} />}
-                        {sub.status}
-                      </div>
-                      
-                      {sub.status !== 'Assigned to Group' && (
-                        <button 
-                          onClick={() => handleAssign(sub._id)}
-                          className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-black/10"
-                        >
-                          <ExternalLink size={18} />
-                          Assign Group
-                        </button>
+                    <div className="lg:w-72 space-y-4 w-full">
+                      {sub.status === 'Assigned to Group' ? (
+                        <div className="space-y-3">
+                           <div className="text-[10px] font-black py-2.5 px-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center gap-2 uppercase tracking-widest">
+                             <CheckCircle size={14} /> Assigned
+                           </div>
+                           <div className="p-4 bg-[#f4f5f8] rounded-2xl border border-black/5">
+                              <p className="text-[10px] uppercase font-black text-zinc-400 tracking-widest mb-1">Assigned Group</p>
+                              <p className="font-bold text-zinc-900">{sub.assigned_group || 'Manual Assignment'}</p>
+                           </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                           <input 
+                             type="text" 
+                             placeholder="Group Name (e.g. Netflix #4)"
+                             value={groupAssignments[sub._id] || ''}
+                             onChange={(e) => setGroupAssignments(prev => ({ ...prev, [sub._id]: e.target.value }))}
+                             className="w-full px-4 py-3 bg-[#f4f5f8] border border-black/5 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-indigo-500/20"
+                           />
+                           <button 
+                             onClick={() => handleAssign(sub._id)}
+                             className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
+                           >
+                             <ExternalLink size={18} />
+                             Confirm Assignment
+                           </button>
+                        </div>
                       )}
                     </div>
                   </motion.div>

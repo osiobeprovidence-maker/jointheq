@@ -13,6 +13,9 @@ import MigrationPage from "./pages/MigrationPage";
 import AdminMigrationPage from "./pages/AdminMigrationPage";
 import WalletFundingPage from "./pages/WalletFundingPage";
 import AdminPaymentsPage from "./pages/AdminPaymentsPage";
+import ListSubscriptionPage from "./pages/ListSubscriptionPage";
+import OwnerEarningsPage from "./pages/OwnerEarningsPage";
+import AdminListingsPage from "./pages/AdminListingsPage";
 
 export default function App() {
   return (
@@ -63,6 +66,15 @@ export default function App() {
         />
 
         <Route
+          path="/admin/listings"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminListingsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/admin/payments"
           element={
             <ProtectedRoute requireAdmin>
@@ -86,6 +98,24 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CampusDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/list-subscription"
+          element={
+            <ProtectedRoute>
+              <ListSubscriptionPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/owner-dashboard"
+          element={
+            <ProtectedRoute>
+              <OwnerEarningsPage />
             </ProtectedRoute>
           }
         />
