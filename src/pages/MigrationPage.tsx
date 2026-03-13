@@ -38,6 +38,7 @@ export default function MigrationPage() {
     email: "",
     phone: "",
     platform: "Netflix",
+    custom_platform: "",
     profile_name: "",
     payment_day: 1,
     last_payment_date: "",
@@ -70,8 +71,17 @@ export default function MigrationPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const platformToSubmit = formData.platform === "Other" ? formData.custom_platform : formData.platform;
+      
+      if (formData.platform === "Other" && !formData.custom_platform) {
+        toast.error("Please specify your subscription name");
+        setLoading(false);
+        return;
+      }
+
       await submitMigration({
         ...formData,
+        platform: platformToSubmit,
         payment_day: Number(formData.payment_day),
         group_size: formData.group_size ? Number(formData.group_size) : undefined
       });
@@ -87,24 +97,24 @@ export default function MigrationPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#0A0A0B] text-white flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#FAFAF9] text-zinc-900 flex items-center justify-center p-6">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full text-center space-y-6 bg-[#161618] p-10 rounded-3xl border border-white/5 shadow-2xl"
+          className="max-w-md w-full text-center space-y-6 bg-white p-10 rounded-[2.5rem] border border-black/5 shadow-2xl shadow-black/5"
         >
           <div className="flex justify-center">
-            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="text-emerald-500" size={48} />
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="text-emerald-600" size={48} />
             </div>
           </div>
-          <h1 className="text-3xl font-bold">Migration Successful!</h1>
-          <p className="text-gray-400 text-lg">
+          <h1 className="text-3xl font-bold tracking-tight">Migration Successful!</h1>
+          <p className="text-zinc-500 text-lg">
             Your subscription has been successfully migrated to Q. Your group assignment will be completed shortly.
           </p>
           <button 
             onClick={() => window.location.href = "/"}
-            className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 group"
+            className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 group shadow-lg shadow-black/10"
           >
             Go to Home Screen
             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -115,29 +125,29 @@ export default function MigrationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-white font-['Inter']">
+    <div className="min-h-screen bg-[#FAFAF9] text-zinc-900 font-sans">
       {/* Header */}
-      <div className="pt-12 pb-8 px-6 text-center space-y-4">
+      <div className="pt-20 pb-12 px-6 text-center space-y-4">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-400 text-sm font-medium mb-4"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-black/5 border border-black/5 rounded-full text-zinc-600 text-sm font-bold mb-4"
         >
-          <ShieldCheck size={16} />
+          <ShieldCheck size={16} className="text-emerald-500" />
           Secure Account Migration
         </motion.div>
         <motion.h1 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-4xl md:text-5xl font-black tracking-tight"
+          className="text-4xl md:text-6xl font-black tracking-tight"
         >
-          Migrate Your <span className="text-indigo-500">Subscription</span>
+          Migrate Your <span className="text-zinc-400">Subscription</span>
         </motion.h1>
         <motion.p 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="max-w-lg mx-auto text-gray-400 leading-relaxed"
+          className="max-w-lg mx-auto text-zinc-500 leading-relaxed font-medium"
         >
           If you are already using a shared subscription through Q offline, you can migrate your account here so it can be managed on the platform.
         </motion.p>
@@ -150,19 +160,19 @@ export default function MigrationPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           onSubmit={handleSubmit}
-          className="space-y-8 bg-[#161618] p-8 md:p-12 rounded-[2.5rem] border border-white/5"
+          className="space-y-10 bg-white p-8 md:p-14 rounded-[3rem] border border-black/5 shadow-xl shadow-black/[0.02]"
         >
           {/* Section 1: Contact Info */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-sm">1</span>
+          <div className="space-y-8">
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <span className="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-sm font-black">1</span>
               Contact Information
             </h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-zinc-400 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
                   <input
                     required
                     type="email"
@@ -170,14 +180,14 @@ export default function MigrationPage() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="name@example.com"
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder:text-gray-700"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium placeholder:text-zinc-300"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-zinc-400 ml-1">Phone Number</label>
+                <div className="relative group">
+                  <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
                   <input
                     required
                     type="tel"
@@ -185,54 +195,85 @@ export default function MigrationPage() {
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="+234..."
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder:text-gray-700"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium placeholder:text-zinc-300"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <hr className="border-white/5" />
+          <div className="h-px bg-zinc-100" />
 
           {/* Section 2: Subscription Details */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-sm">2</span>
+          <div className="space-y-8">
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <span className="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-sm font-black">2</span>
               Subscription Details
             </h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Subscription Platform</label>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-zinc-400 ml-1">Subscription Platform</label>
                 <div className="relative">
                   <select
                     name="platform"
                     value={formData.platform}
                     onChange={handleChange}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-4 appearance-none focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 appearance-none focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
                   >
-                    {PLATFORMS.map(p => <option key={p} value={p} className="bg-[#161618]">{p}</option>)}
+                    {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={18} />
+                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={20} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Profile Name on Account</label>
-                <input
-                  required
-                  type="text"
-                  name="profile_name"
-                  value={formData.profile_name}
-                  onChange={handleChange}
-                  placeholder="e.g. Netflix profile name"
-                  className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-4 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder:text-gray-700"
-                />
-              </div>
+
+              {formData.platform === "Other" ? (
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-zinc-400 ml-1">Specify Subscription</label>
+                  <input
+                    required
+                    type="text"
+                    name="custom_platform"
+                    value={formData.custom_platform}
+                    onChange={handleChange}
+                    placeholder="e.g. Crunchyroll"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-zinc-400 ml-1">Profile Name on Account</label>
+                  <input
+                    required
+                    type="text"
+                    name="profile_name"
+                    value={formData.profile_name}
+                    onChange={handleChange}
+                    placeholder="e.g. Netflix profile name"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Monthly Payment Day</label>
-                <div className="relative">
+            {formData.platform === "Other" && (
+               <div className="space-y-3">
+               <label className="text-sm font-bold text-zinc-400 ml-1">Profile Name on Account</label>
+               <input
+                 required
+                 type="text"
+                 name="profile_name"
+                 value={formData.profile_name}
+                 onChange={handleChange}
+                 placeholder="e.g. Profil name used"
+                 className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
+               />
+             </div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-zinc-400 ml-1">Monthly Payment Day</label>
+                <div className="relative group">
                   <input
                     required
                     type="number"
@@ -241,49 +282,49 @@ export default function MigrationPage() {
                     name="payment_day"
                     value={formData.payment_day}
                     onChange={handleChange}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-4 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">th</div>
+                  <div className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">th</div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Last Payment Date</label>
-                <div className="relative">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-zinc-400 ml-1">Last Payment Date</label>
+                <div className="relative group">
+                  <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
                   <input
                     required
                     type="date"
                     name="last_payment_date"
                     value={formData.last_payment_date}
                     onChange={handleChange}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all [color-scheme:dark]"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <hr className="border-white/5" />
+          <div className="h-px bg-zinc-100" />
 
           {/* Section 3: Group & Devices */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-sm">3</span>
+          <div className="space-y-8">
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <span className="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-sm font-black">3</span>
               Group & Device Info
             </h2>
             
             <div className="space-y-4">
-              <label className="text-sm font-medium text-gray-400 ml-1">Are You a Group Manager or Member?</label>
+              <label className="text-sm font-bold text-zinc-400 ml-1">Role in Subscription</label>
               <div className="grid grid-cols-2 gap-4">
                 {ROLES.map(role => (
                   <button
                     key={role}
                     type="button"
                     onClick={() => setFormData(p => ({ ...p, role }))}
-                    className={`py-4 rounded-2xl border transition-all font-medium ${
+                    className={`py-5 rounded-2xl border-2 transition-all font-bold text-sm ${
                       formData.role === role 
-                      ? "bg-indigo-500 border-indigo-500 text-white" 
-                      : "bg-black/20 border-white/5 text-gray-500 hover:border-white/10"
+                      ? "bg-black border-black text-white shadow-lg shadow-black/10" 
+                      : "bg-[#F4F5F8] border-transparent text-zinc-400 hover:bg-[#EBECF0]"
                     }`}
                   >
                     {role}
@@ -292,53 +333,55 @@ export default function MigrationPage() {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Group Size (Optional)</label>
-                <div className="relative">
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-zinc-400 ml-1">Group Size (Optional)</label>
+                <div className="relative group">
+                  <Users className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-black transition-colors" size={20} />
                   <input
                     type="number"
                     name="group_size"
                     value={formData.group_size}
                     onChange={handleChange}
                     placeholder="Total members"
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder:text-gray-700"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold placeholder:text-zinc-300"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-400 ml-1">Connected Devices</label>
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-zinc-400 ml-1">Connected Devices</label>
                 <div className="relative">
                   <select
                     name="device_count"
                     value={formData.device_count}
                     onChange={handleChange}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-4 appearance-none focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all"
+                    className="w-full bg-[#F4F5F8] border-none rounded-2xl py-5 px-6 appearance-none focus:ring-2 focus:ring-black/5 outline-none transition-all font-bold"
                   >
-                    {DEVICE_COUNTS.map(d => <option key={d} value={d} className="bg-[#161618]">{d}</option>)}
+                    {DEVICE_COUNTS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={18} />
+                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={20} />
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <label className="text-sm font-medium text-gray-400 ml-1">Device Types (Optional)</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <label className="text-sm font-bold text-zinc-400 ml-1">Device Types (Optional)</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {DEVICE_TYPES.map(type => (
                   <button
                     key={type.label}
                     type="button"
                     onClick={() => handleDeviceTypeToggle(type.label)}
-                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                    className={`flex items-center gap-3 p-5 rounded-2xl border-2 transition-all group ${
                       formData.device_types.includes(type.label)
-                      ? "bg-indigo-500/20 border-indigo-500 text-white"
-                      : "bg-black/20 border-white/5 text-gray-500 hover:border-white/10"
+                      ? "bg-zinc-900 border-zinc-900 text-white shadow-lg shadow-black/5"
+                      : "bg-[#F4F5F8] border-transparent text-zinc-400 hover:bg-[#EBECF0]"
                     }`}
                   >
-                    {type.icon}
-                    <span className="text-sm">{type.label}</span>
+                    <span className={formData.device_types.includes(type.label) ? "text-white" : "text-zinc-300 group-hover:text-zinc-500"}>
+                      {type.icon}
+                    </span>
+                    <span className="text-sm font-bold">{type.label}</span>
                   </button>
                 ))}
               </div>
@@ -346,21 +389,21 @@ export default function MigrationPage() {
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.01 }}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={loading}
             type="submit"
-            className="w-full py-5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg mt-8"
+            className="w-full py-6 bg-black text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed text-xl mt-12"
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Processing Migration...
+                <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                Processing...
               </>
             ) : (
               <>
                 Complete Migration
-                <ArrowRight size={20} />
+                <ArrowRight size={24} />
               </>
             )}
           </motion.button>
