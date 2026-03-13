@@ -17,7 +17,8 @@ import {
   MoreHorizontal,
   CheckCircle2,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  ChevronLeft
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useQuery } from "convex/react";
@@ -148,7 +149,20 @@ export default function MigrationPage() {
       }}
       qScore={currentUser?.q_score || 0}
     >
-      <div className="min-h-screen bg-[#FAFAF9] text-zinc-900 font-sans">
+      <div className="text-zinc-900 font-sans">
+        {/* Navigation / Back Button */}
+        <div className="max-w-2xl mx-auto px-6 pt-6">
+          <button 
+            onClick={() => user ? navigate('/dashboard') : navigate('/')}
+            className="flex items-center gap-2 text-zinc-400 hover:text-black font-bold text-sm transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-full bg-white border border-black/5 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all shadow-sm">
+              <ChevronLeft size={16} />
+            </div>
+            Back to {user ? 'Dashboard' : 'Home'}
+          </button>
+        </div>
+
         {/* Header */}
         <div className="pt-10 pb-12 px-6 text-center space-y-4">
           <motion.div 
