@@ -239,6 +239,7 @@ export default defineSchema({
         amount: v.number(),
         type: v.string(),
         description: v.string(),
+        fee: v.optional(v.number()),
         created_at: v.number(),
     }).index("by_user", ["user_id"]),
 
@@ -418,4 +419,17 @@ export default defineSchema({
     }).index("by_user", ["user_id"])
         .index("by_status", ["status"])
         .index("by_platform", ["platform"]),
+
+    manual_funding_requests: defineTable({
+        user_id: v.id("users"),
+        amount: v.number(),
+        sender_name: v.string(),
+        reference: v.optional(v.string()),
+        status: v.string(), // "Awaiting Review" | "Approved" | "Rejected"
+        admin_note: v.optional(v.string()),
+        created_at: v.number(),
+        processed_at: v.optional(v.number()),
+        processed_by: v.optional(v.id("users")),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"]),
 });

@@ -322,6 +322,7 @@ export default function AdminPanel() {
         { id: "support", label: "Support", icon: <HeadphonesIcon size={18} /> },
         { id: "admins", label: "Admins", icon: <Shield size={18} /> },
         { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} /> },
+        { id: "review_payments" as any, label: "Review Payments", icon: <Wallet size={18} /> },
         { id: "migrations" as any, label: "Migrations", icon: <RefreshCw size={18} /> },
     ];
 
@@ -354,6 +355,8 @@ export default function AdminPanel() {
                             onClick={() => {
                                 if (item.id as any === "migrations") {
                                     navigate("/admin/migrations");
+                                } else if (item.id as any === "review_payments") {
+                                    navigate("/admin/payments");
                                 } else {
                                     setActiveTab(item.id);
                                 }
@@ -450,6 +453,8 @@ export default function AdminPanel() {
                                         onClick={() => {
                                             if (item.id as any === "migrations") {
                                                 navigate("/admin/migrations");
+                                            } else if (item.id as any === "review_payments") {
+                                                navigate("/admin/payments");
                                             } else {
                                                 setActiveTab(item.id);
                                                 setMobileMenuOpen(false);

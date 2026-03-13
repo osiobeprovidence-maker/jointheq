@@ -96,6 +96,7 @@ export default function DashboardPage() {
     const adminMarketplace = useQuery(api.subscriptions.getAdminMarketplace) || [];
     const campusRepInfo = useQuery(api.users.getCampusRep, currentUser ? { userId: currentUser._id } : "skip");
     const transactions = useQuery(api.transactions.getTransactions, currentUser ? { user_id: currentUser._id } : "skip") || [];
+    const manualRequests = useQuery(api.funding.getUserManualRequests, currentUser ? { user_id: currentUser._id } : "skip") || [];
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -123,18 +124,7 @@ export default function DashboardPage() {
     const [bootsModalOpen, setBootsModalOpen] = useState(false);
 
     const handleFundSubmit = () => {
-        const amount = Number(fundAmount.replace(/,/g, ''));
-        if (isNaN(amount) || amount < 1000) {
-            toast.error("Minimum funding amount is ₦1,000");
-            return;
-        }
-        if (amount > 100000) {
-            toast.error("Maximum funding amount is ₦100,000");
-            return;
-        }
-        fundWallet(amount);
-        setFundAmount('');
-        toast.success(`₦${amount.toLocaleString()} funded successfully!`);
+        navigate('/fund-wallet');
     };
 
     const messagesUserId = currentUser?.is_admin ? (selectedChatUserId || currentUser._id) : currentUser?._id;
@@ -577,48 +567,46 @@ export default function DashboardPage() {
                                 </motion.div>
                             </div>
 
-                            <div className="border-t border-gray-100 pt-8 max-w-sm mx-auto">
-                                <h4 className="text-sm font-bold text-center mb-4">Fund Wallet</h4>
-                                <div className="relative mb-4">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <span className="text-gray-500 font-bold">₦</span>
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter Amount"
-                                        value={fundAmount}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/\D/g, '');
-                                            if (val) {
-                                                setFundAmount(Number(val).toLocaleString());
-                                            } else {
-                                                setFundAmount('');
-                                            }
-                                        }}
-                                        className="w-full bg-gray-50 border-none rounded-2xl py-4 pl-10 pr-4 font-bold text-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                                    />
-                                </div>
-
-                                <div className="flex flex-wrap gap-2 justify-center mb-6">
-                                    {['1,000', '5,000', '10,000', '20,000'].map(amt => (
-                                        <button
-                                            key={amt}
-                                            onClick={() => setFundAmount(amt)}
-                                            className="px-4 py-2 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl hover:bg-emerald-100 transition-colors"
-                                        >
-                                            ₦{amt}
-                                        </button>
-                                    ))}
-                                </div>
-
+                            <div className="border-t border-gray-100 pt-8 max-w-sm mx-auto text-center">
+                                <p className="text-zinc-400 text-sm font-medium mb-6">
+                                    Top up your wallet instantly or via manual bank transfer.
+                                </p>
                                 <button
                                     onClick={handleFundSubmit}
-                                    className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all"
+                                    className="w-full py-5 bg-black text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                                 >
+                                    <Plus size={20} />
                                     Fund Wallet
                                 </button>
                             </div>
                         </div>
+
+                        {/* MANUAL FUNDING STATUS SECTION */}
+                        {manualRequests.filter(r => r.status === 'Awaiting Review').length > 0 && (
+                            <div className="bg-amber-50/50 border border-amber-100 rounded-[2rem] p-8">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-6 flex items-center gap-2">
+                                    <Clock size={16} /> Pending Verification
+                                </h3>
+                                <div className="space-y-4">
+                                    {manualRequests.filter(r => r.status === 'Awaiting Review').map((req) => (
+                                        <div key={req._id} className="bg-white p-6 rounded-2xl border border-amber-200/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+                                                    <Banknote size={24} />
+                                                </div>
+                                                <div>
+                                                    <div className="font-black text-lg">₦{req.amount.toLocaleString()}</div>
+                                                    <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Awaiting Admin Review</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-xs font-medium text-amber-700 bg-amber-100/50 px-4 py-2 rounded-full border border-amber-200 italic">
+                                                Your transfer has been received and is pending admin verification.
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             {/* 2. BOOTS WALLET (GAMIFIED REWARDS) */}

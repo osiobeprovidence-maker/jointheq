@@ -16,6 +16,7 @@ import type * as campus from "../campus.js";
 import type * as devices from "../devices.js";
 import type * as email from "../email.js";
 import type * as fraud from "../fraud.js";
+import type * as funding from "../funding.js";
 import type * as init from "../init.js";
 import type * as lunar from "../lunar.js";
 import type * as messages from "../messages.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   devices: typeof devices;
   email: typeof email;
   fraud: typeof fraud;
+  funding: typeof funding;
   init: typeof init;
   lunar: typeof lunar;
   messages: typeof messages;

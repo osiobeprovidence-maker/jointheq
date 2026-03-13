@@ -19,14 +19,18 @@ export const addTransaction = mutation({
         amount: v.number(),
         type: v.string(), // 'funding', 'payment', 'refund'
         description: v.string(),
+        fee: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const user = await ctx.db.get(args.user_id);
         if (!user) throw new Error("User not found");
 
+        const fee = args.type === "funding" ? (args.fee || 0) : 0;
+        const net_amount = args.amount - fee;
+
         const new_balance = args.type === "funding"
-            ? user.wallet_balance + args.amount
-            : user.wallet_balance - args.amount;
+            ? (user.wallet_balance || 0) + net_amount
+            : (user.wallet_balance || 0) - args.amount;
 
         await ctx.db.patch(args.user_id, { wallet_balance: new_balance });
 
@@ -41,7 +45,11 @@ export const addTransaction = mutation({
         }
 
         return await ctx.db.insert("transactions", {
-            ...args,
+            user_id: args.user_id,
+            amount: args.amount,
+            type: args.type,
+            description: args.description,
+            fee: args.fee,
             created_at: Date.now(),
         });
     },

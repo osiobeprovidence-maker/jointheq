@@ -11,6 +11,8 @@ import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
 import CampusDashboardPage from "./pages/CampusDashboardPage";
 import MigrationPage from "./pages/MigrationPage";
 import AdminMigrationPage from "./pages/AdminMigrationPage";
+import WalletFundingPage from "./pages/WalletFundingPage";
+import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 
 export default function App() {
   return (
@@ -47,6 +49,24 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminMigrationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/fund-wallet"
+          element={
+            <ProtectedRoute>
+              <WalletFundingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/payments"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminPaymentsPage />
             </ProtectedRoute>
           }
         />
