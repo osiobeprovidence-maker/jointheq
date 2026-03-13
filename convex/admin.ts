@@ -15,13 +15,14 @@ export const getPlatformStats = query({
         startOfMonth.setHours(0, 0, 0, 0);
         const monthMs = startOfMonth.getTime();
 
-        const [users, slots, transactions, bootTransactions, campaigns, campaignParticipants] = await Promise.all([
+        const [users, slots, transactions, bootTransactions, campaigns, campaignParticipants, migrations] = await Promise.all([
             ctx.db.query("users").collect(),
             ctx.db.query("slots").collect(),
             ctx.db.query("transactions").collect(),
             ctx.db.query("boot_transactions").collect(),
             ctx.db.query("campaigns").collect(),
             ctx.db.query("campaign_participants").collect(),
+            ctx.db.query("migrated_subscriptions").collect(),
         ]);
 
         const totalUsers = users.length;
@@ -56,6 +57,8 @@ export const getPlatformStats = query({
             .reduce((s, t) => s + t.amount, 0);
 
         const activeCampaigns = campaigns.filter(c => c.status === "active").length;
+        const totalMigrations = migrations.length;
+        const pendingMigrations = migrations.filter(m => m.status === "Migrated Slot").length;
 
         return {
             // Users
@@ -81,6 +84,9 @@ export const getPlatformStats = query({
             // Campaigns
             activeCampaigns,
             totalCampaignParticipants: campaignParticipants.length,
+            // Migrations
+            totalMigrations,
+            pendingMigrations,
         };
     }
 });

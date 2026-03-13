@@ -44,6 +44,7 @@ import {
     Calendar,
     Flag,
     Menu,
+    Layers,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -324,7 +325,6 @@ export default function AdminPanel() {
         { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} /> },
         { id: "review_payments" as any, label: "Review Payments", icon: <Wallet size={18} /> },
         { id: "user_listings" as any, label: "User Listings", icon: <Layers size={18} /> },
-        { id: "migrations" as any, label: "Migrations", icon: <RefreshCw size={18} /> },
     ];
 
     const filteredUsers = allUsers.filter(u =>
@@ -569,6 +569,16 @@ export default function AdminPanel() {
                                         <StatCard label="Issued Today" value={(stats?.bootsIssuedToday ?? 0).toLocaleString()} icon={<TrendingUp size={18} />} color="bg-amber-400" trend="up" />
                                         <StatCard label="Active Campaigns" value={stats?.activeCampaigns ?? 0} icon={<Megaphone size={18} />} color="bg-purple-500" />
                                         <StatCard label="Total Participants" value={(stats?.totalCampaignParticipants ?? 0).toLocaleString()} icon={<Users size={18} />} color="bg-pink-500" />
+                                    </div>
+                                </div>
+
+                                {/* Migrations */}
+                                <div>
+                                    <SectionHeader title="Offline Migrations" sub="Legacy account transition metrics" />
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                        <StatCard label="Total Migrations" value={stats?.totalMigrations ?? 0} icon={<RefreshCw size={18} />} color="bg-indigo-500" />
+                                        <StatCard label="Pending Review" value={stats?.pendingMigrations ?? 0} icon={<Clock size={18} />} color="bg-amber-500" sub="Needs verification" />
+                                        <StatCard label="Migration Completion" value={`${stats?.totalMigrations ? Math.round(((stats.totalMigrations - stats.pendingMigrations) / stats.totalMigrations) * 100) : 0}%`} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" />
                                     </div>
                                 </div>
 
