@@ -9,6 +9,8 @@ import AdminPanel from "./pages/AdminPanel";
 import CampaignDetailPage from "./pages/CampaignDetailPage";
 import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
 import CampusDashboardPage from "./pages/CampusDashboardPage";
+import MigrationPage from "./pages/MigrationPage";
+import AdminMigrationPage from "./pages/AdminMigrationPage";
 
 export default function App() {
   return (
@@ -17,6 +19,7 @@ export default function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/migrate" element={<MigrationPage />} />
         <Route path="/console" element={<ConsoleLogin />} />
 
         {/* Protected Routes */}
@@ -35,6 +38,15 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/migrations"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminMigrationPage />
             </ProtectedRoute>
           }
         />

@@ -19,6 +19,7 @@ import type * as fraud from "../fraud.js";
 import type * as init from "../init.js";
 import type * as lunar from "../lunar.js";
 import type * as messages from "../messages.js";
+import type * as migrated_subscriptions from "../migrated_subscriptions.js";
 import type * as migration from "../migration.js";
 import type * as migrations from "../migrations.js";
 import type * as reputation from "../reputation.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   init: typeof init;
   lunar: typeof lunar;
   messages: typeof messages;
+  migrated_subscriptions: typeof migrated_subscriptions;
   migration: typeof migration;
   migrations: typeof migrations;
   reputation: typeof reputation;

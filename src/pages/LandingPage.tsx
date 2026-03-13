@@ -148,6 +148,12 @@ export default function LandingPage() {
               About Us
             </button>
             <button
+              onClick={() => navigate('/migrate')}
+              className="text-sm sm:text-base font-semibold text-black/50 hover:text-black transition-colors whitespace-nowrap"
+            >
+              Migrate
+            </button>
+            <button
               onClick={() => setActiveSection('login')}
               className="px-4 py-2 sm:px-6 sm:py-2.5 bg-black text-white rounded-xl font-bold text-sm sm:text-base hover:scale-105 transition-transform shadow-lg shadow-black/10 whitespace-nowrap"
             >

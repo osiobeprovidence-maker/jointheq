@@ -400,4 +400,22 @@ export default defineSchema({
         updated_at: v.optional(v.number()),
     }).index("by_user", ["user_id"])
         .index("by_status", ["status"]),
+
+    migrated_subscriptions: defineTable({
+        user_id: v.id("users"),
+        email: v.string(),
+        phone: v.string(),
+        platform: v.string(),
+        profile_name: v.string(),
+        payment_day: v.number(),
+        last_payment_date: v.string(),
+        role: v.string(), // "Group Manager" | "Member"
+        group_size: v.optional(v.number()),
+        device_count: v.string(),
+        device_types: v.array(v.string()),
+        status: v.string(),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_platform", ["platform"]),
 });

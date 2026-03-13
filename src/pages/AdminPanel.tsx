@@ -322,6 +322,7 @@ export default function AdminPanel() {
         { id: "support", label: "Support", icon: <HeadphonesIcon size={18} /> },
         { id: "admins", label: "Admins", icon: <Shield size={18} /> },
         { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} /> },
+        { id: "migrations" as any, label: "Migrations", icon: <RefreshCw size={18} /> },
     ];
 
     const filteredUsers = allUsers.filter(u =>
@@ -350,7 +351,13 @@ export default function AdminPanel() {
                     {navItems.map(item => (
                         <button
                             key={item.id}
-                            onClick={() => setActiveTab(item.id)}
+                            onClick={() => {
+                                if (item.id as any === "migrations") {
+                                    navigate("/admin/migrations");
+                                } else {
+                                    setActiveTab(item.id);
+                                }
+                            }}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === item.id
                                 ? 'bg-white text-zinc-900'
                                 : 'text-white/50 hover:text-white hover:bg-white/5'
@@ -441,8 +448,12 @@ export default function AdminPanel() {
                                     <button
                                         key={item.id}
                                         onClick={() => {
-                                            setActiveTab(item.id);
-                                            setMobileMenuOpen(false);
+                                            if (item.id as any === "migrations") {
+                                                navigate("/admin/migrations");
+                                            } else {
+                                                setActiveTab(item.id);
+                                                setMobileMenuOpen(false);
+                                            }
                                         }}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === item.id
                                             ? 'bg-white text-zinc-900'
