@@ -1392,7 +1392,14 @@ export default function DashboardPage() {
                                     <button onClick={resetQRank} className="w-full py-5 bg-white text-red-600 rounded-[2.5rem] font-bold hover:bg-red-600 hover:text-white transition-all border border-red-200 shadow-sm flex items-center justify-center gap-2">
                                         <Activity size={20} /> Reset Account Q Rank
                                     </button>
-                                    <button onClick={() => auth.logout()} className="w-full py-5 bg-zinc-900 text-white rounded-[2.5rem] font-bold hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            if (window.confirm("Are you sure you want to log out?")) {
+                                                auth.logout();
+                                            }
+                                        }} 
+                                        className="w-full py-5 bg-zinc-900 text-white rounded-[2.5rem] font-bold hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2"
+                                    >
                                         <LogOut size={20} /> Log Out Securely
                                     </button>
                                 </div>

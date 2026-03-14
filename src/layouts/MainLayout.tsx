@@ -99,7 +99,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                             Rank: {getRank(qScore)}
                         </div>
                     </div>
-                    <button onClick={() => auth.logout()} className="flex items-center gap-3 w-full p-3 text-red-500 hover:bg-red-50 rounded-full scale-100 hover:scale-[1.02] transition-colors">
+                    <button 
+                        onClick={() => {
+                            if (window.confirm("Are you sure you want to log out?")) {
+                                auth.logout();
+                            }
+                        }} 
+                        className="flex items-center gap-3 w-full p-3 text-red-500 hover:bg-red-50 rounded-full scale-100 hover:scale-[1.02] transition-colors"
+                    >
                         <LogOut size={20} />
                         <span className="font-medium">Logout</span>
                     </button>
@@ -107,17 +114,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
             </nav>
 
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 left-0 w-full bg-white border-bottom border-black/5 p-4 flex items-center justify-between z-50">
+            <header className="lg:hidden fixed top-0 left-0 w-full bg-white border-b border-black/5 p-4 flex items-center justify-between z-50">
                 <div className="flex items-center gap-2">
                     <Logo className="w-8 h-8" />
                     <span className="font-bold">jointheq</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button onClick={() => auth.logout()} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
-                        <LogOut size={20} />
-                    </button>
-                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                        {isMobileMenuOpen ? <X /> : <Menu />}
+                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 hover:bg-black/5 rounded-lg transition-colors">
+                        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                     </button>
                 </div>
             </header>
@@ -144,10 +148,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                                 <span className="font-semibold">{item.label}</span>
                             </button>
                         ))}
-                        <button onClick={() => auth.logout()} className="flex items-center gap-3 w-full p-3 text-red-500 rounded-full scale-100 hover:scale-[1.02] font-bold">
-                            <LogOut size={20} />
-                            Logout
-                        </button>
+                        <div className="pt-2 mt-2 border-t border-black/5">
+                            <button 
+                                onClick={() => {
+                                    if (window.confirm("Are you sure you want to log out?")) {
+                                        auth.logout();
+                                    }
+                                }} 
+                                className="flex items-center gap-3 w-full p-3 text-red-500 rounded-full scale-100 hover:scale-[1.02] font-bold hover:bg-red-50 transition-colors"
+                            >
+                                <LogOut size={20} />
+                                Logout
+                            </button>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
