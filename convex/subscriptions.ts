@@ -30,36 +30,39 @@ export const getActiveSubscriptions = query({
                     .filter((q) => q.eq(q.field("status"), "active"))
                     .collect();
 
-                if (groups.length === 0) return null;
-
+                // If no groups, still return the subscription with default values
                 const slot_types_with_count = await Promise.all(
                     slot_types.map(async (st) => {
                         let total_capacity = 0;
                         let current_members = 0;
                         let open_slots = 0;
+                        let owner_name = "admin";
 
                         // Aggregate counts across all active groups for this specific slot type
-                        for (const group of groups) {
-                            const slots = await ctx.db
-                                .query("subscription_slots")
-                                .withIndex("by_group", (q) => q.eq("group_id", group._id))
-                                .filter((q) => q.eq(q.field("slot_type_id"), st._id))
-                                .collect();
-                            
-                            total_capacity += slots.length;
-                            current_members += slots.filter(s => s.status === "filled").length;
-                            open_slots += slots.filter(s => s.status === "open").length;
-                        }
+                        if (groups.length > 0) {
+                            for (const group of groups) {
+                                const slots = await ctx.db
+                                    .query("subscription_slots")
+                                    .withIndex("by_group", (q) => q.eq("group_id", group._id))
+                                    .filter((q) => q.eq(q.field("slot_type_id"), st._id))
+                                    .collect();
 
-                        // Use the owner from the first group as a representative for now
-                        const representativeGroup = groups[0];
+                                total_capacity += slots.length;
+                                current_members += slots.filter(s => s.status === "filled").length;
+                                open_slots += slots.filter(s => s.status === "open").length;
+                            }
+
+                            // Use the owner from the first group as a representative
+                            const representativeGroup = groups[0];
+                            owner_name = normalizeOwnerName(representativeGroup?.plan_owner);
+                        }
 
                         return {
                             ...st,
                             total_capacity,
                             current_members,
                             open_slots,
-                            owner_name: normalizeOwnerName(representativeGroup?.plan_owner),
+                            owner_name,
                             sub_name: sub.name,
                             sub_logo: sub.logo_url
                         };
@@ -70,7 +73,7 @@ export const getActiveSubscriptions = query({
             })
         );
 
-        return result.filter((item): item is NonNullable<typeof item> => item !== null);
+        return result;
     },
 });
 
@@ -138,7 +141,7 @@ export const joinSlot = mutation({
             const openSlot = await ctx.db
                 .query("subscription_slots")
                 .withIndex("by_group", (q) => q.eq("group_id", g._id))
-                .filter(q => 
+                .filter(q =>
                     q.and(
                         q.eq(q.field("slot_type_id"), st._id),
                         q.eq(q.field("status"), "open")

@@ -413,7 +413,7 @@ export const getAdminLogs = query({
     handler: async (ctx, { admin_id, limit }) => {
         const logs = admin_id
             ? await ctx.db.query("admin_logs").withIndex("by_admin", q => q.eq("admin_id", admin_id)).collect()
-            : await ctx.db.query("admin_logs").withIndex("by_created").order("desc").collect();
+            : await ctx.db.query("admin_logs").withIndex("by_created_at").order("desc").collect();
 
         const enriched = await Promise.all(logs.map(async l => {
             const admin = await ctx.db.get(l.admin_id);
@@ -591,7 +591,7 @@ export const getDailyReport = query({
         const openFlags = allFlags.filter(f => f.status === "open").length;
 
         // Admin activity today
-        const allLogs = await ctx.db.query("admin_logs").withIndex("by_created").collect();
+        const allLogs = await ctx.db.query("admin_logs").withIndex("by_created_at").collect();
         const adminActionsToday = allLogs.filter(l => l.created_at >= todayMs).length;
 
         return {

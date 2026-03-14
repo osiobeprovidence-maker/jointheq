@@ -9,7 +9,6 @@ import AdminPanel from "./pages/AdminPanel";
 import CampaignDetailPage from "./pages/CampaignDetailPage";
 import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
 import CampusDashboardPage from "./pages/CampusDashboardPage";
-import MigrationPage from "./pages/MigrationPage";
 import AdminMigrationPage from "./pages/AdminMigrationPage";
 import WalletFundingPage from "./pages/WalletFundingPage";
 import AdminPaymentsPage from "./pages/AdminPaymentsPage";
@@ -24,7 +23,6 @@ export default function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/migrate" element={<MigrationPage />} />
         <Route path="/console" element={<ConsoleLogin />} />
 
         {/* Protected Routes */}

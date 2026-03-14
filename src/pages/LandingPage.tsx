@@ -113,13 +113,13 @@ export default function LandingPage() {
 
       if (result.success && result.user) {
         auth.login(result.user as any);
-        
+
         // If not verified, store verification info for Dashboard to show warning
         if (!result.isVerified && result.daysRemaining !== null) {
           localStorage.setItem('verification_days_remaining', String(result.daysRemaining));
           localStorage.setItem('verification_deadline', String(result.verificationDeadline));
         }
-        
+
         navigate("/dashboard");
       } else {
         setError(result.error || 'Login failed');
@@ -146,12 +146,6 @@ export default function LandingPage() {
               className={`text-sm sm:text-base font-semibold transition-colors whitespace-nowrap ${activeSection === 'about' ? 'text-black' : 'text-black/50 hover:text-black'}`}
             >
               About Us
-            </button>
-            <button
-              onClick={() => navigate('/migrate')}
-              className="text-sm sm:text-base font-semibold text-black/50 hover:text-black transition-colors whitespace-nowrap"
-            >
-              Migrate Account
             </button>
             <button
               onClick={() => setActiveSection('login')}
