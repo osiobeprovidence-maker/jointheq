@@ -15,6 +15,7 @@ import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 import ListSubscriptionPage from "./pages/ListSubscriptionPage";
 import OwnerEarningsPage from "./pages/OwnerEarningsPage";
 import AdminListingsPage from "./pages/AdminListingsPage";
+import MigrationPage from "./pages/MigrationPage";
 
 export default function App() {
   return (
@@ -114,6 +115,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <OwnerEarningsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/migrate"
+          element={
+            <ProtectedRoute>
+              <MigrationPage />
             </ProtectedRoute>
           }
         />
