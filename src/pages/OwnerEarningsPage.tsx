@@ -119,7 +119,7 @@ export default function OwnerEarningsPage() {
                          <div className="space-y-1">
                             <h4 className="font-black text-lg tracking-tight">{l.platform}</h4>
                             <div className="flex items-center gap-3">
-                               <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{l.email}</span>
+                               <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{l.login_email}</span>
                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
                                   l.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 
                                   l.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'

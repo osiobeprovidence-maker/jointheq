@@ -17,7 +17,8 @@ import {
   Cpu,
   Shield,
   LayoutGrid,
-  Loader2
+  Loader2,
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";

@@ -17,12 +17,12 @@ export const getPlatformStats = query({
 
         const [users, slots, transactions, bootTransactions, campaigns, campaignParticipants, migrations] = await Promise.all([
             ctx.db.query("users").collect(),
-            ctx.db.query("slots").collect(),
-            ctx.db.query("transactions").collect(),
+            ctx.db.query("subscription_slots").collect(),
+            ctx.db.query("wallet_transactions").collect(),
             ctx.db.query("boot_transactions").collect(),
             ctx.db.query("campaigns").collect(),
             ctx.db.query("campaign_participants").collect(),
-            ctx.db.query("migrated_subscriptions").collect(),
+            ctx.db.query("migration_records").collect(),
         ]);
 
         const totalUsers = users.length;
@@ -31,7 +31,7 @@ export const getPlatformStats = query({
         const suspendedUsers = users.filter(u => u.is_suspended).length;
         const bannedUsers = users.filter(u => u.is_banned).length;
 
-        const filledSlots = slots.filter(s => s.user_id && s.status === "active").length;
+        const filledSlots = slots.filter(s => s.user_id && s.status === "filled").length;
         const totalSlots = slots.length;
         const availableSlots = totalSlots - filledSlots;
 
@@ -58,7 +58,7 @@ export const getPlatformStats = query({
 
         const activeCampaigns = campaigns.filter(c => c.status === "active").length;
         const totalMigrations = migrations.length;
-        const pendingMigrations = migrations.filter(m => m.status === "Migrated Slot").length;
+        const pendingMigrations = migrations.filter(m => m.status === "pending").length;
 
         return {
             // Users
@@ -93,14 +93,14 @@ export const getPlatformStats = query({
 
 export const getSubscriptionBreakdown = query({
     handler: async (ctx) => {
-        const subscriptions = await ctx.db.query("subscriptions").collect();
-        return await Promise.all(subscriptions.map(async (sub) => {
+        const catalogItems = await ctx.db.query("subscription_catalog").collect();
+        return await Promise.all(catalogItems.map(async (item) => {
             const slotTypes = await ctx.db.query("slot_types")
-                .withIndex("by_subscription", q => q.eq("subscription_id", sub._id))
+                .withIndex("by_subscription", q => q.eq("subscription_id", item._id))
                 .collect();
 
             const groups = await ctx.db.query("groups")
-                .withIndex("by_subscription", q => q.eq("subscription_id", sub._id))
+                .withIndex("by_catalog", q => q.eq("subscription_catalog_id", item._id))
                 .collect();
 
             let totalSlots = 0;
@@ -108,21 +108,21 @@ export const getSubscriptionBreakdown = query({
             let revenue = 0;
 
             for (const group of groups) {
-                const slots = await ctx.db.query("slots")
+                const slots = await ctx.db.query("subscription_slots")
                     .withIndex("by_group", q => q.eq("group_id", group._id))
                     .collect();
 
                 totalSlots += slots.length;
-                filledSlots += slots.filter(s => s.user_id && s.status === "active").length;
+                filledSlots += slots.filter(s => s.user_id && s.status === "filled").length;
 
-                for (const slot of slots.filter(s => s.user_id && s.status === "active")) {
+                for (const slot of slots.filter(s => s.user_id && s.status === "filled")) {
                     const slotType = await ctx.db.get(slot.slot_type_id);
                     revenue += slotType?.price || 0;
                 }
             }
 
             return {
-                ...sub,
+                ...item,
                 totalGroups: groups.length,
                 totalSlots,
                 filledSlots,
@@ -139,16 +139,16 @@ export const getAllUsers = query({
     handler: async (ctx) => {
         const users = await ctx.db.query("users").collect();
         return await Promise.all(users.map(async (user) => {
-            const slots = await ctx.db.query("slots")
+            const slots = await ctx.db.query("subscription_slots")
                 .withIndex("by_user", q => q.eq("user_id", user._id))
                 .collect();
-            const txns = await ctx.db.query("transactions")
+            const txns = await ctx.db.query("wallet_transactions")
                 .withIndex("by_user", q => q.eq("user_id", user._id))
                 .collect();
             return {
                 ...user,
-                activeSubscriptions: slots.filter(s => s.status === "active").length,
-                totalPayments: txns.filter(t => t.type === "payment").reduce((s, t) => s + t.amount, 0),
+                activeSubscriptions: slots.filter(s => s.status === "filled").length,
+                totalPayments: txns.filter(t => t.type === "subscription").reduce((s, t) => s + t.amount, 0),
             };
         }));
     }
@@ -288,7 +288,7 @@ export const addCampusRep = mutation({
 
 export const getRecentTransactions = query({
     handler: async (ctx) => {
-        const txns = await ctx.db.query("transactions").order("desc").take(50);
+        const txns = await ctx.db.query("wallet_transactions").order("desc").take(50);
         return await Promise.all(txns.map(async (t) => {
             const user = await ctx.db.get(t.user_id);
             return { ...t, user_name: user?.full_name || "Unknown", user_email: user?.email || "" };

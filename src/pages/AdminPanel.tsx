@@ -55,17 +55,12 @@ import { useNavigate } from "react-router-dom";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security";
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function fmt(n: number) {
-    if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `₦${(n / 1_000).toFixed(1)}K`;
-    return `₦${n.toLocaleString()}`;
-}
 
 function StatCard({ label, value, sub, icon, color, trend }: {
-    label: string; value: string | number; sub?: string; icon: React.ReactNode;
+    label: string; value: React.ReactNode; sub?: string; icon: React.ReactNode;
     color: string; trend?: "up" | "down" | "neutral";
 }) {
     return (
@@ -143,6 +138,19 @@ export default function AdminPanel() {
     const [inviteForm, setInviteForm] = useState({ email: "", role: "support", work_username: "" });
     const [taskForm, setTaskForm] = useState({ title: "", description: "", assigned_to: "", deadline: "", priority: "medium", category: "general" });
 
+    // Payment Review state
+    const [paymentFilterStatus, setPaymentFilterStatus] = useState("Awaiting Review");
+    const [paymentAdminNote, setPaymentAdminNote] = useState("");
+    const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+
+    // Listing Review state
+    const [listingFilterStatus, setListingFilterStatus] = useState("Pending Review");
+    const [selectedReviewListing, setSelectedReviewListing] = useState<any>(null);
+    const [reviewTotalSlots, setReviewTotalSlots] = useState<number>(0);
+    const [reviewPricePerSlot, setReviewPricePerSlot] = useState<number>(0);
+    const [reviewOwnerPayout, setReviewOwnerPayout] = useState<number>(0);
+    const [reviewAdminNote, setReviewAdminNote] = useState("");
+
     // Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const isSuperAdmin = currentUser?.admin_role === "super" || currentUser?.email === "riderezzy@gmail.com";
@@ -168,6 +176,20 @@ export default function AdminPanel() {
     const campusEvents = useQuery(api.campus.getEvents, {}) || [];
     const campusOverview = useQuery(api.campus.getCampusOverview);
     const campusApplications = useQuery(api.campus.getCampusApplications, {}) || [];
+
+    // Payment Review Queries
+    const paymentRequests = useQuery(api.funding.getManualRequests, { 
+        status: paymentFilterStatus 
+    }) || [];
+
+    // User Listings Queries
+    const userListings = useQuery(api.listings.getAdminListings, { 
+        status: listingFilterStatus 
+    }) || [];
+
+    // Pending Counts for Badges
+    const pendingPaymentsCount = useQuery(api.funding.getManualRequests, { status: "Awaiting Review" })?.length || 0;
+    const pendingListingsCount = useQuery(api.listings.getAdminListings, { status: "Pending Review" })?.length || 0;
 
     // Mutations
     const suspendUserMut = useMutation(api.admin.suspendUser);
@@ -208,6 +230,14 @@ export default function AdminPanel() {
     const createEventMut = useMutation(api.campus.createEvent);
     const updateEventMut = useMutation(api.campus.updateEvent);
     const reviewCampusApplicationMut = useMutation(api.campus.reviewCampusApplication);
+
+    // Payment Mutations
+    const approvePaymentMut = useMutation(api.funding.approveFunding);
+    const rejectPaymentMut = useMutation(api.funding.rejectFunding);
+
+    // Listing Review Mutations
+    const approveListingMut = useMutation(api.listings.approveListing);
+    const rejectListingMut = useMutation(api.listings.rejectListing);
 
     const handleSaveCampaign = async () => {
 
@@ -254,6 +284,65 @@ export default function AdminPanel() {
             setShowCampaignModal(false);
             setEditingCampaign(null);
             setCampaignForm({ name: '', type: 'referral', description: '', about: '', rules: [''], how_it_works: [''], reward_structure: '', reward_type: 'boots', reward_amount: 0, referral_boots: 5, commission_months: 3, start_date: '', end_date: '', target_goal: 100 });
+        } catch (e: any) { toast.error(e.message); }
+    };
+
+    const handleApprovePayment = async (id: any) => {
+        if (!confirm("Are you sure you want to approve this payment? This will credit the user's wallet with the base amount.")) return;
+        try {
+            await approvePaymentMut({ 
+                request_id: id, 
+                admin_id: currentUser!._id as any,
+                admin_note: paymentAdminNote || undefined
+            });
+            toast.success("Payment approved and wallet credited!");
+            setPaymentAdminNote("");
+        } catch (e: any) { toast.error(e.message || "Failed to approve payment"); }
+    };
+
+    const handleRejectPayment = async (id: any) => {
+        if (!paymentAdminNote) return toast.error("Please provide a reason for rejection in the note field.");
+        if (!confirm("Reject this payment?")) return;
+        try {
+            await rejectPaymentMut({ 
+                request_id: id, 
+                admin_id: currentUser!._id as any,
+                admin_note: paymentAdminNote
+            });
+            toast.success("Payment rejected");
+            setPaymentAdminNote("");
+        } catch (e: any) { toast.error(e.message || "Failed to reject payment"); }
+    };
+
+    const handleOpenApproveListing = (listing: any) => {
+        setSelectedReviewListing(listing);
+        setReviewTotalSlots(listing.total_slots);
+        // Suggest pricing
+        if (listing.platform === "Netflix Premium") {
+            setReviewPricePerSlot(1600);
+            setReviewOwnerPayout(13000);
+        } else if (listing.platform === "Spotify Family") {
+            setReviewPricePerSlot(800);
+            setReviewOwnerPayout(4800);
+        } else {
+            setReviewPricePerSlot(1000);
+            setReviewOwnerPayout(0);
+        }
+    };
+
+    const handleApproveListingSubmit = async () => {
+        if (!reviewTotalSlots || !reviewPricePerSlot || !reviewOwnerPayout) return toast.error("Please fill in all approval details");
+        try {
+            await approveListingMut({
+                listing_id: selectedReviewListing._id,
+                admin_id: currentUser!._id as any,
+                total_slots: reviewTotalSlots,
+                price_per_slot: reviewPricePerSlot,
+                owner_payout: reviewOwnerPayout,
+                admin_note: reviewAdminNote || undefined
+            });
+            toast.success("Listing approved and marketplace updated!");
+            setSelectedReviewListing(null);
         } catch (e: any) { toast.error(e.message); }
     };
 
@@ -313,18 +402,18 @@ export default function AdminPanel() {
         );
     }
 
-    const navItems: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
-        { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
-        { id: "users", label: "Users", icon: <Users size={18} /> },
-        { id: "marketplace", label: "Marketplace", icon: <ShoppingBag size={18} /> },
-        { id: "payments", label: "Payments", icon: <CreditCard size={18} /> },
-        { id: "campaigns", label: "Campaigns", icon: <Megaphone size={18} /> },
-        { id: "security", label: "Security", icon: <ShieldCheck size={18} /> },
-        { id: "support", label: "Support", icon: <HeadphonesIcon size={18} /> },
-        { id: "admins", label: "Admins", icon: <Shield size={18} /> },
-        { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} /> },
-        { id: "review_payments" as any, label: "Review Payments", icon: <Wallet size={18} /> },
-        { id: "user_listings" as any, label: "User Listings", icon: <Layers size={18} /> },
+    const navItems: { id: AdminTab; label: string; icon: React.ReactNode; sub?: string }[] = [
+        { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} />, sub: "Platform Command Center" },
+        { id: "users", label: "Users", icon: <Users size={18} />, sub: "User Management & Audit" },
+        { id: "marketplace", label: "Marketplace", icon: <ShoppingBag size={18} />, sub: "Subscription Inventory" },
+        { id: "payments", label: "Payments", icon: <CreditCard size={18} />, sub: "Transaction History" },
+        { id: "campaigns", label: "Campaigns", icon: <Megaphone size={18} />, sub: "Growth & Commissions" },
+        { id: "security", label: "Security", icon: <ShieldCheck size={18} />, sub: "Fraud & Anti-Spam" },
+        { id: "support", label: "Support", icon: <HeadphonesIcon size={18} />, sub: "Customer Experience" },
+        { id: "admins", label: "Admins", icon: <Shield size={18} />, sub: "Workforce & Tasks" },
+        { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} />, sub: "Campus Rep Program" },
+        { id: "review_payments", label: "Payments Review", icon: <Wallet size={18} />, sub: "FINANCE OPERATIONS" },
+        { id: "user_listings", label: "Listing Review", icon: <Layers size={18} />, sub: "CONTENT MODERATION" },
     ];
 
     const filteredUsers = allUsers.filter(u =>
@@ -354,15 +443,8 @@ export default function AdminPanel() {
                         <button
                             key={item.id}
                             onClick={() => {
-                                if (item.id as any === "migrations") {
-                                    navigate("/admin/migrations");
-                                } else if (item.id as any === "review_payments") {
-                                    navigate("/admin/payments");
-                                } else if (item.id as any === "user_listings") {
-                                    navigate("/admin/listings");
-                                } else {
-                                    setActiveTab(item.id);
-                                }
+                                setActiveTab(item.id);
+                                setMobileMenuOpen(false);
                             }}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === item.id
                                 ? 'bg-white text-zinc-900'
@@ -379,6 +461,16 @@ export default function AdminPanel() {
                             {item.id === "security" && (fraudFlags.filter((f: any) => f.status === "open").length) > 0 && (
                                 <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                                     {fraudFlags.filter((f: any) => f.status === "open").length}
+                                </span>
+                            )}
+                            {item.id === "review_payments" && pendingPaymentsCount > 0 && (
+                                <span className="ml-auto bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                    {pendingPaymentsCount}
+                                </span>
+                            )}
+                            {item.id === "user_listings" && pendingListingsCount > 0 && (
+                                <span className="ml-auto bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                    {pendingListingsCount}
                                 </span>
                             )}
                         </button>
@@ -454,16 +546,8 @@ export default function AdminPanel() {
                                     <button
                                         key={item.id}
                                         onClick={() => {
-                                            if (item.id as any === "migrations") {
-                                                navigate("/admin/migrations");
-                                            } else if (item.id as any === "review_payments") {
-                                                navigate("/admin/payments");
-                                            } else if (item.id as any === "user_listings") {
-                                                navigate("/admin/listings");
-                                            } else {
-                                                setActiveTab(item.id);
-                                                setMobileMenuOpen(false);
-                                            }
+                                            setActiveTab(item.id);
+                                            setMobileMenuOpen(false);
                                         }}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === item.id
                                             ? 'bg-white text-zinc-900'
@@ -506,9 +590,19 @@ export default function AdminPanel() {
             <main className="flex-1 md:ml-64 mt-14 md:mt-0 min-h-screen">
                 {/* Top bar (desktop) */}
                 <div className="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-black/5 sticky top-0 z-30">
-                    <div>
-                        <h1 className="text-xl font-black capitalize">{navItems.find(n => n.id === activeTab)?.label}</h1>
-                        <p className="text-xs text-gray-400">JoinTheQ Platform Command Center</p>
+                    <div className="flex items-center gap-4">
+                        {activeTab !== "dashboard" && (
+                            <button 
+                                onClick={() => setActiveTab("dashboard")}
+                                className="p-2 -ml-2 bg-zinc-50 hover:bg-zinc-100 rounded-xl transition-all group shadow-sm border border-black/5"
+                            >
+                                <ArrowLeft size={18} className="text-gray-400 group-hover:text-zinc-900 group-hover:-translate-x-0.5 transition-all" />
+                            </button>
+                        )}
+                        <div>
+                            <h1 className="text-xl font-black capitalize">{navItems.find(n => n.id === activeTab)?.label}</h1>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{navItems.find(n => n.id === activeTab)?.sub || "JoinTheQ Platform Command Center"}</p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold flex items-center gap-1.5">
@@ -554,10 +648,10 @@ export default function AdminPanel() {
                                 <div>
                                     <SectionHeader title="Revenue & Payments" sub="Financial performance" />
                                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        <StatCard label="Today" value={stats ? fmt(stats.revenueToday) : "—"} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="vs yesterday" />
-                                        <StatCard label="This Month" value={stats ? fmt(stats.revenueThisMonth) : "—"} icon={<BarChart3 size={18} />} color="bg-blue-500" />
-                                        <StatCard label="Total Revenue" value={stats ? fmt(stats.totalRevenue) : "—"} icon={<DollarSign size={18} />} color="bg-indigo-600" />
-                                        <StatCard label="Refunds" value={stats ? fmt(stats.totalRefunds) : "—"} icon={<RefreshCw size={18} />} color="bg-orange-500" trend="down" />
+                                        <StatCard label="Today" value={stats ? fmtCurrency(stats.revenueToday) : "—"} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="vs yesterday" />
+                                        <StatCard label="This Month" value={stats ? fmtCurrency(stats.revenueThisMonth) : "—"} icon={<BarChart3 size={18} />} color="bg-blue-500" />
+                                        <StatCard label="Total Revenue" value={stats ? fmtCurrency(stats.totalRevenue) : "—"} icon={<DollarSign size={18} />} color="bg-indigo-600" />
+                                        <StatCard label="Refunds" value={stats ? fmtCurrency(stats.totalRefunds) : "—"} icon={<RefreshCw size={18} />} color="bg-orange-500" trend="down" />
                                     </div>
                                 </div>
 
@@ -616,7 +710,7 @@ export default function AdminPanel() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div className="text-right font-bold text-emerald-600">{fmt(sub.estimatedRevenue)}</div>
+                                                <div className="text-right font-bold text-emerald-600">{fmtCurrency(sub.estimatedRevenue)}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -639,7 +733,7 @@ export default function AdminPanel() {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className={`text-sm font-black ${t.type === 'refund' ? 'text-red-500' : 'text-emerald-600'}`}>
-                                                        {t.type === 'refund' ? '-' : '+'}{fmt(t.amount)}
+                                                        {t.type === 'refund' ? '-' : '+'}{fmtCurrency(t.amount)}
                                                     </div>
                                                     <div className="text-[10px] text-gray-400">{new Date(t.created_at).toLocaleDateString()}</div>
                                                 </div>
@@ -2047,10 +2141,167 @@ export default function AdminPanel() {
                                                             {rep.is_active ? "Active" : "Inactive"}
                                                         </span>
                                                     </div>
-                                                    <div className="text-right font-black text-emerald-600">{fmt(rep.total_earned)}</div>
+                                                    <div className="text-right font-black text-emerald-600">{fmtCurrency(rep.total_earned)}</div>
                                                 </div>
                                             ))}
                                         </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* ═══ PAYMENTS REVIEW ═══ */}
+                        {activeTab === "review_payments" && (
+                            <motion.div key="review_payments" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard label="Review Needed" value={pendingPaymentsCount} icon={<Clock size={18} />} color="bg-amber-500" />
+                                    <StatCard label="Total Approved" value={paymentRequests.filter(r => r.status === 'Approved').length} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" trend="up" sub="Processed transfer" />
+                                    <StatCard label="Total Credited" value={fmtCurrency(paymentRequests.reduce((acc, r) => acc + (r.status === 'Approved' ? r.base_amount : 0), 0))} icon={<Wallet size={18} />} color="bg-blue-500" />
+                                    <StatCard label="Verification Rev" value={fmtCurrency(paymentRequests.reduce((acc, r) => acc + (r.status === 'Approved' ? (r.unique_amount - r.base_amount) : 0), 0))} icon={<DollarSign size={18} />} color="bg-indigo-500" />
+                                </div>
+
+                                <div className="bg-white border border-black/5 rounded-[2rem] p-6 flex flex-wrap gap-4 items-end shadow-sm">
+                                    <div className="flex-1 min-w-[200px] space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Status Filter</label>
+                                        <div className="flex gap-2">
+                                            {["All", "Awaiting Review", "Approved", "Rejected"].map(s => (
+                                                <button key={s} onClick={() => setPaymentFilterStatus(s)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${paymentFilterStatus === s ? 'bg-zinc-900 text-white shadow-lg' : 'bg-zinc-100 text-gray-400 hover:bg-zinc-200'}`}>{s}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex-[2] min-w-[300px] space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Admin Note / Rejection Reason</label>
+                                        <input type="text" placeholder="Add a note before approving or rejecting..." value={paymentAdminNote} onChange={(e) => setPaymentAdminNote(e.target.value)} className="w-full bg-[#f8f9fa] border-none rounded-xl py-3 px-4 outline-none focus:ring-2 ring-black/5 font-bold text-sm" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {paymentRequests.length === 0 ? (
+                                        <div className="bg-white border border-black/5 rounded-[2rem] p-20 text-center text-gray-400">
+                                            <ShieldCheck size={40} className="mx-auto mb-4 opacity-20" />
+                                            <p className="font-bold">No payment requests found</p>
+                                        </div>
+                                    ) : (
+                                        paymentRequests.map((req: any) => (
+                                            <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 hover:shadow-xl transition-all flex flex-col lg:flex-row gap-8 items-start lg:items-center relative overflow-hidden shadow-sm">
+                                                {req.status === 'Awaiting Review' && <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400" />}
+                                                <div className="flex items-center gap-4 min-w-[280px]">
+                                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg">₦</div>
+                                                    <div>
+                                                        <div className="flex items-baseline gap-2">
+                                                            <span className="font-black text-xl text-indigo-600">₦{req.unique_amount.toLocaleString()}</span>
+                                                            <span className="text-[10px] font-bold text-gray-400">Crediting ₦{req.base_amount.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="text-xs font-bold text-gray-600 flex items-center gap-1.5 mt-0.5"><Users size={12} className="text-gray-300" /> {req.sender_name}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-6 w-full lg:w-auto">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] uppercase font-black text-gray-300 tracking-widest">Bank</p>
+                                                        <p className="font-bold text-xs text-gray-600">{req.bank_name || "N/A"}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] uppercase font-black text-gray-300 tracking-widest">Proof</p>
+                                                        {req.screenshot_id ? (
+                                                            <button onClick={() => setSelectedScreenshot(req.screenshot_id)} className="flex items-center gap-1.5 text-[10px] font-black uppercase text-indigo-600 hover:scale-105 transition-transform"><Plus size={12} /> View Screenshot</button>
+                                                        ) : <span className="text-[10px] font-black text-gray-200 uppercase">No Proof</span>}
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] uppercase font-black text-gray-300 tracking-widest">Date</p>
+                                                        <p className="font-bold text-[10px] text-gray-500">{new Date(req.created_at).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="lg:w-72 flex gap-3 w-full border-l border-black/5 pl-8">
+                                                    {req.status === 'Awaiting Review' ? (
+                                                        <>
+                                                            <button onClick={() => handleRejectPayment(req._id)} className="flex-1 py-3.5 bg-red-50 text-red-600 font-bold rounded-2xl hover:bg-red-100 transition-colors text-xs">Reject</button>
+                                                            <button onClick={() => handleApprovePayment(req._id)} className="flex-[2] py-3.5 bg-zinc-900 text-white font-bold rounded-2xl hover:scale-105 transition-transform text-xs shadow-lg shadow-black/10">Approve</button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="p-3 bg-zinc-50 rounded-xl w-full text-[10px] text-gray-500 italic">
+                                                            <span className="font-black uppercase not-italic text-gray-300 mr-2">Note:</span>
+                                                            {req.admin_note || "No administrative notes."}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* ═══ LISTING REVIEW ═══ */}
+                        {activeTab === "user_listings" && (
+                            <motion.div key="user_listings" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard label="New Submissions" value={userListings.filter(l => l.status === 'Pending Review').length} icon={<Clock size={18} />} color="bg-amber-500" />
+                                    <StatCard label="Active Listings" value={userListings.filter(l => l.status === 'Active').length} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" />
+                                    <StatCard label="Total Slots Listed" value={userListings.reduce((acc, l) => acc + (l.total_slots || 0), 0)} icon={<Layers size={18} />} color="bg-blue-500" />
+                                    <StatCard label="Est. Monthly Rev" value={fmtCurrency(userListings.reduce((acc, l) => acc + ((l.price_per_slot || 0) * (l.total_slots || 0)), 0))} icon={<DollarSign size={18} />} color="bg-indigo-500" />
+                                </div>
+
+                                <div className="flex gap-2 overflow-x-auto pb-2">
+                                    {["All", "Pending Review", "Active", "Rejected"].map(s => (
+                                        <button key={s} onClick={() => setListingFilterStatus(s)} className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-nowrap ${listingFilterStatus === s ? 'bg-zinc-900 text-white shadow-lg' : 'bg-white text-gray-400 border border-black/5 hover:bg-zinc-50'}`}>{s}</button>
+                                    ))}
+                                </div>
+
+                                <div className="space-y-4">
+                                    {userListings.length === 0 ? (
+                                        <div className="bg-white border border-black/5 rounded-[3rem] p-20 text-center text-gray-400 uppercase font-black text-xs tracking-widest">
+                                            No listings found in this category
+                                        </div>
+                                    ) : (
+                                        userListings.map((listing: any) => (
+                                            <div key={listing._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-10 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
+                                                {listing.status === 'Pending Review' && <div className="absolute top-0 left-0 w-2 h-full bg-amber-400" />}
+                                                <div className="flex items-center gap-6 min-w-[280px]">
+                                                    <div className="w-14 h-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-xl">{listing.platform[0]}</div>
+                                                    <div>
+                                                        <h3 className="font-black text-lg">{listing.platform}</h3>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-zinc-100 px-2 py-0.5 rounded-full">{listing.status}</span>
+                                                            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1">
+                                                                <Calendar size={12} /> {listing.renewal_date}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-6 w-full">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Credentials</p>
+                                                        <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5"><Mail size={12} className="text-gray-300" /> {listing.email}</p>
+                                                        <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5"><Lock size={12} className="text-gray-300" /> ••••••••</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Pricing</p>
+                                                        <p className="text-xs font-black text-indigo-600">₦{(listing.price_per_slot || 0).toLocaleString()} / Slot</p>
+                                                        <p className="text-[10px] font-bold text-gray-400">Payout: ₦{(listing.owner_payout_amount || 0).toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="space-y-1 col-span-2">
+                                                        <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Owner</p>
+                                                        <p className="text-xs font-bold text-gray-500 truncate">{(listing as any).owner_name || listing.owner_id}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {listing.status === 'Pending Review' ? (
+                                                        <>
+                                                            <button onClick={() => handleOpenApproveListing(listing)} className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"><ShieldCheck size={18} /> Approve</button>
+                                                            <button onClick={async () => {
+                                                                if (!confirm("Reject this listing?")) return;
+                                                                try {
+                                                                    await rejectListingMut({ listing_id: listing._id, admin_id: currentUser!._id as any, admin_note: "Rejected by admin" });
+                                                                    toast.success("Listing rejected");
+                                                                } catch (e: any) { toast.error(e.message); }
+                                                            }} className="p-3.5 bg-red-50 text-red-600 rounded-2xl hover:bg-red-100 transition-colors"><X size={18} /></button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="text-[10px] font-black text-gray-300 uppercase py-2.5 px-6 border border-black/5 rounded-2xl bg-zinc-50">Handled</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
                                     )}
                                 </div>
                             </motion.div>
@@ -2580,6 +2831,60 @@ export default function AdminPanel() {
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Screenshot Modal (Payments) ── */}
+            <AnimatePresence>
+                {selectedScreenshot && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8" onClick={() => setSelectedScreenshot(null)}>
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="absolute top-6 right-6 z-10 text-white">
+                                <button onClick={() => setSelectedScreenshot(null)} className="p-3 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full"><X size={24} /></button>
+                            </div>
+                            <img src={`https://aromatic-ox-169.eu-west-1.convex.site/api/storage/${selectedScreenshot}`} alt="Transfer Proof" className="w-full h-full object-contain bg-zinc-900" />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Listing Verification Modal ── */}
+            <AnimatePresence>
+                {selectedReviewListing && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md" onClick={() => setSelectedReviewListing(null)} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="bg-white max-w-lg w-full rounded-[3rem] p-10 relative z-10 shadow-2xl">
+                            <div className="flex items-center gap-5 mb-8">
+                                <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-black text-xl">{selectedReviewListing.platform[0]}</div>
+                                <div>
+                                    <h2 className="text-xl font-black">Approve {selectedReviewListing.platform}</h2>
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Verify & Set Payouts</p>
+                                </div>
+                            </div>
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Total Slots</label>
+                                        <input type="number" value={reviewTotalSlots} onChange={(e) => setReviewTotalSlots(Number(e.target.value))} className="w-full bg-zinc-50 border-none rounded-xl py-3 px-4 font-black" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Price / Slot (₦)</label>
+                                        <input type="number" value={reviewPricePerSlot} onChange={(e) => setReviewPricePerSlot(Number(e.target.value))} className="w-full bg-zinc-50 border-none rounded-xl py-3 px-4 font-black" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 text-center py-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Monthly Owner Payout (₦)</label>
+                                    <input type="number" value={reviewOwnerPayout} onChange={(e) => setReviewOwnerPayout(Number(e.target.value))} className="w-full bg-transparent border-none text-center text-3xl font-black text-indigo-600 outline-none" />
+                                    <p className="text-[10px] font-bold text-indigo-400">Total Marketplace Rev: ₦{(reviewTotalSlots * reviewPricePerSlot).toLocaleString()}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Admin Note</label>
+                                    <textarea placeholder="Internal notes..." value={reviewAdminNote} onChange={(e) => setReviewAdminNote(e.target.value)} className="w-full bg-zinc-50 border-none rounded-xl py-3 px-4 text-sm font-medium h-24" />
+                                </div>
+                                <button onClick={handleApproveListingSubmit} className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 flex items-center justify-center gap-3"><ShieldCheck size={20} /> Verify & Launch Listing</button>
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

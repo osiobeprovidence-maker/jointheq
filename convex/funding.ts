@@ -113,10 +113,12 @@ export const approveFunding = mutation({
     });
 
     // Add to transactions
-    await ctx.db.insert("transactions", {
+    await ctx.db.insert("wallet_transactions", {
       user_id: request.user_id,
       amount: request.base_amount,
       type: "funding",
+      source: "bank_transfer",
+      status: "completed",
       description: `Manual Wallet Funding (Ref: ${request.unique_amount})`,
       created_at: Date.now(),
     });

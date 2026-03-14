@@ -55,6 +55,9 @@ import { MainLayout } from "../layouts/MainLayout";
 import { UserSlot, SlotType } from "../types";
 import toast from "react-hot-toast";
 import SupportChatUser from "../components/chat/SupportChatUser";
+import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 import CampusJoinCard from "../components/campus/CampusJoinCard";
 import CampusApplicationModal from "../components/campus/CampusApplicationModal";
 
@@ -593,7 +596,7 @@ export default function DashboardPage() {
                                     transition={{ duration: 0.3 }}
                                     className="text-5xl font-extrabold text-zinc-900 tracking-tight"
                                 >
-                                    ₦{(currentUser?.wallet_balance || 0).toLocaleString()}
+                                    {fmtCurrency(currentUser?.wallet_balance || 0)}
                                 </motion.div>
                             </div>
 
@@ -622,12 +625,12 @@ export default function DashboardPage() {
                                         <div key={req._id} className="bg-white p-6 rounded-2xl border border-amber-200/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
-                                                    <Banknote size={24} />
+                                                    <Wallet size={24} />
                                                 </div>
                                                 <div>
-                                                    <div className="font-black text-lg text-indigo-600">₦{req.unique_amount.toLocaleString()}</div>
+                                                    <div className="font-black text-lg text-indigo-600">{fmtCurrency(req.unique_amount)}</div>
                                                     <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                                        Sent for ₦{req.base_amount.toLocaleString()} Credit
+                                                        Sent for {fmtCurrency(req.base_amount)} Credit
                                                     </div>
                                                 </div>
                                             </div>
@@ -2028,7 +2031,7 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick }: { slot: Us
 
 function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: () => void, userQScore: number }) {
     const isEligible = userQScore >= (slot.min_q_score || 0);
-    const capacity = slot.capacity || 4;
+    const capacity = slot.total_capacity || slot.capacity || 0;
     const joined = slot.current_members || 0;
     const isPopular = slot.sub_name === "Netflix" || slot.sub_name === "Spotify";
     const fallbackOwnerAvatars = [
@@ -2044,6 +2047,9 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
     const ownerHash = ownerName.split("").reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
     const ownerFallbackAvatar = fallbackOwnerAvatars[ownerHash % fallbackOwnerAvatars.length];
     const useBlackFallback = !ownerProfileImage && ownerName.toLowerCase() === "admin";
+
+    // A slot is actually sold out if joined >= capacity AND capacity > 0
+    const isSoldOut = capacity > 0 && joined >= capacity;
 
     return (
         <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-7 rounded-[2.5rem] flex flex-col hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-black/5">
@@ -2084,7 +2090,7 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
                         <img src={ownerFallbackAvatar} alt={ownerName} className="w-full h-full object-cover" />
                     )}
                 </div>
-                <span className="text-xs font-bold text-black/40 tracking-tight">Owner: <span className="text-black/80">{ownerName}</span></span>
+                <span className="text-xs font-bold text-black/40 tracking-tight">System Node: <span className="text-black/80">{ownerName}</span></span>
             </div>
 
             {/* Features (Hidden or truncated for cleaner look) */}
@@ -2104,24 +2110,26 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
             <div className="mb-8">
                 <div className="text-[10px] font-black uppercase tracking-widest text-black/20 mb-1">Profile Slot</div>
                 <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black">₦{slot.price.toLocaleString()}</span>
+                    <span className="text-2xl font-black">{fmtCurrency(slot.price)}</span>
                     <span className="text-xs font-bold text-black/30">/ month</span>
                 </div>
             </div>
 
             {/* Capacity Section */}
-            <div className="mb-8 p-5 bg-[#fdfdfd] rounded-[2rem] border border-black/5">
-                <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-black/40">Members Joined</span>
-                    <span className="text-xs font-black">{joined} / {capacity}</span>
+            {capacity > 0 && (
+                <div className="mb-8 p-5 bg-[#fdfdfd] rounded-[2rem] border border-black/5">
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-black/40">Market Availability</span>
+                        <span className="text-xs font-black">{joined} / {capacity}</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-black/[0.03] rounded-full overflow-hidden">
+                        <div
+                            className={`h-full transition-all duration-700 rounded-full ${isSoldOut ? 'bg-red-500' : 'bg-zinc-900'}`}
+                            style={{ width: `${(joined / capacity) * 100}%` }}
+                        />
+                    </div>
                 </div>
-                <div className="w-full h-2.5 bg-black/[0.03] rounded-full overflow-hidden">
-                    <div
-                        className={`h-full transition-all duration-700 rounded-full ${joined === capacity ? 'bg-red-500' : 'bg-zinc-900'}`}
-                        style={{ width: `${(joined / capacity) * 100}%` }}
-                    />
-                </div>
-            </div>
+            )}
 
             <button
                 onClick={onJoin}

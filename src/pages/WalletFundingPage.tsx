@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
+import { fmtCurrency } from "../lib/utils";
 
 type Method = "paystack" | "manual";
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
@@ -218,7 +219,7 @@ export default function WalletFundingPage() {
                       onClick={() => setBaseAmount(amt)}
                       className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${baseAmount === amt ? 'bg-black text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100'}`}
                     >
-                      ₦{amt.toLocaleString()}
+                      {fmtCurrency(amt)}
                     </button>
                   ))}
                 </div>
@@ -263,7 +264,7 @@ export default function WalletFundingPage() {
                 
                 <div className="text-center space-y-3 mb-12 mt-4">
                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount to Transfer</p>
-                  <h2 className="text-5xl font-black tracking-tight text-indigo-600">₦{uniqueAmount?.toLocaleString()}</h2>
+                  <h2 className="text-5xl font-black tracking-tight text-indigo-600">{fmtCurrency(uniqueAmount || 0)}</h2>
                   <p className="text-sm font-bold text-red-500 px-8">Transfer the exact amount above including the extra digits for verification.</p>
                 </div>
 
@@ -342,9 +343,9 @@ export default function WalletFundingPage() {
                 <div className="flex gap-4 p-6 bg-blue-50/50 border border-blue-100 rounded-3xl">
                    <AlertCircle size={20} className="text-blue-500 shrink-0" />
                    <p className="text-[10px] font-bold text-blue-700 leading-relaxed uppercase tracking-tight">
-                     Wallet credits: ₦{baseAmount.toLocaleString()}. The unique digits are only for verification purposes.
+                     Wallet credits: {fmtCurrency(Number(baseAmount))}. The unique digits are only for verification purposes.
                    </p>
-                </div>
+                 </div>
 
                 <button 
                   disabled={!senderName || !bankUsed || isLoading}

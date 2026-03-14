@@ -6,7 +6,7 @@ export const getTransactions = query({
     args: { user_id: v.id("users") },
     handler: async (ctx, args) => {
         return await ctx.db
-            .query("transactions")
+            .query("wallet_transactions")
             .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
             .order("desc")
             .collect();
@@ -44,10 +44,12 @@ export const addTransaction = mutation({
             });
         }
 
-        return await ctx.db.insert("transactions", {
+        return await ctx.db.insert("wallet_transactions", {
             user_id: args.user_id,
             amount: args.amount,
             type: args.type,
+            source: args.type === "funding" ? "paystack" : "wallet",
+            status: "completed",
             description: args.description,
             fee: args.fee,
             created_at: Date.now(),

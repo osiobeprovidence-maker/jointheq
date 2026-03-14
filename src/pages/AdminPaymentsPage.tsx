@@ -119,19 +119,25 @@ export default function AdminPaymentsPage() {
             <div className="text-3xl font-black">{(requests?.filter(r => r.status === 'Approved').length || 0)}</div>
             <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Processed</div>
           </div>
-          <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm">
+          <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm hover:shadow-md transition-shadow">
             <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4">
               <Wallet size={20} />
             </div>
-            <div className="text-3xl font-black">₦{requests?.reduce((acc, r) => acc + (r.status === 'Approved' ? r.base_amount : 0), 0).toLocaleString()}</div>
+            <div className="text-3xl font-black">
+              <span className="text-xl text-zinc-300 font-bold mr-1">₦</span>
+              {requests?.reduce((acc, r) => acc + (r.status === 'Approved' ? r.base_amount : 0), 0).toLocaleString()}
+            </div>
             <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Total Credited</div>
           </div>
-          <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm">
+          <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm hover:shadow-md transition-shadow">
             <div className="w-10 h-10 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4">
               <AlertCircle size={20} />
             </div>
-            <div className="text-3xl font-black">₦{requests?.reduce((acc, r) => acc + (r.status === 'Approved' ? (r.unique_amount - r.base_amount) : 0), 0).toLocaleString()}</div>
-            <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Total Verification Digits</div>
+            <div className="text-3xl font-black">
+              <span className="text-xl text-zinc-300 font-bold mr-1">₦</span>
+              {requests?.reduce((acc, r) => acc + (r.status === 'Approved' ? (r.unique_amount - r.base_amount) : 0), 0).toLocaleString()}
+            </div>
+            <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Verification Revenue</div>
           </div>
         </div>
 

@@ -23,14 +23,15 @@ export const submitListing = mutation({
   handler: async (ctx, args) => {
     const total_slots = SLOT_RULES[args.platform] || 1;
     
-    return await ctx.db.insert("subscription_owner_listings", {
+    return await ctx.db.insert("subscriptions", {
       owner_id: args.owner_id,
       platform: args.platform,
-      email: args.email,
-      password: args.password,
+      login_email: args.email,
+      login_password: args.password,
       renewal_date: args.renewal_date,
       status: "Pending Review",
       total_slots,
+      slot_price: 0, // Set by admin on approval
       created_at: Date.now(),
       updated_at: Date.now(),
     });
@@ -41,7 +42,7 @@ export const getOwnerListings = query({
   args: { owner_id: v.id("users") },
   handler: async (ctx, args) => {
     return await ctx.db
-      .query("subscription_owner_listings")
+      .query("subscriptions")
       .withIndex("by_owner", (q) => q.eq("owner_id", args.owner_id))
       .order("desc")
       .collect();
@@ -51,20 +52,31 @@ export const getOwnerListings = query({
 export const getAdminListings = query({
   args: { status: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    // Only show subscriptions that came from user listings (not admin-created ones)
+    // They are identified by having a login_password set by users
     if (args.status && args.status !== "All") {
-      return await ctx.db
-        .query("subscription_owner_listings")
+      const results = await ctx.db
+        .query("subscriptions")
         .withIndex("by_status", (q) => q.eq("status", args.status!))
         .order("desc")
         .collect();
+      // Enrich with owner name
+      return await Promise.all(results.map(async (s) => {
+        const owner = await ctx.db.get(s.owner_id);
+        return { ...s, owner_name: owner?.full_name ?? "Unknown", email: s.login_email };
+      }));
     }
-    return await ctx.db.query("subscription_owner_listings").order("desc").collect();
+    const results = await ctx.db.query("subscriptions").order("desc").collect();
+    return await Promise.all(results.map(async (s) => {
+      const owner = await ctx.db.get(s.owner_id);
+      return { ...s, owner_name: owner?.full_name ?? "Unknown", email: s.login_email };
+    }));
   },
 });
 
 export const approveListing = mutation({
   args: {
-    listing_id: v.id("subscription_owner_listings"),
+    listing_id: v.id("subscriptions"),
     admin_id: v.id("users"),
     total_slots: v.number(),
     price_per_slot: v.number(),
@@ -75,35 +87,34 @@ export const approveListing = mutation({
     const listing = await ctx.db.get(args.listing_id);
     if (!listing) throw new Error("Listing not found");
 
-    // 1. Find or create the Subscription Platform record in the "subscriptions" table
-    let sub = await ctx.db.query("subscriptions")
+    // 1. Find or create the Catalog record
+    let catalog = await ctx.db.query("subscription_catalog")
       .filter(q => q.eq(q.field("name"), listing.platform))
       .first();
     
-    if (!sub) {
-      const subId = await ctx.db.insert("subscriptions", {
+    if (!catalog) {
+      const catalogId = await ctx.db.insert("subscription_catalog", {
         name: listing.platform,
-        description: `Owner-listed ${listing.platform} subscription`,
+        description: `Owner-listed ${listing.platform}`,
         base_cost: args.owner_payout,
         is_active: true,
       });
-      sub = await ctx.db.get(subId);
+      catalog = await ctx.db.get(catalogId);
     }
 
     // 2. Create the Marketplace Group
     const groupId = await ctx.db.insert("groups", {
-      subscription_id: sub!._id,
+      subscription_catalog_id: catalog!._id,
       billing_cycle_start: listing.renewal_date,
       status: "active",
-      account_email: listing.email,
-      plan_owner: "user_owner", // Marker for revenue sharing
+      account_email: listing.login_email,
+      plan_owner: "owner_listed",
     });
 
-    // 3. Create a Slot Type for this group if it doesn't exist
-    // (In a real app, we might reuse slot types, but for now we create a specific one)
+    // 3. Create a Slot Type
     const slotTypeId = await ctx.db.insert("slot_types", {
-      subscription_id: sub!._id,
-      name: "Standard Access",
+      subscription_id: catalog!._id,
+      name: "Owner Slot",
       price: args.price_per_slot,
       device_limit: 1,
       downloads_enabled: true,
@@ -112,23 +123,27 @@ export const approveListing = mutation({
       access_type: "email_invite",
     });
 
-    // 4. Create the actual Slots
-    for (let i = 0; i < args.total_slots; i++) {
-      await ctx.db.insert("slots", {
+    // 4. Create pre-generated Slots (PILLAR 3)
+    for (let i = 1; i <= args.total_slots; i++) {
+      await ctx.db.insert("subscription_slots", {
+        subscription_id: listing._id,
         group_id: groupId,
         slot_type_id: slotTypeId,
-        status: "available",
+        slot_number: i,
+        status: "open",
         renewal_date: listing.renewal_date,
+        created_at: Date.now(),
       });
     }
 
-    // 5. Update the Owner Listing
+    // 5. Update the Subscription Account record
     await ctx.db.patch(args.listing_id, {
       status: "Active",
       total_slots: args.total_slots,
-      price_per_slot: args.price_per_slot,
+      slot_price: args.price_per_slot,
       owner_payout_amount: args.owner_payout,
       group_id: groupId,
+      platform_catalog_id: catalog!._id,
       admin_note: args.admin_note,
       updated_at: Date.now(),
     });
@@ -139,8 +154,9 @@ export const approveListing = mutation({
 
 export const rejectListing = mutation({
   args: {
-    listing_id: v.id("subscription_owner_listings"),
-    admin_note: v.string(),
+    listing_id: v.id("subscriptions"),
+    admin_note: v.optional(v.string()),
+    admin_id: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.listing_id, {

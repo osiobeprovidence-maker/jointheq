@@ -39,7 +39,7 @@ export const importSubscriptions = mutation({
                 if (sub[key] !== null) sanitizedSub[key] = sub[key];
             }
 
-            const id = await ctx.db.insert("subscriptions", {
+            const id = await ctx.db.insert("subscription_catalog", {
                 ...sanitizedSub,
                 is_active: sub.is_active === 1 || sub.is_active === true,
             });
@@ -83,6 +83,12 @@ export const importGroups = mutation({
             const sanitizedG: any = {};
             for (const key in g) {
                 if (g[key] !== null) sanitizedG[key] = g[key];
+            }
+
+            // Map old subscription_id to new subscription_catalog_id
+            if (sanitizedG.subscription_id) {
+                sanitizedG.subscription_catalog_id = sanitizedG.subscription_id;
+                delete sanitizedG.subscription_id;
             }
 
             const id = await ctx.db.insert("groups", sanitizedG);
