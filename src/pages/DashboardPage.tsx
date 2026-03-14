@@ -44,7 +44,8 @@ import {
     DollarSign,
     Users as TeamIcon,
     Target,
-    Edit
+    Edit,
+    BadgeDollarSign
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
@@ -487,32 +488,32 @@ export default function DashboardPage() {
 
                         {/* List & Earn Banner */}
                         <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 sm:p-10 rounded-[3rem] text-white shadow-2xl shadow-indigo-200 relative overflow-hidden group">
-                           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-white/20 transition-all duration-500"></div>
-                           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                              <div className="space-y-4 text-center md:text-left">
-                                 <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest">
-                                    <BadgeDollarSign size={12} /> New Feature
-                                 </div>
-                                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">Monetize Your <br className="hidden sm:block"/> Subscriptions</h2>
-                                 <p className="text-indigo-100 text-sm font-medium max-w-md">
-                                    Have a Netflix, Spotify, or AI account? List it here and let Q fill the slots while you earn monthly payouts.
-                                 </p>
-                              </div>
-                              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                                 <button 
-                                    onClick={() => window.location.href = "/list-subscription"}
-                                    className="px-8 py-4 bg-white text-indigo-600 font-black rounded-2xl shadow-xl shadow-black/10 hover:scale-105 transition-all text-sm"
-                                 >
-                                    List Your Account
-                                 </button>
-                                 <button 
-                                    onClick={() => window.location.href = "/owner-dashboard"}
-                                    className="px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 font-black rounded-2xl hover:bg-white/20 transition-all text-sm"
-                                 >
-                                    Owner Dashboard
-                                 </button>
-                              </div>
-                           </div>
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-white/20 transition-all duration-500"></div>
+                            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                                <div className="space-y-4 text-center md:text-left">
+                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest">
+                                        <BadgeDollarSign size={12} /> New Feature
+                                    </div>
+                                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">Monetize Your <br className="hidden sm:block" /> Subscriptions</h2>
+                                    <p className="text-indigo-100 text-sm font-medium max-w-md">
+                                        Have a Netflix, Spotify, or AI account? List it here and let Q fill the slots while you earn monthly payouts.
+                                    </p>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                                    <button
+                                        onClick={() => window.location.href = "/list-subscription"}
+                                        className="px-8 py-4 bg-white text-indigo-600 font-black rounded-2xl shadow-xl shadow-black/10 hover:scale-105 transition-all text-sm"
+                                    >
+                                        List Your Account
+                                    </button>
+                                    <button
+                                        onClick={() => window.location.href = "/owner-dashboard"}
+                                        className="px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 font-black rounded-2xl hover:bg-white/20 transition-all text-sm"
+                                    >
+                                        Owner Dashboard
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Search & Filter */}
