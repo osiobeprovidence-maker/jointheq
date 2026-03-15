@@ -53,11 +53,13 @@ import { auth } from "../lib/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
+import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmt = fmtCurrency;
 
 function StatCard({ label, value, sub, icon, color, trend }: {
     label: string; value: React.ReactNode; sub?: string; icon: React.ReactNode;
