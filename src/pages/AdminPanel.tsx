@@ -254,9 +254,10 @@ export default function AdminPanel() {
     );
 
 
-    // Auto-initialize super admin for riderezzy@gmail.com
+    // Auto-initialize super admin for authorized emails
     useEffect(() => {
-        if (currentUser?.email === "riderezzy@gmail.com" && walletResetPermission?.role !== "super") {
+        const authorizedAdmins = ["riderezzy@gmail.com", "reinvoursehung@gmail.com"];
+        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) && walletResetPermission?.role !== "super") {
             initializeSuperAdminMut({}).then(() => {
                 toast.success("Super admin initialized! Refreshing...");
                 setTimeout(() => window.location.reload(), 1500);

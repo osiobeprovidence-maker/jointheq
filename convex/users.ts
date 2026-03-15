@@ -83,33 +83,36 @@ export const resetAllWallets = mutation({
 export const initializeSuperAdmin = mutation({
     args: {},
     handler: async (ctx) => {
-        // Find user by email
-        const adminUser = await ctx.db.query("users")
-            .withIndex("by_email", q => q.eq("email", "riderezzy@gmail.com"))
-            .unique();
+        const adminEmails = ["riderezzy@gmail.com", "reinvoursehung@gmail.com"];
+        const results = [];
 
-        if (!adminUser) {
-            throw new Error("User riderezzy@gmail.com not found");
+        for (const email of adminEmails) {
+            const user = await ctx.db.query("users")
+                .withIndex("by_email", q => q.eq("email", email))
+                .unique();
+
+            if (!user) continue;
+
+            if (user.admin_role !== "super") {
+                await ctx.db.patch(user._id, {
+                    admin_role: "super",
+                    is_admin: true,
+                });
+
+                await ctx.db.insert("admin_logs", {
+                    admin_id: user._id,
+                    action: "initialized_super_admin",
+                    target_type: "user",
+                    target_name: `${user.full_name} (${user.email})`,
+                    created_at: Date.now(),
+                });
+                results.push(`${email}: granted`);
+            } else {
+                results.push(`${email}: already super`);
+            }
         }
 
-        if (adminUser.admin_role === "super") {
-            return { success: false, message: "Already super admin", role: "super" };
-        }
-
-        await ctx.db.patch(adminUser._id, {
-            admin_role: "super",
-            is_admin: true,
-        });
-
-        await ctx.db.insert("admin_logs", {
-            admin_id: adminUser._id,
-            action: "initialized_super_admin",
-            target_type: "user",
-            target_name: `${adminUser.full_name} (${adminUser.email})`,
-            created_at: Date.now(),
-        });
-
-        return { success: true, message: "Super admin granted!", role: "super" };
+        return { success: true, message: results.join(", "), role: "super" };
     },
 });
 
