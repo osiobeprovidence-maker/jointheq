@@ -47,9 +47,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
         { id: 'history', label: 'History', icon: <Clock size={20} /> },
         { id: 'support', label: 'Support', icon: <MessageCircle size={20} /> },
-        ...(auth.isAdmin() ? [{ id: 'admin', label: 'Admin', icon: <Lock size={20} /> }] : []),
         { id: 'profile', label: 'Profile', icon: <UserIcon size={20} /> },
     ];
+
+    const adminNavItem = { id: 'admin', label: 'Admin', icon: <Lock size={20} /> };
 
     return (
         <div className="min-h-screen bg-[#f4f5f8] text-[#1A1A1A] font-sans">
@@ -79,6 +80,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                             <span className="font-semibold">{item.label}</span>
                         </button>
                     ))}
+                    {auth.isAdmin() && (
+                        <button
+                            onClick={() => setActiveTab(adminNavItem.id)}
+                            className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === adminNavItem.id
+                                ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                : 'text-gray-500 hover:bg-black/5 hover:text-black'
+                                }`}
+                        >
+                            {adminNavItem.icon}
+                            <span className="font-semibold">{adminNavItem.label}</span>
+                        </button>
+                    )}
                 </div>
 
                 <div className="pt-6 border-t border-black/5">
@@ -99,12 +112,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                             Rank: {getRank(qScore)}
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={() => {
                             if (window.confirm("Are you sure you want to log out?")) {
                                 auth.logout();
                             }
-                        }} 
+                        }}
                         className="flex items-center gap-3 w-full p-3 text-red-500 hover:bg-red-50 rounded-full scale-100 hover:scale-[1.02] transition-colors"
                     >
                         <LogOut size={20} />
@@ -148,13 +161,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                                 <span className="font-semibold">{item.label}</span>
                             </button>
                         ))}
+                        {auth.isAdmin() && (
+                            <button
+                                onClick={() => { setActiveTab(adminNavItem.id); setIsMobileMenuOpen(false); }}
+                                className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === adminNavItem.id
+                                    ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                    : 'text-gray-500 hover:bg-black/5 hover:text-black'
+                                    }`}
+                            >
+                                {adminNavItem.icon}
+                                <span className="font-semibold">{adminNavItem.label}</span>
+                            </button>
+                        )}
                         <div className="pt-2 mt-2 border-t border-black/5">
-                            <button 
+                            <button
                                 onClick={() => {
                                     if (window.confirm("Are you sure you want to log out?")) {
                                         auth.logout();
                                     }
-                                }} 
+                                }}
                                 className="flex items-center gap-3 w-full p-3 text-red-500 rounded-full scale-100 hover:scale-[1.02] font-bold hover:bg-red-50 transition-colors"
                             >
                                 <LogOut size={20} />

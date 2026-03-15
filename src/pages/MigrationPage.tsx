@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -19,7 +18,8 @@ import {
   ArrowRight,
   ShieldCheck,
   ChevronLeft,
-  ArrowLeft
+  ArrowLeft,
+  Check
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useQuery } from "convex/react";
@@ -121,87 +121,50 @@ export default function MigrationPage() {
       }}
       qScore={currentUser?.q_score || 0}
     >
-      <div className="max-w-2xl mx-auto px-6 pt-12 pb-8">
-        <button
-          onClick={() => user ? navigate('/dashboard') : navigate('/')}
-          className="flex items-center gap-2 text-zinc-400 hover:text-black font-bold text-sm transition-colors group"
-        >
-          <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center group-hover:bg-zinc-900 group-hover:text-white transition-all shadow-sm border border-black/5">
-            <ArrowLeft size={20} />
-          </div>
-          Back to {user ? 'Dashboard' : 'Home'}
-        </button>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-6 pb-20">
+      <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="text-center space-y-4 mb-10">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-4"
-          >
-            <ShieldCheck size={14} className="text-indigo-500" />
-            Verified Migration Portal
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-4xl md:text-5xl font-black tracking-tight text-zinc-900"
-          >
-            Migrate <span className="text-zinc-300 underline decoration-zinc-100 underline-offset-8">Subscription</span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="max-w-lg mx-auto text-zinc-500 leading-relaxed font-medium mt-6"
-          >
-            Offline Q member? Migrate your existing slot here to manage it directly on the platform.
-          </motion.p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Migrate Subscription</h1>
+          <p className="text-zinc-500 mt-2 text-base">
+            Transfer your existing subscription to manage it inside Q.
+          </p>
         </div>
 
-        {/* Info Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-zinc-900 p-8 rounded-[2.5rem] text-white mb-8 shadow-2xl shadow-black/10 flex items-center gap-6"
-        >
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
-            <ShieldCheck size={24} />
+        {/* Section 1: Identity Verification */}
+        <section className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <Check size={16} strokeWidth={3} />
+            </div>
+            <h2 className="text-lg font-bold text-zinc-900">Identity Verified</h2>
           </div>
-          <div className="space-y-1">
-            <h4 className="font-black text-sm uppercase tracking-tight">Identity Linked</h4>
-            <p className="text-[11px] font-bold text-white/70 uppercase tracking-tight leading-relaxed">
-              Your account info ({currentUser?.email}) is already linked. Just tell us which subscription you are using.
+          <div className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm">
+            <p className="text-zinc-600 font-medium">
+              Your email <span className="font-bold text-zinc-900">{currentUser?.email}</span> is linked to this account.
             </p>
           </div>
-        </motion.div>
+        </section>
 
-        {/* Form */}
-        <motion.form
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          onSubmit={handleSubmit}
-          className="space-y-10 bg-white p-8 md:p-10 rounded-[2.5rem] border border-black/5 shadow-xl shadow-black/[0.02]"
-        >
-          {/* Subscription Details */}
-          <div className="space-y-8">
-            <h2 className="text-xl font-black flex items-center gap-4 text-zinc-900">
-              <span className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center text-sm font-black">1</span>
-              Subscription Details
-            </h2>
+        {/* Section 2: Subscription Details */}
+        <section className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center text-sm font-bold">
+              1
+            </div>
+            <h2 className="text-lg font-bold text-zinc-900">Subscription Details</h2>
+          </div>
 
-            <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-white p-8 rounded-3xl border border-black/5 shadow-sm space-y-6">
+              {/* Platform Selection */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Subscription Platform</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Subscription Platform</label>
                 <div className="relative">
                   <select
                     name="platform"
                     value={formData.platform}
                     onChange={handleChange}
-                    className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 px-6 appearance-none focus:ring-1 focus:ring-zinc-900 outline-none transition-all font-bold text-zinc-800 text-sm"
+                    className="w-full bg-[#f4f5f8] border-none rounded-2xl py-4 px-5 appearance-none focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-bold text-zinc-800 text-base"
                   >
                     {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
@@ -209,8 +172,9 @@ export default function MigrationPage() {
                 </div>
               </div>
 
+              {/* Profile Name */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Profile Name on Account</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Profile Name on Account</label>
                 <input
                   required
                   type="text"
@@ -218,53 +182,53 @@ export default function MigrationPage() {
                   value={formData.profile_name}
                   onChange={handleChange}
                   placeholder="e.g. Netflix profile name"
-                  className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 px-6 focus:ring-1 focus:ring-zinc-900 outline-none transition-all font-bold placeholder:text-zinc-300 text-sm"
+                  className="w-full bg-[#f4f5f8] border-none rounded-2xl py-4 px-5 focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-bold placeholder:text-zinc-300 text-base"
                 />
               </div>
 
+              {/* Payment Day & Last Payment Date */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Payment Day (1-31)</label>
-                  <div className="relative group">
-                    <input
-                      required
-                      type="number"
-                      min="1"
-                      max="31"
-                      name="payment_day"
-                      value={formData.payment_day}
-                      onChange={handleChange}
-                      className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 px-6 focus:ring-1 focus:ring-zinc-900 outline-none transition-all font-bold text-center text-base"
-                    />
-                  </div>
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Payment Day (1-31)</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    max="31"
+                    name="payment_day"
+                    value={formData.payment_day}
+                    onChange={handleChange}
+                    className="w-full bg-[#f4f5f8] border-none rounded-2xl py-4 px-5 focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-bold text-center text-base"
+                  />
                 </div>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Last Payment Date</label>
-                  <div className="relative group">
-                    <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-zinc-900 transition-colors" size={20} />
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Last Payment Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300" size={20} />
                     <input
                       required
                       type="date"
                       name="last_payment_date"
                       value={formData.last_payment_date}
                       onChange={handleChange}
-                      className="w-full bg-[#f4f5f8] border-none rounded-2xl py-5 pl-14 pr-6 focus:ring-1 focus:ring-zinc-900 outline-none transition-all font-bold text-sm"
+                      className="w-full bg-[#f4f5f8] border-none rounded-2xl py-4 pl-13 pr-5 focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-bold text-base"
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Device Count */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Number of Devices Used</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Number of Devices Used</label>
                 <div className="grid grid-cols-4 gap-3">
                   {DEVICE_COUNTS.map(d => (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setFormData(p => ({ ...p, device_count: d }))}
-                      className={`py-4 rounded-2xl border-2 transition-all font-bold text-sm ${formData.device_count === d
-                          ? "bg-zinc-900 border-zinc-900 text-white shadow-xl shadow-black/10"
-                          : "bg-[#f4f5f8] border-transparent text-zinc-400 hover:bg-[#EBECF0]"
+                      className={`py-4 rounded-2xl border-2 transition-all font-bold text-base ${formData.device_count === d
+                        ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
+                        : "bg-[#f4f5f8] border-transparent text-zinc-500 hover:bg-[#EBECF0]"
                         }`}
                     >
                       {d}
@@ -273,25 +237,26 @@ export default function MigrationPage() {
                 </div>
               </div>
             </div>
-          </div>
 
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            disabled={loading}
-            type="submit"
-            className="w-full py-6 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-base hover:shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed mt-8"
-          >
-            {loading ? (
-              <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                Migrate Subscription
-                <ArrowRight size={20} />
-              </>
-            )}
-          </motion.button>
-        </motion.form>
+            {/* Section 3: Migration Confirmation - Submit Button */}
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              disabled={loading}
+              type="submit"
+              className="w-full py-5 bg-zinc-900 text-white shadow-lg rounded-2xl font-bold text-base hover:shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  Submit Migration Request
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </motion.button>
+          </form>
+        </section>
       </div>
     </MainLayout>
   );
