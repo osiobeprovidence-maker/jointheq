@@ -77,6 +77,43 @@ export const resetAllWallets = mutation({
 });
 
 /**
+ * ONE-TIME SETUP: Grant super admin to the first user
+ * Call this once to initialize your admin account
+ */
+export const initializeSuperAdmin = mutation({
+    args: {},
+    handler: async (ctx) => {
+        // Find user by email
+        const adminUser = await ctx.db.query("users")
+            .withIndex("by_email", q => q.eq("email", "riderezzy@gmail.com"))
+            .unique();
+
+        if (!adminUser) {
+            throw new Error("User riderezzy@gmail.com not found");
+        }
+
+        if (adminUser.admin_role === "super") {
+            return { success: false, message: "Already super admin", role: "super" };
+        }
+
+        await ctx.db.patch(adminUser._id, {
+            admin_role: "super",
+            is_admin: true,
+        });
+
+        await ctx.db.insert("admin_logs", {
+            admin_id: adminUser._id,
+            action: "initialized_super_admin",
+            target_type: "user",
+            target_name: `${adminUser.full_name} (${adminUser.email})`,
+            created_at: Date.now(),
+        });
+
+        return { success: true, message: "Super admin granted!", role: "super" };
+    },
+});
+
+/**
  * Check if current user can reset wallets (is super admin)
  */
 export const canResetWallets = query({

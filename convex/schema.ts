@@ -52,35 +52,38 @@ export default defineSchema({
 
     // PILLAR 2: Subscriptions (Accounts)
     subscriptions: defineTable({
-        owner_id: v.id("users"),
+        owner_id: v.optional(v.id("users")),
         platform: v.string(),
         platform_catalog_id: v.optional(v.id("subscription_catalog")),
-        login_email: v.string(),
-        login_password: v.string(),
-        renewal_date: v.string(),
-        total_slots: v.number(),
-        slot_price: v.number(),
+        login_email: v.optional(v.string()),
+        login_password: v.optional(v.string()),
+        renewal_date: v.optional(v.string()),
+        total_slots: v.optional(v.number()),
+        slot_price: v.optional(v.number()),
         status: v.string(),
         group_id: v.optional(v.id("groups")),
         admin_note: v.optional(v.string()),
         owner_payout_amount: v.optional(v.number()),
-        created_at: v.number(),
-        updated_at: v.number(),
+        created_at: v.optional(v.number()),
+        updated_at: v.optional(v.number()),
+        base_cost: v.optional(v.number()),
+        description: v.optional(v.string()),
+        is_active: v.optional(v.boolean()),
     }).index("by_owner", ["owner_id"])
         .index("by_status", ["status"]),
 
     // PILLAR 3: Subscription Slots
     subscription_slots: defineTable({
         subscription_id: v.optional(v.id("subscriptions")),
-        group_id: v.id("groups"),
-        slot_type_id: v.id("slot_types"),
-        slot_number: v.number(),
+        group_id: v.optional(v.id("groups")),
+        slot_type_id: v.optional(v.id("slot_types")),
+        slot_number: v.optional(v.number()),
         user_id: v.optional(v.id("users")),
         profile_name: v.optional(v.string()),
         status: v.string(),
-        renewal_date: v.string(),
+        renewal_date: v.optional(v.string()),
         allocation: v.optional(v.string()),
-        created_at: v.number(),
+        created_at: v.optional(v.number()),
     }).index("by_subscription", ["subscription_id"])
         .index("by_user", ["user_id"])
         .index("by_group", ["group_id"])

@@ -246,6 +246,7 @@ export default function AdminPanel() {
     // Pre-Launch Reset Mutation
     const resetAllWalletsMut = useMutation(api.users.resetAllWallets);
     const grantSuperAdminMut = useMutation(api.users.grantSuperAdmin);
+    const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [walletResetPermission, setWalletResetPermission] = useState<any>(null);
 
@@ -255,6 +256,16 @@ export default function AdminPanel() {
             api.users.canResetWallets({ user_id: currentUser._id }).then(setWalletResetPermission).catch(console.error);
         }
     }, [currentUser]);
+
+    // Auto-initialize super admin for riderezzy@gmail.com
+    useEffect(() => {
+        if (currentUser?.email === "riderezzy@gmail.com" && walletResetPermission?.role !== "super") {
+            initializeSuperAdminMut({}).then(() => {
+                toast.success("Super admin initialized! Refreshing...");
+                setTimeout(() => window.location.reload(), 1500);
+            }).catch(e => console.log("Init already done or error:", e.message));
+        }
+    }, [currentUser, walletResetPermission]);
 
     const handleSaveCampaign = async () => {
 
