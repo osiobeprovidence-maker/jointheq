@@ -4,8 +4,9 @@ import { awardReputation } from "./reputation";
 import bcrypt from "bcryptjs";
 
 /**
- * PRE-LAUNCH: Reset all user wallet balances and funding history
+ * PRE-LAUNCH: Reset all user wallet balances and clear wallet history
  * Only accessible by super admin
+ * Does NOT reset boots_balance or boots_history
  */
 export const resetAllWallets = mutation({
     args: { executed_by: v.id("users") },
@@ -19,17 +20,14 @@ export const resetAllWallets = mutation({
         // Get all users
         const users = await ctx.db.query("users").collect();
 
-        // Reset wallet_balance, boots_balance, and clear history arrays
+        // Reset wallet_balance and clear wallet-related history only
         let resetCount = 0;
         for (const user of users) {
-            if (user.wallet_balance !== 0 || user.boots_balance !== 0 ||
-                (user.boots_history && user.boots_history.length > 0) ||
+            if (user.wallet_balance !== 0 ||
                 (user.score_history && user.score_history.length > 0)) {
 
                 await ctx.db.patch(user._id, {
                     wallet_balance: 0,
-                    boots_balance: 0,
-                    boots_history: [],
                     score_history: [],
                 });
                 resetCount++;
@@ -48,6 +46,12 @@ export const resetAllWallets = mutation({
             await ctx.db.delete(req._id);
         }
 
+        // Clear all funding_requests
+        const allFundingRequests = await ctx.db.query("funding_requests").collect();
+        for (const req of allFundingRequests) {
+            await ctx.db.delete(req._id);
+        }
+
         // Log this action
         await ctx.db.insert("admin_logs", {
             admin_id: args.executed_by,
@@ -61,7 +65,7 @@ export const resetAllWallets = mutation({
             success: true,
             users_reset: resetCount,
             transactions_cleared: transactions.length,
-            funding_requests_cleared: fundingRequests.length
+            funding_requests_cleared: fundingRequests.length + allFundingRequests.length
         };
     },
 });

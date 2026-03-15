@@ -2934,12 +2934,11 @@ export default function AdminPanel() {
                                     <p className="text-sm font-bold text-red-800 mb-2">This will:</p>
                                     <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
                                         <li>Set ALL user wallet balances to ₦0</li>
-                                        <li>Set ALL user boots balances to 0</li>
-                                        <li>Clear all boots history</li>
                                         <li>Clear all score history</li>
                                         <li>Delete ALL wallet transactions</li>
                                         <li>Delete ALL funding requests</li>
                                     </ul>
+                                    <p className="text-xs text-red-600 font-bold mt-3">✓ Boots balances and history are NOT affected</p>
                                 </div>
                                 <p className="text-xs text-gray-500 font-bold">
                                     Type "CONFIRM RESET" to proceed:
