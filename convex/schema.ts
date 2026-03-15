@@ -131,6 +131,25 @@ export default defineSchema({
         device_count: v.optional(v.number()),
     }).index("by_user", ["user_id"]),
 
+    // PILLAR 8: Migrated Subscriptions (New Migration System)
+    migrated_subscriptions: defineTable({
+        user_id: v.id("users"),
+        email: v.string(),
+        phone: v.string(),
+        platform: v.string(),
+        profile_name: v.string(),
+        payment_day: v.number(),
+        last_payment_date: v.string(),
+        role: v.string(),
+        device_count: v.string(),
+        device_types: v.optional(v.array(v.string())),
+        status: v.string(),
+        assigned_group: v.optional(v.string()),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_platform", ["platform"]),
+
     // --- SUPPORTING TABLES ---
     subscription_catalog: defineTable({
         name: v.string(),
