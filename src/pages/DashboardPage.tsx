@@ -1896,11 +1896,15 @@ function StatCard({ title, value, icon, color }: { title: string, value: string,
 }
 
 function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick }: { slot: UserSlot, onUpdateAllocation: (val: string) => void, onSupportClick: () => void }) {
-    const daysLeft = Math.ceil((new Date(slot.renewal_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const getDateSafely = (dateStr?: string) => {
+        if (!dateStr) return new Date();
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? new Date() : d;
+    };
 
-    // Formatting date
-    const d = new Date(slot.renewal_date);
-    const formattedRenewal = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const targetDate = getDateSafely(slot.renewal_date);
+    const daysLeft = Math.ceil((targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const formattedRenewal = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     const [isEditing, setIsEditing] = useState(false);
     const [allocation, setAllocation] = useState(slot.allocation || '');
@@ -1949,6 +1953,17 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick }: { slot: Us
                             <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">2.</span> Send your Google email address</li>
                             <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">3.</span> Admin will send a family invite</li>
                             <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">4.</span> Accept the invitation</li>
+                        </ul>
+                    </div>
+                );
+            case 'migrated':
+                return (
+                    <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
+                        <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex gap-2 items-start"><span className="text-indigo-500 opacity-80 text-[10px] mt-1 font-mono">1.</span> Your subscription is being migrated</li>
+                            <li className="flex gap-2 items-start"><span className="text-indigo-500 opacity-80 text-[10px] mt-1 font-mono">2.</span> Status: <span className="font-bold text-indigo-600">{slot.status}</span></li>
+                            <li className="flex gap-2 items-start"><span className="text-indigo-500 opacity-80 text-[10px] mt-1 font-mono">3.</span> Open Chat Support if you have questions</li>
                         </ul>
                     </div>
                 );

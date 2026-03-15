@@ -80,24 +80,46 @@ export const getActiveSubscriptions = query({
 export const getSlotsByUserId = query({
     args: { user_id: v.id("users") },
     handler: async (ctx, args) => {
+        // 1. Get standard subscription slots
         const slots = await ctx.db
             .query("subscription_slots")
             .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
             .collect();
 
-        return Promise.all(
+        const standardSlots = await Promise.all(
             slots.map(async (slot) => {
-                const slotType = await ctx.db.get(slot.slot_type_id);
-                const sub = slotType ? await ctx.db.get(slotType.subscription_id) : null;
+                const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
+                const sub = slotType ? await ctx.db.get((slotType as any).subscription_id) : null;
                 return {
                     ...slot,
-                    slot_name: slotType?.name,
-                    sub_name: sub?.name,
-                    price: slotType?.price,
-                    access_type: slotType?.access_type,
+                    slot_name: (slotType as any)?.name,
+                    sub_name: (sub as any)?.name,
+                    price: (slotType as any)?.price,
+                    access_type: (slotType as any)?.access_type,
                 };
             })
         );
+
+        // 2. Get migrated subscriptions
+        const migrations = await ctx.db
+            .query("migrated_subscriptions")
+            .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
+            .collect();
+
+        const migratedSlots = migrations.map((m) => ({
+            _id: m._id,
+            _creationTime: m._creationTime,
+            user_id: m.user_id,
+            status: m.status,
+            renewal_date: m.last_payment_date,
+            slot_name: m.profile_name,
+            sub_name: m.platform,
+            price: 0, // Migrated slots might not have a set price yet
+            allocation: m.assigned_group || "Pending Approval",
+            access_type: "migrated",
+        }));
+
+        return [...standardSlots, ...migratedSlots];
     },
 });
 
@@ -259,9 +281,15 @@ export const joinSlot = mutation({
     },
 });
 export const updateAllocation = mutation({
-    args: { id: v.id("subscription_slots"), allocation: v.string() },
+    args: { id: v.any(), allocation: v.string() },
     handler: async (ctx, args) => {
-        await ctx.db.patch(args.id, { allocation: args.allocation });
+        // Try patching subscription_slots first
+        try {
+            await ctx.db.patch(args.id, { allocation: args.allocation });
+        } catch (e) {
+            // If that fails, try migrated_subscriptions (which uses assigned_group field)
+            await ctx.db.patch(args.id, { assigned_group: args.allocation });
+        }
     },
 });
 
