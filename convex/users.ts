@@ -13,8 +13,14 @@ export const resetAllWallets = mutation({
     handler: async (ctx, args) => {
         // Verify executor is super admin
         const executor = await ctx.db.get(args.executed_by);
-        if (!executor?.is_admin || executor.admin_role !== "super") {
-            throw new Error("Only Super Admin can execute wallet reset");
+        if (!executor) {
+            throw new Error("User not found");
+        }
+        if (!executor.is_admin) {
+            throw new Error("You must be an admin to perform this action");
+        }
+        if (executor.admin_role !== "super") {
+            throw new Error(`Access denied. Your role: ${executor.admin_role}. Required role: super`);
         }
 
         // Get all users
@@ -67,6 +73,61 @@ export const resetAllWallets = mutation({
             transactions_cleared: transactions.length,
             funding_requests_cleared: fundingRequests.length + allFundingRequests.length
         };
+    },
+});
+
+/**
+ * Check if current user can reset wallets (is super admin)
+ */
+export const canResetWallets = query({
+    args: { user_id: v.id("users") },
+    handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.user_id);
+        if (!user) return { can_reset: false, reason: "User not found", role: null };
+        if (!user.is_admin) return { can_reset: false, reason: "Not an admin", role: user.admin_role };
+        if (user.admin_role !== "super") return { can_reset: false, reason: `Role is ${user.admin_role}, requires super`, role: user.admin_role };
+        return { can_reset: true, reason: "OK", role: user.admin_role };
+    },
+});
+
+/**
+ * Grant super admin role to the first admin (owner initialization)
+ * Only callable by existing super admin OR if no super admin exists
+ */
+export const grantSuperAdmin = mutation({
+    args: { target_id: v.id("users"), granted_by: v.id("users") },
+    handler: async (ctx, args) => {
+        const granter = await ctx.db.get(args.granted_by);
+
+        // Check if granter is authorized
+        if (!granter?.is_admin) {
+            throw new Error("You must be an admin to grant super admin");
+        }
+        if (granter.admin_role !== "super") {
+            // Check if there are ANY super admins
+            const allAdmins = await ctx.db.query("users").filter(q => q.eq(q.field("is_admin"), true)).collect();
+            const hasSuperAdmin = allAdmins.some(a => a.admin_role === "super");
+            if (hasSuperAdmin) {
+                throw new Error("Only a super admin can grant super admin role");
+            }
+        }
+
+        const target = await ctx.db.get(args.target_id);
+        if (!target?.is_admin) {
+            throw new Error("Target user must be an admin");
+        }
+
+        await ctx.db.patch(args.target_id, { admin_role: "super" });
+
+        await ctx.db.insert("admin_logs", {
+            admin_id: args.granted_by,
+            action: "granted_super_admin",
+            target_type: "user",
+            target_name: `${target.full_name} (${target.email})`,
+            created_at: Date.now(),
+        });
+
+        return { success: true, new_role: "super" };
     },
 });
 
