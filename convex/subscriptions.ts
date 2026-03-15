@@ -389,7 +389,7 @@ export const getAdminMarketplace = query({
     handler: async (ctx) => {
         const groups = await ctx.db.query("groups").collect();
         return await Promise.all(groups.map(async (group) => {
-            const sub = await ctx.db.get(group.subscription_catalog_id);
+            const sub = group.subscription_catalog_id ? await ctx.db.get(group.subscription_catalog_id) : null;
             const slots = await ctx.db.query("subscription_slots")
                 .withIndex("by_group", q => q.eq("group_id", group._id))
                 .collect();
@@ -399,7 +399,7 @@ export const getAdminMarketplace = query({
 
             const members = await Promise.all(slots.map(async (s) => {
                 const u = s.user_id ? await ctx.db.get(s.user_id) : null;
-                const st = await ctx.db.get(s.slot_type_id);
+                const st = s.slot_type_id ? await ctx.db.get(s.slot_type_id) : null;
                 return {
                     slot_id: s._id,
                     user_name: u?.full_name ?? "Empty Slot",

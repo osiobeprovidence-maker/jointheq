@@ -421,6 +421,9 @@ export const login = mutation({
 
         // Check password using bcrypt with fallback for plain text
         let isPasswordValid = false;
+        if (!user.password_hash) {
+            return { success: false, error: "Invalid credentials" };
+        }
         if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
             isPasswordValid = bcrypt.compareSync(args.password, user.password_hash);
         } else {
@@ -674,6 +677,52 @@ export const getCampusRep = query({
             .query("campus_reps")
             .withIndex("by_user", (q) => q.eq("user_id", args.userId))
             .unique();
+    },
+});
+
+/**
+ * Cleanup duplicate users and fix invalid data
+ * Only callable by super admin
+ */
+export const cleanupDuplicates = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const users = await ctx.db.query("users").collect();
+
+        // Find and delete duplicate admin@jointheq.com (keep the oldest)
+        const adminUsers = users
+            .filter(u => u.email === "admin@jointheq.com")
+            .sort((a, b) => a.created_at - b.created_at);
+
+        let deletedCount = 0;
+        if (adminUsers.length > 1) {
+            // Delete all but the first (oldest) one
+            for (let i = 1; i < adminUsers.length; i++) {
+                await ctx.db.delete(adminUsers[i]._id);
+                deletedCount++;
+            }
+        }
+
+        // Fix demo@jointheq.com - add missing role field
+        const demoUser = users.find(u => u.email === "demo@jointheq.com");
+        let fixedCount = 0;
+        if (demoUser && !demoUser.role) {
+            await ctx.db.patch(demoUser._id, { role: "user" });
+            fixedCount++;
+        }
+
+        // Fix any other users with missing role
+        const usersMissingRole = users.filter(u => !u.role && u.email !== "demo@jointheq.com");
+        for (const user of usersMissingRole) {
+            await ctx.db.patch(user._id, { role: "user" });
+            fixedCount++;
+        }
+
+        return {
+            success: true,
+            deleted_duplicates: deletedCount,
+            fixed_missing_role: fixedCount,
+        };
     },
 });
 

@@ -9,7 +9,7 @@ export default defineSchema({
         full_name: v.string(),
         username: v.optional(v.string()),
         work_username: v.optional(v.string()),
-        role: v.string(), // "subscriber" | "owner" | "admin"
+        role: v.optional(v.string()), // "subscriber" | "owner" | "admin"
         wallet_balance: v.number(),
         boots_balance: v.number(),
         created_at: v.number(),
@@ -25,17 +25,29 @@ export default defineSchema({
         is_verified: v.boolean(),
         profile_image_url: v.optional(v.string()),
         university: v.optional(v.string()),
+        password_hash: v.optional(v.string()),
+        verification_token: v.optional(v.string()),
+        verification_token_expires: v.optional(v.string()),
+        verification_deadline: v.optional(v.number()),
+        direct_debit_card: v.optional(v.object({
+            last4: v.string(),
+            brand: v.string(),
+            expiry: v.string(),
+            auth_token: v.string(),
+        })),
         score_history: v.optional(v.array(v.object({
             amount: v.number(),
             type: v.string(),
             description: v.string(),
             timestamp: v.optional(v.number()),
+            created_at: v.optional(v.number()),
         }))),
         boots_history: v.optional(v.array(v.object({
             amount: v.number(),
             type: v.string(),
             description: v.string(),
             timestamp: v.optional(v.number()),
+            created_at: v.optional(v.number()),
         }))),
         penalty_history: v.optional(v.array(v.object({
             type: v.string(),
@@ -43,24 +55,30 @@ export default defineSchema({
             score_penalty: v.number(),
             boots_penalty: v.number(),
             timestamp: v.optional(v.number()),
+            created_at: v.optional(v.number()),
         }))),
+        failed_login_attempts: v.optional(v.number()),
+        lockout_until: v.optional(v.number()),
     }).index("by_email", ["email"])
         .index("by_username", ["username"])
         .index("by_referral_code", ["referral_code"])
+        .index("by_referred_by", ["referred_by"])
+        .index("by_phone", ["phone"])
+        .index("by_token", ["verification_token"])
         .index("by_is_admin", ["is_admin"])
         .index("by_work_username", ["work_username"]),
 
     // PILLAR 2: Subscriptions (Accounts)
     subscriptions: defineTable({
         owner_id: v.optional(v.id("users")),
-        platform: v.string(),
+        platform: v.optional(v.string()),
         platform_catalog_id: v.optional(v.id("subscription_catalog")),
         login_email: v.optional(v.string()),
         login_password: v.optional(v.string()),
         renewal_date: v.optional(v.string()),
         total_slots: v.optional(v.number()),
         slot_price: v.optional(v.number()),
-        status: v.string(),
+        status: v.optional(v.string()),
         group_id: v.optional(v.id("groups")),
         admin_note: v.optional(v.string()),
         owner_payout_amount: v.optional(v.number()),
@@ -69,6 +87,7 @@ export default defineSchema({
         base_cost: v.optional(v.number()),
         description: v.optional(v.string()),
         is_active: v.optional(v.boolean()),
+        name: v.optional(v.string()),
     }).index("by_owner", ["owner_id"])
         .index("by_status", ["status"]),
 
@@ -218,6 +237,27 @@ export default defineSchema({
         created_at: v.number(),
     }).index("by_user", ["user_id"]),
 
+    support_conversations: defineTable({
+        user_id: v.id("users"),
+        status: v.string(),
+        assigned_admin_id: v.optional(v.id("users")),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+        last_message_at: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_admin", ["assigned_admin_id"])
+        .index("by_last_message", ["updated_at"]),
+
+    support_messages: defineTable({
+        conversation_id: v.id("support_conversations"),
+        sender_id: v.id("users"),
+        sender_role: v.optional(v.string()),
+        content: v.string(),
+        created_at: v.number(),
+    }).index("by_conversation", ["conversation_id"])
+        .index("by_sender", ["sender_id"]),
+
     support_tickets: defineTable({
         user_id: v.id("users"),
         category: v.string(),
@@ -290,7 +330,7 @@ export default defineSchema({
         admin_id: v.id("users"),
         action: v.string(),
         target_type: v.string(),
-        target_id: v.string(),
+        target_id: v.optional(v.string()),
         target_name: v.string(),
         details: v.optional(v.string()),
         created_at: v.number(),
@@ -313,7 +353,7 @@ export default defineSchema({
         amount: v.number(),
         type: v.string(),
         description: v.string(),
-        status: v.string(),
+        status: v.optional(v.string()),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_created_at", ["created_at"]),

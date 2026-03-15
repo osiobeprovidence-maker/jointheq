@@ -13,6 +13,7 @@ import type * as admin from "../admin.js";
 import type * as adminWorkforce from "../adminWorkforce.js";
 import type * as campaigns from "../campaigns.js";
 import type * as campus from "../campus.js";
+import type * as createSuperAdmin from "../createSuperAdmin.js";
 import type * as devices from "../devices.js";
 import type * as email from "../email.js";
 import type * as fraud from "../fraud.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   adminWorkforce: typeof adminWorkforce;
   campaigns: typeof campaigns;
   campus: typeof campus;
+  createSuperAdmin: typeof createSuperAdmin;
   devices: typeof devices;
   email: typeof email;
   fraud: typeof fraud;
