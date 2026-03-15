@@ -1,28 +1,16 @@
 import React, { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Mail,
-  Phone,
   ChevronDown,
   Calendar,
-  Users,
-  Laptop,
-  Tv,
-  Smartphone,
-  Gamepad,
-  Tablet,
-  MoreHorizontal,
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
-  ChevronLeft,
-  ArrowLeft,
   Check
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useQuery } from "convex/react";
 import { auth } from "../lib/auth";
 import { MainLayout } from "../layouts/MainLayout";
 import { useNavigate } from "react-router-dom";

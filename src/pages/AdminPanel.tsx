@@ -180,13 +180,13 @@ export default function AdminPanel() {
     const campusApplications = useQuery(api.campus.getCampusApplications, {}) || [];
 
     // Payment Review Queries
-    const paymentRequests = useQuery(api.funding.getManualRequests, { 
-        status: paymentFilterStatus 
+    const paymentRequests = useQuery(api.funding.getManualRequests, {
+        status: paymentFilterStatus
     }) || [];
 
     // User Listings Queries
-    const userListings = useQuery(api.listings.getAdminListings, { 
-        status: listingFilterStatus 
+    const userListings = useQuery(api.listings.getAdminListings, {
+        status: listingFilterStatus
     }) || [];
 
     // Pending Counts for Badges
@@ -292,8 +292,8 @@ export default function AdminPanel() {
     const handleApprovePayment = async (id: any) => {
         if (!confirm("Are you sure you want to approve this payment? This will credit the user's wallet with the base amount.")) return;
         try {
-            await approvePaymentMut({ 
-                request_id: id, 
+            await approvePaymentMut({
+                request_id: id,
                 admin_id: currentUser!._id as any,
                 admin_note: paymentAdminNote || undefined
             });
@@ -306,8 +306,8 @@ export default function AdminPanel() {
         if (!paymentAdminNote) return toast.error("Please provide a reason for rejection in the note field.");
         if (!confirm("Reject this payment?")) return;
         try {
-            await rejectPaymentMut({ 
-                request_id: id, 
+            await rejectPaymentMut({
+                request_id: id,
                 admin_id: currentUser!._id as any,
                 admin_note: paymentAdminNote
             });
@@ -594,7 +594,7 @@ export default function AdminPanel() {
                 <div className="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-black/5 sticky top-0 z-30">
                     <div className="flex items-center gap-4">
                         {activeTab !== "dashboard" && (
-                            <button 
+                            <button
                                 onClick={() => setActiveTab("dashboard")}
                                 className="p-2 -ml-2 bg-zinc-50 hover:bg-zinc-100 rounded-xl transition-all group shadow-sm border border-black/5"
                             >
@@ -2857,9 +2857,9 @@ export default function AdminPanel() {
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md" onClick={() => setSelectedReviewListing(null)} />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="bg-white max-w-lg w-full rounded-[3rem] p-10 relative z-10 shadow-2xl">
                             <div className="flex items-center gap-5 mb-8">
-                                <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-black text-xl">{selectedReviewListing.platform[0]}</div>
+                                <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-black text-xl">{selectedReviewListing.platform?.[0] || 'S'}</div>
                                 <div>
-                                    <h2 className="text-xl font-black">Approve {selectedReviewListing.platform}</h2>
+                                    <h2 className="text-xl font-black">Approve {selectedReviewListing.platform || 'Subscription'}</h2>
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Verify & Set Payouts</p>
                                 </div>
                             </div>
