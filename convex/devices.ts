@@ -19,8 +19,12 @@ export const addDevice = mutation({
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("devices", {
-            ...args,
+            user_id: args.user_id,
+            device_name: args.name,
+            device_type: args.type,
+            is_verified: true,
             last_used: Date.now(),
+            created_at: Date.now(),
         });
     },
 });

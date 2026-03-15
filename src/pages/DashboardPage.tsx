@@ -322,7 +322,7 @@ export default function DashboardPage() {
 
     const updateAllocation = async (slotId: string, val: string) => {
         try {
-            await updateAllocationMutation({ id: slotId as Id<"slots">, allocation: val });
+            await updateAllocationMutation({ id: slotId as Id<"subscription_slots">, allocation: val });
         } catch (error) {
             console.error("Error updating allocation:", error);
         }

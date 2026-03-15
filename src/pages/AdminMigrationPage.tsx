@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const PLATFORMS = ["All", "Netflix Premium", "Spotify", "Apple Music", "VPN", "CapCut", "AI Tools", "Other"];
 const STATUSES = ["All", "Migrated Slot", "In Review", "Assigned to Group"];

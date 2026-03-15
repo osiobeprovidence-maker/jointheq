@@ -171,7 +171,12 @@ export default function CampaignDetailPage() {
         );
     }
 
-    const daysLeft = Math.max(0, Math.ceil((campaign.end_date - Date.now()) / 86400000));
+    const getEndDate = () => {
+        if (!campaign.end_date) return Date.now();
+        if (typeof campaign.end_date === "number") return campaign.end_date;
+        return new Date(campaign.end_date).getTime();
+    };
+    const daysLeft = Math.max(0, Math.ceil((getEndDate() - Date.now()) / 86400000));
     const fillPct = campaign.target_goal ? Math.min(100, Math.round(((campaign.current_progress ?? 0) / campaign.target_goal) * 100)) : 0;
     const isCampus = campaign.type === "campus";
 

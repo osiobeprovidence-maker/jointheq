@@ -248,14 +248,11 @@ export default function AdminPanel() {
     const grantSuperAdminMut = useMutation(api.users.grantSuperAdmin);
     const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
-    const [walletResetPermission, setWalletResetPermission] = useState<any>(null);
+    const walletResetPermission = useQuery(
+        api.users.canResetWallets,
+        currentUser?._id ? { user_id: currentUser._id } : "skip"
+    );
 
-    // Check if current user can reset wallets
-    useEffect(() => {
-        if (currentUser?._id) {
-            api.users.canResetWallets({ user_id: currentUser._id }).then(setWalletResetPermission).catch(console.error);
-        }
-    }, [currentUser]);
 
     // Auto-initialize super admin for riderezzy@gmail.com
     useEffect(() => {
@@ -679,7 +676,6 @@ export default function AdminPanel() {
                                                                 await grantSuperAdminMut({ target_id: currentUser!._id, granted_by: currentUser!._id });
                                                                 toast.success('Super admin role granted! You can now reset wallets.');
                                                                 // Refresh permission check
-                                                                api.users.canResetWallets({ user_id: currentUser!._id }).then(setWalletResetPermission);
                                                             } catch (e: any) {
                                                                 toast.error(e.message);
                                                             }
@@ -2318,7 +2314,7 @@ export default function AdminPanel() {
                                     <StatCard label="New Submissions" value={userListings.filter(l => l.status === 'Pending Review').length} icon={<Clock size={18} />} color="bg-amber-500" />
                                     <StatCard label="Active Listings" value={userListings.filter(l => l.status === 'Active').length} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" />
                                     <StatCard label="Total Slots Listed" value={userListings.reduce((acc, l) => acc + (l.total_slots || 0), 0)} icon={<Layers size={18} />} color="bg-blue-500" />
-                                    <StatCard label="Est. Monthly Rev" value={fmtCurrency(userListings.reduce((acc, l) => acc + ((l.price_per_slot || 0) * (l.total_slots || 0)), 0))} icon={<DollarSign size={18} />} color="bg-indigo-500" />
+                                    <StatCard label="Est. Monthly Rev" value={fmtCurrency(userListings.reduce((acc, l) => acc + ((l.slot_price || 0) * (l.total_slots || 0)), 0))} icon={<DollarSign size={18} />} color="bg-indigo-500" />
                                 </div>
 
                                 <div className="flex gap-2 overflow-x-auto pb-2">

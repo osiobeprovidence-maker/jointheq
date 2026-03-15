@@ -47,7 +47,7 @@ export const findOptimalSlot = query({
     // 1. Get all active groups for this catalog item
     const groups = await ctx.db
       .query("groups")
-      .withIndex("by_catalog", (q) => q.eq("subscription_catalog_id", slotType.subscription_id))
+      .withIndex("by_catalog", (q) => q.eq("subscription_catalog_id", slotType.subscription_id as any))
       .filter((q) => q.eq(q.field("status"), "active"))
       .collect();
 

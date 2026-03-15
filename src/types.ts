@@ -95,14 +95,14 @@ export interface Subscription {
 
 export interface UserSlot {
   _id: string;
-  group_id: string;
-  slot_type_id: string;
+  group_id?: string;
+  slot_type_id?: string;
   user_id?: string;
   status: string;
-  renewal_date: string;
-  slot_name: string;
-  sub_name: string;
-  price: number;
+  renewal_date?: string;
+  slot_name?: string;
+  sub_name?: string;
+  price?: number;
   allocation?: string;
   access_type?: string;
 }

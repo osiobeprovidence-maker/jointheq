@@ -578,7 +578,7 @@ export const getDailyReport = query({
         const activeCampaigns = allCampaigns.filter(c => c.status === "active").length;
 
         // New subscriptions/slots
-        const allSlots = await ctx.db.query("slots").collect();
+        const allSlots = await ctx.db.query("subscription_slots").collect();
         const newSlotsToday = allSlots.filter(s => (s as any).created_at >= todayMs).length;
 
         // Campaign referrals today

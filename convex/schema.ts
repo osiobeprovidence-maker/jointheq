@@ -59,6 +59,9 @@ export default defineSchema({
         }))),
         failed_login_attempts: v.optional(v.number()),
         lockout_until: v.optional(v.number()),
+        fraud_review_reason: v.optional(v.string()),
+        is_admin_suspended: v.optional(v.boolean()),
+        admin_suspended_at: v.optional(v.number()),
     }).index("by_email", ["email"])
         .index("by_username", ["username"])
         .index("by_referral_code", ["referral_code"])
@@ -66,7 +69,8 @@ export default defineSchema({
         .index("by_phone", ["phone"])
         .index("by_token", ["verification_token"])
         .index("by_is_admin", ["is_admin"])
-        .index("by_work_username", ["work_username"]),
+        .index("by_work_username", ["work_username"])
+        .index("by_fraud", ["is_fraud_flagged"]),
 
     // PILLAR 2: Subscriptions (Accounts)
     subscriptions: defineTable({
@@ -254,6 +258,7 @@ export default defineSchema({
         sender_id: v.id("users"),
         sender_role: v.optional(v.string()),
         content: v.string(),
+        image_url: v.optional(v.string()),
         created_at: v.number(),
     }).index("by_conversation", ["conversation_id"])
         .index("by_sender", ["sender_id"]),
@@ -265,8 +270,10 @@ export default defineSchema({
         status: v.string(),
         assigned_admin_id: v.optional(v.id("users")),
         created_at: v.number(),
-        updated_at: v.number(),
-    }).index("by_user", ["user_id"]),
+        updated_at: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
+        .index("by_admin", ["assigned_admin_id"])
+        .index("by_status", ["status"]),
 
     campus_reps: defineTable({
         user_id: v.id("users"),
@@ -294,6 +301,19 @@ export default defineSchema({
         target_goal: v.optional(v.number()),
         current_progress: v.optional(v.number()),
         type: v.optional(v.string()),
+        about: v.optional(v.string()),
+        reward_structure: v.optional(v.string()),
+        how_it_works: v.optional(v.array(v.string())),
+        rules: v.optional(v.array(v.string())),
+        referral_boots: v.optional(v.number()),
+        commission_months: v.optional(v.number()),
+        // Fraud / limit controls
+        max_boots_per_user_per_day: v.optional(v.number()),
+        max_referrals_per_user_per_day: v.optional(v.number()),
+        max_total_referrals_per_user: v.optional(v.number()),
+        require_payment_for_reward: v.optional(v.boolean()),
+        banner_url: v.optional(v.string()),
+        image_url: v.optional(v.string()),
     }).index("by_status", ["status"]),
 
     campaign_participants: defineTable({
@@ -306,13 +326,14 @@ export default defineSchema({
         cash_earned: v.optional(v.number()),
         entries: v.optional(v.number()),
         last_active: v.optional(v.number()),
+        referrer_id: v.optional(v.id("users")),
         referral_code: v.optional(v.string()),
     }).index("by_campaign", ["campaign_id"]).index("by_user", ["user_id"]),
 
     // --- ADDITIONAL TABLES FOR ADMIN WORKFORCE & OTHER FEATURES ---
     admin_tasks: defineTable({
         title: v.string(),
-        description: v.string(),
+        description: v.optional(v.string()),
         status: v.string(),
         priority: v.string(),
         assigned_to: v.optional(v.id("users")),
@@ -321,7 +342,8 @@ export default defineSchema({
         completed_at: v.optional(v.number()),
         deadline: v.number(),
         created_at: v.number(),
-        updated_at: v.number(),
+        updated_at: v.optional(v.number()),
+        assigned_by: v.optional(v.id("users")),
     }).index("by_status", ["status"])
         .index("by_assignee", ["assigned_to"])
         .index("by_admin", ["assigned_admin_id"]),
@@ -329,9 +351,9 @@ export default defineSchema({
     admin_logs: defineTable({
         admin_id: v.id("users"),
         action: v.string(),
-        target_type: v.string(),
+        target_type: v.optional(v.string()),
         target_id: v.optional(v.string()),
-        target_name: v.string(),
+        target_name: v.optional(v.string()),
         details: v.optional(v.string()),
         created_at: v.number(),
     }).index("by_admin", ["admin_id"])
@@ -358,31 +380,32 @@ export default defineSchema({
     }).index("by_user", ["user_id"])
         .index("by_created_at", ["created_at"]),
 
-    slots: defineTable({
-        user_id: v.id("users"),
-        subscription_id: v.optional(v.id("subscriptions")),
-        group_id: v.optional(v.id("groups")),
-        slot_type_id: v.optional(v.id("slot_types")),
-        status: v.string(),
-        renewal_date: v.optional(v.string()),
-        created_at: v.optional(v.number()),
-    }).index("by_user", ["user_id"])
-        .index("by_subscription", ["subscription_id"]),
-
     campaign_referrals: defineTable({
         campaign_id: v.id("campaigns"),
         referrer_id: v.id("users"),
         referred_id: v.id("users"),
         status: v.string(),
+        is_fraud_flagged: v.optional(v.boolean()),
+        fraud_reason: v.optional(v.string()),
+        months_remaining: v.optional(v.number()),
+        commission_earned: v.optional(v.number()),
         created_at: v.number(),
     }).index("by_referrer", ["referrer_id"])
         .index("by_campaign", ["campaign_id"])
-        .index("by_created_at", ["created_at"]),
+        .index("by_referred", ["referred_id"])
+        .index("by_created_at", ["created_at"])
+        .index("by_fraud", ["is_fraud_flagged"]),
 
     fraud_flags: defineTable({
         user_id: v.id("users"),
-        reason: v.string(),
+        reason: v.optional(v.string()),
         status: v.string(),
+        severity: v.optional(v.string()),
+        type: v.optional(v.string()),
+        description: v.optional(v.string()),
+        related_user_ids: v.optional(v.array(v.id("users"))),
+        related_campaign_id: v.optional(v.id("campaigns")),
+        reviewed_by: v.optional(v.id("users")),
         created_at: v.number(),
         resolved_at: v.optional(v.number()),
     }).index("by_user", ["user_id"])
@@ -394,20 +417,27 @@ export default defineSchema({
         device_name: v.string(),
         device_type: v.string(),
         is_verified: v.boolean(),
+        last_used: v.optional(v.number()),
         created_at: v.number(),
     }).index("by_user", ["user_id"]),
 
     lunar_memories: defineTable({
-        user_id: v.id("users"),
-        memory_type: v.string(),
-        content: v.string(),
+        user_id: v.optional(v.id("users")),
+        memory_type: v.optional(v.string()),
+        content: v.optional(v.string()),
+        title: v.optional(v.string()),
+        description: v.optional(v.string()),
+        platform: v.optional(v.string()),
+        genre: v.optional(v.string()),
+        added_by: v.optional(v.id("users")),
         created_at: v.number(),
     }).index("by_user", ["user_id"]),
 
     lunar_subscriptions: defineTable({
         user_id: v.id("users"),
-        subscription_id: v.id("subscriptions"),
+        subscription_id: v.optional(v.id("subscriptions")),
         status: v.string(),
+        expiry_date: v.optional(v.string()),
         created_at: v.number(),
     }).index("by_user", ["user_id"]),
 
@@ -451,5 +481,85 @@ export default defineSchema({
         accepted_by: v.optional(v.id("users")),
     }).index("by_email", ["email"])
         .index("by_token", ["token"])
+        .index("by_status", ["status"]),
+
+    user_fingerprints: defineTable({
+        user_id: v.id("users"),
+        device_fingerprint: v.optional(v.string()),
+        ip_address: v.optional(v.string()),
+        user_agent: v.optional(v.string()),
+        created_at: v.number(),
+        last_seen: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_device", ["device_fingerprint"])
+        .index("by_ip", ["ip_address"]),
+
+    campaign_withdrawals: defineTable({
+        user_id: v.id("users"),
+        campaign_id: v.id("campaigns"),
+        amount: v.number(),
+        status: v.string(),
+        bank_name: v.string(),
+        account_number: v.string(),
+        account_name: v.string(),
+        admin_note: v.optional(v.string()),
+        processed_at: v.optional(v.number()),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"]),
+
+    // PILLAR 9: Campus Program
+    campus_territories: defineTable({
+        campus_name: v.string(),
+        city: v.string(),
+        country: v.string(),
+        leader_id: v.optional(v.id("users")),
+        total_users: v.optional(v.number()),
+        total_ambassadors: v.optional(v.number()),
+        total_subscriptions: v.optional(v.number()),
+        is_active: v.boolean(),
+        created_at: v.number(),
+    }).index("by_campus", ["campus_name"]),
+
+    campus_territory_ambassadors: defineTable({
+        territory_id: v.id("campus_territories"),
+        user_id: v.id("users"),
+        role: v.string(),
+        referral_count: v.number(),
+        total_earned: v.number(),
+        is_active: v.boolean(),
+        joined_at: v.number(),
+    }).index("by_territory", ["territory_id"])
+        .index("by_user", ["user_id"]),
+
+    campus_events: defineTable({
+        name: v.string(),
+        territory_id: v.optional(v.id("campus_territories")),
+        campus_name: v.string(),
+        city: v.string(),
+        event_date: v.number(),
+        host_id: v.optional(v.id("users")),
+        description: v.optional(v.string()),
+        type: v.string(),
+        expected_participants: v.optional(v.number()),
+        actual_attendance: v.optional(v.number()),
+        new_users_acquired: v.optional(v.number()),
+        subscriptions_created: v.optional(v.number()),
+        status: v.string(),
+        created_by: v.optional(v.id("users")),
+        created_at: v.number(),
+    }).index("by_status", ["status"])
+        .index("by_territory", ["territory_id"]),
+
+    campus_applications: defineTable({
+        user_id: v.id("users"),
+        university: v.string(),
+        social_handle: v.optional(v.string()),
+        reason: v.string(),
+        status: v.string(),
+        reviewed_by: v.optional(v.id("users")),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
         .index("by_status", ["status"]),
 });
