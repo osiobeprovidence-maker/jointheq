@@ -31,6 +31,7 @@ export interface User {
   penalty_history?: PenaltyEntry[];
   is_admin: boolean;
   role?: string;
+  admin_role?: string;
   is_verified: boolean;
   created_at: number;
 }

@@ -31,6 +31,11 @@ export const auth = {
 
     isAdmin: (): boolean => {
         const user = auth.getCurrentUser();
-        return !!(user?.is_admin || user?.role === "admin");
+        return !!(
+            user?.is_admin || 
+            user?.role === "admin" || 
+            user?.admin_role === "super" || 
+            user?.role === "super"
+        );
     }
 };

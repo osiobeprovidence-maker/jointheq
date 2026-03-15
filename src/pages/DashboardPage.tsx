@@ -97,6 +97,13 @@ export default function DashboardPage() {
     const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
     const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
     const adminsList = useQuery(api.users.getAdmins) || [];
+    
+    // Sync local auth with Convex state
+    useEffect(() => {
+        if (currentUser) {
+            auth.login(currentUser as any);
+        }
+    }, [currentUser]);
     const adminMarketplace = useQuery(api.subscriptions.getAdminMarketplace) || [];
     const campusRepInfo = useQuery(api.users.getCampusRep, currentUser ? { userId: currentUser._id } : "skip");
     const transactions = useQuery(api.transactions.getTransactions, currentUser ? { user_id: currentUser._id } : "skip") || [];
@@ -154,6 +161,11 @@ export default function DashboardPage() {
     const updateCardMutation = useMutation(api.users.updateCard);
     const updateUsernameMutation = useMutation(api.users.updateUsername);
     const updateProfileMutation = useMutation(api.users.updateProfile);
+    const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
+    const walletResetPermission = useQuery(
+        api.users.canResetWallets,
+        currentUser?._id ? { user_id: currentUser._id } : "skip"
+    );
 
     // Username edit state
     const [editingUsername, setEditingUsername] = useState(false);
@@ -247,6 +259,20 @@ export default function DashboardPage() {
             console.error("Error funding wallet:", error);
         }
     };
+
+    // Auto-initialize super admin for authorized emails
+    useEffect(() => {
+        const authorizedAdmins = ["riderezzy@gmail.com", "reinvoursehung@gmail.com"];
+        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) && walletResetPermission?.role !== "super") {
+            initializeSuperAdminMut({}).then(() => {
+                toast.success("Super admin initialized! Refreshing...");
+                setTimeout(() => {
+                    // Force re-fetch user data or just reload
+                    window.location.reload();
+                }, 1500);
+            }).catch(e => console.log("Init already done or error:", e.message));
+        }
+    }, [currentUser, walletResetPermission, initializeSuperAdminMut]);
 
     const joinSlot = async (slotTypeId: string) => {
         if (!currentUser) return;
