@@ -161,11 +161,11 @@ export default defineSchema({
     }),
 
     slot_types: defineTable({
-        subscription_id: v.id("subscription_catalog"),
+        subscription_id: v.optional(v.union(v.id("subscription_catalog"), v.id("subscriptions"))),
         name: v.string(),
         price: v.number(),
-        capacity: v.number(),
-        access_type: v.string(),
+        capacity: v.optional(v.number()),
+        access_type: v.optional(v.string()),
         device_limit: v.number(),
         downloads_enabled: v.boolean(),
         min_q_score: v.number(),
@@ -173,7 +173,8 @@ export default defineSchema({
     }).index("by_subscription", ["subscription_id"]),
 
     groups: defineTable({
-        subscription_catalog_id: v.id("subscription_catalog"),
+        subscription_catalog_id: v.optional(v.id("subscription_catalog")),
+        subscription_id: v.optional(v.id("subscriptions")),
         billing_cycle_start: v.string(),
         status: v.string(),
         account_email: v.optional(v.string()),
@@ -242,8 +243,11 @@ export default defineSchema({
         created_by: v.optional(v.id("users")),
         reward_type: v.optional(v.string()),
         reward_amount: v.optional(v.number()),
-        start_date: v.optional(v.number()),
-        end_date: v.optional(v.number()),
+        reward_formula: v.optional(v.string()),
+        boot_pool_max: v.optional(v.number()),
+        boots_issued: v.optional(v.number()),
+        start_date: v.optional(v.union(v.number(), v.string())),
+        end_date: v.optional(v.union(v.number(), v.string())),
         target_goal: v.optional(v.number()),
         current_progress: v.optional(v.number()),
         type: v.optional(v.string()),
@@ -256,6 +260,10 @@ export default defineSchema({
         joined_at: v.optional(v.number()),
         referral_count: v.optional(v.number()),
         boots_earned: v.optional(v.number()),
+        cash_earned: v.optional(v.number()),
+        entries: v.optional(v.number()),
+        last_active: v.optional(v.number()),
+        referral_code: v.optional(v.string()),
     }).index("by_campaign", ["campaign_id"]).index("by_user", ["user_id"]),
 
     // --- ADDITIONAL TABLES FOR ADMIN WORKFORCE & OTHER FEATURES ---
@@ -309,9 +317,12 @@ export default defineSchema({
 
     slots: defineTable({
         user_id: v.id("users"),
-        subscription_id: v.id("subscriptions"),
+        subscription_id: v.optional(v.id("subscriptions")),
+        group_id: v.optional(v.id("groups")),
+        slot_type_id: v.optional(v.id("slot_types")),
         status: v.string(),
-        created_at: v.number(),
+        renewal_date: v.optional(v.string()),
+        created_at: v.optional(v.number()),
     }).index("by_user", ["user_id"])
         .index("by_subscription", ["subscription_id"]),
 
