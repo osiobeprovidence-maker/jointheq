@@ -3,6 +3,69 @@ import { mutation, query } from "./_generated/server";
 import { awardReputation } from "./reputation";
 import bcrypt from "bcryptjs";
 
+/**
+ * PRE-LAUNCH: Reset all user wallet balances and funding history
+ * Only accessible by super admin
+ */
+export const resetAllWallets = mutation({
+    args: { executed_by: v.id("users") },
+    handler: async (ctx, args) => {
+        // Verify executor is super admin
+        const executor = await ctx.db.get(args.executed_by);
+        if (!executor?.is_admin || executor.admin_role !== "super") {
+            throw new Error("Only Super Admin can execute wallet reset");
+        }
+
+        // Get all users
+        const users = await ctx.db.query("users").collect();
+
+        // Reset wallet_balance, boots_balance, and clear history arrays
+        let resetCount = 0;
+        for (const user of users) {
+            if (user.wallet_balance !== 0 || user.boots_balance !== 0 ||
+                (user.boots_history && user.boots_history.length > 0) ||
+                (user.score_history && user.score_history.length > 0)) {
+
+                await ctx.db.patch(user._id, {
+                    wallet_balance: 0,
+                    boots_balance: 0,
+                    boots_history: [],
+                    score_history: [],
+                });
+                resetCount++;
+            }
+        }
+
+        // Clear all wallet_transactions
+        const transactions = await ctx.db.query("wallet_transactions").collect();
+        for (const tx of transactions) {
+            await ctx.db.delete(tx._id);
+        }
+
+        // Clear all manual_funding_requests
+        const fundingRequests = await ctx.db.query("manual_funding_requests").collect();
+        for (const req of fundingRequests) {
+            await ctx.db.delete(req._id);
+        }
+
+        // Log this action
+        await ctx.db.insert("admin_logs", {
+            admin_id: args.executed_by,
+            action: "reset_all_wallets",
+            target_type: "system",
+            target_name: `Pre-launch wallet reset - ${resetCount} users affected, ${transactions.length} transactions cleared`,
+            created_at: Date.now(),
+        });
+
+        return {
+            success: true,
+            users_reset: resetCount,
+            transactions_cleared: transactions.length,
+            funding_requests_cleared: fundingRequests.length
+        };
+    },
+});
+
 export const getByEmail = query({
     args: { email: v.string() },
     handler: async (ctx, args) => {
