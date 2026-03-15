@@ -149,6 +149,7 @@ export default function DashboardPage() {
     const removeDeviceMutation = useMutation(api.devices.removeDevice);
     const updatePhoneMutation = useMutation(api.users.updatePhone);
     const updateAllocationMutation = useMutation(api.subscriptions.updateAllocation);
+    const leaveSlotMutation = useMutation(api.subscriptions.leaveSlot);
     const resetQScoresMutation = useMutation(api.users.resetQScores);
     const seedMarketplaceMutation = useMutation(api.subscriptions.seedMarketplace);
     const participateInCampaignMutation = useMutation(api.campaigns.participate);
@@ -354,6 +355,16 @@ export default function DashboardPage() {
         }
     };
 
+    const handleLeaveSlot = async (id: string, name: string) => {
+        if (!confirm(`Are you sure you want to leave your ${name} subscription? This action cannot be undone.`)) return;
+        try {
+            await leaveSlotMutation({ id: id as any });
+            toast.success(`Successfully left ${name} subscription`);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to leave subscription");
+        }
+    };
+
     const resetQRank = async () => {
         if (!currentUser) return;
         if (confirm("Setting Q Score to 100 will reset your premium eligibility. Continue?")) {
@@ -485,6 +496,7 @@ export default function DashboardPage() {
                                             slot={slot}
                                             onUpdateAllocation={(val) => updateAllocation(slot._id, val)}
                                             onSupportClick={() => setActiveTab('support')}
+                                            onLeave={() => handleLeaveSlot(slot._id, slot.sub_name || "subscription")}
                                         />
                                     ))}
                                 </div>
@@ -1921,7 +1933,7 @@ function StatCard({ title, value, icon, color }: { title: string, value: string,
     );
 }
 
-function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick }: { slot: UserSlot, onUpdateAllocation: (val: string) => void, onSupportClick: () => void }) {
+function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave }: { slot: UserSlot, onUpdateAllocation: (val: string) => void, onSupportClick: () => void, onLeave: () => void }) {
     const getDateSafely = (dateStr?: string) => {
         if (!dateStr) return new Date();
         const d = new Date(dateStr);
@@ -2072,6 +2084,12 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick }: { slot: Us
                 )}
                 <button onClick={onSupportClick} className="w-full py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all">
                     <MessageCircle size={16} /> Open Chat Support
+                </button>
+                <button 
+                  onClick={onLeave} 
+                  className="w-full py-4 bg-red-50 text-red-500 rounded-full text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
+                >
+                    <LogOut size={16} /> Leave Subscription
                 </button>
             </div>
         </motion.div>

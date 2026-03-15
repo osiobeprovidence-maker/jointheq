@@ -293,6 +293,36 @@ export const updateAllocation = mutation({
     },
 });
 
+export const leaveSlot = mutation({
+    args: { id: v.any() },
+    handler: async (ctx, args) => {
+        // 1. Try standard subscription slots
+        try {
+            const slot = await ctx.db.get(args.id);
+            if (slot && (slot as any).user_id) {
+                await ctx.db.patch(args.id, {
+                    user_id: undefined,
+                    status: "open",
+                    renewal_date: undefined,
+                    allocation: undefined,
+                });
+                return { success: true, type: "slot" };
+            }
+        } catch (e) {}
+
+        // 2. Try migrated subscriptions
+        try {
+            const migration = await ctx.db.get(args.id);
+            if (migration && (migration as any).user_id) {
+                await ctx.db.delete(args.id);
+                return { success: true, type: "migration" };
+            }
+        } catch (e) {}
+
+        throw new Error("Subscription not found or already removed.");
+    },
+});
+
 /** Admin creates a new listing — accepts platform name as free text, auto-creates subscription row */
 export const adminCreateListing = mutation({
     args: {
