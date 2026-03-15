@@ -290,7 +290,9 @@ export default defineSchema({
         admin_id: v.id("users"),
         title: v.string(),
         message: v.string(),
+        type: v.optional(v.string()),
         is_read: v.boolean(),
+        related_task_id: v.optional(v.id("admin_tasks")),
         created_at: v.number(),
     }).index("by_admin", ["admin_id"])
         .index("by_created_at", ["created_at"]),
