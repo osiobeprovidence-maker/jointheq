@@ -692,9 +692,9 @@ export const cleanupDuplicates = mutation({
     handler: async (ctx) => {
         const users = await ctx.db.query("users").collect();
 
-        // Find and delete duplicate admin@jointheq.com (keep the oldest)
+        // Find and delete duplicate admin@jointheq.sbs (keep the oldest)
         const adminUsers = users
-            .filter(u => u.email === "admin@jointheq.com")
+            .filter(u => u.email === "admin@jointheq.sbs")
             .sort((a, b) => a.created_at - b.created_at);
 
         let deletedCount = 0;
@@ -706,8 +706,8 @@ export const cleanupDuplicates = mutation({
             }
         }
 
-        // Fix demo@jointheq.com - add missing role field
-        const demoUser = users.find(u => u.email === "demo@jointheq.com");
+        // Fix demo@jointheq.sbs - add missing role field
+        const demoUser = users.find(u => u.email === "demo@jointheq.sbs");
         let fixedCount = 0;
         if (demoUser && !demoUser.role) {
             await ctx.db.patch(demoUser._id, { role: "user" });
@@ -715,7 +715,7 @@ export const cleanupDuplicates = mutation({
         }
 
         // Fix any other users with missing role
-        const usersMissingRole = users.filter(u => !u.role && u.email !== "demo@jointheq.com");
+        const usersMissingRole = users.filter(u => !u.role && u.email !== "demo@jointheq.sbs");
         for (const user of usersMissingRole) {
             await ctx.db.patch(user._id, { role: "user" });
             fixedCount++;

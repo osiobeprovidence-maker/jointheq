@@ -104,11 +104,11 @@ export const seed = mutation({
         // 3. Seed Demo User
         const demoUser = await ctx.db
             .query("users")
-            .filter((q) => q.eq(q.field("email"), "demo@jointheq.com"))
+            .filter((q) => q.eq(q.field("email"), "demo@jointheq.sbs"))
             .unique();
         if (!demoUser) {
             await ctx.db.insert("users", {
-                email: "demo@jointheq.com",
+                email: "demo@jointheq.sbs",
                 full_name: "Demo User",
                 phone: "+2348000000000",
                 q_score: 100,

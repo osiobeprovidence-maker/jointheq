@@ -1597,10 +1597,11 @@ export default function AdminPanel() {
                                                             <div className="flex gap-2">
                                                                 <button
                                                                     onClick={() => {
-                                                                        const link = `https://jointheq.com/admin-accept?token=${inv.token}`;
+                                                                        const link = `https://jointheq.sbs/admin-accept?token=${inv.token}`;
                                                                         navigator.clipboard.writeText(link);
                                                                         toast.success("Invite link copied!");
                                                                     }}
+
                                                                     className="px-3 py-1.5 bg-zinc-100 rounded-xl text-xs font-bold hover:bg-zinc-200"
                                                                 >Copy Link</button>
                                                                 <button

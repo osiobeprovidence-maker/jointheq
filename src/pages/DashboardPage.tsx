@@ -1733,7 +1733,7 @@ export default function DashboardPage() {
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Login Email</label>
                                                 <input
-                                                    placeholder="netflix@jointheq.com"
+                                                    placeholder="netflix@jointheq.sbs"
                                                     value={listingData.account_email}
                                                     onChange={(e) => setListingData({ ...listingData, account_email: e.target.value })}
                                                     className="w-full p-5 bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] font-bold focus:ring-2 ring-black/5 outline-none"
@@ -2087,7 +2087,7 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
                 return (
                     <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Login Email</div>
-                        <div className="p-2 bg-white rounded-xl text-center font-mono text-sm mb-4 border border-black/5">{slot.sub_name.toLowerCase().replace(/\s/g, '')}@jointheq.com</div>
+                        <div className="p-2 bg-white rounded-xl text-center font-mono text-sm mb-4 border border-black/5">{slot.sub_name.toLowerCase().replace(/\s/g, '')}@jointheq.sbs</div>
 
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
                         <ul className="text-sm space-y-2 mb-4">

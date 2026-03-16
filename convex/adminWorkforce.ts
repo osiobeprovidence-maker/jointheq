@@ -121,7 +121,8 @@ export const createInvitation = mutation({
             created_at: now,
         });
 
-        return { invId, token, invite_link: `https://jointheq.com/admin-accept?token=${token}` };
+        return { invId, token, invite_link: `https://jointheq.sbs/admin-accept?token=${token}` };
+
     },
 });
 
