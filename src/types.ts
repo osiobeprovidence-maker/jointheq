@@ -106,6 +106,8 @@ export interface UserSlot {
   price?: number;
   allocation?: string;
   access_type?: string;
+  auto_renew?: boolean;
+  removal_scheduled_at?: number;
 }
 export interface LunarMemory {
   _id: string;
