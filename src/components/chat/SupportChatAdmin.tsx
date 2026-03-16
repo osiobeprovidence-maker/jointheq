@@ -36,7 +36,8 @@ export default function SupportChatAdmin({ adminId }: SupportChatAdminProps) {
 
     const sendMessage = useMutation(api.support.sendMessage);
     const assignAdmin = useMutation(api.support.assignAdmin);
-    const closeConv = useMutation(api.support.closeConversation);
+    const closeConv = useMutation(api.support.resolveConversation);
+
 
     const activeMessages = messagesData?.messages || [];
     const selectedUser = messagesData?.user;
@@ -138,9 +139,16 @@ export default function SupportChatAdmin({ adminId }: SupportChatAdminProps) {
                                         </p>
                                     </div>
                                 </div>
-                                {isUnassigned && conv.status === "open" && (
+                                {isUnassigned && conv.status === "open" && conv.handled_by === "agent" && (
                                     <div className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
                                 )}
+                                {conv.handled_by === "ai" && conv.status === "open" && (
+                                    <div className="absolute top-2 right-2 bg-indigo-500 text-white text-[8px] font-black px-1 rounded-md uppercase">AI</div>
+                                )}
+                                {conv.status === "resolved" && (
+                                    <div className="absolute top-2 right-2 text-emerald-500"><CheckCircle2 size={12} /></div>
+                                )}
+
                             </button>
                         );
                     })}
@@ -166,19 +174,30 @@ export default function SupportChatAdmin({ adminId }: SupportChatAdminProps) {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => assignAdmin({ adminId, conversationId: selectedConvId })}
-                                    className="px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-[10px] font-black hover:scale-105 transition-transform"
-                                >
-                                    Assign to me
-                                </button>
-                                <button
-                                    onClick={() => closeConv({ adminId, conversationId: selectedConvId })}
-                                    className="p-1.5 hover:bg-black/5 rounded-xl transition-colors text-gray-400"
-                                >
-                                    <MoreVertical size={18} />
-                                </button>
+                                {messagesData?.conversation?.status === "open" && (
+                                    <>
+                                        <button
+                                            onClick={() => assignAdmin({ adminId, conversationId: selectedConvId })}
+                                            className="px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-[10px] font-black hover:scale-105 transition-transform"
+                                        >
+                                            {messagesData.conversation.handled_by === 'ai' ? 'Take Over from AI' : 'Assign to me'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm("End this conversation? Messages will be cleared but the issue record remains.")) {
+                                                    closeConv({ conversationId: selectedConvId });
+                                                    setSelectedConvId(null);
+                                                    toast.success("Conversation resolved and cleared.");
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[10px] font-black hover:bg-red-100 transition-colors flex items-center gap-1"
+                                        >
+                                            <X size={12} /> End Conversation
+                                        </button>
+                                    </>
+                                )}
                             </div>
+
                         </div>
 
                         {/* Messages */}
@@ -190,9 +209,11 @@ export default function SupportChatAdmin({ adminId }: SupportChatAdminProps) {
                                 const isAdmin = msg.sender_role === "admin";
                                 return (
                                     <div key={msg._id} className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
-                                        <div className={`max-w-[70%] ${isAdmin ? "bg-zinc-900 text-white rounded-2xl rounded-tr-none" : "bg-white text-zinc-900 shadow-sm border border-black/5 rounded-2xl rounded-tl-none"} p-4`}>
-                                            {!isAdmin && <div className="text-[9px] font-black uppercase text-gray-400 mb-1">{selectedUser?.full_name}</div>}
+                                        <div className={`max-w-[70%] ${isAdmin ? "bg-zinc-900 text-white rounded-2xl rounded-tr-none" : msg.sender_role === "ai" ? "bg-indigo-50 text-indigo-900 border border-indigo-100 rounded-2xl rounded-tl-none" : "bg-white text-zinc-900 shadow-sm border border-black/5 rounded-2xl rounded-tl-none"} p-4`}>
+                                            {!isAdmin && msg.sender_role !== "ai" && <div className="text-[9px] font-black uppercase text-gray-400 mb-1">{selectedUser?.full_name}</div>}
+                                            {msg.sender_role === "ai" && <div className="text-[9px] font-black uppercase text-indigo-400 mb-1">AI Assistant</div>}
                                             {isAdmin && <div className="text-[9px] font-black uppercase text-white/40 mb-1">You (Support)</div>}
+
                                             {msg.image_url && (
                                                 <div className="mb-2 rounded-xl overflow-hidden shadow-sm">
                                                     <img src={msg.image_url} alt="Attached" className="max-w-full h-auto" />

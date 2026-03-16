@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
+
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "motion/react";
@@ -28,6 +29,10 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
     const data = useQuery(api.support.getMyConversation, { userId });
     const startConv = useMutation(api.support.startConversation);
     const sendMessage = useMutation(api.support.sendMessage);
+    const chatWithAI = useAction(api.support_actions.chatWithAI);
+    const escalateToAgent = useMutation(api.support.escalateToAgent);
+
+
 
     const conversation = data?.conversation;
     const messages = data?.messages || [];
@@ -74,11 +79,20 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
                 content: text,
                 image_url: imgData || undefined
             });
+
+            // If handled by AI, trigger the AI response
+            if (conversation.handled_by === "ai") {
+                chatWithAI({
+                    conversationId: conversation._id,
+                    message: text
+                }).catch(e => console.error("AI Assistant Error:", e));
+            }
         } catch (err: any) {
             toast.error("Failed to send message: " + err.message);
             setContent(text);
             setImage(imgData);
         }
+
     };
 
     if (data === undefined) return <div className="p-8 text-center animate-pulse">Loading Support...</div>;
@@ -121,13 +135,26 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
                     </div>
                     <div>
                         <div className="flex items-center gap-1.5">
-                            <span className="font-black text-sm">JoinTheQ Support</span>
+                            <span className="font-black text-sm">{conversation.handled_by === 'ai' ? 'AI Assistant' : 'Human Agent'}</span>
                             <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
                         </div>
-                        <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Online · Verified</div>
+                        <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">
+                            {conversation.handled_by === 'ai' ? 'Instant AI Response' : 'Verified Agent'}
+                        </div>
                     </div>
                 </div>
+                {conversation.handled_by === 'ai' && (
+                    <button 
+                        onClick={() => {
+                            escalateToAgent({ conversationId: conversation._id });
+                        }}
+                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-white border border-black/10 rounded-lg hover:bg-black/5 transition-all text-gray-500"
+                    >
+                        Talk to Agent
+                    </button>
+                )}
             </div>
+
 
             {/* Messages */}
             <div
@@ -142,6 +169,7 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
 
                 {messages.map((msg, i) => {
                     const isMe = msg.sender_role === "user";
+                    const isAI = msg.sender_role === "ai";
                     return (
                         <motion.div
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -149,7 +177,15 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
                             key={msg._id}
                             className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                         >
-                            <div className={`max-w-[80%] ${isMe ? "bg-zinc-900 text-white rounded-2xl rounded-tr-none" : "bg-white text-zinc-900 rounded-2xl rounded-tl-none shadow-sm border border-black/5"} p-3 px-4`}>
+                            {!isMe && (
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 mt-1 ${isAI ? "bg-indigo-100 text-indigo-600" : "bg-zinc-900 text-white"}`}>
+                                    {isAI ? <Clock size={14} /> : <CheckCircle2 size={14} />}
+                                </div>
+                            )}
+                            <div className={`max-w-[75%] ${isMe ? "bg-zinc-900 text-white rounded-2xl rounded-tr-none" : isAI ? "bg-indigo-50 text-indigo-900 rounded-2xl rounded-tl-none border border-indigo-100" : "bg-white text-zinc-900 rounded-2xl rounded-tl-none shadow-sm border border-black/5"} p-3 px-4`}>
+                                {isAI && <div className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1">AI Assistant</div>}
+                                {!isMe && !isAI && <div className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1">Support Agent</div>}
+
                                 {msg.image_url && (
                                     <div className="mb-2 rounded-xl overflow-hidden shadow-sm">
                                         <img src={msg.image_url} alt="Attached" className="max-w-full h-auto" />

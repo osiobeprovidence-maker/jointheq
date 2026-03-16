@@ -7,6 +7,7 @@ import {
     CreditCard,
     Megaphone,
     HeadphonesIcon,
+    MessageSquare,
     ShieldCheck,
     BarChart3,
     ArrowLeft,
@@ -216,6 +217,8 @@ export default function AdminPanel() {
     const adminActivityLogs = useQuery(api.adminWorkforce.getAdminLogs, {}) || [];
     const performanceMetrics = useQuery(api.adminWorkforce.getPerformanceMetrics) || [];
     const dailyReport = useQuery(api.adminWorkforce.getDailyReport);
+    const supportStats = useQuery(api.support.getSupportStats, { adminId: currentUser!._id as any });
+
 
     // Workforce Mutations
     const createInviteMut = useMutation(api.adminWorkforce.createInvitation);
@@ -1425,8 +1428,17 @@ export default function AdminPanel() {
                         {activeTab === "support" && (
                             <motion.div key="support" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Support Chat" sub="Real-time assistance for users" />
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                    <StatCard label="Open Tickets" value={supportStats?.open || 0} icon={<MessageSquare size={16} />} color="bg-zinc-900" />
+                                    <StatCard label="AI Handled" value={supportStats?.ai_handled || 0} icon={<Zap size={16} />} color="bg-indigo-500" />
+                                    <StatCard label="Agent Handled" value={supportStats?.agent_handled || 0} icon={<Users size={16} />} color="bg-blue-500" />
+                                    <StatCard label="Resolved" value={supportStats?.resolved || 0} icon={<CheckCircle2 size={16} />} color="bg-emerald-500" />
+                                </div>
+
                                 <SupportChatAdmin adminId={currentUser!._id} />
                             </motion.div>
+
                         )}
 
                         {/* ═══ ADMINS — WORKFORCE CONTROL ROOM ═══ */}

@@ -20,9 +20,11 @@ export const startConversation = mutation({
         return await ctx.db.insert("support_conversations", {
             user_id: args.userId,
             status: "open",
+            handled_by: "ai",
             last_message_at: Date.now(),
             created_at: Date.now(),
         });
+
     },
 });
 
@@ -82,6 +84,24 @@ export const getConversations = query({
     },
 });
 
+export const getSupportStats = query({
+    args: { adminId: v.id("users") },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const all = await ctx.db.query("support_conversations").collect();
+        
+        return {
+            open: all.filter(c => c.status === "open").length,
+            resolved: all.filter(c => c.status === "resolved").length,
+            ai_handled: all.filter(c => c.handled_by === "ai" && c.status === "open").length,
+            agent_handled: all.filter(c => c.handled_by === "agent" && c.status === "open").length,
+        };
+    },
+});
+
+
 export const getConversationMessages = query({
     args: { adminId: v.id("users"), conversationId: v.id("support_conversations") },
     handler: async (ctx, args) => {
@@ -97,7 +117,7 @@ export const getConversationMessages = query({
         const conversation = await ctx.db.get(args.conversationId);
         const user = conversation ? await ctx.db.get(conversation.user_id) : null;
 
-        return { messages, user };
+        return { messages, user, conversation };
     },
 });
 
@@ -109,17 +129,98 @@ export const assignAdmin = mutation({
 
         await ctx.db.patch(args.conversationId, {
             assigned_admin_id: args.adminId,
+            handled_by: "agent",
+            updated_at: Date.now(),
         });
     },
 });
 
+export const escalateToAgent = mutation({
+    args: { conversationId: v.id("support_conversations") },
+    handler: async (ctx, args) => {
+        const conversation = await ctx.db.get(args.conversationId);
+        if (!conversation) throw new Error("Conversation not found");
+
+        // Simple assignment logic: find first available admin or riderezzy@gmail.com
+        const admin = await ctx.db
+            .query("users")
+            .withIndex("by_is_admin", (q) => q.eq("is_admin", true))
+            .filter(q => q.eq(q.field("email"), "riderezzy@gmail.com"))
+            .first();
+
+        await ctx.db.patch(args.conversationId, {
+            handled_by: "agent",
+            assigned_admin_id: admin?._id,
+            updated_at: Date.now(),
+        });
+
+        // Insert system message
+        await ctx.db.insert("support_messages", {
+            conversation_id: args.conversationId,
+            sender_id: conversation.user_id, // technically it's a system message
+            sender_role: "ai",
+            content: "I’ll connect you with a support agent. Please wait while someone joins the chat.",
+            created_at: Date.now(),
+        });
+    },
+});
+
+export const resolveConversation = mutation({
+    args: { conversationId: v.id("support_conversations") },
+    handler: async (ctx, args) => {
+        const conversation = await ctx.db.get(args.conversationId);
+        if (!conversation) throw new Error("Conversation not found");
+
+        await ctx.db.patch(args.conversationId, {
+            status: "resolved",
+            updated_at: Date.now(),
+        });
+
+        // Clear messages for this conversation as requested
+        const messages = await ctx.db
+            .query("support_messages")
+            .withIndex("by_conversation", (q) => q.eq("conversation_id", args.conversationId))
+            .collect();
+
+        for (const msg of messages) {
+            await ctx.db.delete(msg._id);
+        }
+    },
+});
+
+
 // ─── Shared Functions ───────────────────────────────────────────────────────
+
+export const sendAIMessage = mutation({
+    args: {
+        conversationId: v.id("support_conversations"),
+        content: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const conversation = await ctx.db.get(args.conversationId);
+        if (!conversation) throw new Error("Conversation not found");
+
+        const msgId = await ctx.db.insert("support_messages", {
+            conversation_id: args.conversationId,
+            sender_id: conversation.user_id, // AI speaks on behalf of the platform to that user
+            sender_role: "ai",
+            content: args.content,
+            created_at: Date.now(),
+        });
+
+        await ctx.db.patch(args.conversationId, {
+            last_message_at: Date.now(),
+        });
+
+        return msgId;
+    },
+});
 
 export const sendMessage = mutation({
     args: {
         conversationId: v.id("support_conversations"),
         senderId: v.id("users"),
-        senderRole: v.string(), // "user" | "admin"
+        senderRole: v.string(), // "user" | "admin" | "ai"
         content: v.string(),
         image_url: v.optional(v.string()),
     },
@@ -143,7 +244,7 @@ export const sendMessage = mutation({
         const messageId = await ctx.db.insert("support_messages", {
             conversation_id: args.conversationId,
             sender_id: args.senderId,
-            sender_role: args.senderRole as "user" | "admin",
+            sender_role: args.senderRole as "user" | "admin" | "ai",
             content: args.content,
             image_url: args.image_url,
             created_at: Date.now(),
@@ -152,11 +253,13 @@ export const sendMessage = mutation({
         // Update conversation last message timestamp
         await ctx.db.patch(args.conversationId, {
             last_message_at: Date.now(),
+            updated_at: Date.now(),
         });
 
         return messageId;
     },
 });
+
 
 export const closeConversation = mutation({
     args: { adminId: v.id("users"), conversationId: v.id("support_conversations") },

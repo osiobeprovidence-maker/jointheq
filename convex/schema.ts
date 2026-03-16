@@ -247,6 +247,8 @@ export default defineSchema({
         user_id: v.id("users"),
         status: v.string(),
         assigned_admin_id: v.optional(v.id("users")),
+        handled_by: v.optional(v.string()), // "ai" | "agent"
+        issue_category: v.optional(v.string()),
         created_at: v.number(),
         updated_at: v.optional(v.number()),
         last_message_at: v.optional(v.number()),
