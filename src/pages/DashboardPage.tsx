@@ -163,6 +163,9 @@ export default function DashboardPage() {
     const updateUsernameMutation = useMutation(api.users.updateUsername);
     const updateProfileMutation = useMutation(api.users.updateProfile);
     const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
+    const renewSlotMutation = useMutation(api.subscriptions.renewSlot);
+    const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
+
     const walletResetPermission = useQuery(
         api.users.canResetWallets,
         currentUser?._id ? { user_id: currentUser._id } : "skip"
@@ -175,6 +178,8 @@ export default function DashboardPage() {
     const [universityInput, setUniversityInput] = useState('');
     const [profileImagePreview, setProfileImagePreview] = useState('');
     const [usernameLoading, setUsernameLoading] = useState(false);
+    const [cancellingSlot, setCancellingSlot] = useState<{ id: string, name: string } | null>(null);
+
 
     const handleProfileImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -357,14 +362,39 @@ export default function DashboardPage() {
     };
 
     const handleLeaveSlot = async (id: string, name: string) => {
-        if (!confirm(`Are you sure you want to leave your ${name} subscription? This action cannot be undone.`)) return;
+        setCancellingSlot({ id, name });
+    };
+
+    const confirmLeaveSlot = async () => {
+        if (!cancellingSlot) return;
         try {
-            await leaveSlotMutation({ id: id as any });
-            toast.success(`Successfully left ${name} subscription`);
+            await leaveSlotMutation({ id: cancellingSlot.id as any });
+            toast.success(`Successfully left ${cancellingSlot.name} subscription`);
+            setCancellingSlot(null);
         } catch (error: any) {
             toast.error(error.message || "Failed to leave subscription");
         }
     };
+
+    const handleRenew = async (slotId: string) => {
+        try {
+            await renewSlotMutation({ id: slotId as Id<"subscription_slots"> });
+            toast.success("Subscription renewed successfully!");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to renew subscription");
+        }
+    };
+
+    const handleToggleAutoRenew = async (slotId: string, val: boolean) => {
+        try {
+            await toggleAutoRenewMutation({ id: slotId as any, auto_renew: val });
+            toast.success(`Auto-renewal ${val ? 'enabled' : 'disabled'}`);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to update auto-renewal");
+        }
+    };
+
+
 
     const resetQRank = async () => {
         if (!currentUser) return;
@@ -498,7 +528,10 @@ export default function DashboardPage() {
                                             onUpdateAllocation={(val) => updateAllocation(slot._id, val)}
                                             onSupportClick={() => setActiveTab('support')}
                                             onLeave={() => handleLeaveSlot(slot._id, slot.sub_name || "subscription")}
+                                            onRenew={() => handleRenew(slot._id)}
+                                            onToggleAutoRenew={(val) => handleToggleAutoRenew(slot._id, val)}
                                         />
+
                                     ))}
                                 </div>
                             ) : (
@@ -1833,6 +1866,42 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </AnimatePresence>
+                {/* Leave Confirmation Modal */}
+                <AnimatePresence>
+                    {cancellingSlot && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl"
+                            >
+                                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+                                    <AlertCircle size={32} />
+                                </div>
+                                <h2 className="text-2xl font-bold mb-2">Cancel Subscription</h2>
+                                <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                                    You are about to leave your <span className="font-bold text-black">{cancellingSlot.name}</span> subscription. 
+                                    Leaving means you will lose access to the service at the end of the current billing cycle.
+                                </p>
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={confirmLeaveSlot}
+                                        className="w-full py-4 bg-red-500 text-white font-bold rounded-2xl hover:bg-red-600 transition-colors shadow-lg shadow-red-200"
+                                    >
+                                        Confirm Leave
+                                    </button>
+                                    <button
+                                        onClick={() => setCancellingSlot(null)}
+                                        className="w-full py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition-colors"
+                                    >
+                                        Go Back
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </AnimatePresence>
         </MainLayout >
     );
@@ -1934,7 +2003,15 @@ function StatCard({ title, value, icon, color }: { title: string, value: string,
     );
 }
 
-function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave }: { slot: UserSlot, onUpdateAllocation: (val: string) => void, onSupportClick: () => void, onLeave: () => void }) {
+function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onRenew, onToggleAutoRenew }: { 
+    slot: UserSlot, 
+    onUpdateAllocation: (val: string) => void, 
+    onSupportClick: () => void, 
+    onLeave: () => void,
+    onRenew: () => void,
+    onToggleAutoRenew: (val: boolean) => void
+}) {
+
     const getDateSafely = (dateStr?: string) => {
         if (!dateStr) return new Date();
         const d = new Date(dateStr);
@@ -2066,33 +2143,42 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave }: {
                 {renderAccessInstructions()}
             </div>
 
-            <div className="mt-auto space-y-4">
-                {slot.access_type === 'invite_link' && (
-                    <div className="mb-4">
-                        <div className="text-[10px] font-bold uppercase opacity-30 mb-1">Your Allocation/Address</div>
-                        {isEditing ? (
-                            <div className="flex gap-2">
-                                <input type="text" value={allocation} onChange={(e) => setAllocation(e.target.value)} placeholder="Enter home address" className="flex-1 p-3 bg-[#f4f5f8] rounded-2xl text-xs outline-none" />
-                                <button onClick={() => { onUpdateAllocation(allocation); setIsEditing(false); }} className="bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] px-4 py-2 rounded-2xl text-xs font-bold">Save</button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-between p-3 bg-[#f4f5f8] rounded-2xl">
-                                <span className="text-xs font-medium">{slot.allocation || 'Address not set'}</span>
-                                <button onClick={() => setIsEditing(true)} className="text-[10px] font-bold text-blue-600 pr-1">Edit</button>
-                            </div>
-                        )}
+            <div className="mt-auto space-y-4 pt-6 border-t border-black/5">
+                {/* Auto-Renewal Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-3xl">
+                    <div>
+                        <div className="text-[10px] font-bold uppercase opacity-40">Auto Renewal</div>
+                        <div className="text-xs font-semibold">{slot.auto_renew ? 'Enabled' : 'Disabled'}</div>
                     </div>
-                )}
+                    <button 
+                        onClick={() => onToggleAutoRenew(!slot.auto_renew)}
+                        className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ${slot.auto_renew ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                    >
+                        <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-200 transform ${slot.auto_renew ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                </div>
+
+                <div className="flex gap-2">
+                    <button 
+                        onClick={onRenew}
+                        disabled={slot.auto_renew}
+                        className={`flex-1 py-4 rounded-full text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${slot.auto_renew ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                    >
+                        <Zap size={16} /> Renew
+                    </button>
+                    <button 
+                        onClick={onLeave} 
+                        className="flex-1 py-4 bg-red-50 text-red-500 rounded-full text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
+                    >
+                        <LogOut size={16} /> Leave
+                    </button>
+                </div>
+
                 <button onClick={onSupportClick} className="w-full py-4 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-full text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all">
                     <MessageCircle size={16} /> Open Chat Support
                 </button>
-                <button 
-                  onClick={onLeave} 
-                  className="w-full py-4 bg-red-50 text-red-500 rounded-full text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
-                >
-                    <LogOut size={16} /> Leave Subscription
-                </button>
             </div>
+
         </motion.div>
     );
 }

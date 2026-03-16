@@ -117,11 +117,69 @@ export const getSlotsByUserId = query({
             price: 0, // Migrated slots might not have a set price yet
             allocation: m.assigned_group || "Pending Approval",
             access_type: "migrated",
+            auto_renew: false,
         }));
 
-        return [...standardSlots, ...migratedSlots];
+        const result = [...standardSlots, ...migratedSlots].map(s => ({
+            ...s,
+            auto_renew: (s as any).auto_renew ?? false,
+            removal_scheduled_at: (s as any).removal_scheduled_at
+        }));
+
+        return result;
     },
 });
+
+export const toggleAutoRenew = mutation({
+    args: { id: v.any(), auto_renew: v.boolean() },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.id, { auto_renew: args.auto_renew });
+    },
+});
+
+export const renewSlot = mutation({
+    args: { id: v.id("subscription_slots") },
+    handler: async (ctx, args) => {
+        const slot = await ctx.db.get(args.id);
+        if (!slot || !slot.user_id || !slot.slot_type_id) throw new Error("Slot not found or inactive");
+        
+        const user = await ctx.db.get(slot.user_id);
+        const slotType = await ctx.db.get(slot.slot_type_id);
+        if (!user || !slotType) throw new Error("User or Slot Type not found");
+
+        const price = slotType.price;
+        if (user.wallet_balance < price) throw new Error("Insufficient balance to renew");
+
+        // Deduct balance
+        await ctx.db.patch(user._id, {
+            wallet_balance: user.wallet_balance - price
+        });
+
+        // Record transaction
+        await ctx.db.insert("wallet_transactions", {
+            user_id: user._id,
+            amount: price,
+            type: "subscription_renewal",
+            status: "completed",
+            source: "wallet",
+            description: `Renewed ${slotType.name}`,
+            created_at: Date.now(),
+        });
+
+        // Update renewal date (add 30 days)
+        const currentRenewal = slot.renewal_date ? new Date(slot.renewal_date) : new Date();
+        const nextRenewal = new Date(currentRenewal.getTime() + 30 * 24 * 60 * 60 * 1000);
+        
+        await ctx.db.patch(slot._id, {
+            renewal_date: nextRenewal.toISOString(),
+            status: "filled",
+            auto_renew: true
+        });
+
+        return { success: true };
+    },
+});
+
 
 export const joinSlot = mutation({
     args: {
@@ -301,12 +359,10 @@ export const leaveSlot = mutation({
             const slot = await ctx.db.get(args.id);
             if (slot && (slot as any).user_id) {
                 await ctx.db.patch(args.id, {
-                    user_id: undefined,
-                    status: "open",
-                    renewal_date: undefined,
-                    allocation: undefined,
+                    auto_renew: false,
+                    status: "closing",
                 });
-                return { success: true, type: "slot" };
+                return { success: true, type: "slot", message: "Removal scheduled for end of cycle" };
             }
         } catch (e) {}
 

@@ -106,6 +106,8 @@ export default defineSchema({
         status: v.string(),
         renewal_date: v.optional(v.string()),
         allocation: v.optional(v.string()),
+        auto_renew: v.optional(v.boolean()),
+        removal_scheduled_at: v.optional(v.number()),
         created_at: v.optional(v.number()),
     }).index("by_subscription", ["subscription_id"])
         .index("by_user", ["user_id"])
