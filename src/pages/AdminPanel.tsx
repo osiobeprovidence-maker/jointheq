@@ -749,7 +749,10 @@ export default function AdminPanel() {
 
                                 {/* Migrations */}
                                 <div>
-                                    <SectionHeader title="Offline Migrations" sub="Legacy account transition metrics" />
+                                    <div className="flex items-center justify-between mb-2">
+                                        <SectionHeader title="Offline Migrations" sub="Legacy account transition metrics" />
+                                        <button onClick={() => navigate("/admin/migrations")} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-xl transition-all">View All</button>
+                                    </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         <StatCard label="Total Migrations" value={stats?.totalMigrations ?? 0} icon={<RefreshCw size={18} />} color="bg-indigo-500" />
                                         <StatCard label="Pending Review" value={stats?.pendingMigrations ?? 0} icon={<Clock size={18} />} color="bg-amber-500" sub="Needs verification" />

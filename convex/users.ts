@@ -637,6 +637,15 @@ export const updateCard = mutation({
     },
 });
 
+export const removeCard = mutation({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.userId, {
+            direct_debit_card: undefined
+        });
+    },
+});
+
 export const updateUsername = mutation({
     args: { userId: v.id("users"), username: v.string() },
     handler: async (ctx, args) => {

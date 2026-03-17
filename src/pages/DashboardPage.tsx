@@ -160,6 +160,7 @@ export default function DashboardPage() {
     const removeAdminMutation = useMutation(api.users.removeAdmin);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
     const updateCardMutation = useMutation(api.users.updateCard);
+    const removeCardMutation = useMutation(api.users.removeCard);
     const updateUsernameMutation = useMutation(api.users.updateUsername);
     const updateProfileMutation = useMutation(api.users.updateProfile);
     const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
@@ -812,11 +813,27 @@ export default function DashboardPage() {
 
                                 <div className="flex gap-3 relative z-10">
                                     {currentUser?.direct_debit_card ? (
-                                        <>
+                                        <div className="flex gap-2 w-full">
                                             <button className="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/20 transition-all border border-white/5">
                                                 Manage Card
                                             </button>
-                                        </>
+                                            <button 
+                                                onClick={async () => {
+                                                    if(confirm("Are you sure you want to remove your card? Automatic renewals will be disabled.")) {
+                                                        const tid = toast.loading("Removing card...");
+                                                        try {
+                                                            await removeCardMutation({ userId: currentUser._id });
+                                                            toast.success("Card removed successfully", { id: tid });
+                                                        } catch (e) {
+                                                            toast.error("Failed to remove card", { id: tid });
+                                                        }
+                                                    }
+                                                }}
+                                                className="px-4 py-3 bg-red-500/10 text-red-500 font-bold text-sm rounded-xl hover:bg-red-500/20 transition-all border border-red-500/20"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
                                     ) : (
                                         <button
                                             onClick={async () => {
