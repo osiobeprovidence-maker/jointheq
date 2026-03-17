@@ -217,7 +217,7 @@ export default function AdminPanel() {
     const adminActivityLogs = useQuery(api.adminWorkforce.getAdminLogs, {}) || [];
     const performanceMetrics = useQuery(api.adminWorkforce.getPerformanceMetrics) || [];
     const dailyReport = useQuery(api.adminWorkforce.getDailyReport);
-    const supportStats = useQuery(api.support.getSupportStats, { adminId: currentUser!._id as any });
+    const supportStats = useQuery(api.support.getSupportStats, currentUser?._id ? { adminId: currentUser._id as any } : "skip");
 
 
     // Workforce Mutations
