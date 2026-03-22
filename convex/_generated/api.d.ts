@@ -25,6 +25,7 @@ import type * as messages from "../messages.js";
 import type * as migrated_subscriptions from "../migrated_subscriptions.js";
 import type * as migration from "../migration.js";
 import type * as migrations from "../migrations.js";
+import type * as notifications from "../notifications.js";
 import type * as reputation from "../reputation.js";
 import type * as slots_engine from "../slots_engine.js";
 import type * as subscriptions from "../subscriptions.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   migrated_subscriptions: typeof migrated_subscriptions;
   migration: typeof migration;
   migrations: typeof migrations;
+  notifications: typeof notifications;
   reputation: typeof reputation;
   slots_engine: typeof slots_engine;
   subscriptions: typeof subscriptions;
