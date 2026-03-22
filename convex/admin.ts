@@ -142,12 +142,15 @@ export const getAllUsers = query({
             const slots = await ctx.db.query("subscription_slots")
                 .withIndex("by_user", q => q.eq("user_id", user._id))
                 .collect();
+            const migrated = await ctx.db.query("migrated_subscriptions")
+                .withIndex("by_user", q => q.eq("user_id", user._id))
+                .collect();
             const txns = await ctx.db.query("wallet_transactions")
                 .withIndex("by_user", q => q.eq("user_id", user._id))
                 .collect();
             return {
                 ...user,
-                activeSubscriptions: slots.filter(s => s.status === "filled").length,
+                activeSubscriptions: slots.filter(s => s.status === "filled").length + migrated.filter(m => m.status !== "failed").length,
                 totalPayments: txns.filter(t => t.type === "subscription").reduce((s, t) => s + t.amount, 0),
             };
         }));

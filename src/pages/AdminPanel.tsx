@@ -193,6 +193,9 @@ export default function AdminPanel() {
     // Settings Query
     const platformSettings = useQuery(api.admin.getPlatformSettings) || {};
 
+    // Selected User Slots Query
+    const selectedUserSlots = useQuery(api.subscriptions.getSlotsByUserId, selectedUser ? { user_id: selectedUser._id as Id<"users"> } : "skip") || [];
+
     // User Listings Queries
     const userListings = useQuery(api.listings.getAdminListings, {
         status: listingFilterStatus
@@ -3091,7 +3094,7 @@ export default function AdminPanel() {
                                     </div>
                                     <div className="min-w-0">
                                         <h2 className="text-xl font-black truncate">{selectedUser.full_name}</h2>
-                                        <p className="text-sm font-medium text-gray-500 truncate">{selectedUser.email} {selectedUser.username && `· @${selectedUser.username}`}</p>
+                                        <p className="text-sm font-medium text-gray-500 truncate">{selectedUser.email} {selectedUser.phone ? `· ${selectedUser.phone}` : ''} {selectedUser.username && `· @${selectedUser.username}`}</p>
                                     </div>
                                 </div>
                                 <button onClick={() => setSelectedUser(null)} className="p-2 bg-white rounded-xl shadow-sm text-gray-400 hover:text-black transition-colors border border-black/5 flex-shrink-0">
@@ -3142,26 +3145,24 @@ export default function AdminPanel() {
                                 <div className="border-t border-black/5 pt-6">
                                     <div className="text-xs font-black uppercase text-gray-400 tracking-widest mb-4">Active Plan Slots</div>
                                     <div className="space-y-3">
-                                        {allSubscriptions.filter((group: any) => group.members?.some((m: any) => m.user_id === selectedUser._id)).flatMap((group: any) => 
-                                            group.members?.filter((m: any) => m.user_id === selectedUser._id).map((m: any, i: number) => (
-                                                <div key={`${group._id}-${i}`} className="bg-white border border-black/5 p-4 rounded-2xl flex justify-between items-center hover:bg-black/[0.01]">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center font-black">
-                                                            {group.subscription_name?.[0]}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-bold text-sm">{group.subscription_name}</div>
-                                                            <div className="text-[10px] text-gray-400 font-bold">{m.slot_name}</div>
-                                                        </div>
+                                        {selectedUserSlots.map((m: any, i: number) => (
+                                            <div key={`${m._id || i}`} className="bg-white border border-black/5 p-4 rounded-2xl flex justify-between items-center hover:bg-black/[0.01]">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center font-black">
+                                                        {m.sub_name?.[0] || m.slot_name?.[0] || '?'}
                                                     </div>
-                                                    <div className="text-right">
-                                                        <div className="text-[10px] font-black uppercase text-amber-500 tracking-widest mb-0.5">Renews</div>
-                                                        <div className="text-xs font-bold">{m.renewal ? new Date(m.renewal).toLocaleDateString() : 'N/A'}</div>
+                                                    <div>
+                                                        <div className="font-bold text-sm">{m.sub_name || "Unknown"}</div>
+                                                        <div className="text-[10px] text-gray-400 font-bold">{m.slot_name || "Unknown Slot"}</div>
                                                     </div>
                                                 </div>
-                                            ))
-                                        )}
-                                        {allSubscriptions.filter((group: any) => group.members?.some((m: any) => m.user_id === selectedUser._id)).length === 0 && (
+                                                <div className="text-right">
+                                                    <div className="text-[10px] font-black uppercase text-amber-500 tracking-widest mb-0.5">Renews</div>
+                                                    <div className="text-xs font-bold">{m.renewal_date ? new Date(m.renewal_date).toLocaleDateString() : 'N/A'}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {selectedUserSlots.length === 0 && (
                                             <div className="text-center py-6 text-gray-400 bg-zinc-50 rounded-2xl">
                                                 <ShoppingBag size={32} className="mx-auto mb-2 opacity-50" />
                                                 <div className="text-sm font-bold">No active subscriptions</div>
