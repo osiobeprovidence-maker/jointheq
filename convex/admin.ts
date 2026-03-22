@@ -59,8 +59,8 @@ export const getPlatformStats = query({
             .reduce((s, t) => s + t.amount, 0);
 
         const activeCampaigns = campaigns.filter(c => c.status === "active").length;
-        const totalMigrations = migrations.length;
-        const pendingMigrations = migrations.filter(m => m.status === "pending").length;
+        const totalMigrations = migrations.length + migratedSubs.length;
+        const pendingMigrations = migrations.filter(m => m.status === "pending").length + migratedSubs.filter(m => m.status === "pending").length;
 
         return {
             // Users
