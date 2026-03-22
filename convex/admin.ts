@@ -15,7 +15,7 @@ export const getPlatformStats = query({
         startOfMonth.setHours(0, 0, 0, 0);
         const monthMs = startOfMonth.getTime();
 
-        const [users, slots, transactions, bootTransactions, campaigns, campaignParticipants, migrations] = await Promise.all([
+        const [users, slots, transactions, bootTransactions, campaigns, campaignParticipants, migrations, migratedSubs] = await Promise.all([
             ctx.db.query("users").collect(),
             ctx.db.query("subscription_slots").collect(),
             ctx.db.query("wallet_transactions").collect(),
@@ -23,6 +23,7 @@ export const getPlatformStats = query({
             ctx.db.query("campaigns").collect(),
             ctx.db.query("campaign_participants").collect(),
             ctx.db.query("migration_records").collect(),
+            ctx.db.query("migrated_subscriptions").collect(),
         ]);
 
         const totalUsers = users.length;
@@ -31,9 +32,10 @@ export const getPlatformStats = query({
         const suspendedUsers = users.filter(u => u.is_suspended).length;
         const bannedUsers = users.filter(u => u.is_banned).length;
 
-        const filledSlots = slots.filter(s => s.user_id && s.status === "filled").length;
-        const totalSlots = slots.length;
-        const availableSlots = totalSlots - filledSlots;
+        const activeMigratedSubs = migratedSubs.filter(m => m.status !== "failed").length;
+        const filledSlots = slots.filter(s => s.user_id && s.status === "filled").length + activeMigratedSubs;
+        const totalSlots = slots.length + activeMigratedSubs;
+        const availableSlots = slots.length - slots.filter(s => s.user_id && s.status === "filled").length;
 
         const paymentTxns = transactions.filter(t => t.type === "payment");
         const fundingTxns = transactions.filter(t => t.type === "funding");
@@ -94,6 +96,9 @@ export const getPlatformStats = query({
 export const getSubscriptionBreakdown = query({
     handler: async (ctx) => {
         const catalogItems = await ctx.db.query("subscription_catalog").collect();
+        const migratedSubs = await ctx.db.query("migrated_subscriptions").collect();
+        const activeMigratedSubs = migratedSubs.filter(m => m.status !== "failed");
+
         return await Promise.all(catalogItems.map(async (item) => {
             const slotTypes = await ctx.db.query("slot_types")
                 .withIndex("by_subscription", q => q.eq("subscription_id", item._id))
@@ -120,6 +125,11 @@ export const getSubscriptionBreakdown = query({
                     revenue += slotType?.price || 0;
                 }
             }
+
+            // Include relevant migrated subscriptions
+            const relevantMigrated = activeMigratedSubs.filter(m => m.platform.toLowerCase().includes(item.name.toLowerCase()) || item.name.toLowerCase().includes(m.platform.toLowerCase()));
+            totalSlots += relevantMigrated.length;
+            filledSlots += relevantMigrated.length;
 
             return {
                 ...item,
