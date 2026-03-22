@@ -130,6 +130,7 @@ export default function AdminPanel() {
         account_email: "",
         plan_owner: "",
         admin_renewal_date: "",
+        category: "Streaming",
         slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
     });
     // Slot editing state
@@ -415,13 +416,14 @@ export default function AdminPanel() {
                 account_email: listingData.account_email,
                 plan_owner: normalizedPlanOwner,
                 admin_renewal_date: listingData.admin_renewal_date,
+                category: listingData.category,
                 slot_types: listingData.slots
             });
             toast.success("Listing published to marketplace!", { icon: '🚀' });
             setShowListingModal(false);
             setListingData({
                 platform_name: "", account_email: "", plan_owner: "",
-                admin_renewal_date: "",
+                admin_renewal_date: "", category: "Streaming",
                 slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
             });
         } catch (error: any) {
@@ -2623,6 +2625,25 @@ export default function AdminPanel() {
                                                 className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
                                             />
                                             <p className="text-[10px] text-gray-400 ml-1">Type the name exactly as you want it to appear. A new platform entry will be created automatically.</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Category</label>
+                                            <select
+                                                value={listingData.category}
+                                                onChange={e => setListingData({ ...listingData, category: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
+                                            >
+                                                <option value="Streaming">Streaming</option>
+                                                <option value="Music">Music</option>
+                                                <option value="Design">Design</option>
+                                                <option value="AI">AI</option>
+                                                <option value="Productivity">Productivity</option>
+                                                <option value="Gaming">Gaming</option>
+                                                <option value="VPN">VPN</option>
+                                                <option value="Software">Software</option>
+                                                <option value="Utility">Utility</option>
+                                                <option value="Education">Education</option>
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Renewal Date</label>

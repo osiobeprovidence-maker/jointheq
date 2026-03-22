@@ -392,7 +392,8 @@ export const adminCreateListing = mutation({
             capacity: v.number(),
             access_type: v.string(),
             downloads_enabled: v.boolean(),
-        }))
+        })),
+        category: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const normalizedPlanOwner = normalizeOwnerName(args.plan_owner);
@@ -407,9 +408,12 @@ export const adminCreateListing = mutation({
             catalogId = await ctx.db.insert("subscription_catalog", {
                 name: args.platform_name,
                 description: `${args.platform_name} subscription`,
+                category: args.category || "Streaming",
                 is_active: true,
                 base_cost: 0,
             });
+        } else if (args.category) {
+            await ctx.db.patch(catalogId, { category: args.category });
         }
 
         const adminUser = await ctx.db.query("users").filter(q => q.eq(q.field("is_admin"), true)).first();
