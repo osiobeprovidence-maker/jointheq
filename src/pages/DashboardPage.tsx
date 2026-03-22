@@ -45,7 +45,8 @@ import {
     Users as TeamIcon,
     Target,
     Edit,
-    BadgeDollarSign
+    BadgeDollarSign,
+    Bell
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
@@ -69,7 +70,7 @@ export default function DashboardPage() {
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
     ];
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'notifications'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
     const [showVerificationWarning, setShowVerificationWarning] = useState(false);
@@ -108,6 +109,7 @@ export default function DashboardPage() {
     const campusRepInfo = useQuery(api.users.getCampusRep, currentUser ? { userId: currentUser._id } : "skip");
     const transactions = useQuery(api.transactions.getTransactions, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const manualRequests = useQuery(api.funding.getUserManualRequests, currentUser ? { user_id: currentUser._id } : "skip") || [];
+    const notifications = useQuery(api.notifications.list, currentUser ? { user_id: currentUser._id } : "skip") || [];
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -166,6 +168,7 @@ export default function DashboardPage() {
     const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
     const renewSlotMutation = useMutation(api.subscriptions.renewSlot);
     const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
+    const markAsReadMutation = useMutation(api.notifications.markAsRead);
 
     const walletResetPermission = useQuery(
         api.users.canResetWallets,
@@ -281,6 +284,12 @@ export default function DashboardPage() {
             }).catch(e => console.log("Init already done or error:", e.message));
         }
     }, [currentUser, walletResetPermission, initializeSuperAdminMut]);
+
+    useEffect(() => {
+        if (activeTab === 'notifications' && currentUser) {
+            markAsReadMutation({ user_id: currentUser._id });
+        }
+    }, [activeTab, currentUser, markAsReadMutation]);
 
     const joinSlot = async (slotTypeId: string) => {
         if (!currentUser) return;
@@ -1918,7 +1927,46 @@ export default function DashboardPage() {
                             </motion.div>
                         </div>
                     )}
-                </AnimatePresence>
+                {activeTab === 'notifications' && (
+                    <motion.div key="notifications" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                        <header>
+                            <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+                            <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
+                        </header>
+
+                        <div className="space-y-4">
+                            {notifications.length > 0 ? (
+                                notifications.map((notif: any) => (
+                                    <div key={notif._id} className={`p-6 rounded-[2rem] border transition-all ${notif.is_read ? 'bg-white border-black/5 opacity-60' : 'bg-white border-blue-500/20 shadow-lg shadow-blue-500/5'}`}>
+                                        <div className="flex items-start gap-4">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                                                notif.type === 'alert' ? 'bg-red-100 text-red-600' :
+                                                notif.type === 'promotion' ? 'bg-amber-100 text-amber-600' :
+                                                notif.type === 'subscription' ? 'bg-blue-100 text-blue-600' :
+                                                'bg-zinc-100 text-zinc-600'
+                                            }`}>
+                                                <Bell size={20} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h3 className="font-bold text-base">{notif.title}</h3>
+                                                    <span className="text-[10px] font-black uppercase text-gray-400">{new Date(notif.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="text-sm text-gray-600 leading-relaxed">{notif.message}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="bg-white rounded-[3rem] p-20 text-center text-gray-400 border border-dashed border-black/10">
+                                    <Bell size={40} className="mx-auto mb-4 opacity-20" />
+                                    <p className="font-bold">No notifications yet.</p>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             </AnimatePresence>
         </MainLayout >
     );

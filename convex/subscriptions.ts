@@ -370,7 +370,9 @@ export const leaveSlot = mutation({
         try {
             const migration = await ctx.db.get(args.id);
             if (migration && (migration as any).user_id) {
-                await ctx.db.delete(args.id);
+                await ctx.db.patch(args.id, {
+                    status: "closing"
+                });
                 return { success: true, type: "migration" };
             }
         } catch (e) {}
@@ -394,6 +396,10 @@ export const adminCreateListing = mutation({
             downloads_enabled: v.boolean(),
         })),
         category: v.optional(v.string()),
+        login_password: v.optional(v.string()),
+        base_cost: v.optional(v.number()),
+        instructions_text: v.optional(v.string()),
+        instructions_image_url: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const normalizedPlanOwner = normalizeOwnerName(args.plan_owner);
@@ -410,10 +416,13 @@ export const adminCreateListing = mutation({
                 description: `${args.platform_name} subscription`,
                 category: args.category || "Streaming",
                 is_active: true,
-                base_cost: 0,
+                base_cost: args.base_cost || 0,
             });
-        } else if (args.category) {
-            await ctx.db.patch(catalogId, { category: args.category });
+        } else if (args.category || args.base_cost !== undefined) {
+            await ctx.db.patch(catalogId, { 
+                ...(args.category && { category: args.category }),
+                ...(args.base_cost !== undefined && { base_cost: args.base_cost })
+            });
         }
 
         const adminUser = await ctx.db.query("users").filter(q => q.eq(q.field("is_admin"), true)).first();
@@ -432,7 +441,10 @@ export const adminCreateListing = mutation({
             platform: args.platform_name,
             platform_catalog_id: catalogId,
             login_email: args.account_email,
-            login_password: "ADMIN_MANAGED",
+            login_password: args.login_password || "ADMIN_MANAGED",
+            base_cost: args.base_cost || 0,
+            instructions_text: args.instructions_text,
+            instructions_image_url: args.instructions_image_url,
             renewal_date: args.admin_renewal_date,
             total_slots: args.slot_types.reduce((a, b) => a + b.capacity, 0),
             slot_price: args.slot_types[0]?.price ?? 0,

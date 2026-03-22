@@ -92,6 +92,8 @@ export default defineSchema({
         description: v.optional(v.string()),
         is_active: v.optional(v.boolean()),
         name: v.optional(v.string()),
+        instructions_text: v.optional(v.string()),
+        instructions_image_url: v.optional(v.string()),
     }).index("by_owner", ["owner_id"])
         .index("by_status", ["status"]),
 
@@ -573,4 +575,14 @@ export default defineSchema({
         updated_at: v.number(),
         updated_by: v.optional(v.id("users")),
     }).index("by_key", ["key"]),
+
+    notifications: defineTable({
+        user_id: v.optional(v.id("users")),
+        title: v.string(),
+        message: v.string(),
+        type: v.string(),
+        is_read: v.boolean(),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+      .index("by_read", ["user_id", "is_read"]),
 });

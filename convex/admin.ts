@@ -381,3 +381,71 @@ export const updatePlatformSetting = mutation({
         }
     }
 });
+
+export const adminSendNotification = mutation({
+    args: {
+        userId: v.optional(v.id("users")),
+        title: v.string(),
+        message: v.string(),
+        type: v.string(),
+    },
+    handler: async (ctx, args) => {
+        if (args.userId) {
+            await ctx.db.insert("notifications", {
+                user_id: args.userId,
+                title: args.title,
+                message: args.message,
+                type: args.type,
+                is_read: false,
+                created_at: Date.now(),
+            });
+        } else {
+            const users = await ctx.db.query("users").filter(q => q.eq(q.field("is_suspended"), false)).collect();
+            for (const u of users) {
+                await ctx.db.insert("notifications", {
+                    user_id: u._id,
+                    title: args.title,
+                    message: args.message,
+                    type: args.type,
+                    is_read: false,
+                    created_at: Date.now(),
+                });
+            }
+        }
+        return { success: true };
+    }
+});
+
+export const getPendingLeaveRequests = query({
+    handler: async (ctx) => {
+        const slots = await ctx.db.query("subscription_slots")
+            .withIndex("by_status", q => q.eq("status", "closing"))
+            .collect();
+            
+        const migrations = await ctx.db.query("migrated_subscriptions")
+            .withIndex("by_status", q => q.eq("status", "closing"))
+            .collect();
+            
+        return { slots, migrations };
+    }
+});
+
+export const approveLeaveRequest = mutation({
+    args: { id: v.any(), type: v.string() },
+    handler: async (ctx, args) => {
+        if (args.type === "slot") {
+            const slot = await ctx.db.get(args.id);
+            if (slot) {
+                await ctx.db.patch(args.id, {
+                    user_id: undefined,
+                    status: "open",
+                    renewal_date: undefined,
+                    allocation: undefined,
+                });
+            }
+        } else if (args.type === "migration") {
+            await ctx.db.delete(args.id);
+        }
+        return { success: true };
+    }
+});

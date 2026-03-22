@@ -13,8 +13,11 @@ import {
     Menu,
     X,
     ShieldCheck,
-    Clock
+    Clock,
+    Bell
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { motion, AnimatePresence } from "motion/react";
 import { auth } from "../lib/auth";
 import { Logo } from "../components/ui/Logo";
@@ -41,6 +44,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
+        { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
         { id: 'migrate', label: 'Migrate Account', icon: <ShieldCheck size={20} /> },
         { id: 'campaigns', label: 'Campaigns', icon: <Sparkles size={20} /> },
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
@@ -71,13 +75,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === item.id
+                            className={`flex items-center justify-between w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all group ${activeTab === item.id
                                 ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
                                 : 'text-gray-500 hover:bg-black/5 hover:text-black'
                                 }`}
                         >
-                            {item.icon}
-                            <span className="font-semibold">{item.label}</span>
+                            <div className="flex items-center gap-3">
+                                {item.icon}
+                                <span className="font-semibold">{item.label}</span>
+                            </div>
+                            {item.id === 'notifications' && (
+                                <NotificationBadge unreadCount={useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id } : "skip") || 0} />
+                            )}
                         </button>
                     ))}
                     {auth.isAdmin() && (
@@ -198,3 +207,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         </div>
     );
 };
+function NotificationBadge({ unreadCount }: { unreadCount: number }) {
+    if (unreadCount <= 0) return null;
+    return (
+        <span className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full ring-2 ring-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+    );
+}

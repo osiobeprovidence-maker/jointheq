@@ -47,7 +47,11 @@ import {
     Menu,
     Layers,
     Mail,
-    Lock
+    Lock,
+    Edit,
+    BadgeDollarSign,
+    Bell,
+    UserMinus
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -59,7 +63,7 @@ import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings";
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = fmtCurrency;
@@ -128,14 +132,20 @@ export default function AdminPanel() {
     const [listingData, setListingData] = useState({
         platform_name: "",
         account_email: "",
+        account_password: "",
         plan_owner: "",
         admin_renewal_date: "",
         category: "Streaming",
+        base_cost: 0,
+        instructions_text: "",
+        instructions_image_url: "",
         slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
     });
-    // Slot editing state
     const [editingSlot, setEditingSlot] = useState<any>(null);  // { slot_type_id, name, price, capacity, access_type }
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+
+    // Notifications state
+    const [notifForm, setNotifForm] = useState({ title: "", message: "", type: "system", userId: "" });
 
     // Selected User state
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -180,6 +190,8 @@ export default function AdminPanel() {
     // Security / Fraud
     const fraudFlags = useQuery(api.fraud.getFraudFlags, {}) || [];
     const fraudSummary = useQuery(api.fraud.getFraudSummary);
+    const manualRequests = useQuery(api.funding.getUserManualRequests, currentUser ? { user_id: currentUser._id } : "skip") || [];
+    const notifications = useQuery(api.notifications.list, currentUser ? { user_id: currentUser._id } : "skip") || [];
     // Campus territories & events
     const territories = useQuery(api.campus.getTerritories) || [];
     const campusEvents = useQuery(api.campus.getEvents, {}) || [];
@@ -206,7 +218,13 @@ export default function AdminPanel() {
     const pendingPaymentsCount = useQuery(api.funding.getManualRequests, { status: "Awaiting Review" })?.length || 0;
     const pendingListingsCount = useQuery(api.listings.getAdminListings, { status: "Pending Review" })?.length || 0;
 
+    // Leave Requests Query
+    const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
+    const pendingLeaveCount = pendingLeaveRequests.slots.length + pendingLeaveRequests.migrations.length;
+
     // Mutations
+    const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
+    const markAsReadMutation = useMutation(api.notifications.markAsRead);
     const suspendUserMut = useMutation(api.admin.suspendUser);
     const unsuspendUserMut = useMutation(api.admin.unsuspendUser);
     const banUserMut = useMutation(api.admin.banUser);
@@ -216,6 +234,11 @@ export default function AdminPanel() {
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
     const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
+    const adminUpdateSlotCapacity = useMutation(api.subscriptions.adminUpdateSlotCapacity);
+    const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
+    
+    const adminSendNotification = useMutation(api.admin.adminSendNotification);
+    const approveLeaveRequest = useMutation(api.admin.approveLeaveRequest);
     const createCampaignMut = useMutation(api.campaigns.create);
     const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
     const editCampaignMut = useMutation(api.campaigns.editCampaign);
@@ -417,18 +440,48 @@ export default function AdminPanel() {
                 plan_owner: normalizedPlanOwner,
                 admin_renewal_date: listingData.admin_renewal_date,
                 category: listingData.category,
+                login_password: listingData.account_password,
+                base_cost: Number(listingData.base_cost),
+                instructions_text: listingData.instructions_text,
+                instructions_image_url: listingData.instructions_image_url,
                 slot_types: listingData.slots
             });
             toast.success("Listing published to marketplace!", { icon: '🚀' });
             setShowListingModal(false);
             setListingData({
-                platform_name: "", account_email: "", plan_owner: "",
-                admin_renewal_date: "", category: "Streaming",
+                platform_name: "", account_email: "", account_password: "", plan_owner: "",
+                admin_renewal_date: "", category: "Streaming", base_cost: 0, instructions_text: "", instructions_image_url: "",
                 slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
             });
         } catch (error: any) {
             toast.error(error.message || "Failed to create listing");
         }
+    };
+
+    const handleSendNotification = async () => {
+        if (!notifForm.title || !notifForm.message) return toast.error("Title and message are required");
+        try {
+            await adminSendNotification({
+                title: notifForm.title,
+                message: notifForm.message,
+                type: notifForm.type as any,
+                user_id: notifForm.userId ? notifForm.userId as Id<"users"> : undefined,
+                executor_id: currentUser!._id,
+            });
+            toast.success("Notification sent successfully!");
+            setNotifForm({ title: "", message: "", type: "system", userId: "" });
+        } catch (e: any) { toast.error(e.message); }
+    };
+
+    const handleApproveLeave = async (id: Id<"slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
+        try {
+            await approveLeaveRequest({ id, type, executorId: currentUser!._id });
+            toast.success("Leave request approved");
+        } catch (e: any) { toast.error(e.message); }
+    };
+
+    const handleRejectLeave = async (id: Id<"slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
+        toast("Rejection not implemented yet. Contact ops.", { icon: "ℹ️" });
     };
 
     if (!currentUser?.is_admin) {
@@ -458,6 +511,8 @@ export default function AdminPanel() {
         { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} />, sub: "Campus Rep Program" },
         { id: "review_payments", label: "Payments Review", icon: <Wallet size={18} />, sub: "FINANCE OPERATIONS" },
         { id: "user_listings", label: "Listing Review", icon: <Layers size={18} />, sub: "CONTENT MODERATION" },
+        { id: "notifications", label: "Notifications", icon: <Bell size={18} />, sub: "Push Updates" },
+        { id: "leave_requests", label: "Leave Requests", icon: <UserMinus size={18} />, sub: "Cancellations" },
     ];
 
     const filteredUsers = allUsers.filter(u =>
@@ -515,6 +570,11 @@ export default function AdminPanel() {
                             {item.id === "user_listings" && pendingListingsCount > 0 && (
                                 <span className="ml-auto bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                                     {pendingListingsCount}
+                                </span>
+                            )}
+                            {item.id === "leave_requests" && pendingLeaveCount > 0 && (
+                                <span className="ml-auto bg-purple-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                    {pendingLeaveCount}
                                 </span>
                             )}
                         </button>
@@ -2446,6 +2506,144 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
+                        {/* ═══ NOTIFICATIONS ═══ */}
+                        {activeTab === "notifications" && (
+                            <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
+                                <SectionHeader title="Send Notifications" sub="Broadcast updates to all users or a specific individual" />
+                                <div className="bg-white rounded-[2.5rem] p-8 border border-black/5 space-y-6 shadow-sm">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Audience</label>
+                                            <select 
+                                                value={notifForm.userId} 
+                                                onChange={e => setNotifForm({ ...notifForm, userId: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
+                                            >
+                                                <option value="">All Users (Broadcast)</option>
+                                                {allUsers.map((u: any) => (
+                                                    <option key={u._id} value={u._id}>{u.full_name} ({u.email})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notification Type</label>
+                                            <select 
+                                                value={notifForm.type} 
+                                                onChange={e => setNotifForm({ ...notifForm, type: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
+                                            >
+                                                <option value="system">System Update</option>
+                                                <option value="promotion">Promotion / Deal</option>
+                                                <option value="alert">Critical Security Alert</option>
+                                                <option value="subscription">Subscription Update</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
+                                        <input 
+                                            placeholder="e.g. Netflix Price Update" 
+                                            value={notifForm.title}
+                                            onChange={e => setNotifForm({ ...notifForm, title: e.target.value })}
+                                            className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Message Body</label>
+                                        <textarea 
+                                            placeholder="Details of the update..." 
+                                            value={notifForm.message}
+                                            onChange={e => setNotifForm({ ...notifForm, message: e.target.value })}
+                                            rows={4}
+                                            className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={handleSendNotification}
+                                        className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-black text-base hover:scale-[1.01] transition-transform shadow-xl shadow-black/10 flex items-center justify-center gap-3"
+                                    >
+                                        <Zap size={20} className="text-yellow-400" /> Send Notification
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* ═══ LEAVE REQUESTS ═══ */}
+                        {activeTab === "leave_requests" && (
+                            <motion.div key="leave_requests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
+                                <SectionHeader title="Leave Requests" sub="Approve users wanting to cancel or leave subscriptions" />
+                                
+                                <div className="grid grid-cols-1 gap-4">
+                                    {(pendingLeaveRequests.slots.length === 0 && pendingLeaveRequests.migrations.length === 0) ? (
+                                        <div className="bg-white rounded-[3rem] p-20 text-center text-gray-400 uppercase font-black text-xs tracking-widest border border-dashed border-black/10">
+                                            No pending leave requests
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Legacy Migrations */}
+                                            {pendingLeaveRequests.migrations.map((req: any) => (
+                                                <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-10 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-2 h-full bg-red-400" />
+                                                    <div className="flex items-center gap-6 min-w-[280px]">
+                                                        <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center font-black text-xl">
+                                                            <Clock size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-black text-lg">Legacy: {req.subscription_name}</h3>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Migration</span>
+                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{req.account_email}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-bold text-gray-500">User wants to leave this migrated subscription.</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button 
+                                                            onClick={() => handleApproveLeave(req._id, "migration")}
+                                                            className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
+                                                        >
+                                                            Approve Exit
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* Standard Slots */}
+                                            {pendingLeaveRequests.slots.map((req: any) => (
+                                                <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-10 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-2 h-full bg-amber-400" />
+                                                    <div className="flex items-center gap-6 min-w-[280px]">
+                                                        <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center font-black text-xl">
+                                                            <Clock size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-black text-lg">{req.sub_name}</h3>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">{req.slot_name}</span>
+                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">@{req.user_name}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-bold text-gray-500">User requested to leave this slot.</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button 
+                                                            onClick={() => handleApproveLeave(req._id, "slot")}
+                                                            className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
+                                                        >
+                                                            Approve Exit
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
                     </AnimatePresence>
 
                 </div>
@@ -2665,6 +2863,16 @@ export default function AdminPanel() {
                                             />
                                         </div>
                                         <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Password</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. secret123"
+                                                value={listingData.account_password}
+                                                onChange={e => setListingData({ ...listingData, account_password: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Plan Owner</label>
                                             <input
                                                 placeholder="e.g. Providence"
@@ -2673,15 +2881,59 @@ export default function AdminPanel() {
                                                 className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
                                             />
                                         </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Base Cost (₦)</label>
+                                            <input
+                                                type="number"
+                                                placeholder="Amount"
+                                                value={listingData.base_cost === 0 ? "" : listingData.base_cost}
+                                                onChange={e => setListingData({ ...listingData, base_cost: Number(e.target.value) })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Instructions Image URL</label>
+                                            <input
+                                                type="url"
+                                                placeholder="https://example.com/image.jpg"
+                                                value={listingData.instructions_image_url}
+                                                onChange={e => setListingData({ ...listingData, instructions_image_url: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Instructions Text</label>
+                                            <textarea
+                                                placeholder="Step-by-step instructions for members to access this account"
+                                                value={listingData.instructions_text}
+                                                onChange={e => setListingData({ ...listingData, instructions_text: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm min-h-[100px]"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Slot Varieties */}
                                 <div className="bg-white rounded-[2.5rem] p-8">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h3 className="font-black text-lg flex items-center gap-2">
-                                            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" /> Slot Varieties
-                                        </h3>
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <h3 className="font-black text-lg flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" /> Slot Varieties
+                                            </h3>
+                                            {/* Profitability Tracker */}
+                                            <div className="flex gap-4">
+                                                <div className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-500">
+                                                    Est. Rev: ₦{listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0).toLocaleString()}
+                                                </div>
+                                                <div className={`px-4 py-2 rounded-xl text-xs font-bold ${
+                                                    listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) > listingData.base_cost 
+                                                    ? 'bg-emerald-50 text-emerald-600' 
+                                                    : 'bg-red-50 text-red-500'
+                                                }`}>
+                                                    Profit: ₦{(listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) - listingData.base_cost).toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </div>
                                         <button
                                             onClick={() => setListingData({
                                                 ...listingData,
