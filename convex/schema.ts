@@ -566,4 +566,11 @@ export default defineSchema({
         updated_at: v.optional(v.number()),
     }).index("by_user", ["user_id"])
         .index("by_status", ["status"]),
+
+    platform_settings: defineTable({
+        key: v.string(),
+        value: v.any(),
+        updated_at: v.number(),
+        updated_by: v.optional(v.id("users")),
+    }).index("by_key", ["key"]),
 });

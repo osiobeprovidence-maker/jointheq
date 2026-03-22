@@ -31,8 +31,7 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
     const sendMessage = useMutation(api.support.sendMessage);
     const chatWithAI = useAction(api.support_actions.chatWithAI);
     const escalateToAgent = useMutation(api.support.escalateToAgent);
-
-
+    const platformSettings = useQuery(api.admin.getPlatformSettings) || {};
 
     const conversation = data?.conversation;
     const messages = data?.messages || [];
@@ -107,12 +106,24 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
                 <p className="text-gray-400 mb-8 max-w-sm">
                     Need help with your account, payments, or campaigns? Our verified support team is online and ready to assist you.
                 </p>
-                <button
-                    onClick={handleStart}
-                    className="px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold flex items-center gap-2 hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
-                >
-                    <Send size={18} /> Start a Conversation
-                </button>
+                <div className="flex flex-col gap-3 w-full max-w-xs">
+                    <button
+                        onClick={handleStart}
+                        className="w-full px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
+                    >
+                        <Send size={18} /> Start a Conversation
+                    </button>
+                    {platformSettings?.whatsapp_number && (
+                        <a
+                            href={`https://wa.me/${platformSettings.whatsapp_number.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full px-8 py-4 bg-[#25D366] text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-xl shadow-[#25D366]/20"
+                        >
+                            <MessageSquare size={18} /> WhatsApp Support
+                        </a>
+                    )}
+                </div>
             </div>
         );
     }
@@ -143,16 +154,28 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
                         </div>
                     </div>
                 </div>
-                {conversation.handled_by === 'ai' && (
-                    <button 
-                        onClick={() => {
-                            escalateToAgent({ conversationId: conversation._id });
-                        }}
-                        className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-white border border-black/10 rounded-lg hover:bg-black/5 transition-all text-gray-500"
-                    >
-                        Talk to Agent
-                    </button>
-                )}
+                <div className="flex items-center gap-2">
+                    {platformSettings?.whatsapp_number && (
+                        <a 
+                            href={`https://wa.me/${platformSettings.whatsapp_number.replace(/[^0-9]/g, '')}?text=${encodeURIComponent("Hi, I need support with my JoinTheQ account.")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#25D366]/10 border border-[#25D366]/20 rounded-lg hover:bg-[#25D366]/20 transition-all text-[#25D366] flex items-center gap-1"
+                        >
+                            WhatsApp
+                        </a>
+                    )}
+                    {conversation.handled_by === 'ai' && (
+                        <button 
+                            onClick={() => {
+                                escalateToAgent({ conversationId: conversation._id });
+                            }}
+                            className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-white border border-black/10 rounded-lg hover:bg-black/5 transition-all text-gray-500"
+                        >
+                            Talk to Agent
+                        </button>
+                    )}
+                </div>
             </div>
 
 

@@ -295,3 +295,47 @@ export const getRecentTransactions = query({
         }));
     }
 });
+
+// ─── Platform Settings ───────────────────────────────────────────────────────
+
+export const getPlatformSettings = query({
+    handler: async (ctx) => {
+        const settings = await ctx.db.query("platform_settings").collect();
+        const settingsMap: Record<string, any> = {};
+        for (const s of settings) {
+            settingsMap[s.key] = s.value;
+        }
+        return settingsMap;
+    }
+});
+
+export const updatePlatformSetting = mutation({
+    args: {
+        key: v.string(),
+        value: v.any(),
+        executorId: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const executor = await ctx.db.get(args.executorId);
+        if (!executor?.is_admin) throw new Error("Unauthorized");
+
+        const existing = await ctx.db.query("platform_settings")
+            .withIndex("by_key", q => q.eq("key", args.key))
+            .first();
+
+        if (existing) {
+            await ctx.db.patch(existing._id, {
+                value: args.value,
+                updated_at: Date.now(),
+                updated_by: args.executorId,
+            });
+        } else {
+            await ctx.db.insert("platform_settings", {
+                key: args.key,
+                value: args.value,
+                updated_at: Date.now(),
+                updated_by: args.executorId,
+            });
+        }
+    }
+});

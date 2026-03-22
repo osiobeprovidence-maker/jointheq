@@ -136,6 +136,9 @@ export default function AdminPanel() {
     const [editingSlot, setEditingSlot] = useState<any>(null);  // { slot_type_id, name, price, capacity, access_type }
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
+    // Selected User state
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+
     // Workforce admin state
     const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -186,6 +189,9 @@ export default function AdminPanel() {
     const paymentRequests = useQuery(api.funding.getManualRequests, {
         status: paymentFilterStatus
     }) || [];
+
+    // Settings Query
+    const platformSettings = useQuery(api.admin.getPlatformSettings) || {};
 
     // User Listings Queries
     const userListings = useQuery(api.listings.getAdminListings, {
@@ -245,6 +251,9 @@ export default function AdminPanel() {
     // Listing Review Mutations
     const approveListingMut = useMutation(api.listings.approveListing);
     const rejectListingMut = useMutation(api.listings.rejectListing);
+
+    // Settings Mutation
+    const updateSettingMut = useMutation(api.admin.updatePlatformSetting);
 
     // Pre-Launch Reset Mutation
     const resetAllWalletsMut = useMutation(api.users.resetAllWallets);
@@ -856,7 +865,7 @@ export default function AdminPanel() {
                                         <div className="col-span-2 text-center">Actions</div>
                                     </div>
                                     {filteredUsers.map((u: any) => (
-                                        <div key={u._id} className="grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01]">
+                                        <div key={u._id} onClick={() => setSelectedUser(u)} className="grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01] cursor-pointer">
                                             <div className="col-span-3 flex items-center gap-3 min-w-0">
                                                 <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
                                                     {u.full_name?.[0]}
@@ -882,7 +891,8 @@ export default function AdminPanel() {
                                             <div className="col-span-2 flex justify-center gap-1">
                                                 {u.is_suspended ? (
                                                     <button
-                                                        onClick={async () => {
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
                                                             await unsuspendUserMut({ userId: u._id, executorId: currentUser!._id });
                                                             toast.success("User unsuspended");
                                                         }}
@@ -893,7 +903,8 @@ export default function AdminPanel() {
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        onClick={async () => {
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
                                                             await suspendUserMut({ userId: u._id, executorId: currentUser!._id });
                                                             toast.success("User suspended");
                                                         }}
@@ -905,12 +916,13 @@ export default function AdminPanel() {
                                                 )}
                                                 {!u.is_banned && (
                                                     <button
-                                                        onClick={async () => {
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
                                                             if (!window.confirm(`Ban ${u.full_name}? This is serious.`)) return;
                                                             try {
                                                                 await banUserMut({ userId: u._id, executorId: currentUser!._id });
                                                                 toast.success("User banned");
-                                                            } catch (e: any) { toast.error(e.message); }
+                                                            } catch (err: any) { toast.error(err.message); }
                                                         }}
                                                         className="p-1.5 bg-red-50 text-red-500 rounded-xl hover:scale-110 transition-transform"
                                                         title="Ban"
@@ -1437,6 +1449,34 @@ export default function AdminPanel() {
                                     <StatCard label="AI Handled" value={supportStats?.ai_handled || 0} icon={<Zap size={16} />} color="bg-indigo-500" />
                                     <StatCard label="Agent Handled" value={supportStats?.agent_handled || 0} icon={<Users size={16} />} color="bg-blue-500" />
                                     <StatCard label="Resolved" value={supportStats?.resolved || 0} icon={<CheckCircle2 size={16} />} color="bg-emerald-500" />
+                                </div>
+
+                                {/* WhatsApp Config */}
+                                <div className="bg-white p-5 rounded-3xl border border-black/5 flex flex-col md:flex-row md:items-center gap-4 justify-between">
+                                    <div>
+                                        <div className="font-black text-sm">WhatsApp Support Number</div>
+                                        <div className="text-xs text-gray-400 mt-1">Users clicking the WhatsApp support button will be redirected here.</div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            defaultValue={platformSettings?.whatsapp_number || ""}
+                                            id="whatsapp_input"
+                                            placeholder="e.g. +1234567890" 
+                                            className="w-48 px-4 py-2 bg-zinc-50 border border-black/5 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-emerald-500/20"
+                                        />
+                                        <button
+                                            onClick={async () => {
+                                                const val = (document.getElementById('whatsapp_input') as HTMLInputElement).value;
+                                                try {
+                                                    await updateSettingMut({ key: "whatsapp_number", value: val, executorId: currentUser!._id as any });
+                                                    toast.success("WhatsApp number updated!");
+                                                } catch(e:any) { toast.error(e.message); }
+                                            }}
+                                            className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-sm font-black hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+                                        >
+                                            Save
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <SupportChatAdmin adminId={currentUser!._id} />
@@ -3035,6 +3075,103 @@ export default function AdminPanel() {
                             </button>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* User Details Modal */}
+            <AnimatePresence>
+                {selectedUser && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedUser(null)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden max-h-[90vh] flex flex-col">
+                            <div className="p-6 border-b border-black/5 flex items-center justify-between bg-zinc-50">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center font-black text-xl flex-shrink-0">
+                                        {selectedUser.full_name?.[0]}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h2 className="text-xl font-black truncate">{selectedUser.full_name}</h2>
+                                        <p className="text-sm font-medium text-gray-500 truncate">{selectedUser.email} {selectedUser.username && `· @${selectedUser.username}`}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedUser(null)} className="p-2 bg-white rounded-xl shadow-sm text-gray-400 hover:text-black transition-colors border border-black/5 flex-shrink-0">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                                {/* Status Row */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="bg-zinc-50 p-4 rounded-2xl">
+                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Status</div>
+                                        <div className="font-bold text-sm">
+                                            {selectedUser.is_banned ? <span className="text-red-500">Banned</span> : selectedUser.is_suspended ? <span className="text-amber-500">Suspended</span> : <span className="text-emerald-500">Active</span>}
+                                        </div>
+                                    </div>
+                                    <div className="bg-zinc-50 p-4 rounded-2xl">
+                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Joined</div>
+                                        <div className="font-bold text-sm">{new Date(selectedUser.created_at).toLocaleDateString()}</div>
+                                    </div>
+                                    <div className="bg-zinc-50 p-4 rounded-2xl">
+                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Wallet</div>
+                                        <div className="font-bold text-sm text-emerald-600">{fmtCurrency(selectedUser.wallet_balance || 0)}</div>
+                                    </div>
+                                    <div className="bg-zinc-50 p-4 rounded-2xl">
+                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">BOOTS</div>
+                                        <div className="font-bold text-sm text-amber-500">{(selectedUser.boots_balance || 0).toLocaleString()}</div>
+                                    </div>
+                                </div>
+
+                                {/* Activity */}
+                                <div className="grid grid-cols-3 gap-4 border-t border-black/5 pt-6">
+                                    <div className="bg-zinc-50 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                                        <div className="text-2xl font-black">{selectedUser.q_score || 0}</div>
+                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mt-1">Q Score</div>
+                                    </div>
+                                    <div className="bg-zinc-50 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                                        <div className="text-2xl font-black text-purple-600">{selectedUser.activeSubscriptions || 0}</div>
+                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mt-1">Active Subs</div>
+                                    </div>
+                                    <div className="bg-zinc-50 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                                        <div className="text-lg font-black text-emerald-600">{fmtCurrencyShort(selectedUser.totalPayments || 0)}</div>
+                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mt-1">Total Paid</div>
+                                    </div>
+                                </div>
+
+                                {/* Subscriptions List */}
+                                <div className="border-t border-black/5 pt-6">
+                                    <div className="text-xs font-black uppercase text-gray-400 tracking-widest mb-4">Active Plan Slots</div>
+                                    <div className="space-y-3">
+                                        {allSubscriptions.filter((group: any) => group.members?.some((m: any) => m.user_id === selectedUser._id)).flatMap((group: any) => 
+                                            group.members?.filter((m: any) => m.user_id === selectedUser._id).map((m: any, i: number) => (
+                                                <div key={`${group._id}-${i}`} className="bg-white border border-black/5 p-4 rounded-2xl flex justify-between items-center hover:bg-black/[0.01]">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center font-black">
+                                                            {group.subscription_name?.[0]}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-sm">{group.subscription_name}</div>
+                                                            <div className="text-[10px] text-gray-400 font-bold">{m.slot_name}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-[10px] font-black uppercase text-amber-500 tracking-widest mb-0.5">Renews</div>
+                                                        <div className="text-xs font-bold">{m.renewal ? new Date(m.renewal).toLocaleDateString() : 'N/A'}</div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                        {allSubscriptions.filter((group: any) => group.members?.some((m: any) => m.user_id === selectedUser._id)).length === 0 && (
+                                            <div className="text-center py-6 text-gray-400 bg-zinc-50 rounded-2xl">
+                                                <ShoppingBag size={32} className="mx-auto mb-2 opacity-50" />
+                                                <div className="text-sm font-bold">No active subscriptions</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>
