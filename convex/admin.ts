@@ -99,7 +99,7 @@ export const getSubscriptionBreakdown = query({
         const migratedSubs = await ctx.db.query("migrated_subscriptions").collect();
         const activeMigratedSubs = migratedSubs.filter(m => m.status !== "failed");
 
-        return await Promise.all(catalogItems.map(async (item) => {
+        const breakDownTemp = await Promise.all(catalogItems.map(async (item) => {
             const slotTypes = await ctx.db.query("slot_types")
                 .withIndex("by_subscription", q => q.eq("subscription_id", item._id))
                 .collect();
@@ -140,6 +140,35 @@ export const getSubscriptionBreakdown = query({
                 estimatedRevenue: revenue,
             };
         }));
+
+        // Find unmatched migrated platforms
+        const matchedPlatforms = new Set(catalogItems.map(c => c.name.toLowerCase()));
+        const unmatchedSubs = activeMigratedSubs.filter(m => {
+             return !matchedPlatforms.has(m.platform.toLowerCase()) && 
+                    !Array.from(matchedPlatforms).some(p => m.platform.toLowerCase().includes(p) || p.includes(m.platform.toLowerCase()));
+        });
+        
+        // Group unmatched subs by platform
+        const unmatchedGroups: Record<string, typeof unmatchedSubs> = {};
+        for (const sub of unmatchedSubs) {
+             const key = sub.platform;
+             if (!unmatchedGroups[key]) unmatchedGroups[key] = [];
+             unmatchedGroups[key].push(sub);
+        }
+
+        const unmatchedBreakdown = Object.entries(unmatchedGroups).map(([platform, subs]) => ({
+             _id: "migrated_" + platform,
+             name: platform + " (Legacy Migration)",
+             logo_url: "",
+             totalGroups: 0,
+             totalSlots: subs.length,
+             filledSlots: subs.length,
+             availableSlots: 0,
+             estimatedRevenue: 0,
+             is_active: true,
+        }));
+        
+        return [...breakDownTemp, ...unmatchedBreakdown];
     }
 });
 
