@@ -1987,24 +1987,8 @@ export default function DashboardPage() {
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
                                 <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
-                                {notifPermission === 'denied' && (
-                                    <p className="text-[10px] text-red-500 font-bold uppercase mt-2">🔔 Browser blocked notifications. Please check site settings to fix.</p>
-                                )}
                             </div>
                             <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={() => {
-                                        if (notifPermission !== 'granted') {
-                                            requestNotificationPermission();
-                                        } else {
-                                            new Notification("JoinTheQ Test", { body: "Push notifications are working correctly!", icon: "/logo.png" });
-                                            toast.success("Test push sent!");
-                                        }
-                                    }}
-                                    className="px-4 py-2 bg-zinc-900 text-white rounded-full text-xs font-bold hover:bg-black transition-all shadow-lg shadow-black/10"
-                                >
-                                    {notifPermission === 'granted' ? 'Send Test Push' : 'Enable Push'}
-                                </button>
                                 {notifications.some((n: any) => !n.is_read) && (
                                     <button 
                                         onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
