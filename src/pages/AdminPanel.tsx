@@ -54,7 +54,8 @@ import {
     UserMinus,
     User,
     ChevronRight,
-    ArrowRight
+    ArrowRight,
+    LogOut
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
