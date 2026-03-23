@@ -60,7 +60,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
-import { useAuth } from "../hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
