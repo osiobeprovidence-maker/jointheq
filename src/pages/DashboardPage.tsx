@@ -183,6 +183,10 @@ export default function DashboardPage() {
     const [profileImagePreview, setProfileImagePreview] = useState('');
     const [usernameLoading, setUsernameLoading] = useState(false);
     const [cancellingSlot, setCancellingSlot] = useState<{ id: string, name: string } | null>(null);
+    const [lastNotifId, setLastNotifId] = useState<string | null>(null);
+    const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
+        typeof window !== 'undefined' ? Notification.permission : 'default'
+    );
 
 
     const handleProfileImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -347,6 +351,43 @@ export default function DashboardPage() {
             console.error("Error deleting device:", error);
         }
     };
+
+    // Notification Permission & Watcher
+    const requestNotificationPermission = async () => {
+        if (!("Notification" in window)) {
+            toast.error("Browser does not support desktop notifications");
+            return;
+        }
+        
+        const permission = await Notification.requestPermission();
+        setNotifPermission(permission);
+        
+        if (permission === "granted") {
+            toast.success("Notifications enabled!", { icon: '🔔' });
+            // Show a test notification
+            new Notification("Notifications Enabled", {
+                body: "You will now receive real-time updates from JoinTheQ.",
+                icon: "/logo.png"
+            });
+        } else if (permission === "denied") {
+            toast.error("Notification permission denied");
+        }
+    };
+
+    useEffect(() => {
+        if (notifications.length > 0 && notifPermission === 'granted') {
+            const latest = notifications[0];
+            // Only notify if unread and we haven't shown it yet
+            if (!latest.is_read && latest._id !== lastNotifId) {
+                // Throttle/check to avoid spam if multiple arrive
+                new Notification(latest.title, {
+                    body: latest.message,
+                    icon: "/logo.png"
+                });
+                setLastNotifId(latest._id);
+            }
+        }
+    }, [notifications, notifPermission, lastNotifId]);
 
     const updatePhone = async () => {
         if (!currentUser || !newPhone) return;
@@ -1225,7 +1266,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* 2. Action Buttons */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <button
                                 onClick={() => {
                                     setUsernameInput(currentUser?.username ?? '');
@@ -1246,7 +1287,18 @@ export default function DashboardPage() {
                                 }}
                                 className="w-full py-5 bg-white border border-black/5 text-zinc-900 shadow-sm rounded-[2.5rem] font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
                             >
-                                <LinkIcon size={20} /> Generate Invite Link
+                                <LinkIcon size={20} /> Invite Link
+                            </button>
+                            <button
+                                onClick={requestNotificationPermission}
+                                className={`w-full py-5 border rounded-[2.5rem] font-bold flex items-center justify-center gap-2 transition-all ${
+                                    notifPermission === 'granted' 
+                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                                    : 'bg-white border-black/5 text-zinc-900 hover:bg-gray-50'
+                                }`}
+                            >
+                                <Bell size={20} /> 
+                                {notifPermission === 'granted' ? 'Alerts On' : 'Enable Alerts'}
                             </button>
                         </div>
 
