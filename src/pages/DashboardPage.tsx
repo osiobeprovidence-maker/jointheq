@@ -169,6 +169,7 @@ export default function DashboardPage() {
     const renewSlotMutation = useMutation(api.subscriptions.renewSlot);
     const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
     const markAsReadMutation = useMutation(api.notifications.markAsRead);
+    const markAllAsReadMutation = useMutation(api.notifications.markAllAsRead);
     const removeNotificationMutation = useMutation(api.notifications.remove);
 
     const walletResetPermission = useQuery(
@@ -292,9 +293,9 @@ export default function DashboardPage() {
 
     useEffect(() => {
         if (activeTab === 'notifications' && currentUser) {
-            markAsReadMutation({ user_id: currentUser._id });
+            markAllAsReadMutation({ user_id: currentUser._id }).catch(console.error);
         }
-    }, [activeTab, currentUser, markAsReadMutation]);
+    }, [activeTab, currentUser, markAllAsReadMutation]);
 
     const joinSlot = async (slotTypeId: string) => {
         if (!currentUser) return;
@@ -1982,9 +1983,19 @@ export default function DashboardPage() {
                     )}
                 {activeTab === 'notifications' && (
                     <motion.div key="notifications" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                        <header>
-                            <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-                            <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
+                        <header className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+                                <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
+                            </div>
+                            {notifications.some((n: any) => !n.is_read) && (
+                                <button 
+                                    onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
+                                    className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
+                                >
+                                    Mark All as Seen
+                                </button>
+                            )}
                         </header>
 
                         <div className="space-y-4">
@@ -2004,7 +2015,19 @@ export default function DashboardPage() {
                                                 <div className="flex items-center justify-between mb-1">
                                                     <h3 className="font-bold text-base">{notif.title}</h3>
                                                     <div className="flex items-center gap-3">
-                                                        <span className="text-[10px] font-black uppercase text-gray-400">{new Date(notif.created_at).toLocaleDateString()}</span>
+                                                        {!notif.is_read && (
+                                                            <button 
+                                                                onClick={async (e) => {
+                                                                    try {
+                                                                        await markAsReadMutation({ notification_id: notif._id });
+                                                                    } catch (e: any) { toast.error(e.message); }
+                                                                }}
+                                                                className="p-1 hover:bg-black/5 rounded-full text-blue-500 hover:text-blue-700 transition-colors"
+                                                                title="Mark as seen"
+                                                            >
+                                                                <Check size={14} />
+                                                            </button>
+                                                        )}
                                                         <button 
                                                             onClick={async (e) => {
                                                                 if (window.confirm("Remove this notification?")) {
