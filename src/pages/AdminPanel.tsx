@@ -783,11 +783,18 @@ export default function AdminPanel() {
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{navItems.find(n => n.id === activeTab)?.sub || "Platform Command Center"}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="px-5 py-2.5 bg-zinc-50 border border-black/5 rounded-full text-xs font-bold text-gray-500 flex items-center gap-1.5 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="px-4 py-2.5 bg-zinc-50 border border-black/5 rounded-full text-xs font-bold text-gray-500 flex items-center gap-1.5 shadow-sm">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                             System Active
                         </div>
+                        <button
+                            onClick={() => navigate("/dashboard")}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/8 rounded-full text-xs font-bold text-zinc-700 hover:bg-zinc-50 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
+                        >
+                            <LayoutDashboard size={14} />
+                            User Dashboard
+                        </button>
                         <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-2 p-1.5 pr-4 bg-zinc-950 text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10">
                             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
                                 {currentUser?.profile_image_url ? <img src={currentUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" /> : <User size={16} />}
