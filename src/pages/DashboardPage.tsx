@@ -1983,19 +1983,37 @@ export default function DashboardPage() {
                     )}
                 {activeTab === 'notifications' && (
                     <motion.div key="notifications" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                        <header className="flex items-center justify-between">
+                        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
                                 <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
+                                {notifPermission === 'denied' && (
+                                    <p className="text-[10px] text-red-500 font-bold uppercase mt-2">🔔 Browser blocked notifications. Please check site settings to fix.</p>
+                                )}
                             </div>
-                            {notifications.some((n: any) => !n.is_read) && (
+                            <div className="flex items-center gap-2">
                                 <button 
-                                    onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
-                                    className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
+                                    onClick={() => {
+                                        if (notifPermission !== 'granted') {
+                                            requestNotificationPermission();
+                                        } else {
+                                            new Notification("JoinTheQ Test", { body: "Push notifications are working correctly!", icon: "/logo.png" });
+                                            toast.success("Test push sent!");
+                                        }
+                                    }}
+                                    className="px-4 py-2 bg-zinc-900 text-white rounded-full text-xs font-bold hover:bg-black transition-all shadow-lg shadow-black/10"
                                 >
-                                    Mark All as Seen
+                                    {notifPermission === 'granted' ? 'Send Test Push' : 'Enable Push'}
                                 </button>
-                            )}
+                                {notifications.some((n: any) => !n.is_read) && (
+                                    <button 
+                                        onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
+                                        className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
+                                    >
+                                        Mark All as Seen
+                                    </button>
+                                )}
+                            </div>
                         </header>
 
                         <div className="space-y-4">
@@ -2015,6 +2033,7 @@ export default function DashboardPage() {
                                                 <div className="flex items-center justify-between mb-1">
                                                     <h3 className="font-bold text-base">{notif.title}</h3>
                                                     <div className="flex items-center gap-3">
+                                                        <span className="text-[10px] font-black uppercase text-gray-400">{new Date(notif.created_at).toLocaleDateString()}</span>
                                                         {!notif.is_read && (
                                                             <button 
                                                                 onClick={async (e) => {
@@ -2022,7 +2041,7 @@ export default function DashboardPage() {
                                                                         await markAsReadMutation({ notification_id: notif._id });
                                                                     } catch (e: any) { toast.error(e.message); }
                                                                 }}
-                                                                className="p-1 hover:bg-black/5 rounded-full text-blue-500 hover:text-blue-700 transition-colors"
+                                                                className="p-1 hover:bg-blue-50 rounded-full text-blue-500 hover:text-blue-700 transition-colors"
                                                                 title="Mark as seen"
                                                             >
                                                                 <Check size={14} />
@@ -2036,7 +2055,7 @@ export default function DashboardPage() {
                                                                     } catch (e: any) { toast.error(e.message); }
                                                                 }
                                                             }}
-                                                            className="p-1 hover:bg-black/5 rounded-full text-zinc-300 hover:text-red-500 transition-colors"
+                                                            className="p-1 hover:bg-red-50 rounded-full text-zinc-300 hover:text-red-500 transition-colors"
                                                         >
                                                             <X size={14} />
                                                         </button>
