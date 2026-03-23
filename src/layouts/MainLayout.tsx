@@ -14,10 +14,15 @@ import {
     X,
     ShieldCheck,
     Clock,
-    Bell
+    Bell,
+    User,
+    ChevronRight,
+    Settings
 } from "lucide-react";
+import { useAuth } from '../hooks/useAuth';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from "motion/react";
 import { auth } from "../lib/auth";
 import { Logo } from "../components/ui/Logo";
@@ -26,12 +31,16 @@ interface MainLayoutProps {
     children: ReactNode;
     activeTab: string;
     setActiveTab: (tab: any) => void;
-    qScore: number;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab, qScore }) => {
+export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab }) => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const user = auth.getCurrentUser();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const qScore = user?.q_score || 0;
+    const isAdminMode = location.pathname.startsWith('/admin');
 
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
@@ -135,18 +144,144 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                 </div>
             </nav>
 
-            {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 left-0 w-full bg-white border-b border-black/5 p-4 flex items-center justify-between z-50">
-                <div className="flex items-center gap-2">
+            {/* Mobile/Desktop Top Header (Fixed) */}
+            <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 sm:h-20 bg-white/80 backdrop-blur-md border-b border-black/5 flex items-center justify-between px-4 sm:px-8 z-40 transition-all duration-300">
+                <div className="flex items-center gap-3 lg:hidden">
                     <Logo className="w-8 h-8" />
-                    <span className="font-bold">jointheq</span>
+                    <span className="font-extrabold tracking-tighter text-xl">Q</span>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 hover:bg-black/5 rounded-lg transition-colors">
-                        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                
+                <div className="hidden lg:block">
+                    <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                        {isAdminMode ? 'System Control' : 'User Terminal'}
+                    </h2>
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-4">
+                    {/* Notification Alert Shortcut */}
+                    <button 
+                        onClick={() => setActiveTab('notifications')}
+                        className="p-3 hover:bg-black/5 rounded-full relative transition-colors"
+                    >
+                        <Bell size={20} className="text-zinc-600" />
+                        <NotificationBadge unreadCount={useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id } : "skip") || 0} />
+                    </button>
+
+                    <button 
+                        onClick={() => setIsProfileOpen(true)}
+                        className="flex items-center gap-2 p-1.5 pr-3 hover:bg-black/5 rounded-full transition-all group"
+                    >
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 rounded-full flex items-center justify-center text-white overflow-hidden shadow-lg shadow-black/10 group-active:scale-95 transition-transform">
+                            {user?.profile_image_url ? (
+                                <img src={user.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <User size={18} />
+                            )}
+                        </div>
+                        <span className="hidden sm:block text-sm font-bold text-zinc-900">
+                            {user?.username || 'Profile'}
+                        </span>
+                    </button>
+
+                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-3 hover:bg-black/5 rounded-full transition-colors">
+                        {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                     </button>
                 </div>
             </header>
+
+            {/* Profile Drawer Overlay */}
+            <AnimatePresence>
+                {isProfileOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsProfileOpen(false)}
+                            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100]"
+                        />
+                        <motion.div
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed top-0 right-0 h-full w-full max-w-[320px] bg-white shadow-2xl z-[101] flex flex-col"
+                        >
+                            <div className="p-8 pb-4 flex items-center justify-between border-b border-black/5">
+                                <h2 className="text-xl font-bold">Profile Settings</h2>
+                                <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-black/5 rounded-full">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                                <div className="text-center">
+                                    <div className="w-24 h-24 bg-zinc-100 rounded-full mx-auto mb-4 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
+                                        {user?.profile_image_url ? (
+                                            <img src={user.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={40} className="text-gray-300" />
+                                        )}
+                                    </div>
+                                    <h3 className="text-lg font-bold">{user?.full_name || user?.username}</h3>
+                                    <p className="text-sm text-gray-500 font-medium">@{user?.username}</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Account Mode</div>
+                                    {auth.isAdmin() && (
+                                        <button
+                                            onClick={() => {
+                                                setIsProfileOpen(false);
+                                                navigate(isAdminMode ? '/dashboard' : '/admin');
+                                            }}
+                                            className="w-full p-4 bg-zinc-900 text-white rounded-3xl font-bold flex items-center justify-between group hover:bg-black transition-all"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center">
+                                                    {isAdminMode ? <LayoutDashboard size={16} /> : <ShieldCheck size={16} />}
+                                                </div>
+                                                <span className="text-sm">
+                                                    {isAdminMode ? 'Switch to User View' : 'Go to Admin Panel'}
+                                                </span>
+                                            </div>
+                                            <ChevronRight size={16} className="opacity-40 group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Quick Stats</div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-gray-50 p-4 rounded-3xl">
+                                            <div className="text-sm font-bold">{user?.q_score}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">Q Score</div>
+                                        </div>
+                                        <div className="bg-gray-50 p-4 rounded-3xl">
+                                            <div className="text-sm font-bold">₦{user?.wallet_balance?.toLocaleString()}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">Wallet</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 border-t border-black/5 bg-gray-50/50">
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm("Are you sure you want to log out?")) {
+                                            auth.logout();
+                                        }
+                                    }}
+                                    className="w-full py-5 bg-white border border-red-50 text-red-500 rounded-3xl font-bold flex items-center justify-center gap-3 hover:bg-red-50 transition-colors shadow-sm"
+                                >
+                                    <LogOut size={20} />
+                                    Logout Session
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
             {/* Mobile Menu */}
             <AnimatePresence>
@@ -199,8 +334,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                 )}
             </AnimatePresence>
 
-            <main className="lg:ml-64 pt-20 lg:pt-0 min-h-screen overflow-x-hidden">
-                <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
+            <main className="lg:ml-64 pt-20 sm:pt-24 lg:pt-32 min-h-screen overflow-x-hidden transition-all duration-300">
+                <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto animate-in fade-in duration-700">
                     {children}
                 </div>
             </main>

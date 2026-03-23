@@ -51,14 +51,18 @@ import {
     Edit,
     BadgeDollarSign,
     Bell,
-    UserMinus
+    UserMinus,
+    User,
+    ChevronRight,
+    ArrowRight
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
+import { useAuth } from "../hooks/useAuth";
+import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
@@ -142,6 +146,7 @@ export default function AdminPanel() {
         slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
     });
     const [editingSlot, setEditingSlot] = useState<any>(null);  // { slot_type_id, name, price, capacity, access_type }
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
     // Notifications state
@@ -598,25 +603,95 @@ export default function AdminPanel() {
                     >
                         <ArrowLeft size={14} /> Switch to User Mode
                     </button>
+                    <div className="pt-2 text-[10px] text-white/20 font-bold uppercase text-center tracking-widest">
+                        Terminal v2.4.0
+                    </div>
                 </div>
             </aside>
 
+            {/* Profile Drawer Overlay (Right Side) */}
+            <AnimatePresence>
+                {isProfileOpen && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }} 
+                            onClick={() => setIsProfileOpen(false)} 
+                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]" 
+                        />
+                        <motion.div 
+                            initial={{ x: '100%' }} 
+                            animate={{ x: 0 }} 
+                            exit={{ x: '100%' }} 
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }} 
+                            className="fixed top-0 right-0 h-full w-full max-w-[320px] bg-white shadow-2xl z-[101] flex flex-col"
+                        >
+                            <div className="p-8 pb-4 flex items-center justify-between border-b border-black/5">
+                                <h2 className="text-xl font-bold">System Mode</h2>
+                                <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-black/5 rounded-full">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                                <div className="text-center">
+                                    <div className="w-24 h-24 bg-zinc-100 rounded-full mx-auto mb-4 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
+                                        {currentUser?.profile_image_url ? (
+                                            <img src={currentUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={40} className="text-gray-300" />
+                                        )}
+                                    </div>
+                                    <h3 className="text-lg font-bold">{currentUser?.full_name || currentUser?.username}</h3>
+                                    <p className="text-sm text-gray-400 font-bold uppercase tracking-widest text-[10px]">@{currentUser?.username}</p>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Switch Side</div>
+                                    <button 
+                                        onClick={() => { 
+                                            setIsProfileOpen(false); 
+                                            navigate('/dashboard'); 
+                                        }} 
+                                        className="w-full p-4 bg-zinc-900 text-white rounded-3xl font-bold flex items-center justify-between group hover:bg-black transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center">
+                                                <LayoutDashboard size={16} />
+                                            </div>
+                                            <span className="text-sm">Go to User Terminal</span>
+                                        </div>
+                                        <ArrowRight size={16} className="opacity-40 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="p-8 border-t border-black/5 bg-gray-50/50">
+                                <button 
+                                    onClick={() => { 
+                                        if (window.confirm("Logout now?")) { 
+                                            auth.logout(); 
+                                        } 
+                                    }} 
+                                    className="w-full py-5 bg-white border border-red-50 text-red-500 rounded-3xl font-bold flex items-center justify-center gap-3 hover:bg-red-50 transition-colors shadow-sm"
+                                >
+                                    <LogOut size={20} /> Logout Session
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
             {/* ── Mobile Top Bar ── */}
-            <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950 text-white flex items-center justify-between px-4 py-3">
+            <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950 text-white flex items-center justify-between px-4 py-3 h-16 shadow-lg">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center font-black">Q</div>
-                    <span className="font-black text-sm">Admin Control</span>
+                    <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center font-black">Q</div>
+                    <span className="font-extrabold tracking-tight text-base">Terminal</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setMobileMenuOpen((prev) => !prev)}
-                        className="p-2 bg-white/10 rounded-xl"
-                        aria-label={mobileMenuOpen ? "Close admin menu" : "Open admin menu"}
-                    >
-                        {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+                    <button onClick={() => setIsProfileOpen(true)} className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden">
+                        {currentUser?.profile_image_url ? <img src={currentUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" /> : <User size={16} />}
                     </button>
-                    <button onClick={() => navigate("/dashboard")} className="p-2 bg-white/10 rounded-xl" aria-label="Switch to user mode">
-                        <ArrowLeft size={18} />
+                    <button onClick={() => setMobileMenuOpen(prev => !prev)} className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
+                        {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                     </button>
                 </div>
             </div>
@@ -705,17 +780,20 @@ export default function AdminPanel() {
                         )}
                         <div>
                             <h1 className="text-xl font-black capitalize">{navItems.find(n => n.id === activeTab)?.label}</h1>
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{navItems.find(n => n.id === activeTab)?.sub || "JoinTheQ Platform Command Center"}</p>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{navItems.find(n => n.id === activeTab)?.sub || "Platform Command Center"}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold flex items-center gap-1.5">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                            Platform Live
+                    <div className="flex items-center gap-4">
+                        <div className="px-5 py-2.5 bg-zinc-50 border border-black/5 rounded-full text-xs font-bold text-gray-500 flex items-center gap-1.5 shadow-sm">
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                            System Active
                         </div>
-                        <div className="w-9 h-9 bg-zinc-900 text-white rounded-full flex items-center justify-center font-bold">
-                            {currentUser?.full_name?.[0]}
-                        </div>
+                        <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-2 p-1.5 pr-4 bg-zinc-950 text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10">
+                            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
+                                {currentUser?.profile_image_url ? <img src={currentUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" /> : <User size={16} />}
+                            </div>
+                            <span className="text-xs font-bold tracking-tight">@{currentUser?.username}</span>
+                        </button>
                     </div>
                 </div>
 
