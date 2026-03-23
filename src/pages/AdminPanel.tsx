@@ -627,7 +627,7 @@ export default function AdminPanel() {
                             className="fixed top-0 right-0 h-full w-full max-w-[320px] bg-white shadow-2xl z-[101] flex flex-col"
                         >
                             <div className="p-8 pb-4 flex items-center justify-between border-b border-black/5">
-                                <h2 className="text-xl font-bold">System Mode</h2>
+                                <h2 className="text-xl font-bold">Profile Settings</h2>
                                 <button onClick={() => setIsProfileOpen(false)} className="p-2 hover:bg-black/5 rounded-full">
                                     <X size={20} />
                                 </button>
@@ -645,7 +645,7 @@ export default function AdminPanel() {
                                     <p className="text-sm text-gray-400 font-bold uppercase tracking-widest text-[10px]">@{currentUser?.username}</p>
                                 </div>
                                 <div className="space-y-3">
-                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Switch Side</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Account Mode</div>
                                     <button 
                                         onClick={() => { 
                                             setIsProfileOpen(false); 
@@ -657,10 +657,23 @@ export default function AdminPanel() {
                                             <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center">
                                                 <LayoutDashboard size={16} />
                                             </div>
-                                            <span className="text-sm">Go to User Terminal</span>
+                                            <span className="text-sm">Go to User Side</span>
                                         </div>
-                                        <ArrowRight size={16} className="opacity-40 group-hover:translate-x-1 transition-transform" />
+                                        <ChevronRight size={16} className="opacity-40 group-hover:translate-x-1 transition-transform" />
                                     </button>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Quick Stats</div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-gray-50 p-4 rounded-3xl">
+                                            <div className="text-sm font-bold">{currentUser?.q_score}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">Q Score</div>
+                                        </div>
+                                        <div className="bg-gray-50 p-4 rounded-3xl">
+                                            <div className="text-sm font-bold">{fmtCurrency(currentUser?.wallet_balance || 0)}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase">Wallet</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="p-8 border-t border-black/5 bg-gray-50/50">
@@ -787,13 +800,6 @@ export default function AdminPanel() {
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                             System Active
                         </div>
-                        <button
-                            onClick={() => navigate("/dashboard")}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/8 rounded-full text-xs font-bold text-zinc-700 hover:bg-zinc-50 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
-                        >
-                            <LayoutDashboard size={14} />
-                            User Dashboard
-                        </button>
                         <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-2 p-1.5 pr-4 bg-zinc-950 text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10">
                             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
                                 {currentUser?.profile_image_url ? <img src={currentUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" /> : <User size={16} />}
