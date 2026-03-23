@@ -2378,11 +2378,16 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
                         )}
                     </div>
                     <div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                             <h3 className="font-black text-base">{slot.sub_name}</h3>
                             {isPopular && (
                                 <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-black flex items-center gap-1">
                                     🔥 Popular
+                                </span>
+                            )}
+                            {slot.category && (
+                                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-indigo-100/50">
+                                    {slot.category}
                                 </span>
                             )}
                         </div>

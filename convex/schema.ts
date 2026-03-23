@@ -94,6 +94,7 @@ export default defineSchema({
         name: v.optional(v.string()),
         instructions_text: v.optional(v.string()),
         instructions_image_url: v.optional(v.string()),
+        category: v.optional(v.string()),
     }).index("by_owner", ["owner_id"])
         .index("by_status", ["status"]),
 

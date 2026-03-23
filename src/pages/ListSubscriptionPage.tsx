@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import React, { useState, useEffect } from "react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { 
   ArrowLeft, 
@@ -10,7 +10,6 @@ import {
   Lock, 
   Calendar, 
   CheckCircle2, 
-  Info,
   BadgeDollarSign,
   MonitorPlay,
   Music4,
@@ -18,29 +17,39 @@ import {
   Shield,
   LayoutGrid,
   Loader2,
-  Clock
+  Clock,
+  Check,
+  Zap,
+  Tag
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
+import { MainLayout } from "../layouts/MainLayout";
+
+const CATEGORIES = [
+  "Streaming", "Music", "Design", "AI", "Productivity", "Gaming", "VPN", "Software", "Utility", "Education"
+];
 
 const PLATFORMS = [
-  { id: "Netflix Premium", label: "Netflix Premium", icon: <MonitorPlay size={20} /> },
-  { id: "Spotify Family", label: "Spotify Family", icon: <Music4 size={20} /> },
-  { id: "Apple Music", label: "Apple Music Family", icon: <Music4 size={20} /> },
-  { id: "VPN", label: "VPN Services", icon: <Shield size={20} /> },
-  { id: "CapCut", label: "CapCut Pro", icon: <LayoutGrid size={20} /> },
-  { id: "AI Tools", label: "AI Tools (ChatGPT/Midjourney)", icon: <Cpu size={20} /> },
-  { id: "Other", label: "Other", icon: <Sparkles size={20} /> }
+  { id: "Netflix Premium", label: "Netflix Premium", category: "Streaming", icon: <MonitorPlay size={20} /> },
+  { id: "Spotify Family", label: "Spotify Family", category: "Music", icon: <Music4 size={20} /> },
+  { id: "Apple Music", label: "Apple Music", category: "Music", icon: <Music4 size={20} /> },
+  { id: "VPN Services", label: "VPN Services", category: "VPN", icon: <Shield size={20} /> },
+  { id: "CapCut Pro", label: "CapCut Pro", category: "Design", icon: <LayoutGrid size={20} /> },
+  { id: "AI Tools", label: "AI Tools", category: "AI", icon: <Cpu size={20} /> },
+  { id: "Other", label: "Other", category: "Utility", icon: <Sparkles size={20} /> }
 ];
 
 export default function ListSubscriptionPage() {
   const user = auth.getCurrentUser();
+  const [activeTab, setActiveTab] = useState('list-earn'); // For MainLayout
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   
   // Form fields
   const [platform, setPlatform] = useState("");
+  const [category, setCategory] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [renewalDate, setRenewalDate] = useState("");
@@ -48,8 +57,18 @@ export default function ListSubscriptionPage() {
 
   const submitListing = useMutation(api.listings.submitListing);
 
+  // Auto-map category when platform is selected
+  useEffect(() => {
+    if (platform) {
+      const selectedPlatform = PLATFORMS.find(p => p.id === platform);
+      if (selectedPlatform && selectedPlatform.category) {
+        setCategory(selectedPlatform.category);
+      }
+    }
+  }, [platform]);
+
   const handleSubmit = async () => {
-    if (!platform || !email || !password || !renewalDate || !confirmed) {
+    if (!platform || !category || !email || !password || !renewalDate || !confirmed) {
       return toast.error("Please fill in all fields and confirm ownership");
     }
     
@@ -58,6 +77,7 @@ export default function ListSubscriptionPage() {
       await submitListing({
         owner_id: user!._id as any,
         platform,
+        category,
         email,
         password,
         renewal_date: renewalDate,
@@ -72,214 +92,274 @@ export default function ListSubscriptionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f5f8] text-zinc-900 font-sans pb-20">
-      {/* Header */}
-      <header className="max-w-2xl mx-auto px-6 pt-12 pb-8 flex items-center justify-between">
-        <button 
-          onClick={() => step > 1 ? setStep(step - 1) : window.location.href = "/dashboard"} 
-          className="p-3 bg-white border border-black/5 rounded-2xl shadow-sm hover:scale-105 transition-all text-zinc-400"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="text-right">
-          <h1 className="text-xl font-black tracking-tight">List & Earn</h1>
-          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Revenue Sharing</p>
+    <MainLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-8">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">List & Earn</h1>
+                <p className="text-gray-500 mt-1">Monetize your unused subscription slots safely.</p>
+            </div>
+            {step > 1 && step < 3 && (
+                <button 
+                  onClick={() => setStep(step - 1)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  <ArrowLeft size={16} /> Back
+                </button>
+            )}
         </div>
-      </header>
 
-      <main className="max-w-2xl mx-auto px-6">
-        <AnimatePresence mode="wait">
-          {step === 1 && (
-            <motion.div 
-              key="step1"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
-            >
-              {/* Hero Banner */}
-              <div className="bg-zinc-900 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/20 rounded-full -mr-24 -mt-24 blur-3xl" />
-                <div className="relative z-10">
-                  <div className="w-11 h-11 bg-white/10 rounded-2xl flex items-center justify-center mb-5">
-                    <BadgeDollarSign size={22} className="text-blue-400" />
-                  </div>
-                  <h2 className="text-2xl font-black mb-2">Turn Subscriptions into Income</h2>
-                  <p className="text-zinc-400 text-sm font-medium leading-relaxed">
-                    List your unused/extra slots and let Q manage them. We fill the slots, manage members, and send you monthly payouts.
-                  </p>
+        <section className="space-y-6">
+          <AnimatePresence mode="wait">
+            {step === 1 && (
+              <motion.div 
+                key="step1"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-8"
+              >
+                {/* Visual Cards (Instructional) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <InstructionCard 
+                        icon={<BadgeDollarSign />} 
+                        title="Set Your Price" 
+                        desc="Earn monthly revenue based on marketplace demand." 
+                    />
+                    <InstructionCard 
+                        icon={<ShieldCheck />} 
+                        title="Verified Safety" 
+                        desc="We manage access so you don't have to share passwords with strangers." 
+                    />
+                    <InstructionCard 
+                        icon={<Zap />} 
+                        title="Auto-Payout" 
+                        desc="Earnings are credited directly to your Q Wallet monthly." 
+                    />
                 </div>
-              </div>
 
-              {/* Platform Selection */}
-              <div className="space-y-3">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Your Subscription</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {PLATFORMS.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setPlatform(p.id)}
-                      className={`p-5 rounded-[2rem] border transition-all text-left flex items-center justify-between group ${
-                        platform === p.id 
-                          ? 'bg-zinc-900 border-zinc-900 shadow-xl shadow-black/10' 
-                          : 'bg-white border-black/5 shadow-sm hover:border-zinc-200 hover:shadow-md'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          platform === p.id ? 'bg-white/10 text-white' : 'bg-zinc-100 text-zinc-600'
+                {/* Platform Selection */}
+                <div className="space-y-4">
+                  <header>
+                    <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Select Your Subscription</h2>
+                  </header>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {PLATFORMS.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setPlatform(p.id)}
+                        className={`p-6 rounded-2xl border transition-all text-left flex items-center justify-between group ${
+                          platform === p.id 
+                            ? 'bg-gray-50 border-black ring-1 ring-black shadow-md' 
+                            : 'bg-white border-gray-100 shadow-sm hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`p-3 rounded-xl transition-colors ${
+                            platform === p.id ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {p.icon}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-zinc-900">{p.label}</div>
+                            <div className="text-[10px] uppercase font-bold text-gray-400 tracking-tight">{p.category}</div>
+                          </div>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                          platform === p.id ? 'border-black bg-black' : 'border-gray-200'
                         }`}>
-                          {p.icon}
+                          {platform === p.id && <Check size={12} className="text-white" />}
                         </div>
-                        <div className={`text-sm font-black ${platform === p.id ? 'text-white' : 'text-zinc-900'}`}>
-                          {p.label}
-                        </div>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                        platform === p.id ? 'border-white bg-white' : 'border-zinc-200'
-                      }`}>
-                        {platform === p.id && <div className="w-2.5 h-2.5 rounded-full bg-zinc-900" />}
-                      </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                    <button 
+                        disabled={!platform}
+                        onClick={() => setStep(2)}
+                        className="w-full py-4.5 bg-black text-white font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    >
+                        Continue to Account Details
+                        <ChevronRight size={20} />
                     </button>
-                  ))}
                 </div>
-              </div>
+              </motion.div>
+            )}
 
-              <button 
-                disabled={!platform}
-                onClick={() => setStep(2)}
-                className="w-full py-5 bg-zinc-900 text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:pointer-events-none"
+            {step === 2 && (
+              <motion.div 
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="max-w-xl mx-auto"
               >
-                Continue to Account Details
-                <ChevronRight size={20} />
-              </button>
-            </motion.div>
-          )}
+                <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-8 space-y-8">
+                    <header className="border-b border-gray-50 pb-6 mb-2">
+                        <h2 className="text-xl font-semibold">Account & Category Details</h2>
+                        <p className="text-sm text-gray-500 mt-1">Provide the credentials for the {platform} account.</p>
+                    </header>
 
-          {step === 2 && (
-            <motion.div 
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
-            >
-              {/* Security Notice */}
-              <div className="bg-white border border-black/5 shadow-sm p-6 rounded-[2rem] flex gap-4">
-                <div className="w-10 h-10 bg-zinc-100 text-zinc-600 rounded-xl flex items-center justify-center shrink-0">
-                  <ShieldCheck size={20} />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-black text-zinc-900 text-sm">Security & Management</h4>
-                  <p className="text-[11px] font-medium text-zinc-500 leading-relaxed">
-                    Q needs login access to manage slots, verify subscription status, and resolve member access issues automatically.
-                  </p>
-                </div>
-              </div>
+                    <div className="space-y-6">
+                        {/* Category Selector (Pills) */}
+                        <div className="space-y-3">
+                            <label className="text-sm font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                                <Tag size={14} className="text-gray-400" /> Category
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {CATEGORIES.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setCategory(cat)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                                            category === cat 
+                                            ? 'bg-black text-white border-black shadow-md' 
+                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Subscription Login Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                    <input 
-                      type="email" 
-                      placeholder="account@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white border border-black/5 shadow-sm rounded-2xl py-5 pl-14 pr-6 font-bold focus:outline-none focus:ring-4 focus:ring-zinc-900/5 transition-all"
-                    />
-                  </div>
-                </div>
+                        <div className="grid grid-cols-1 gap-6">
+                            <InputField 
+                                label="Login Email" 
+                                icon={<Mail size={18} />} 
+                                type="email"
+                                placeholder="account@email.com"
+                                value={email}
+                                onChange={setEmail}
+                            />
+                            <InputField 
+                                label="Password" 
+                                icon={<Lock size={18} />} 
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={setPassword}
+                            />
+                            <InputField 
+                                label="Renewal Date" 
+                                icon={<Calendar size={18} />} 
+                                type="text"
+                                placeholder="e.g. 20th of every month"
+                                value={renewalDate}
+                                onChange={setRenewalDate}
+                            />
+                        </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Subscription Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                    <input 
-                      type="password" 
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-white border border-black/5 shadow-sm rounded-2xl py-5 pl-14 pr-6 font-bold focus:outline-none focus:ring-4 focus:ring-zinc-900/5 transition-all"
-                    />
-                  </div>
-                </div>
+                        {/* Confirmation checkbox */}
+                        <label className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors group">
+                            <div className="relative flex items-center">
+                                <input 
+                                    type="checkbox"
+                                    checked={confirmed}
+                                    onChange={() => setConfirmed(!confirmed)}
+                                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-gray-300 transition-all checked:bg-black checked:border-black"
+                                />
+                                <Check size={14} className="absolute left-1 top-1 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
+                            </div>
+                            <span className="text-xs font-medium text-gray-500 leading-relaxed group-hover:text-zinc-900 transition-colors">
+                            I verify ownership of this subscription and authorize JoinTheQ to manage member verification.
+                            </span>
+                        </label>
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Renewal Date</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                    <input 
-                      type="text" 
-                      placeholder="e.g. 20th of every month"
-                      value={renewalDate}
-                      onChange={(e) => setRenewalDate(e.target.value)}
-                      className="w-full bg-white border border-black/5 shadow-sm rounded-2xl py-5 pl-14 pr-6 font-bold focus:outline-none focus:ring-4 focus:ring-zinc-900/5 transition-all"
-                    />
-                  </div>
+                    <button 
+                        disabled={!email || !password || !renewalDate || !confirmed || !category || isLoading}
+                        onClick={handleSubmit}
+                        className="w-full py-4.5 bg-black text-white font-bold rounded-xl shadow-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? <Loader2 className="animate-spin" size={20} /> : <BadgeDollarSign size={20} />}
+                        Confirm Listing
+                    </button>
                 </div>
-              </div>
+              </motion.div>
+            )}
 
-              {/* Confirmation checkbox */}
-              <button 
-                onClick={() => setConfirmed(!confirmed)}
-                className="flex items-start gap-4 text-left group w-full"
+            {step === 3 && (
+              <motion.div 
+                key="step3"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="max-w-xl mx-auto text-center"
               >
-                <div className={`mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${confirmed ? 'bg-zinc-900 border-zinc-900 text-white' : 'bg-white border-zinc-200'}`}>
-                  {confirmed && <CheckCircle2 size={14} />}
-                </div>
-                <span className="text-xs font-bold text-zinc-500 leading-relaxed group-hover:text-zinc-900 transition-colors">
-                  I confirm that I own this subscription and authorize JoinTheQ to manage members and verify credentials for revenue generation.
-                </span>
-              </button>
+                <div className="bg-white border border-gray-100 shadow-lg rounded-[2.5rem] p-12 space-y-8">
+                    <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+                        <CheckCircle2 size={40} />
+                    </div>
+                    <div className="space-y-3">
+                        <h2 className="text-2xl font-bold">Submission Successful</h2>
+                        <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                            Your listing is under review. Our team will verify credentials and set up slots within 12–24 hours.
+                        </p>
+                    </div>
 
-              <button 
-                disabled={!email || !password || !renewalDate || !confirmed || isLoading}
-                onClick={handleSubmit}
-                className="w-full py-5 bg-zinc-900 text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <BadgeDollarSign size={20} />}
-                List Subscription & Earn
-              </button>
-            </motion.div>
-          )}
+                    <div className="p-6 bg-gray-50 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
+                                <Clock size={16} />
+                            </div>
+                            <div className="text-left font-bold text-xs uppercase tracking-tight text-gray-400">Status</div>
+                        </div>
+                        <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">Pending Approval</span>
+                    </div>
 
-          {step === 3 && (
-            <motion.div 
-              key="step3"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-12 space-y-8"
-            >
-              <div className="w-24 h-24 bg-white border border-black/5 shadow-sm text-emerald-500 rounded-[2.5rem] flex items-center justify-center mx-auto">
-                <CheckCircle2 size={48} />
-              </div>
-              <div className="space-y-3">
-                <h2 className="text-3xl font-black tracking-tight">Listing Submitted!</h2>
-                <p className="text-zinc-500 font-medium max-w-sm mx-auto leading-relaxed">
-                  Our team is currently verifying the credentials. You will be notified once your subscription is live on the marketplace.
-                </p>
-              </div>
-              <div className="bg-white border border-black/5 shadow-sm p-8 rounded-[2rem] space-y-5">
-                <div className="flex items-center justify-center gap-3 text-amber-500 font-black text-xs uppercase tracking-widest">
-                  <Clock size={16} /> Verification Status: Pending
+                    <button 
+                        onClick={() => window.location.href = "/dashboard"}
+                        className="w-full py-4.5 bg-black text-white font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all"
+                    >
+                        Return to Terminal
+                    </button>
                 </div>
-                <div className="h-px bg-zinc-100" />
-                <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest leading-loose">
-                  Estimated Time: 2–4 Hours <br/>
-                  Next Step: Approval & Slot Generation
-                </p>
-              </div>
-              <button 
-                onClick={() => window.location.href = "/dashboard"}
-                className="w-full py-5 bg-zinc-900 text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:scale-[1.02] active:scale-95 transition-all"
-              >
-                Back to Dashboard
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-    </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+      </div>
+    </MainLayout>
   );
+}
+
+function InstructionCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
+    return (
+        <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:translate-y-[-2px] transition-all">
+            <div className="w-10 h-10 bg-gray-100 text-black rounded-lg flex items-center justify-center mb-4">
+                {icon}
+            </div>
+            <h4 className="text-sm font-semibold mb-1">{title}</h4>
+            <p className="text-[11px] text-gray-500 leading-relaxed font-medium">{desc}</p>
+        </div>
+    );
+}
+
+function InputField({ label, icon, type, placeholder, value, onChange }: { 
+    label: string, 
+    icon: React.ReactNode, 
+    type: string, 
+    placeholder: string, 
+    value: string, 
+    onChange: (val: string) => void 
+}) {
+    return (
+        <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-500 uppercase tracking-wide ml-1">{label}</label>
+            <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-black transition-colors">
+                    {icon}
+                </div>
+                <input 
+                    type={type} 
+                    placeholder={placeholder}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl py-4 pl-12 pr-6 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                />
+            </div>
+        </div>
+    );
 }

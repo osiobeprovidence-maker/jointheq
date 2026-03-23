@@ -19,6 +19,7 @@ export const submitListing = mutation({
     email: v.string(),
     password: v.string(),
     renewal_date: v.string(),
+    category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const total_slots = SLOT_RULES[args.platform] || 1;
@@ -29,6 +30,7 @@ export const submitListing = mutation({
       login_email: args.email,
       login_password: args.password,
       renewal_date: args.renewal_date,
+      category: args.category,
       status: "Pending Review",
       total_slots,
       slot_price: 0, // Set by admin on approval
@@ -81,6 +83,7 @@ export const approveListing = mutation({
     total_slots: v.number(),
     price_per_slot: v.number(),
     owner_payout: v.number(),
+    category: v.optional(v.string()),
     admin_note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -95,6 +98,7 @@ export const approveListing = mutation({
     if (!catalog) {
       const catalogId = await ctx.db.insert("subscription_catalog", {
         name: listing.platform,
+        category: args.category || listing.category || "Streaming",
         description: `Owner-listed ${listing.platform}`,
         base_cost: args.owner_payout,
         is_active: true,
@@ -113,8 +117,9 @@ export const approveListing = mutation({
 
     // 3. Create a Slot Type
     const slotTypeId = await ctx.db.insert("slot_types", {
-      subscription_id: catalog!._id,
+      subscription_catalog_id: catalog!._id,
       name: "Owner Slot",
+      sub_name: "Reserved",
       price: args.price_per_slot,
       device_limit: 1,
       downloads_enabled: true,
@@ -142,6 +147,7 @@ export const approveListing = mutation({
       total_slots: args.total_slots,
       slot_price: args.price_per_slot,
       owner_payout_amount: args.owner_payout,
+      category: args.category || listing.category,
       group_id: groupId,
       platform_catalog_id: catalog!._id,
       admin_note: args.admin_note,

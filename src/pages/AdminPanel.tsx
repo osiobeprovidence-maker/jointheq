@@ -2885,142 +2885,136 @@ export default function AdminPanel() {
                             className="bg-[#f5f5f7] w-full sm:max-w-3xl sm:rounded-[3rem] rounded-t-[3rem] max-h-[90vh] overflow-y-auto shadow-2xl"
                         >
                             {/* Modal Header */}
-                            <div className="sticky top-0 z-10 bg-[#f5f5f7] px-8 pt-8 pb-4 border-b border-black/5">
+                            <div className="sticky top-0 z-10 bg-white px-10 pt-10 pb-6 border-b border-gray-100">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-black">Create New Listing</h2>
-                                        <p className="text-sm text-gray-400 mt-1">Add a subscription account to the marketplace</p>
+                                        <h2 className="text-2xl font-bold tracking-tight text-gray-900">Create New Listing</h2>
+                                        <p className="text-sm text-gray-500 mt-1">Add a premium subscription account to the catalog</p>
                                     </div>
-                                    <button onClick={() => setShowListingModal(false)} className="p-3 bg-white rounded-full shadow-sm hover:scale-110 transition-transform">
+                                    <button onClick={() => setShowListingModal(false)} className="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all">
                                         <X size={20} />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="p-8 space-y-6">
+                            <div className="p-10 space-y-8">
                                 {/* Account Info */}
-                                <div className="bg-white rounded-[2.5rem] p-8 space-y-6">
-                                    <h3 className="font-black text-lg flex items-center gap-2">
-                                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" /> Account Details
+                                <div className="bg-white rounded-2xl border border-gray-100 p-8 space-y-8 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 flex items-center gap-2 uppercase text-[10px] tracking-[0.2em] text-gray-400">
+                                        <div className="w-1.5 h-6 bg-black rounded-full" /> Account Details
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Subscription Platform Name</label>
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Subscription Platform</label>
                                             <input
                                                 type="text"
-                                                placeholder="e.g. Netflix, Spotify, YouTube Premium"
+                                                placeholder="e.g. Netflix Premium"
                                                 value={listingData.platform_name}
                                                 onChange={e => setListingData({ ...listingData, platform_name: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-black transition-all text-sm"
                                             />
-                                            <p className="text-[10px] text-gray-400 ml-1">Type the name exactly as you want it to appear. A new platform entry will be created automatically.</p>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Category</label>
-                                            <select
-                                                value={listingData.category}
-                                                onChange={e => setListingData({ ...listingData, category: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
-                                            >
-                                                <option value="Streaming">Streaming</option>
-                                                <option value="Music">Music</option>
-                                                <option value="Design">Design</option>
-                                                <option value="AI">AI</option>
-                                                <option value="Productivity">Productivity</option>
-                                                <option value="Gaming">Gaming</option>
-                                                <option value="VPN">VPN</option>
-                                                <option value="Software">Software</option>
-                                                <option value="Utility">Utility</option>
-                                                <option value="Education">Education</option>
-                                            </select>
+
+                                        {/* Category Connector Pills */}
+                                        <div className="space-y-3 md:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest flex items-center gap-2">
+                                                <Tag size={12} /> Marketplace Category
+                                            </label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {['Streaming', 'Music', 'Design', 'AI', 'Productivity', 'Gaming', 'VPN', 'Software', 'Utility', 'Education'].map(cat => (
+                                                    <button
+                                                        key={cat}
+                                                        onClick={() => setListingData({ ...listingData, category: cat })}
+                                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${
+                                                            listingData.category === cat 
+                                                            ? 'bg-black text-white border-black shadow-md' 
+                                                            : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
+                                                        }`}
+                                                    >
+                                                        {cat}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
+
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Renewal Date</label>
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Renewal Date</label>
                                             <input
                                                 type="date"
                                                 value={listingData.admin_renewal_date}
                                                 onChange={e => setListingData({ ...listingData, admin_renewal_date: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-black transition-all text-sm"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Email</label>
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Account Email</label>
                                             <input
                                                 type="email"
-                                                placeholder="e.g. netflix@example.com"
+                                                placeholder="account@email.com"
                                                 value={listingData.account_email}
                                                 onChange={e => setListingData({ ...listingData, account_email: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-black transition-all text-sm"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Account Password</label>
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Password</label>
                                             <input
                                                 type="text"
-                                                placeholder="e.g. secret123"
+                                                placeholder="••••••••"
                                                 value={listingData.account_password}
                                                 onChange={e => setListingData({ ...listingData, account_password: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-black transition-all text-sm"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Plan Owner</label>
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Provider Tag</label>
                                             <input
-                                                placeholder="e.g. Providence"
+                                                placeholder="e.g. JoinTheQ"
                                                 value={listingData.plan_owner}
                                                 onChange={e => setListingData({ ...listingData, plan_owner: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Base Cost (₦)</label>
-                                            <input
-                                                type="number"
-                                                placeholder="Amount"
-                                                value={listingData.base_cost === 0 ? "" : listingData.base_cost}
-                                                onChange={e => setListingData({ ...listingData, base_cost: Number(e.target.value) })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-black transition-all text-sm"
                                             />
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Instructions Image URL</label>
-                                            <input
-                                                type="url"
-                                                placeholder="https://example.com/image.jpg"
-                                                value={listingData.instructions_image_url}
-                                                onChange={e => setListingData({ ...listingData, instructions_image_url: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
-                                            />
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Base Subscription Cost (₦)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₦</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    value={listingData.base_cost === 0 ? "" : listingData.base_cost}
+                                                    onChange={e => setListingData({ ...listingData, base_cost: Number(e.target.value) })}
+                                                    className="w-full py-4.5 pl-10 pr-6 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-black transition-all text-sm"
+                                                />
+                                            </div>
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Instructions Text</label>
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Member Instructions</label>
                                             <textarea
-                                                placeholder="Step-by-step instructions for members to access this account"
+                                                placeholder="Detailed steps for members to access this account..."
                                                 value={listingData.instructions_text}
                                                 onChange={e => setListingData({ ...listingData, instructions_text: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm min-h-[100px]"
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-medium outline-none focus:ring-2 ring-black transition-all text-sm min-h-[100px] resize-none"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Slot Varieties */}
-                                <div className="bg-white rounded-[2.5rem] p-8">
-                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                                <div className="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4 pb-6 border-b border-gray-50">
                                         <div className="flex items-center gap-4">
-                                            <h3 className="font-black text-lg flex items-center gap-2">
-                                                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" /> Slot Varieties
+                                            <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                                <div className="w-1.5 h-6 bg-emerald-500 rounded-full" /> Slot Varieties
                                             </h3>
                                             {/* Profitability Tracker */}
-                                            <div className="flex gap-4">
-                                                <div className="px-4 py-2 bg-gray-50 rounded-xl text-xs font-bold text-gray-500">
-                                                    Est. Rev: ₦{listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0).toLocaleString()}
-                                                </div>
-                                                <div className={`px-4 py-2 rounded-xl text-xs font-bold ${
+                                            <div className="flex gap-2">
+                                                <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 ${
                                                     listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) > listingData.base_cost 
-                                                    ? 'bg-emerald-50 text-emerald-600' 
-                                                    : 'bg-red-50 text-red-500'
+                                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                                                    : 'bg-red-50 text-red-500 border border-red-100'
                                                 }`}>
+                                                    <AlertCircle size={12} />
                                                     Profit: ₦{(listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) - listingData.base_cost).toLocaleString()}
                                                 </div>
                                             </div>
@@ -3030,9 +3024,9 @@ export default function AdminPanel() {
                                                 ...listingData,
                                                 slots: [...listingData.slots, { name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
                                             })}
-                                            className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-full border border-blue-100 transition-colors"
+                                            className="text-[10px] font-black uppercase tracking-widest text-black hover:bg-gray-100 px-5 py-2.5 rounded-xl border border-gray-100 transition-all flex items-center gap-2"
                                         >
-                                            + Add Variety
+                                            <Plus size={14} /> Add Variety
                                         </button>
                                     </div>
                                     <div className="space-y-4">
