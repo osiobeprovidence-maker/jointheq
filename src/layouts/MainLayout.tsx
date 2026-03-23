@@ -98,18 +98,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                             )}
                         </button>
                     ))}
-                    {auth.isAdmin() && (
-                        <button
-                            onClick={() => setActiveTab(adminNavItem.id)}
-                            className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === adminNavItem.id
-                                ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
-                                : 'text-gray-500 hover:bg-black/5 hover:text-black'
-                                }`}
-                        >
-                            {adminNavItem.icon}
-                            <span className="font-semibold">{adminNavItem.label}</span>
-                        </button>
-                    )}
+
                 </div>
 
                 <div className="pt-6 border-t border-black/5">
@@ -158,14 +147,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-4">
-                    {/* Notification Alert Shortcut */}
-                    <button 
-                        onClick={() => setActiveTab('notifications')}
-                        className="p-3 hover:bg-black/5 rounded-full relative transition-colors"
-                    >
-                        <Bell size={20} className="text-zinc-600" />
-                        <NotificationBadge unreadCount={useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id } : "skip") || 0} />
-                    </button>
+
 
                     <button 
                         onClick={() => setIsProfileOpen(true)}
