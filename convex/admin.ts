@@ -388,8 +388,12 @@ export const adminSendNotification = mutation({
         title: v.string(),
         message: v.string(),
         type: v.string(),
+        executorId: v.id("users"),
     },
     handler: async (ctx, args) => {
+        const executor = await ctx.db.get(args.executorId);
+        if (!executor?.is_admin) throw new Error("Unauthorized");
+
         if (args.userId) {
             await ctx.db.insert("notifications", {
                 user_id: args.userId,

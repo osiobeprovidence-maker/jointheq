@@ -465,8 +465,8 @@ export default function AdminPanel() {
                 title: notifForm.title,
                 message: notifForm.message,
                 type: notifForm.type as any,
-                user_id: notifForm.userId ? notifForm.userId as Id<"users"> : undefined,
-                executor_id: currentUser!._id,
+                userId: notifForm.userId ? notifForm.userId as Id<"users"> : undefined,
+                executorId: currentUser!._id,
             });
             toast.success("Notification sent successfully!");
             setNotifForm({ title: "", message: "", type: "system", userId: "" });
