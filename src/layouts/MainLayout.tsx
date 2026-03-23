@@ -19,7 +19,7 @@ import {
     ChevronRight,
     Settings
 } from "lucide-react";
-import { useAuth } from '../hooks/useAuth';
+
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -34,7 +34,7 @@ interface MainLayoutProps {
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab }) => {
-    const { user } = useAuth();
+    const user = auth.getCurrentUser();
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
