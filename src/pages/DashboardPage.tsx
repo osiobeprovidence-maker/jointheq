@@ -169,6 +169,7 @@ export default function DashboardPage() {
     const renewSlotMutation = useMutation(api.subscriptions.renewSlot);
     const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
     const markAsReadMutation = useMutation(api.notifications.markAsRead);
+    const removeNotificationMutation = useMutation(api.notifications.remove);
 
     const walletResetPermission = useQuery(
         api.users.canResetWallets,
@@ -2002,7 +2003,21 @@ export default function DashboardPage() {
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-1">
                                                     <h3 className="font-bold text-base">{notif.title}</h3>
-                                                    <span className="text-[10px] font-black uppercase text-gray-400">{new Date(notif.created_at).toLocaleDateString()}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-[10px] font-black uppercase text-gray-400">{new Date(notif.created_at).toLocaleDateString()}</span>
+                                                        <button 
+                                                            onClick={async (e) => {
+                                                                if (window.confirm("Remove this notification?")) {
+                                                                    try {
+                                                                        await removeNotificationMutation({ notification_id: notif._id });
+                                                                    } catch (e: any) { toast.error(e.message); }
+                                                                }
+                                                            }}
+                                                            className="p-1 hover:bg-black/5 rounded-full text-zinc-300 hover:text-red-500 transition-colors"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <p className="text-sm text-gray-600 leading-relaxed">{notif.message}</p>
                                             </div>

@@ -45,3 +45,11 @@ export const markAllAsRead = mutation({
         return { success: true, count: unread.length };
     },
 });
+
+export const remove = mutation({
+    args: { notification_id: v.id("notifications") },
+    handler: async (ctx, args) => {
+        await ctx.db.delete(args.notification_id);
+        return { success: true };
+    },
+});
