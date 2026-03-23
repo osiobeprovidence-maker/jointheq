@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { 
   ArrowLeft, 
@@ -43,6 +44,7 @@ const PLATFORMS = [
 
 export default function ListSubscriptionPage() {
   const user = auth.getCurrentUser();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('list-earn'); // For MainLayout
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,14 +102,22 @@ export default function ListSubscriptionPage() {
                 <h1 className="text-3xl font-bold tracking-tight">List & Earn</h1>
                 <p className="text-gray-500 mt-1">Monetize your unused subscription slots safely.</p>
             </div>
-            {step > 1 && step < 3 && (
+            <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                {step > 1 && step < 3 && (
+                    <button 
+                      onClick={() => setStep(step - 1)}
+                      className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/50 transition-all shadow-sm flex items-center gap-2"
+                    >
+                      <ArrowLeft size={16} /> Back
+                    </button>
+                )}
                 <button 
-                  onClick={() => setStep(step - 1)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all shadow-sm"
+                    onClick={() => navigate('/dashboard')}
+                    className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 transition-all"
                 >
-                  <ArrowLeft size={16} /> Back
+                    Cancel
                 </button>
-            )}
+            </div>
         </div>
 
         <section className="space-y-6">
