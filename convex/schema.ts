@@ -176,6 +176,7 @@ export default defineSchema({
         device_types: v.optional(v.array(v.string())),
         status: v.string(),
         assigned_group: v.optional(v.string()),
+        auto_renew: v.optional(v.boolean()),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_status", ["status"])
@@ -585,5 +586,5 @@ export default defineSchema({
         is_read: v.boolean(),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
-      .index("by_read", ["user_id", "is_read"]),
+        .index("by_read", ["user_id", "is_read"]),
 });
