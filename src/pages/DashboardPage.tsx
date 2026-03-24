@@ -46,7 +46,8 @@ import {
     Target,
     Edit,
     BadgeDollarSign,
-    Bell
+    Bell,
+    Repeat
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
@@ -72,6 +73,7 @@ export default function DashboardPage() {
     ];
     const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'notifications'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
+    const [enableAutoDebit, setEnableAutoDebit] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
     const [showVerificationWarning, setShowVerificationWarning] = useState(false);
     const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
@@ -98,7 +100,7 @@ export default function DashboardPage() {
     const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
     const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
     const adminsList = useQuery(api.users.getAdmins) || [];
-    
+
     // Sync local auth with Convex state
     useEffect(() => {
         if (currentUser) {
@@ -279,7 +281,7 @@ export default function DashboardPage() {
     // Auto-initialize super admin for authorized emails
     useEffect(() => {
         const authorizedAdmins = ["riderezzy@gmail.com", "reinvoursehung@gmail.com"];
-        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) && 
+        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) &&
             walletResetPermission !== undefined && walletResetPermission.role !== "super") {
             initializeSuperAdminMut({}).then(() => {
                 toast.success("Super admin initialized! Refreshing...");
@@ -303,11 +305,16 @@ export default function DashboardPage() {
             const result = await joinSlotMutation({
                 user_id: currentUser._id,
                 slot_type_id: slotTypeId as Id<"slot_types">,
-                use_boots: useBootsForPayment
+                use_boots: useBootsForPayment,
+                auto_renew: enableAutoDebit
             });
             if (result.success) {
                 toast.success("Successfully joined slot!");
+                if (enableAutoDebit) {
+                    toast.success("Auto-renewal enabled!");
+                }
                 setCheckoutSlot(null);
+                setEnableAutoDebit(false);
                 setActiveTab('dashboard');
             }
         } catch (error: any) {
@@ -360,10 +367,10 @@ export default function DashboardPage() {
             toast.error("Browser does not support desktop notifications");
             return;
         }
-        
+
         const permission = await Notification.requestPermission();
         setNotifPermission(permission);
-        
+
         if (permission === "granted") {
             toast.success("Notifications enabled!", { icon: '🔔' });
             // Show a test notification
@@ -695,7 +702,11 @@ export default function DashboardPage() {
                                     <MarketplaceSlotCard
                                         key={slot._id}
                                         slot={slot}
-                                        onJoin={() => setCheckoutSlot(slot as unknown as SlotType)}
+                                        onJoin={() => {
+                                            setCheckoutSlot(slot as unknown as SlotType);
+                                            setUseBootsForPayment(false);
+                                            setEnableAutoDebit(false);
+                                        }}
                                         userQScore={currentUser?.q_score || 0}
                                     />
                                 ))}
@@ -869,9 +880,9 @@ export default function DashboardPage() {
                                             <button className="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/20 transition-all border border-white/5">
                                                 Manage Card
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={async () => {
-                                                    if(confirm("Are you sure you want to remove your card? Automatic renewals will be disabled.")) {
+                                                    if (confirm("Are you sure you want to remove your card? Automatic renewals will be disabled.")) {
                                                         const tid = toast.loading("Removing card...");
                                                         try {
                                                             await removeCardMutation({ userId: currentUser._id });
@@ -1293,13 +1304,12 @@ export default function DashboardPage() {
                             </button>
                             <button
                                 onClick={requestNotificationPermission}
-                                className={`w-full py-5 border rounded-[2.5rem] font-bold flex items-center justify-center gap-2 transition-all ${
-                                    notifPermission === 'granted' 
-                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                                className={`w-full py-5 border rounded-[2.5rem] font-bold flex items-center justify-center gap-2 transition-all ${notifPermission === 'granted'
+                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
                                     : 'bg-white border-black/5 text-zinc-900 hover:bg-gray-50'
-                                }`}
+                                    }`}
                             >
-                                <Bell size={20} /> 
+                                <Bell size={20} />
                                 {notifPermission === 'granted' ? 'Alerts On' : 'Enable Alerts'}
                             </button>
                         </div>
@@ -1544,12 +1554,12 @@ export default function DashboardPage() {
                                     <button onClick={resetQRank} className="w-full py-5 bg-white text-red-600 rounded-[2.5rem] font-bold hover:bg-red-600 hover:text-white transition-all border border-red-200 shadow-sm flex items-center justify-center gap-2">
                                         <Activity size={20} /> Reset Account Q Rank
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             if (window.confirm("Are you sure you want to log out?")) {
                                                 auth.logout();
                                             }
-                                        }} 
+                                        }}
                                         className="w-full py-5 bg-zinc-900 text-white rounded-[2.5rem] font-bold hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2"
                                     >
                                         <LogOut size={20} /> Log Out Securely
@@ -1682,7 +1692,10 @@ export default function DashboardPage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                onClick={() => setCheckoutSlot(null)}
+                                onClick={() => {
+                                    setCheckoutSlot(null);
+                                    setEnableAutoDebit(false);
+                                }}
                                 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                             />
                             <motion.div
@@ -1694,7 +1707,13 @@ export default function DashboardPage() {
                                 <div className="p-8">
                                     <div className="flex items-center justify-between mb-8">
                                         <h2 className="text-2xl font-bold">Checkout</h2>
-                                        <button onClick={() => setCheckoutSlot(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+                                        <button
+                                            onClick={() => {
+                                                setCheckoutSlot(null);
+                                                setEnableAutoDebit(false);
+                                            }}
+                                            className="p-2 hover:bg-black/5 rounded-full transition-colors"
+                                        >
                                             <X size={20} />
                                         </button>
                                     </div>
@@ -1739,6 +1758,30 @@ export default function DashboardPage() {
                                                 </div>
                                                 {useBootsForPayment && <Check size={20} className="text-black" />}
                                             </div>
+                                        </div>
+
+                                        {/* Auto-Debit Toggle */}
+                                        <div className="pt-4 border-t border-gray-100">
+                                            <label className="flex items-start gap-4 p-4 bg-emerald-50 rounded-2xl cursor-pointer hover:bg-emerald-100/50 transition-colors group">
+                                                <div className="relative flex items-center mt-0.5">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={enableAutoDebit}
+                                                        onChange={() => setEnableAutoDebit(!enableAutoDebit)}
+                                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-emerald-300 transition-all checked:bg-emerald-500 checked:border-emerald-500"
+                                                    />
+                                                    <Check size={14} className="absolute left-1 top-1 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <Repeat size={16} className="text-emerald-600" />
+                                                        <span className="text-sm font-bold text-emerald-800">Enable Auto-Debit</span>
+                                                    </div>
+                                                    <p className="text-xs text-emerald-600 mt-1 leading-relaxed">
+                                                        Automatically renew this subscription from your wallet at the end of each cycle.
+                                                    </p>
+                                                </div>
+                                            </label>
                                         </div>
                                     </div>
 
@@ -1961,7 +2004,7 @@ export default function DashboardPage() {
                                 </div>
                                 <h2 className="text-2xl font-bold mb-2">Cancel Subscription</h2>
                                 <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                                    You are about to leave your <span className="font-bold text-black">{cancellingSlot.name}</span> subscription. 
+                                    You are about to leave your <span className="font-bold text-black">{cancellingSlot.name}</span> subscription.
                                     Leaving means you will lose access to the service at the end of the current billing cycle.
                                 </p>
                                 <div className="flex flex-col gap-3">
@@ -1981,85 +2024,84 @@ export default function DashboardPage() {
                             </motion.div>
                         </div>
                     )}
-                {activeTab === 'notifications' && (
-                    <motion.div key="notifications" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-                                <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {notifications.some((n: any) => !n.is_read) && (
-                                    <button 
-                                        onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
-                                        className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
-                                    >
-                                        Mark All as Seen
-                                    </button>
-                                )}
-                            </div>
-                        </header>
+                    {activeTab === 'notifications' && (
+                        <motion.div key="notifications" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div>
+                                    <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+                                    <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {notifications.some((n: any) => !n.is_read) && (
+                                        <button
+                                            onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
+                                            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
+                                        >
+                                            Mark All as Seen
+                                        </button>
+                                    )}
+                                </div>
+                            </header>
 
-                        <div className="space-y-4">
-                            {notifications.length > 0 ? (
-                                notifications.map((notif: any) => (
-                                    <div key={notif._id} className={`p-6 rounded-[2rem] border transition-all ${notif.is_read ? 'bg-white border-black/5 opacity-60' : 'bg-white border-blue-500/20 shadow-lg shadow-blue-500/5'}`}>
-                                        <div className="flex items-start gap-4">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                                                notif.type === 'alert' ? 'bg-red-100 text-red-600' :
-                                                notif.type === 'promotion' ? 'bg-amber-100 text-amber-600' :
-                                                notif.type === 'subscription' ? 'bg-blue-100 text-blue-600' :
-                                                'bg-zinc-100 text-zinc-600'
-                                            }`}>
-                                                <Bell size={20} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <h3 className="font-bold text-base">{notif.title}</h3>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-[10px] font-black uppercase text-gray-400">{new Date(notif.created_at).toLocaleDateString()}</span>
-                                                        {!notif.is_read && (
-                                                            <button 
-                                                                onClick={async (e) => {
-                                                                    try {
-                                                                        await markAsReadMutation({ notification_id: notif._id });
-                                                                    } catch (e: any) { toast.error(e.message); }
-                                                                }}
-                                                                className="p-1 hover:bg-blue-50 rounded-full text-blue-500 hover:text-blue-700 transition-colors"
-                                                                title="Mark as seen"
-                                                            >
-                                                                <Check size={14} />
-                                                            </button>
-                                                        )}
-                                                        <button 
-                                                            onClick={async (e) => {
-                                                                if (window.confirm("Remove this notification?")) {
-                                                                    try {
-                                                                        await removeNotificationMutation({ notification_id: notif._id });
-                                                                    } catch (e: any) { toast.error(e.message); }
-                                                                }
-                                                            }}
-                                                            className="p-1 hover:bg-red-50 rounded-full text-zinc-300 hover:text-red-500 transition-colors"
-                                                        >
-                                                            <X size={14} />
-                                                        </button>
-                                                    </div>
+                            <div className="space-y-4">
+                                {notifications.length > 0 ? (
+                                    notifications.map((notif: any) => (
+                                        <div key={notif._id} className={`p-6 rounded-[2rem] border transition-all ${notif.is_read ? 'bg-white border-black/5 opacity-60' : 'bg-white border-blue-500/20 shadow-lg shadow-blue-500/5'}`}>
+                                            <div className="flex items-start gap-4">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'alert' ? 'bg-red-100 text-red-600' :
+                                                    notif.type === 'promotion' ? 'bg-amber-100 text-amber-600' :
+                                                        notif.type === 'subscription' ? 'bg-blue-100 text-blue-600' :
+                                                            'bg-zinc-100 text-zinc-600'
+                                                    }`}>
+                                                    <Bell size={20} />
                                                 </div>
-                                                <p className="text-sm text-gray-600 leading-relaxed">{notif.message}</p>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <h3 className="font-bold text-base">{notif.title}</h3>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-[10px] font-black uppercase text-gray-400">{new Date(notif.created_at).toLocaleDateString()}</span>
+                                                            {!notif.is_read && (
+                                                                <button
+                                                                    onClick={async (e) => {
+                                                                        try {
+                                                                            await markAsReadMutation({ notification_id: notif._id });
+                                                                        } catch (e: any) { toast.error(e.message); }
+                                                                    }}
+                                                                    className="p-1 hover:bg-blue-50 rounded-full text-blue-500 hover:text-blue-700 transition-colors"
+                                                                    title="Mark as seen"
+                                                                >
+                                                                    <Check size={14} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    if (window.confirm("Remove this notification?")) {
+                                                                        try {
+                                                                            await removeNotificationMutation({ notification_id: notif._id });
+                                                                        } catch (e: any) { toast.error(e.message); }
+                                                                    }
+                                                                }}
+                                                                className="p-1 hover:bg-red-50 rounded-full text-zinc-300 hover:text-red-500 transition-colors"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600 leading-relaxed">{notif.message}</p>
+                                                </div>
                                             </div>
                                         </div>
+                                    ))
+                                ) : (
+                                    <div className="bg-white rounded-[3rem] p-20 text-center text-gray-400 border border-dashed border-black/10">
+                                        <Bell size={40} className="mx-auto mb-4 opacity-20" />
+                                        <p className="font-bold">No notifications yet.</p>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="bg-white rounded-[3rem] p-20 text-center text-gray-400 border border-dashed border-black/10">
-                                    <Bell size={40} className="mx-auto mb-4 opacity-20" />
-                                    <p className="font-bold">No notifications yet.</p>
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </AnimatePresence>
         </MainLayout >
     );
@@ -2161,10 +2203,10 @@ function StatCard({ title, value, icon, color }: { title: string, value: string,
     );
 }
 
-function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onRenew, onToggleAutoRenew }: { 
-    slot: UserSlot, 
-    onUpdateAllocation: (val: string) => void, 
-    onSupportClick: () => void, 
+function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onRenew, onToggleAutoRenew }: {
+    slot: UserSlot,
+    onUpdateAllocation: (val: string) => void,
+    onSupportClick: () => void,
     onLeave: () => void,
     onRenew: () => void,
     onToggleAutoRenew: (val: boolean) => void
@@ -2308,7 +2350,7 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
                         <div className="text-[10px] font-bold uppercase opacity-40">Auto Renewal</div>
                         <div className="text-xs font-semibold">{slot.auto_renew ? 'Enabled' : 'Disabled'}</div>
                     </div>
-                    <button 
+                    <button
                         onClick={() => onToggleAutoRenew(!slot.auto_renew)}
                         className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ${slot.auto_renew ? 'bg-emerald-500' : 'bg-gray-300'}`}
                     >
@@ -2317,15 +2359,15 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
                 </div>
 
                 <div className="flex gap-2">
-                    <button 
+                    <button
                         onClick={onRenew}
                         disabled={slot.auto_renew}
                         className={`flex-1 py-4 rounded-full text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${slot.auto_renew ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
                     >
                         <Zap size={16} /> Renew
                     </button>
-                    <button 
-                        onClick={onLeave} 
+                    <button
+                        onClick={onLeave}
                         className="flex-1 py-4 bg-red-50 text-red-500 rounded-full text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
                     >
                         <LogOut size={16} /> Leave

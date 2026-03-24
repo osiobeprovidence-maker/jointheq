@@ -142,7 +142,7 @@ export const renewSlot = mutation({
     handler: async (ctx, args) => {
         const slot = await ctx.db.get(args.id);
         if (!slot || !slot.user_id || !slot.slot_type_id) throw new Error("Slot not found or inactive");
-        
+
         const user = await ctx.db.get(slot.user_id);
         const slotType = await ctx.db.get(slot.slot_type_id);
         if (!user || !slotType) throw new Error("User or Slot Type not found");
@@ -169,7 +169,7 @@ export const renewSlot = mutation({
         // Update renewal date (add 30 days)
         const currentRenewal = slot.renewal_date ? new Date(slot.renewal_date) : new Date();
         const nextRenewal = new Date(currentRenewal.getTime() + 30 * 24 * 60 * 60 * 1000);
-        
+
         await ctx.db.patch(slot._id, {
             renewal_date: nextRenewal.toISOString(),
             status: "filled",
@@ -186,6 +186,7 @@ export const joinSlot = mutation({
         user_id: v.id("users"),
         slot_type_id: v.id("slot_types"),
         use_boots: v.boolean(),
+        auto_renew: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         const user = await ctx.db.get(args.user_id);
@@ -273,6 +274,7 @@ export const joinSlot = mutation({
             user_id: user._id,
             status: "filled",
             renewal_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            auto_renew: args.auto_renew || false,
         });
 
         // Award Reward for self (Join/Pay)
@@ -364,7 +366,7 @@ export const leaveSlot = mutation({
                 });
                 return { success: true, type: "slot", message: "Removal scheduled for end of cycle" };
             }
-        } catch (e) {}
+        } catch (e) { }
 
         // 2. Try migrated subscriptions
         try {
@@ -375,7 +377,7 @@ export const leaveSlot = mutation({
                 });
                 return { success: true, type: "migration" };
             }
-        } catch (e) {}
+        } catch (e) { }
 
         throw new Error("Subscription not found or already removed.");
     },
@@ -419,7 +421,7 @@ export const adminCreateListing = mutation({
                 base_cost: args.base_cost || 0,
             });
         } else if (args.category || args.base_cost !== undefined) {
-            await ctx.db.patch(catalogId, { 
+            await ctx.db.patch(catalogId, {
                 ...(args.category && { category: args.category }),
                 ...(args.base_cost !== undefined && { base_cost: args.base_cost })
             });
