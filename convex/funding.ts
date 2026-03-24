@@ -9,13 +9,14 @@ export const generateUniqueAmount = mutation({
   handler: async (ctx, args) => {
     let attempts = 0;
     while (attempts < 50) {
-      const randomExtra = Math.floor(Math.random() * (99 - 10 + 1)) + 10;
+      // Generate random extra between 10 and 20 (rotating, not constant)
+      const randomExtra = Math.floor(Math.random() * (20 - 10 + 1)) + 10;
       const uniqueAmount = args.base_amount + randomExtra;
 
       // Check if any "Awaiting Review" request already has this unique amount
       const existing = await ctx.db
         .query("manual_funding_requests")
-        .withIndex("by_unique_amount", (q) => 
+        .withIndex("by_unique_amount", (q) =>
           q.eq("unique_amount", uniqueAmount).eq("status", "Awaiting Review")
         )
         .first();
