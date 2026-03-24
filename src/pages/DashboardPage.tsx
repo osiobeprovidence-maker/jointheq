@@ -188,9 +188,7 @@ export default function DashboardPage() {
     const [usernameLoading, setUsernameLoading] = useState(false);
     const [cancellingSlot, setCancellingSlot] = useState<{ id: string, name: string } | null>(null);
     const [lastNotifId, setLastNotifId] = useState<string | null>(null);
-    const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
-        typeof window !== 'undefined' ? Notification.permission : 'default'
-    );
+    const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
 
     const handleProfileImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -382,6 +380,13 @@ export default function DashboardPage() {
             toast.error("Notification permission denied");
         }
     };
+
+    // Initialize notification permission on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+            setNotifPermission(Notification.permission);
+        }
+    }, []);
 
     useEffect(() => {
         if (notifications.length > 0 && notifPermission === 'granted') {
