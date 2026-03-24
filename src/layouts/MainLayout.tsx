@@ -137,9 +137,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
             <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 sm:h-20 bg-white/80 backdrop-blur-md border-b border-black/5 flex items-center justify-between px-4 sm:px-8 z-40 transition-all duration-300">
                 <div className="flex items-center gap-3 lg:hidden">
                     <Logo className="w-8 h-8" />
-                    <span className="font-extrabold tracking-tighter text-xl">Q</span>
                 </div>
-                
+
                 <div className="hidden lg:block">
                     <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
                         {isAdminMode ? 'System Control' : 'User Terminal'}
@@ -147,23 +146,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-4">
-
-
-                    <button 
-                        onClick={() => setIsProfileOpen(true)}
-                        className="flex items-center gap-2 p-1.5 pr-3 hover:bg-black/5 rounded-full transition-all group"
-                    >
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 rounded-full flex items-center justify-center text-white overflow-hidden shadow-lg shadow-black/10 group-active:scale-95 transition-transform">
-                            {user?.profile_image_url ? (
-                                <img src={user.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <User size={18} />
-                            )}
-                        </div>
-                        <span className="hidden sm:block text-sm font-bold text-zinc-900">
-                            {user?.username || 'Profile'}
-                        </span>
-                    </button>
+                    {auth.isAdmin() && (
+                        <button
+                            onClick={() => setIsProfileOpen(true)}
+                            className="flex items-center gap-2 p-1.5 pr-3 hover:bg-black/5 rounded-full transition-all group"
+                        >
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 rounded-full flex items-center justify-center text-white overflow-hidden shadow-lg shadow-black/10 group-active:scale-95 transition-transform">
+                                {user?.profile_image_url ? (
+                                    <img src={user.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User size={18} />
+                                )}
+                            </div>
+                            <span className="hidden sm:block text-sm font-bold text-zinc-900">
+                                {user?.username || 'Profile'}
+                            </span>
+                        </button>
+                    )}
 
                     <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-3 hover:bg-black/5 rounded-full transition-colors">
                         {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
