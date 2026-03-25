@@ -587,4 +587,95 @@ export default defineSchema({
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_read", ["user_id", "is_read"]),
+
+    // ─── ENHANCED ADMIN SYSTEM ────────────────────────────────────────────────
+
+    // Admin Activity Logs
+    admin_logs: defineTable({
+        admin_id: v.id("users"),
+        admin_role: v.optional(v.string()),
+        action_type: v.string(),
+        target_type: v.optional(v.string()),
+        target_id: v.optional(v.string()),
+        target_name: v.optional(v.string()),
+        details: v.optional(v.string()),
+        reason: v.optional(v.string()),
+        metadata: v.optional(v.any()),
+        created_at: v.number(),
+    }).index("by_admin", ["admin_id"])
+        .index("by_action_type", ["action_type"])
+        .index("by_created_at", ["created_at"])
+        .index("by_target", ["target_type", "target_id"]),
+
+    // Slot Waitlist
+    slot_waitlist: defineTable({
+        user_id: v.id("users"),
+        subscription_catalog_id: v.id("subscription_catalog"),
+        slot_type_id: v.optional(v.id("slot_types")),
+        status: v.string(),
+        priority: v.optional(v.number()),
+        notes: v.optional(v.string()),
+        added_by: v.optional(v.id("users")),
+        added_at: v.number(),
+        expires_at: v.optional(v.number()),
+        filled_at: v.optional(v.number()),
+        filled_slot_id: v.optional(v.id("subscription_slots")),
+    }).index("by_user", ["user_id"])
+        .index("by_subscription", ["subscription_catalog_id"])
+        .index("by_status", ["status"]),
+
+    // Payment Overrides
+    payment_overrides: defineTable({
+        slot_id: v.id("subscription_slots"),
+        user_id: v.id("users"),
+        original_status: v.string(),
+        new_status: v.string(),
+        original_amount: v.optional(v.number()),
+        override_amount: v.optional(v.number()),
+        admin_id: v.id("users"),
+        admin_note: v.optional(v.string()),
+        reason: v.string(),
+        created_at: v.number(),
+    }).index("by_slot", ["slot_id"])
+        .index("by_user", ["user_id"])
+        .index("by_admin", ["admin_id"]),
+
+    // Group Management Logs
+    group_changes: defineTable({
+        group_id: v.id("groups"),
+        user_id: v.optional(v.id("users")),
+        action: v.string(),
+        from_group_id: v.optional(v.id("groups")),
+        to_group_id: v.optional(v.id("groups")),
+        admin_id: v.id("users"),
+        reason: v.optional(v.string()),
+        metadata: v.optional(v.any()),
+        created_at: v.number(),
+    }).index("by_group", ["group_id"])
+        .index("by_user", ["user_id"])
+        .index("by_admin", ["admin_id"]),
+
+    // Admin Roles & Permissions
+    admin_roles: defineTable({
+        role_name: v.string(),
+        permissions: v.array(v.string()),
+        description: v.optional(v.string()),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_role_name", ["role_name"]),
+
+    // Bulk Operations Queue
+    bulk_operations: defineTable({
+        admin_id: v.id("users"),
+        operation_type: v.string(),
+        status: v.string(),
+        total_items: v.number(),
+        processed_items: v.number(),
+        failed_items: v.number(),
+        metadata: v.optional(v.any()),
+        created_at: v.number(),
+        completed_at: v.optional(v.number()),
+        results: v.optional(v.any()),
+    }).index("by_admin", ["admin_id"])
+        .index("by_status", ["status"]),
 });

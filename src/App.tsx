@@ -6,6 +6,7 @@ import { ProtectedRoute } from "./components/auth/AuthGuards";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminPanel from "./pages/AdminPanel";
+import AdminEnhancedPage from "./pages/AdminEnhancedPage";
 import CampaignDetailPage from "./pages/CampaignDetailPage";
 import { ConsoleLogin, ConsoleDashboard } from "./pages/Console";
 import CampusDashboardPage from "./pages/CampusDashboardPage";
@@ -42,6 +43,16 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Enhanced Admin System */}
+        <Route
+          path="/admin/enhanced"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminEnhancedPage />
             </ProtectedRoute>
           }
         />
