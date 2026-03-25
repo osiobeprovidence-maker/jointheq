@@ -2130,7 +2130,7 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
 
     return (
         <motion.div whileHover={{ y: -5 }} className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden  flex flex-col group">
-            <div className="p-8 pb-4 flex items-start justify-between">
+            <div className="p-6 sm:p-8 pb-4 sm:pb-4 flex items-start justify-between">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-[#fdfdfd] rounded-[2rem] flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors duration-500">
                         {getIcon()}
@@ -2150,7 +2150,7 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
                 </div>
             </div>
 
-            <div className="p-8 pt-0 flex-1">
+            <div className="p-6 sm:p-8 pt-0 sm:pt-0 flex-1">
                 <p className="text-sm text-gray-500 mb-8 leading-relaxed">
                     {campaign.description}
                 </p>
@@ -2195,7 +2195,7 @@ function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onPa
 
 function StatCard({ title, value, icon, color }: { title: string, value: string, icon: ReactNode, color: string }) {
     return (
-        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 rounded-3xl ">
+        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-4 sm:p-6 rounded-3xl ">
             <div className="flex items-center justify-between mb-4">
                 <div className={`w-10 h-10 ${color} text-white rounded-full scale-100 hover:scale-[1.02] flex items-center justify-center`}>
                     {icon}
@@ -2411,7 +2411,7 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
     const isSoldOut = capacity > 0 && joined >= capacity;
 
     return (
-        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-7 rounded-[2.5rem] flex flex-col hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-black/5">
+        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-5 sm:p-7 rounded-[2.5rem] flex flex-col hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-black/5">
             {/* Header with Logo */}
             <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">

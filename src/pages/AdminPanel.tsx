@@ -800,7 +800,7 @@ export default function AdminPanel() {
                             onClick={() => setMobileMenuOpen(false)}
                         />
                         <motion.aside
-                            className="md:hidden fixed top-14 left-0 bottom-0 w-[88%] max-w-[320px] bg-zinc-950 text-white z-50 p-4 flex flex-col"
+                            className="md:hidden fixed top-16 left-0 bottom-0 w-[88%] max-w-[320px] bg-zinc-950 text-white z-50 p-4 flex flex-col"
                             initial={{ x: "-100%" }}
                             animate={{ x: 0 }}
                             exit={{ x: "-100%" }}
@@ -856,7 +856,7 @@ export default function AdminPanel() {
             </AnimatePresence>
 
             {/* ── Main Content ── */}
-            <main className="flex-1 md:ml-64 mt-14 md:mt-0 min-h-screen">
+            <main className="flex-1 md:ml-64 mt-16 md:mt-0 min-h-screen">
                 {/* Top bar (desktop) */}
                 <div className="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-black/5 sticky top-0 z-30">
                     <div className="flex items-center gap-4">
@@ -887,7 +887,7 @@ export default function AdminPanel() {
                     </div>
                 </div>
 
-                <div className="p-4 sm:p-6 md:p-8">
+                <div className="p-4 sm:p-6 md:p-8 pt-6 sm:pt-6">
                     <AnimatePresence mode="wait">
 
                         {/* ═══ DASHBOARD ═══ */}
