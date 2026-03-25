@@ -39,12 +39,13 @@ export const checkAdminPermission = query({
         if (!admin || !admin.is_admin) return false;
 
         // Super admin has all permissions
-        if (admin.email === "riderezzy@gmail.com" || admin.admin_role === "super_admin") {
+        if (admin.email === "riderezzy@gmail.com" || admin.admin_role === "super" || admin.admin_role === "super_admin") {
             return true;
         }
 
         // Check role-based permissions
         const rolePermissions: Record<string, string[]> = {
+            "super": ["*"],
             "super_admin": ["*"],
             "finance_admin": ["payments.view", "payments.override", "payments.approve", "users.view", "logs.view"],
             "support_admin": ["users.view", "users.suspend", "support.manage", "notifications.send", "logs.view"],
@@ -61,11 +62,13 @@ export const getAdminRole = query({
     handler: async (ctx, args) => {
         const admin = await ctx.db.get(args.adminId);
         if (!admin || !admin.is_admin) return null;
-        
+
+        const isSuper = admin.email === "riderezzy@gmail.com" || admin.admin_role === "super" || admin.admin_role === "super_admin";
+
         return {
             role: admin.admin_role || "admin",
             email: admin.email,
-            isSuperAdmin: admin.email === "riderezzy@gmail.com" || admin.admin_role === "super_admin",
+            isSuperAdmin: isSuper,
         };
     }
 });
@@ -280,7 +283,7 @@ export const adminBulkUpdatePaymentStatus = mutation({
                 const slot = await ctx.db.get(slotId);
                 if (slot && slot.user_id) {
                     await ctx.db.patch(slotId, { status: args.newStatus });
-                    
+
                     await ctx.db.insert("payment_overrides", {
                         slot_id: slotId,
                         user_id: slot.user_id,
@@ -353,7 +356,7 @@ export const adminMoveUserToGroup = mutation({
 
         if (currentSlots.length > 0) {
             fromGroupId = currentSlots[0].group_id;
-            
+
             // Clear old slot
             await ctx.db.patch(currentSlots[0]._id, {
                 user_id: undefined,
@@ -442,25 +445,25 @@ export const adminAutoBalanceGroups = mutation({
 
         // Simple balancing: move members from overfilled to underfilled groups
         const moves: any[] = [];
-        
+
         for (let i = 0; i < groups.length; i++) {
             const group = groups[i];
             const current = groupCounts.find(g => g.groupId === group._id)!;
-            
+
             if (current.count > avgPerGroup + 1) {
                 // This group is overfilled, find underfilled group
                 for (let j = 0; j < groups.length; j++) {
                     if (i === j) continue;
                     const targetGroup = groups[j];
                     const targetCurrent = groupCounts.find(g => g.groupId === targetGroup._id)!;
-                    
+
                     if (targetCurrent.count < avgPerGroup) {
                         // Move one member
                         const slots = await ctx.db.query("subscription_slots")
                             .withIndex("by_group", q => q.eq("group_id", group._id))
                             .filter(q => q.eq(q.field("status"), "filled"))
                             .take(1);
-                        
+
                         if (slots.length > 0) {
                             moves.push({
                                 userId: slots[0].user_id,
