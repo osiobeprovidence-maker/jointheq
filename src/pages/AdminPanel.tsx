@@ -57,7 +57,9 @@ import {
     ChevronRight,
     ArrowRight,
     LogOut,
-    Tag
+    Tag,
+    Sparkles,
+    UserPlus
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -229,6 +231,14 @@ export default function AdminPanel() {
     const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
     const pendingLeaveCount = pendingLeaveRequests.slots.length + pendingLeaveRequests.migrations.length;
 
+    // God Mode State
+    const [showGodModeModal, setShowGodModeModal] = useState(false);
+    const [godModeUserId, setGodModeUserId] = useState<Id<"users"> | null>(null);
+    const [selectedSlotForAssignment, setSelectedSlotForAssignment] = useState<Id<"slot_types"> | null>(null);
+    const [overridePaymentStatus, setOverridePaymentStatus] = useState("filled");
+    const [overrideReason, setOverrideReason] = useState("");
+    const [overrideAmount, setOverrideAmount] = useState("");
+
     // Mutations
     const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
     const markAsReadMutation = useMutation(api.notifications.markAsRead);
@@ -242,6 +252,14 @@ export default function AdminPanel() {
     const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
+
+    // God Mode Mutations (Enhanced Admin)
+    const assignUserToSlot = useMutation(api.adminEnhanced.adminAssignUserToSlot);
+    const removeUserFromSlot = useMutation(api.adminEnhanced.adminRemoveUserFromSlot);
+    const overridePayment = useMutation(api.adminEnhanced.adminOverridePayment);
+    const moveToGroup = useMutation(api.adminEnhanced.adminMoveUserToGroup);
+    const addToWaitlist = useMutation(api.adminEnhanced.addToWaitlist);
+    const fillWaitlistSlot = useMutation(api.adminEnhanced.fillWaitlistSlot);
 
     const adminSendNotification = useMutation(api.admin.adminSendNotification);
     const approveLeaveRequest = useMutation(api.admin.approveLeaveRequest);
@@ -357,6 +375,64 @@ export default function AdminPanel() {
             setEditingCampaign(null);
             setCampaignForm({ name: '', type: 'referral', description: '', about: '', rules: [''], how_it_works: [''], reward_structure: '', reward_type: 'boots', reward_amount: 0, referral_boots: 5, commission_months: 3, start_date: '', end_date: '', target_goal: 100 });
         } catch (e: any) { toast.error(e.message); }
+    };
+
+    // God Mode Handlers
+    const handleAssignUserToSlot = async () => {
+        if (!godModeUserId || !selectedSlotForAssignment) return;
+        try {
+            await assignUserToSlot({
+                adminId: currentUser!._id,
+                userId: godModeUserId,
+                slotTypeId: selectedSlotForAssignment,
+                reason: "Manual assignment via God mode"
+            });
+            toast.success("User assigned to slot!");
+            setShowGodModeModal(false);
+            setGodModeUserId(null);
+            setSelectedSlotForAssignment(null);
+        } catch (e: any) {
+            toast.error(e.message || "Failed to assign user");
+        }
+    };
+
+    const handleOverridePayment = async (slotId: Id<"subscription_slots">) => {
+        if (!overrideReason) return toast.error("Please provide a reason");
+        try {
+            await overridePayment({
+                adminId: currentUser!._id,
+                slotId,
+                newStatus: overridePaymentStatus,
+                overrideAmount: overrideAmount ? Number(overrideAmount) : undefined,
+                reason: overrideReason,
+            });
+            toast.success("Payment status overridden!");
+            setShowGodModeModal(false);
+            setOverrideReason("");
+            setOverrideAmount("");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to override payment");
+        }
+    };
+
+    const handleAddToWaitlist = async (subscriptionCatalogId: Id<"subscription_catalog">) => {
+        if (!godModeUserId) return;
+        try {
+            await addToWaitlist({
+                adminId: currentUser!._id,
+                userId: godModeUserId,
+                subscriptionCatalogId,
+                notes: "Added via God mode"
+            });
+            toast.success("User added to waitlist!");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to add to waitlist");
+        }
+    };
+
+    const handleOpenGodMode = (userId: Id<"users">) => {
+        setGodModeUserId(userId);
+        setShowGodModeModal(true);
     };
 
     const handleApprovePayment = async (id: any) => {
@@ -1046,6 +1122,18 @@ export default function AdminPanel() {
                                                 )}
                                             </div>
                                             <div className="col-span-2 flex justify-center gap-1">
+                                                {/* God Mode Button */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenGodMode(u._id);
+                                                    }}
+                                                    className="p-1.5 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
+                                                    title="God Mode"
+                                                >
+                                                    <Sparkles size={14} />
+                                                </button>
+
                                                 {u.is_suspended ? (
                                                     <button
                                                         onClick={async (e) => {
@@ -3530,6 +3618,183 @@ export default function AdminPanel() {
                             </div>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            {/* God Mode Modal */}
+            <AnimatePresence>
+                {showGodModeModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                    >
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowGodModeModal(false)} />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+                        >
+                            {/* Header */}
+                            <div className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
+                                        <Sparkles size={28} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black">God Mode</h2>
+                                        <p className="text-sm text-white/80">Advanced user management</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowGodModeModal(false)} className="p-3 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                                {/* User Info */}
+                                <div className="bg-zinc-50 p-5 rounded-3xl border border-black/5">
+                                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Target User</div>
+                                    <div className="font-bold text-lg">
+                                        {allUsers.find(u => u._id === godModeUserId)?.full_name || "Unknown"}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                        {allUsers.find(u => u._id === godModeUserId)?.email}
+                                    </div>
+                                </div>
+
+                                {/* Action Tabs */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-5 rounded-3xl border border-purple-100">
+                                        <div className="w-10 h-10 bg-purple-500 text-white rounded-xl flex items-center justify-center mb-3">
+                                            <UserPlus size={20} />
+                                        </div>
+                                        <div className="font-bold text-sm mb-1">Assign to Slot</div>
+                                        <div className="text-xs text-gray-500 mb-3">Add user to subscription</div>
+                                        <select
+                                            value={selectedSlotForAssignment || ""}
+                                            onChange={(e) => setSelectedSlotForAssignment(e.target.value as Id<"slot_types">)}
+                                            className="w-full p-2.5 bg-white border border-purple-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-purple-500"
+                                        >
+                                            <option value="">Select slot type...</option>
+                                            {allSubscriptions.map((group: any) =>
+                                                group.slot_types.map((st: any) => (
+                                                    <option key={st._id} value={st._id}>
+                                                        {st.name} - ₦{st.price.toLocaleString()}
+                                                    </option>
+                                                ))
+                                            )}
+                                        </select>
+                                        <button
+                                            onClick={handleAssignUserToSlot}
+                                            disabled={!selectedSlotForAssignment}
+                                            className="w-full mt-2 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-600 transition-colors"
+                                        >
+                                            Assign Now
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-3xl border border-amber-100">
+                                        <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center mb-3">
+                                            <CreditCard size={20} />
+                                        </div>
+                                        <div className="font-bold text-sm mb-1">Override Payment</div>
+                                        <div className="text-xs text-gray-500 mb-3">Mark as PAID/FAILED</div>
+                                        <select
+                                            value={overridePaymentStatus}
+                                            onChange={(e) => setOverridePaymentStatus(e.target.value)}
+                                            className="w-full p-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-amber-500 mb-2"
+                                        >
+                                            <option value="filled">PAID</option>
+                                            <option value="pending">PENDING</option>
+                                            <option value="failed">FAILED</option>
+                                        </select>
+                                        <input
+                                            type="text"
+                                            placeholder="Reason (required)"
+                                            value={overrideReason}
+                                            onChange={(e) => setOverrideReason(e.target.value)}
+                                            className="w-full p-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-amber-500 mb-2"
+                                        />
+                                        <input
+                                            type="number"
+                                            placeholder="Override amount (optional)"
+                                            value={overrideAmount}
+                                            onChange={(e) => setOverrideAmount(e.target.value)}
+                                            className="w-full p-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-amber-500"
+                                        />
+                                    </div>
+
+                                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-3xl border border-emerald-100">
+                                        <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mb-3">
+                                            <Clock size={20} />
+                                        </div>
+                                        <div className="font-bold text-sm mb-1">Add to Waitlist</div>
+                                        <div className="text-xs text-gray-500 mb-3">Queue for next slot</div>
+                                        <select
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleAddToWaitlist(e.target.value as Id<"subscription_catalog">);
+                                                    e.target.value = "";
+                                                }
+                                            }}
+                                            className="w-full p-2.5 bg-white border border-emerald-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-emerald-500"
+                                        >
+                                            <option value="">Select subscription...</option>
+                                            {allSubscriptions.map((group: any) => (
+                                                <option key={group._id} value={group.subscription_catalog_id || group._id}>
+                                                    {group.subscription_name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-3xl border border-blue-100">
+                                        <div className="w-10 h-10 bg-blue-500 text-white rounded-xl flex items-center justify-center mb-3">
+                                            <Activity size={20} />
+                                        </div>
+                                        <div className="font-bold text-sm mb-1">Quick Actions</div>
+                                        <div className="text-xs text-gray-500 mb-3">User management</div>
+                                        <div className="space-y-2">
+                                            <button
+                                                onClick={() => {
+                                                    if (godModeUserId) {
+                                                        setSelectedUser(allUsers.find(u => u._id === godModeUserId) || null);
+                                                        setShowGodModeModal(false);
+                                                    }
+                                                }}
+                                                className="w-full py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-colors"
+                                            >
+                                                View Full Profile
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    toast.success("Feature: Move to group coming soon");
+                                                }}
+                                                className="w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-50 transition-colors"
+                                            >
+                                                Move to Group
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Warning */}
+                                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex items-start gap-4">
+                                    <AlertTriangle size={24} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <div className="font-bold text-amber-800 text-sm">God Mode Actions are Logged</div>
+                                        <div className="text-xs text-amber-700 mt-1">
+                                            All actions taken in God mode are recorded in the activity logs with your admin ID, timestamp, and reason. Use responsibly.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
