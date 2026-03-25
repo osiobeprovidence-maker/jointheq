@@ -240,7 +240,6 @@ export default function AdminPanel() {
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
     const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
-    const adminUpdateSlotCapacity = useMutation(api.subscriptions.adminUpdateSlotCapacity);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
 
     const adminSendNotification = useMutation(api.admin.adminSendNotification);
@@ -2927,8 +2926,8 @@ export default function AdminPanel() {
                                                         key={cat}
                                                         onClick={() => setListingData({ ...listingData, category: cat })}
                                                         className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${listingData.category === cat
-                                                                ? 'bg-black text-white border-black shadow-md'
-                                                                : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
+                                                            ? 'bg-black text-white border-black shadow-md'
+                                                            : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
                                                             }`}
                                                     >
                                                         {cat}
@@ -3010,8 +3009,8 @@ export default function AdminPanel() {
                                             {/* Profitability Tracker */}
                                             <div className="flex gap-2">
                                                 <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 ${listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) > listingData.base_cost
-                                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                                        : 'bg-red-50 text-red-500 border border-red-100'
+                                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                    : 'bg-red-50 text-red-500 border border-red-100'
                                                     }`}>
                                                     <AlertCircle size={12} />
                                                     Profit: ₦{(listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) - listingData.base_cost).toLocaleString()}
