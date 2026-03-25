@@ -41,6 +41,7 @@ import {
     ArrowDownCircle,
     Users2,
     AlertTriangle,
+    AlertCircle,
     MapPin,
     Calendar,
     Flag,
@@ -241,7 +242,7 @@ export default function AdminPanel() {
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
     const adminUpdateSlotCapacity = useMutation(api.subscriptions.adminUpdateSlotCapacity);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
-    
+
     const adminSendNotification = useMutation(api.admin.adminSendNotification);
     const approveLeaveRequest = useMutation(api.admin.approveLeaveRequest);
     const createCampaignMut = useMutation(api.campaigns.create);
@@ -301,7 +302,7 @@ export default function AdminPanel() {
     // Auto-initialize super admin for authorized emails
     useEffect(() => {
         const authorizedAdmins = ["riderezzy@gmail.com", "reinvoursehung@gmail.com"];
-        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) && 
+        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) &&
             walletResetPermission !== undefined && walletResetPermission.role !== "super") {
             initializeSuperAdminMut({}).then(() => {
                 toast.success("Super admin initialized! Refreshing...");
@@ -613,18 +614,18 @@ export default function AdminPanel() {
             <AnimatePresence>
                 {isProfileOpen && (
                     <>
-                        <motion.div 
-                            initial={{ opacity: 0 }} 
-                            animate={{ opacity: 1 }} 
-                            exit={{ opacity: 0 }} 
-                            onClick={() => setIsProfileOpen(false)} 
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]" 
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsProfileOpen(false)}
+                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]"
                         />
-                        <motion.div 
-                            initial={{ x: '100%' }} 
-                            animate={{ x: 0 }} 
-                            exit={{ x: '100%' }} 
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }} 
+                        <motion.div
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                             className="fixed top-0 right-0 h-full w-full max-w-[320px] bg-white shadow-2xl z-[101] flex flex-col"
                         >
                             <div className="p-8 pb-4 flex items-center justify-between border-b border-black/5">
@@ -647,11 +648,11 @@ export default function AdminPanel() {
                                 </div>
                                 <div className="space-y-3">
                                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Account Mode</div>
-                                    <button 
-                                        onClick={() => { 
-                                            setIsProfileOpen(false); 
-                                            navigate('/dashboard'); 
-                                        }} 
+                                    <button
+                                        onClick={() => {
+                                            setIsProfileOpen(false);
+                                            navigate('/dashboard');
+                                        }}
                                         className="w-full p-4 bg-zinc-900 text-white rounded-3xl font-bold flex items-center justify-between group hover:bg-black transition-all"
                                     >
                                         <div className="flex items-center gap-3">
@@ -678,12 +679,12 @@ export default function AdminPanel() {
                                 </div>
                             </div>
                             <div className="p-8 border-t border-black/5 bg-gray-50/50">
-                                <button 
-                                    onClick={() => { 
-                                        if (window.confirm("Logout now?")) { 
-                                            auth.logout(); 
-                                        } 
-                                    }} 
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm("Logout now?")) {
+                                            auth.logout();
+                                        }
+                                    }}
                                     className="w-full py-5 bg-white border border-red-50 text-red-500 rounded-3xl font-bold flex items-center justify-center gap-3 hover:bg-red-50 transition-colors shadow-sm"
                                 >
                                     <LogOut size={20} /> Logout Session
@@ -1599,7 +1600,7 @@ export default function AdminPanel() {
                         {activeTab === "support" && (
                             <motion.div key="support" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Support Chat" sub="Real-time assistance for users" />
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                                     <StatCard label="Open Tickets" value={supportStats?.open || 0} icon={<MessageSquare size={16} />} color="bg-zinc-900" />
                                     <StatCard label="AI Handled" value={supportStats?.ai_handled || 0} icon={<Zap size={16} />} color="bg-indigo-500" />
@@ -1614,10 +1615,10 @@ export default function AdminPanel() {
                                         <div className="text-xs text-gray-400 mt-1">Users clicking the WhatsApp support button will be redirected here.</div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <input 
+                                        <input
                                             defaultValue={platformSettings?.whatsapp_number || ""}
                                             id="whatsapp_input"
-                                            placeholder="e.g. +1234567890" 
+                                            placeholder="e.g. +1234567890"
                                             className="w-48 px-4 py-2 bg-zinc-50 border border-black/5 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-emerald-500/20"
                                         />
                                         <button
@@ -1626,7 +1627,7 @@ export default function AdminPanel() {
                                                 try {
                                                     await updateSettingMut({ key: "whatsapp_number", value: val, executorId: currentUser!._id as any });
                                                     toast.success("WhatsApp number updated!");
-                                                } catch(e:any) { toast.error(e.message); }
+                                                } catch (e: any) { toast.error(e.message); }
                                             }}
                                             className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-sm font-black hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
                                         >
@@ -2605,8 +2606,8 @@ export default function AdminPanel() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Audience</label>
-                                            <select 
-                                                value={notifForm.userId} 
+                                            <select
+                                                value={notifForm.userId}
                                                 onChange={e => setNotifForm({ ...notifForm, userId: e.target.value })}
                                                 className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
                                             >
@@ -2618,8 +2619,8 @@ export default function AdminPanel() {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notification Type</label>
-                                            <select 
-                                                value={notifForm.type} 
+                                            <select
+                                                value={notifForm.type}
                                                 onChange={e => setNotifForm({ ...notifForm, type: e.target.value })}
                                                 className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
                                             >
@@ -2632,8 +2633,8 @@ export default function AdminPanel() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
-                                        <input 
-                                            placeholder="e.g. Netflix Price Update" 
+                                        <input
+                                            placeholder="e.g. Netflix Price Update"
                                             value={notifForm.title}
                                             onChange={e => setNotifForm({ ...notifForm, title: e.target.value })}
                                             className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
@@ -2641,15 +2642,15 @@ export default function AdminPanel() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Message Body</label>
-                                        <textarea 
-                                            placeholder="Details of the update..." 
+                                        <textarea
+                                            placeholder="Details of the update..."
                                             value={notifForm.message}
                                             onChange={e => setNotifForm({ ...notifForm, message: e.target.value })}
                                             rows={4}
                                             className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none"
                                         />
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={handleSendNotification}
                                         className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-black text-base hover:scale-[1.01] transition-transform shadow-xl shadow-black/10 flex items-center justify-center gap-3"
                                     >
@@ -2663,7 +2664,7 @@ export default function AdminPanel() {
                         {activeTab === "leave_requests" && (
                             <motion.div key="leave_requests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Leave Requests" sub="Approve users wanting to cancel or leave subscriptions" />
-                                
+
                                 <div className="grid grid-cols-1 gap-4">
                                     {(pendingLeaveRequests.slots.length === 0 && pendingLeaveRequests.migrations.length === 0) ? (
                                         <div className="bg-white rounded-[3rem] p-20 text-center text-gray-400 uppercase font-black text-xs tracking-widest border border-dashed border-black/10">
@@ -2691,7 +2692,7 @@ export default function AdminPanel() {
                                                         <p className="text-xs font-bold text-gray-500">User wants to leave this migrated subscription.</p>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleApproveLeave(req._id, "migration")}
                                                             className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
                                                         >
@@ -2721,7 +2722,7 @@ export default function AdminPanel() {
                                                         <p className="text-xs font-bold text-gray-500">User requested to leave this slot.</p>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleApproveLeave(req._id, "slot")}
                                                             className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
                                                         >
@@ -2925,11 +2926,10 @@ export default function AdminPanel() {
                                                     <button
                                                         key={cat}
                                                         onClick={() => setListingData({ ...listingData, category: cat })}
-                                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${
-                                                            listingData.category === cat 
-                                                            ? 'bg-black text-white border-black shadow-md' 
-                                                            : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
-                                                        }`}
+                                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${listingData.category === cat
+                                                                ? 'bg-black text-white border-black shadow-md'
+                                                                : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
+                                                            }`}
                                                     >
                                                         {cat}
                                                     </button>
@@ -3009,11 +3009,10 @@ export default function AdminPanel() {
                                             </h3>
                                             {/* Profitability Tracker */}
                                             <div className="flex gap-2">
-                                                <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 ${
-                                                    listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) > listingData.base_cost 
-                                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                                                    : 'bg-red-50 text-red-500 border border-red-100'
-                                                }`}>
+                                                <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 ${listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) > listingData.base_cost
+                                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                        : 'bg-red-50 text-red-500 border border-red-100'
+                                                    }`}>
                                                     <AlertCircle size={12} />
                                                     Profit: ₦{(listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) - listingData.base_cost).toLocaleString()}
                                                 </div>
