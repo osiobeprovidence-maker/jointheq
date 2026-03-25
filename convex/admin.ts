@@ -144,30 +144,30 @@ export const getSubscriptionBreakdown = query({
         // Find unmatched migrated platforms
         const matchedPlatforms = new Set(catalogItems.map(c => c.name.toLowerCase()));
         const unmatchedSubs = activeMigratedSubs.filter(m => {
-             return !matchedPlatforms.has(m.platform.toLowerCase()) && 
-                    !Array.from(matchedPlatforms).some(p => m.platform.toLowerCase().includes(p) || p.includes(m.platform.toLowerCase()));
+            return !matchedPlatforms.has(m.platform.toLowerCase()) &&
+                !Array.from(matchedPlatforms).some(p => m.platform.toLowerCase().includes(p) || p.includes(m.platform.toLowerCase()));
         });
-        
+
         // Group unmatched subs by platform
         const unmatchedGroups: Record<string, typeof unmatchedSubs> = {};
         for (const sub of unmatchedSubs) {
-             const key = sub.platform;
-             if (!unmatchedGroups[key]) unmatchedGroups[key] = [];
-             unmatchedGroups[key].push(sub);
+            const key = sub.platform;
+            if (!unmatchedGroups[key]) unmatchedGroups[key] = [];
+            unmatchedGroups[key].push(sub);
         }
 
         const unmatchedBreakdown = Object.entries(unmatchedGroups).map(([platform, subs]) => ({
-             _id: "migrated_" + platform,
-             name: platform + " (Legacy Migration)",
-             logo_url: "",
-             totalGroups: 0,
-             totalSlots: subs.length,
-             filledSlots: subs.length,
-             availableSlots: 0,
-             estimatedRevenue: 0,
-             is_active: true,
+            _id: "migrated_" + platform,
+            name: platform + " (Legacy Migration)",
+            logo_url: "",
+            totalGroups: 0,
+            totalSlots: subs.length,
+            filledSlots: subs.length,
+            availableSlots: 0,
+            estimatedRevenue: 0,
+            is_active: true,
         }));
-        
+
         return [...breakDownTemp, ...unmatchedBreakdown];
     }
 });
@@ -425,12 +425,42 @@ export const getPendingLeaveRequests = query({
         const slots = await ctx.db.query("subscription_slots")
             .withIndex("by_status", q => q.eq("status", "closing"))
             .collect();
-            
+
         const migrations = await ctx.db.query("migrated_subscriptions")
             .withIndex("by_status", q => q.eq("status", "closing"))
             .collect();
-            
-        return { slots, migrations };
+
+        // Enrich slot requests with user and subscription info
+        const enrichedSlots = await Promise.all(slots.map(async (slot) => {
+            const user = slot.user_id ? await ctx.db.get(slot.user_id) : null;
+            const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
+            const subscription = slotType?.subscription_id ? await ctx.db.get(slotType.subscription_id as any) : null;
+            const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
+
+            return {
+                ...slot,
+                user_name: user?.full_name || "Unknown",
+                user_email: user?.email || "",
+                slot_name: slotType?.name || "Unknown",
+                sub_name: subscription?.name || group?.subscription_catalog_id ? "Subscription" : "Unknown",
+                renewal_date: slot.renewal_date,
+                price: slotType?.price || 0,
+            };
+        }));
+
+        // Enrich migration requests with user info
+        const enrichedMigrations = await Promise.all(migrations.map(async (mig) => {
+            const user = await ctx.db.get(mig.user_id);
+            return {
+                ...mig,
+                user_name: user?.full_name || "Unknown",
+                user_email: user?.email || "",
+                subscription_name: mig.platform,
+                account_email: mig.email,
+            };
+        }));
+
+        return { slots: enrichedSlots, migrations: enrichedMigrations };
     }
 });
 

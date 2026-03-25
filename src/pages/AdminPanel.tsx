@@ -2762,28 +2762,40 @@ export default function AdminPanel() {
                                         <>
                                             {/* Legacy Migrations */}
                                             {pendingLeaveRequests.migrations.map((req: any) => (
-                                                <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-10 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
+                                                <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-6 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
                                                     <div className="absolute top-0 left-0 w-2 h-full bg-red-400" />
-                                                    <div className="flex items-center gap-6 min-w-[280px]">
+                                                    <div className="flex items-center gap-4 min-w-[280px]">
                                                         <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center font-black text-xl">
-                                                            <Clock size={24} />
+                                                            <UserMinus size={24} />
                                                         </div>
-                                                        <div>
-                                                            <h3 className="font-black text-lg">Legacy: {req.subscription_name}</h3>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Migration</span>
-                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{req.account_email}</span>
+                                                        <div className="min-w-0">
+                                                            <h3 className="font-black text-base truncate">{req.user_name}</h3>
+                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Legacy</span>
+                                                                <span className="text-[10px] font-bold text-gray-600 truncate">{req.user_email}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-xs font-bold text-gray-500">User wants to leave this migrated subscription.</p>
+                                                    <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Platform</div>
+                                                            <div className="text-sm font-bold">{req.subscription_name}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Account Email</div>
+                                                            <div className="text-sm font-bold truncate">{req.account_email}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Status</div>
+                                                            <div className="text-sm font-bold text-amber-600">Leaving</div>
+                                                        </div>
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => handleApproveLeave(req._id, "migration")}
                                                             className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
                                                         >
+                                                            <CheckCircle2 size={16} />
                                                             Approve Exit
                                                         </button>
                                                     </div>
@@ -2792,28 +2804,44 @@ export default function AdminPanel() {
 
                                             {/* Standard Slots */}
                                             {pendingLeaveRequests.slots.map((req: any) => (
-                                                <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-10 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
+                                                <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-6 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
                                                     <div className="absolute top-0 left-0 w-2 h-full bg-amber-400" />
-                                                    <div className="flex items-center gap-6 min-w-[280px]">
+                                                    <div className="flex items-center gap-4 min-w-[280px]">
                                                         <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center font-black text-xl">
-                                                            <Clock size={24} />
+                                                            <UserMinus size={24} />
                                                         </div>
-                                                        <div>
-                                                            <h3 className="font-black text-lg">{req.sub_name}</h3>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">{req.slot_name}</span>
-                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">@{req.user_name}</span>
+                                                        <div className="min-w-0">
+                                                            <h3 className="font-black text-base truncate">{req.user_name}</h3>
+                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">Slot</span>
+                                                                <span className="text-[10px] font-bold text-gray-600 truncate">{req.user_email}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-xs font-bold text-gray-500">User requested to leave this slot.</p>
+                                                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Subscription</div>
+                                                            <div className="text-sm font-bold truncate">{req.sub_name}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Slot Type</div>
+                                                            <div className="text-sm font-bold truncate">{req.slot_name}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Price</div>
+                                                            <div className="text-sm font-bold text-emerald-600">₦{req.price?.toLocaleString()}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Renewal</div>
+                                                            <div className="text-sm font-bold">{req.renewal_date ? new Date(req.renewal_date).toLocaleDateString() : 'N/A'}</div>
+                                                        </div>
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => handleApproveLeave(req._id, "slot")}
                                                             className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
                                                         >
+                                                            <CheckCircle2 size={16} />
                                                             Approve Exit
                                                         </button>
                                                     </div>
