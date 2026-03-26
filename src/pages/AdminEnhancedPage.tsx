@@ -134,22 +134,22 @@ export default function AdminEnhancedPage() {
 
     return (
         <MainLayout activeTab="dashboard" setActiveTab={setActiveTab as any}>
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Enhanced Admin System</h1>
-                        <p className="text-gray-500 mt-1">Advanced subscription and user management</p>
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Enhanced Admin System</h1>
+                        <p className="text-gray-500 mt-1 text-sm">Advanced subscription and user management</p>
                     </div>
                     {adminRole && (
-                        <div className="bg-zinc-900 text-white px-4 py-2 rounded-full text-sm font-bold">
+                        <div className="bg-zinc-900 text-white px-4 py-2 rounded-full text-xs sm:text-sm font-bold self-start sm:self-auto">
                             {adminRole.isSuperAdmin ? "Super Admin" : adminRole.role?.replace("_", " ").toUpperCase()}
                         </div>
                     )}
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                {/* Tab Navigation - Scrollable on mobile */}
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
                     <TabButton active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} icon={<LayoutDashboard size={18} />} label="Dashboard" />
                     <TabButton active={activeTab === "slots"} onClick={() => setActiveTab("slots")} icon={<ShoppingBag size={18} />} label="Slot Management" />
                     <TabButton active={activeTab === "payments"} onClick={() => setActiveTab("payments")} icon={<CreditCard size={18} />} label="Payments" />
@@ -162,49 +162,49 @@ export default function AdminEnhancedPage() {
                 {activeTab === "dashboard" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                         {/* Health Metrics */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <MetricCard 
-                                label="Subscription Health" 
-                                value={`${metrics?.healthScore || 0}%`} 
-                                icon={<Activity size={20} />} 
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            <MetricCard
+                                label="Subscription Health"
+                                value={`${metrics?.healthScore || 0}%`}
+                                icon={<Activity size={20} />}
                                 color="bg-emerald-500"
                                 trend={metrics && metrics.healthScore > 80 ? "up" : "neutral"}
                             />
-                            <MetricCard 
-                                label="Active Slots" 
-                                value={metrics?.activeSlots || 0} 
-                                icon={<CheckCircle2 size={20} />} 
-                                color="bg-blue-500" 
+                            <MetricCard
+                                label="Active Slots"
+                                value={metrics?.activeSlots || 0}
+                                icon={<CheckCircle2 size={20} />}
+                                color="bg-blue-500"
                             />
-                            <MetricCard 
-                                label="Open Slots" 
-                                value={metrics?.openSlots || 0} 
-                                icon={<ShoppingBag size={20} />} 
-                                color="bg-amber-500" 
+                            <MetricCard
+                                label="Open Slots"
+                                value={metrics?.openSlots || 0}
+                                icon={<ShoppingBag size={20} />}
+                                color="bg-amber-500"
                             />
-                            <MetricCard 
-                                label="Waiting Users" 
-                                value={metrics?.waitingUsers || 0} 
-                                icon={<Users size={20} />} 
-                                color="bg-purple-500" 
+                            <MetricCard
+                                label="Waiting Users"
+                                value={metrics?.waitingUsers || 0}
+                                icon={<Users size={20} />}
+                                color="bg-purple-500"
                             />
                         </div>
 
                         {/* Quick Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <StatCard 
-                                label="Total Groups" 
-                                value={metrics?.totalGroups || 0} 
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                            <StatCard
+                                label="Total Groups"
+                                value={metrics?.totalGroups || 0}
                                 icon={<Settings size={18} />}
                             />
-                            <StatCard 
-                                label="Payment Overrides Today" 
-                                value={metrics?.paymentOverridesToday || 0} 
+                            <StatCard
+                                label="Payment Overrides Today"
+                                value={metrics?.paymentOverridesToday || 0}
                                 icon={<CreditCard size={18} />}
                             />
-                            <StatCard 
-                                label="Closing Slots" 
-                                value={metrics?.closingSlots || 0} 
+                            <StatCard
+                                label="Closing Slots"
+                                value={metrics?.closingSlots || 0}
                                 icon={<AlertTriangle size={18} />}
                                 color="text-red-500"
                             />
@@ -244,7 +244,7 @@ export default function AdminEnhancedPage() {
                 {/* Slot Management Tab */}
                 {activeTab === "slots" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="relative flex-1 max-w-md">
                                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
@@ -257,11 +257,11 @@ export default function AdminEnhancedPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                             {/* User List */}
-                            <div className="bg-white rounded-3xl p-6 border border-black/5">
-                                <h3 className="text-lg font-bold mb-4">Users ({filteredUsers.length})</h3>
-                                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-black/5">
+                                <h3 className="text-base sm:text-lg font-bold mb-4">Users ({filteredUsers.length})</h3>
+                                <div className="space-y-2 max-h-[400px] sm:max-h-[600px] overflow-y-auto">
                                     {filteredUsers.map((u: any) => (
                                         <div
                                             key={u._id}
@@ -287,8 +287,8 @@ export default function AdminEnhancedPage() {
                             </div>
 
                             {/* Available Slot Types */}
-                            <div className="bg-white rounded-3xl p-6 border border-black/5">
-                                <h3 className="text-lg font-bold mb-4">Available Slot Types</h3>
+                            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-black/5">
+                                <h3 className="text-base sm:text-lg font-bold mb-4">Available Slot Types</h3>
                                 <div className="space-y-3">
                                     {slotTypes.map((group: any) =>
                                         group.slot_types.map((st: any) => (
@@ -306,7 +306,7 @@ export default function AdminEnhancedPage() {
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <div>
-                                                        <div className="font-bold">{st.name}</div>
+                                                        <div className="font-bold text-sm sm:text-base">{st.name}</div>
                                                         <div className="text-xs text-gray-500">
                                                             {group.subscription_name} · ₦{st.price.toLocaleString()}
                                                         </div>
@@ -327,10 +327,10 @@ export default function AdminEnhancedPage() {
                 {/* Payments Tab */}
                 {activeTab === "payments" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                        <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 flex items-start gap-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 sm:p-6 flex items-start gap-4">
                             <AlertTriangle size={24} className="text-amber-600 flex-shrink-0 mt-1" />
                             <div>
-                                <h3 className="font-bold text-amber-800 mb-1">Payment Override System</h3>
+                                <h3 className="font-bold text-amber-800 mb-1 text-sm sm:text-base">Payment Override System</h3>
                                 <p className="text-sm text-amber-700">
                                     Use this to manually change payment status for slots. All actions are logged.
                                 </p>
@@ -338,17 +338,17 @@ export default function AdminEnhancedPage() {
                         </div>
 
                         {/* Recent Payment Overrides */}
-                        <div className="bg-white rounded-3xl p-6 border border-black/5">
-                            <h3 className="text-lg font-bold mb-4">Recent Overrides</h3>
+                        <div className="bg-white rounded-3xl p-4 sm:p-6 border border-black/5">
+                            <h3 className="text-base sm:text-lg font-bold mb-4">Recent Overrides</h3>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b border-black/5">
-                                            <th className="text-left py-3 px-4 font-bold text-gray-500">User</th>
-                                            <th className="text-left py-3 px-4 font-bold text-gray-500">Status</th>
-                                            <th className="text-left py-3 px-4 font-bold text-gray-500">Amount</th>
-                                            <th className="text-left py-3 px-4 font-bold text-gray-500">Admin</th>
-                                            <th className="text-left py-3 px-4 font-bold text-gray-500">Reason</th>
+                                            <th className="text-left py-3 px-3 sm:px-4 font-bold text-gray-500 text-xs">User</th>
+                                            <th className="text-left py-3 px-3 sm:px-4 font-bold text-gray-500 text-xs">Status</th>
+                                            <th className="text-left py-3 px-3 sm:px-4 font-bold text-gray-500 text-xs">Amount</th>
+                                            <th className="text-left py-3 px-3 sm:px-4 font-bold text-gray-500 text-xs hidden sm:table-cell">Admin</th>
+                                            <th className="text-left py-3 px-3 sm:px-4 font-bold text-gray-500 text-xs hidden md:table-cell">Reason</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -368,21 +368,21 @@ export default function AdminEnhancedPage() {
                 {/* Waitlist Tab */}
                 {activeTab === "waitlist" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                        <div className="bg-white rounded-3xl p-6 border border-black/5">
-                            <h3 className="text-lg font-bold mb-4">Waitlist Queue ({waitlist.length})</h3>
+                        <div className="bg-white rounded-3xl p-4 sm:p-6 border border-black/5">
+                            <h3 className="text-base sm:text-lg font-bold mb-4">Waitlist Queue ({waitlist.length})</h3>
                             <div className="space-y-3">
                                 {waitlist.map((item: any) => (
-                                    <div key={item._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                    <div key={item._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gray-50 rounded-2xl">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center font-bold">
+                                            <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center font-bold flex-shrink-0">
                                                 {item.user_name?.[0] || "U"}
                                             </div>
                                             <div>
-                                                <div className="font-bold">{item.user_name || "Unknown"}</div>
+                                                <div className="font-bold text-sm sm:text-base">{item.user_name || "Unknown"}</div>
                                                 <div className="text-xs text-gray-500">{item.user_email}</div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-3 sm:gap-4">
                                             <div className="text-sm">
                                                 <div className="font-bold">Priority: {item.priority || 0}</div>
                                                 <div className="text-xs text-gray-500">
@@ -395,7 +395,7 @@ export default function AdminEnhancedPage() {
                                                         if (!user) return;
                                                         toast.success("Feature: Select a slot to fill");
                                                     }}
-                                                    className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-sm font-bold hover:bg-emerald-600 transition-colors"
+                                                    className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-emerald-600 transition-colors flex-shrink-0"
                                                 >
                                                     Fill Slot
                                                 </button>

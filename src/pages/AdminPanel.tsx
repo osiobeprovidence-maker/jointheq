@@ -81,13 +81,13 @@ function StatCard({ label, value, sub, icon, color, trend }: {
     color: string; trend?: "up" | "down" | "neutral";
 }) {
     return (
-        <div className={`bg-white rounded-3xl p-6 border border-black/5 hover:shadow-lg transition-all group overflow-hidden relative`}>
+        <div className={`bg-white rounded-3xl p-4 sm:p-6 border border-black/5 hover:shadow-lg transition-all group overflow-hidden relative`}>
             <div className={`absolute top-0 right-0 w-24 h-24 rounded-full opacity-5 -mr-8 -mt-8 ${color}`} />
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 ${color} bg-opacity-10`}>
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-4 ${color} bg-opacity-10`}>
                 <div className={`${color.replace('bg-', 'text-')}`}>{icon}</div>
             </div>
-            <div className="text-2xl font-black mb-1">{value}</div>
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</div>
+            <div className="text-xl sm:text-2xl font-black mb-1">{value}</div>
+            <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</div>
             {sub && (
                 <div className={`text-[10px] font-bold mt-2 flex items-center gap-1 ${trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-red-400' : 'text-gray-400'}`}>
                     {trend === 'up' && <TrendingUp size={10} />}
@@ -101,12 +101,12 @@ function StatCard({ label, value, sub, icon, color, trend }: {
 
 function SectionHeader({ title, sub, action }: { title: string; sub?: string; action?: React.ReactNode }) {
     return (
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
             <div>
-                <h2 className="text-xl font-black">{title}</h2>
-                {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+                <h2 className="text-lg sm:text-xl font-black">{title}</h2>
+                {sub && <p className="text-[10px] sm:text-xs text-gray-400 mt-1">{sub}</p>}
             </div>
-            {action}
+            {action && <div className="flex-shrink-0">{action}</div>}
         </div>
     );
 }
@@ -858,8 +858,8 @@ export default function AdminPanel() {
             {/* ── Main Content ── */}
             <main className="flex-1 md:ml-64 mt-16 md:mt-0 min-h-screen">
                 {/* Top bar (desktop) */}
-                <div className="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-black/5 sticky top-0 z-30">
-                    <div className="flex items-center gap-4">
+                <div className="hidden md:flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 bg-white border-b border-black/5 sticky top-0 z-30">
+                    <div className="flex items-center gap-2 sm:gap-4">
                         {activeTab !== "dashboard" && (
                             <button
                                 onClick={() => setActiveTab("dashboard")}
@@ -869,25 +869,25 @@ export default function AdminPanel() {
                             </button>
                         )}
                         <div>
-                            <h1 className="text-xl font-black capitalize">{navItems.find(n => n.id === activeTab)?.label}</h1>
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{navItems.find(n => n.id === activeTab)?.sub || "Platform Command Center"}</p>
+                            <h1 className="text-base sm:text-xl font-black capitalize">{navItems.find(n => n.id === activeTab)?.label}</h1>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:block">{navItems.find(n => n.id === activeTab)?.sub || "Platform Command Center"}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="px-4 py-2.5 bg-zinc-50 border border-black/5 rounded-full text-xs font-bold text-gray-500 flex items-center gap-1.5 shadow-sm">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="px-3 sm:px-4 py-2 sm:py-2.5 bg-zinc-50 border border-black/5 rounded-full text-[10px] sm:text-xs font-bold text-gray-500 flex items-center gap-1.5 shadow-sm">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                            System Active
+                            <span className="hidden sm:inline">System Active</span>
                         </div>
-                        <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-2 p-1.5 pr-4 bg-zinc-950 text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10">
-                            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
-                                {currentUser?.profile_image_url ? <img src={currentUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" /> : <User size={16} />}
+                        <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 sm:pr-4 bg-zinc-950 text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
+                                {currentUser?.profile_image_url ? <img src={currentUser.profile_image_url} alt="Profile" className="w-full h-full object-cover" /> : <User size={14} />}
                             </div>
-                            <span className="text-xs font-bold tracking-tight">@{currentUser?.username}</span>
+                            <span className="text-[10px] sm:text-xs font-bold tracking-tight hidden sm:inline">@{currentUser?.username}</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="p-4 sm:p-6 md:p-8 pt-6 sm:pt-6">
+                <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-4 sm:pt-6">
                     <AnimatePresence mode="wait">
 
                         {/* ═══ DASHBOARD ═══ */}
@@ -1072,7 +1072,7 @@ export default function AdminPanel() {
 
                         {/* ═══ USERS ═══ */}
                         {activeTab === "users" && (
-                            <motion.div key="users" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
+                            <motion.div key="users" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-4 sm:space-y-6">
                                 <SectionHeader
                                     title={`All Users (${allUsers.length})`}
                                     sub="Manage user accounts across the platform"
@@ -1083,13 +1083,15 @@ export default function AdminPanel() {
                                                 value={searchQuery}
                                                 onChange={e => setSearchQuery(e.target.value)}
                                                 placeholder="Search users..."
-                                                className="outline-none text-sm w-48 font-medium"
+                                                className="outline-none text-sm w-32 sm:w-48 font-medium"
                                             />
                                         </div>
                                     }
                                 />
+                                {/* Desktop Table / Mobile Cards */}
                                 <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                    <div className="grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b border-black/5">
+                                    {/* Desktop Table Header */}
+                                    <div className="hidden md:grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b border-black/5">
                                         <div className="col-span-3">User</div>
                                         <div className="col-span-2 text-center">Q Score</div>
                                         <div className="col-span-2 text-center">Active Subs</div>
@@ -1097,87 +1099,164 @@ export default function AdminPanel() {
                                         <div className="col-span-1 text-center">Status</div>
                                         <div className="col-span-2 text-center">Actions</div>
                                     </div>
-                                    {filteredUsers.map((u: any) => (
-                                        <div key={u._id} onClick={() => setSelectedUser(u)} className="grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01] cursor-pointer">
-                                            <div className="col-span-3 flex items-center gap-3 min-w-0">
-                                                <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
-                                                    {u.full_name?.[0]}
+                                    {/* Mobile-first card layout */}
+                                    <div className="divide-y divide-black/5">
+                                        {filteredUsers.map((u: any) => (
+                                            <React.Fragment key={u._id}>
+                                                <div onClick={() => setSelectedUser(u)} className="p-4 hover:bg-black/[0.01] cursor-pointer md:hidden">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                            <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-base flex-shrink-0">
+                                                                {u.full_name?.[0]}
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="font-bold text-sm truncate">{u.full_name}</div>
+                                                                <div className="text-[10px] text-gray-400 truncate">{u.email}</div>
+                                                                {u.username && <div className="text-[10px] text-blue-500 font-bold">@{u.username}</div>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            {u.is_banned ? (
+                                                                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full">Banned</span>
+                                                            ) : u.is_suspended ? (
+                                                                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-full">Suspended</span>
+                                                            ) : (
+                                                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full">Active</span>
+                                                            )}
+                                                            <div className="text-xs font-bold text-gray-400">Q: {u.q_score}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-2xl p-3 mb-3">
+                                                        <div className="text-center">
+                                                            <div className="text-[10px] font-bold text-gray-400 uppercase">Subs</div>
+                                                            <div className="text-sm font-black">{u.activeSubscriptions}</div>
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <div className="text-[10px] font-bold text-gray-400 uppercase">Payments</div>
+                                                            <div className="text-sm font-black text-emerald-600">{fmt(u.totalPayments)}</div>
+                                                        </div>
+                                                        <div className="text-center flex items-center justify-center gap-1">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleOpenGodMode(u._id);
+                                                                }}
+                                                                className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
+                                                                title="God Mode"
+                                                            >
+                                                                <Sparkles size={14} />
+                                                            </button>
+                                                            {u.is_suspended ? (
+                                                                <button
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        await unsuspendUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                        toast.success("User unsuspended");
+                                                                    }}
+                                                                    className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
+                                                                    title="Unsuspend"
+                                                                >
+                                                                    <PlayCircle size={14} />
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        await suspendUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                        toast.success("User suspended");
+                                                                    }}
+                                                                    className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform"
+                                                                    title="Suspend"
+                                                                >
+                                                                    <PauseCircle size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <div className="font-bold text-sm truncate">{u.full_name}</div>
-                                                    <div className="text-[10px] text-gray-400 truncate">{u.email}</div>
-                                                    {u.username && <div className="text-[10px] text-blue-500 font-bold">@{u.username}</div>}
+                                                {/* Desktop Table Row */}
+                                                <div onClick={() => setSelectedUser(u)} className="hidden md:grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01] cursor-pointer">
+                                                <div className="col-span-3 flex items-center gap-3 min-w-0">
+                                                    <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                                        {u.full_name?.[0]}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="font-bold text-sm truncate">{u.full_name}</div>
+                                                        <div className="text-[10px] text-gray-400 truncate">{u.email}</div>
+                                                        {u.username && <div className="text-[10px] text-blue-500 font-bold">@{u.username}</div>}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="col-span-2 text-center font-bold text-sm">{u.q_score}</div>
-                                            <div className="col-span-2 text-center font-bold text-sm">{u.activeSubscriptions}</div>
-                                            <div className="col-span-2 text-center font-bold text-sm text-emerald-600">{fmt(u.totalPayments)}</div>
-                                            <div className="col-span-1 flex justify-center">
-                                                {u.is_banned ? (
-                                                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full">Banned</span>
-                                                ) : u.is_suspended ? (
-                                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-full">Suspended</span>
-                                                ) : (
-                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full">Active</span>
-                                                )}
-                                            </div>
-                                            <div className="col-span-2 flex justify-center gap-1">
-                                                {/* God Mode Button */}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleOpenGodMode(u._id);
-                                                    }}
-                                                    className="p-1.5 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
-                                                    title="God Mode"
-                                                >
-                                                    <Sparkles size={14} />
-                                                </button>
+                                                <div className="col-span-2 text-center font-bold text-sm">{u.q_score}</div>
+                                                <div className="col-span-2 text-center font-bold text-sm">{u.activeSubscriptions}</div>
+                                                <div className="col-span-2 text-center font-bold text-sm text-emerald-600">{fmt(u.totalPayments)}</div>
+                                                <div className="col-span-1 flex justify-center">
+                                                    {u.is_banned ? (
+                                                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full">Banned</span>
+                                                    ) : u.is_suspended ? (
+                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-full">Suspended</span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full">Active</span>
+                                                    )}
+                                                </div>
+                                                <div className="col-span-2 flex justify-center gap-1">
+                                                    {/* God Mode Button */}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenGodMode(u._id);
+                                                        }}
+                                                        className="p-1.5 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
+                                                        title="God Mode"
+                                                    >
+                                                        <Sparkles size={14} />
+                                                    </button>
 
-                                                {u.is_suspended ? (
-                                                    <button
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            await unsuspendUserMut({ userId: u._id, executorId: currentUser!._id });
-                                                            toast.success("User unsuspended");
-                                                        }}
-                                                        className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
-                                                        title="Unsuspend"
-                                                    >
-                                                        <PlayCircle size={14} />
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            await suspendUserMut({ userId: u._id, executorId: currentUser!._id });
-                                                            toast.success("User suspended");
-                                                        }}
-                                                        className="p-1.5 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform"
-                                                        title="Suspend"
-                                                    >
-                                                        <PauseCircle size={14} />
-                                                    </button>
-                                                )}
-                                                {!u.is_banned && (
-                                                    <button
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            if (!window.confirm(`Ban ${u.full_name}? This is serious.`)) return;
-                                                            try {
-                                                                await banUserMut({ userId: u._id, executorId: currentUser!._id });
-                                                                toast.success("User banned");
-                                                            } catch (err: any) { toast.error(err.message); }
-                                                        }}
-                                                        className="p-1.5 bg-red-50 text-red-500 rounded-xl hover:scale-110 transition-transform"
-                                                        title="Ban"
-                                                    >
-                                                        <Ban size={14} />
-                                                    </button>
-                                                )}
+                                                    {u.is_suspended ? (
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                await unsuspendUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                toast.success("User unsuspended");
+                                                            }}
+                                                            className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
+                                                            title="Unsuspend"
+                                                        >
+                                                            <PlayCircle size={14} />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                await suspendUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                toast.success("User suspended");
+                                                            }}
+                                                            className="p-1.5 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform"
+                                                            title="Suspend"
+                                                        >
+                                                            <PauseCircle size={14} />
+                                                        </button>
+                                                    )}
+                                                    {!u.is_banned && (
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                if (!window.confirm(`Ban ${u.full_name}? This is serious.`)) return;
+                                                                try {
+                                                                    await banUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                    toast.success("User banned");
+                                                                } catch (err: any) { toast.error(err.message); }
+                                                            }}
+                                                            className="p-1.5 bg-red-50 text-red-500 rounded-xl hover:scale-110 transition-transform"
+                                                            title="Ban"
+                                                        >
+                                                            <Ban size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
