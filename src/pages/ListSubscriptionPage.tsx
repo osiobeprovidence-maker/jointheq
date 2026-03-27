@@ -48,6 +48,7 @@ export default function ListSubscriptionPage() {
   const [activeTab, setActiveTab] = useState('list-earn'); // For MainLayout
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingListing, setIsCreatingListing] = useState(false);
   
   // Form fields
   const [platform, setPlatform] = useState("");
@@ -73,9 +74,13 @@ export default function ListSubscriptionPage() {
     if (!platform || !category || !email || !password || !renewalDate || !confirmed) {
       return toast.error("Please fill in all fields and confirm ownership");
     }
-    
+    if (isCreatingListing) return;
+
+    setIsCreatingListing(true);
     setIsLoading(true);
     try {
+      (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+
       await submitListing({
         owner_id: user!._id as any,
         platform,
@@ -83,6 +88,7 @@ export default function ListSubscriptionPage() {
         email,
         password,
         renewal_date: renewalDate,
+        request_id: (window as any).__listingRequestId || undefined,
       });
       toast.success("Listing submitted! Our team will review it within 24 hours.");
       setStep(3);
@@ -90,6 +96,7 @@ export default function ListSubscriptionPage() {
       toast.error(e.message || "Failed to submit listing");
     } finally {
       setIsLoading(false);
+      setIsCreatingListing(false);
     }
   };
 
@@ -280,7 +287,7 @@ export default function ListSubscriptionPage() {
                     </div>
 
                     <button 
-                        disabled={!email || !password || !renewalDate || !confirmed || !category || isLoading}
+                      disabled={!email || !password || !renewalDate || !confirmed || !category || isLoading || isCreatingListing}
                         onClick={handleSubmit}
                         className="w-full py-4.5 bg-black text-white font-bold rounded-xl shadow-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
                     >
