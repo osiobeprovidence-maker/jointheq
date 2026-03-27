@@ -706,24 +706,48 @@ export default function DashboardPage() {
                         {/* Marketplace Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {subscriptions
-                                .flatMap(sub => sub.slot_types.map(st => ({ ...st, category: sub.category })))
-                                .filter(slot => {
-                                    const matchesSearch = slot.name.toLowerCase().includes(searchQuery.toLowerCase()) || slot.sub_name.toLowerCase().includes(searchQuery.toLowerCase());
-                                    const matchesFilter = activeFilter === 'All' || (slot.category === activeFilter);
-                                    return matchesSearch && matchesFilter;
-                                })
-                                .map((slot) => (
-                                    <MarketplaceSlotCard
-                                        key={slot._id}
-                                        slot={slot}
-                                        onJoin={() => {
-                                            setCheckoutSlot(slot as unknown as SlotType);
-                                            setUseBootsForPayment(false);
-                                            setEnableAutoDebit(false);
-                                        }}
-                                        userQScore={currentUser?.q_score || 0}
-                                    />
-                                ))}
+                                .filter((sub: any) => sub && sub.is_active)
+                                .map((sub: any) => {
+                                    // Aggregate across slot_types for this subscription catalog
+                                    const slotTypes = sub.slot_types || [];
+                                    const total_capacity = slotTypes.reduce((acc: number, st: any) => acc + (st.total_capacity || st.capacity || 0), 0);
+                                    const current_members = slotTypes.reduce((acc: number, st: any) => acc + (st.current_members || 0), 0);
+                                    const open_slots = slotTypes.reduce((acc: number, st: any) => acc + (st.open_slots || 0), 0);
+
+                                    // Choose a representative slot_type for price/min_q_score; prefer lowest price
+                                    const rep = slotTypes.slice().sort((a: any, b: any) => (a.price || Infinity) - (b.price || Infinity))[0] || {};
+
+                                    const listingCard = {
+                                        _id: sub._id,
+                                        sub_name: sub.name,
+                                        sub_logo: sub.logo_url,
+                                        category: sub.category,
+                                        name: rep.name || sub.name,
+                                        price: rep.price || 0,
+                                        total_capacity,
+                                        current_members,
+                                        open_slots,
+                                        min_q_score: Math.min(...(slotTypes.map((st: any) => st.min_q_score || 0).concat([0]))),
+                                        features: rep.features || [],
+                                    };
+
+                                    const matchesSearch = listingCard.name.toLowerCase().includes(searchQuery.toLowerCase()) || listingCard.sub_name.toLowerCase().includes(searchQuery.toLowerCase());
+                                    const matchesFilter = activeFilter === 'All' || (listingCard.category === activeFilter);
+                                    if (!matchesSearch || !matchesFilter) return null;
+
+                                    return (
+                                        <MarketplaceSlotCard
+                                            key={listingCard._id}
+                                            slot={listingCard}
+                                            onJoin={() => {
+                                                setCheckoutSlot(listingCard as unknown as SlotType);
+                                                setUseBootsForPayment(false);
+                                                setEnableAutoDebit(false);
+                                            }}
+                                            userQScore={currentUser?.q_score || 0}
+                                        />
+                                    );
+                                })}
                         </div>
                     </motion.div>
                 )}
