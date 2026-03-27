@@ -85,13 +85,13 @@ export const getAdminListings = query({
         .collect();
       // Enrich with owner name
       return await Promise.all(results.map(async (s) => {
-        const owner = await ctx.db.get(s.owner_id);
+        const owner = s.owner_id ? await ctx.db.get(s.owner_id) : null;
         return { ...s, owner_name: owner?.full_name ?? "Unknown", email: s.login_email };
       }));
     }
     const results = await ctx.db.query("subscriptions").order("desc").collect();
     return await Promise.all(results.map(async (s) => {
-      const owner = await ctx.db.get(s.owner_id);
+      const owner = s.owner_id ? await ctx.db.get(s.owner_id) : null;
       return { ...s, owner_name: owner?.full_name ?? "Unknown", email: s.login_email };
     }));
   },
