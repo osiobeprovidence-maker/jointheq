@@ -706,29 +706,26 @@ export default function DashboardPage() {
                         {/* Marketplace Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {subscriptions
-                                .filter((sub: any) => sub && sub.is_active)
-                                .map((sub: any) => {
-                                    // Aggregate across slot_types for this subscription catalog
-                                    const slotTypes = sub.slot_types || [];
-                                    const total_capacity = slotTypes.reduce((acc: number, st: any) => acc + (st.total_capacity || st.capacity || 0), 0);
-                                    const current_members = slotTypes.reduce((acc: number, st: any) => acc + (st.current_members || 0), 0);
-                                    const open_slots = slotTypes.reduce((acc: number, st: any) => acc + (st.open_slots || 0), 0);
-
-                                    // Choose a representative slot_type for price/min_q_score; prefer lowest price
-                                    const rep = slotTypes.slice().sort((a: any, b: any) => (a.price || Infinity) - (b.price || Infinity))[0] || {};
-
+                                .filter((listing: any) => listing && listing.group_id)
+                                .map((listing: any) => {
+                                    // Each listing is now a single entry (no aggregation)
+                                    // Use group_id as the unique key to prevent merging
                                     const listingCard = {
-                                        _id: sub._id,
-                                        sub_name: sub.name,
-                                        sub_logo: sub.logo_url,
-                                        category: sub.category,
-                                        name: rep.name || sub.name,
-                                        price: rep.price || 0,
-                                        total_capacity,
-                                        current_members,
-                                        open_slots,
-                                        min_q_score: Math.min(...(slotTypes.map((st: any) => st.min_q_score || 0).concat([0]))),
-                                        features: rep.features || [],
+                                        _id: listing.group_id,
+                                        slot_type_id: listing._id,
+                                        sub_name: listing.sub_name,
+                                        sub_logo: listing.sub_logo,
+                                        category: listing.category,
+                                        name: listing.name,
+                                        price: listing.price,
+                                        total_capacity: listing.total_capacity,
+                                        current_members: listing.current_members,
+                                        open_slots: listing.open_slots,
+                                        min_q_score: listing.min_q_score,
+                                        features: listing.features || [],
+                                        owner_name: listing.owner_name,
+                                        account_email: listing.account_email,
+                                        billing_cycle_start: listing.billing_cycle_start,
                                     };
 
                                     const matchesSearch = listingCard.name.toLowerCase().includes(searchQuery.toLowerCase()) || listingCard.sub_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -2434,11 +2431,11 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Nox",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Ari",
     ];
-    const ownerName = ((slot.owner_name as string | undefined) || "admin").trim().replace(/^@+/, "") || "admin";
+    const ownerName = ((slot.owner_name as string | undefined) || "Unknown").trim().replace(/^@+/, "") || "Unknown";
     const ownerProfileImage = ((slot.owner_profile_image_url as string | undefined) || "").trim();
     const ownerHash = ownerName.split("").reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
     const ownerFallbackAvatar = fallbackOwnerAvatars[ownerHash % fallbackOwnerAvatars.length];
-    const useBlackFallback = !ownerProfileImage && ownerName.toLowerCase() === "admin";
+    const useBlackFallback = !ownerProfileImage && ownerName.toLowerCase() === "system";
 
     // A slot is actually sold out if joined >= capacity AND capacity > 0
     const isSoldOut = capacity > 0 && joined >= capacity;

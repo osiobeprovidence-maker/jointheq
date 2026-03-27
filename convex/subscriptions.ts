@@ -6,78 +6,78 @@ import { Id } from "./_generated/dataModel";
 
 const normalizeOwnerName = (owner?: string) => {
     const cleaned = (owner || "").trim().replace(/^@+/, "");
-    return cleaned || "admin";
+    return cleaned || "Unknown";
 };
 
+/**
+ * Returns EACH listing as a separate item (no aggregation across listings).
+ * Each group = 1 listing with its own capacity, owner, and slot counts.
+ */
 export const getActiveSubscriptions = query({
     handler: async (ctx) => {
-        const subs = await ctx.db
-            .query("subscription_catalog")
-            .filter((q) => q.eq(q.field("is_active"), true))
+        // Get ALL active groups (each group is one listing)
+        const allGroups = await ctx.db
+            .query("groups")
+            .filter((q) => q.and(
+                q.eq(q.field("status"), "active"),
+                // Exclude owner-listed groups from the public marketplace
+                q.not(q.eq(q.field("plan_owner"), "owner_listed"))
+            ))
             .collect();
 
         const result = await Promise.all(
-            subs.map(async (sub) => {
-                const slot_types = await ctx.db
+            allGroups.map(async (group) => {
+                // Get the subscription catalog info for this group
+                const sub = group.subscription_catalog_id ? await ctx.db.get(group.subscription_catalog_id) : null;
+                
+                // Get slot types for this specific catalog
+                const slot_types = sub ? await ctx.db
                     .query("slot_types")
                     .withIndex("by_subscription", (q) => q.eq("subscription_id", sub._id))
+                    .collect() : [];
+
+                // Get slots for THIS GROUP ONLY (no cross-listing aggregation)
+                const allSlots = await ctx.db
+                    .query("subscription_slots")
+                    .withIndex("by_group", (q) => q.eq("group_id", group._id))
                     .collect();
 
-                // Find ALL active groups for this catalog item
-                const groups = await ctx.db
-                    .query("groups")
-                    .withIndex("by_catalog", (q) => q.eq("subscription_catalog_id", sub._id))
-                    .filter((q) => q.and(
-                        q.eq(q.field("status"), "active"),
-                        // Exclude owner-listed groups from the public marketplace
-                        q.not(q.eq(q.field("plan_owner"), "owner_listed"))
-                    ))
-                    .collect();
-
-                // If no groups, still return the subscription with default values
+                // Calculate slot counts per slot type for THIS GROUP
                 const slot_types_with_count = await Promise.all(
                     slot_types.map(async (st) => {
-                        let total_capacity = 0;
-                        let current_members = 0;
-                        let open_slots = 0;
-                        let owner_name = "admin";
-
-                        // Aggregate counts across all active groups for this specific slot type
-                        if (groups.length > 0) {
-                            for (const group of groups) {
-                                const slots = await ctx.db
-                                    .query("subscription_slots")
-                                    .withIndex("by_group", (q) => q.eq("group_id", group._id))
-                                    .filter((q) => q.eq(q.field("slot_type_id"), st._id))
-                                    .collect();
-
-                                total_capacity += slots.length;
-                                current_members += slots.filter(s => s.status === "filled").length;
-                                open_slots += slots.filter(s => s.status === "open").length;
-                            }
-
-                            // Use the owner from the first group as a representative
-                            const representativeGroup = groups[0];
-                            owner_name = normalizeOwnerName(representativeGroup?.plan_owner);
-                        }
+                        const slotsForThisType = allSlots.filter(s => s.slot_type_id === st._id);
+                        const total_capacity = slotsForThisType.length;
+                        const current_members = slotsForThisType.filter(s => s.status === "filled").length;
+                        const open_slots = slotsForThisType.filter(s => s.status === "open").length;
 
                         return {
                             ...st,
                             total_capacity,
                             current_members,
                             open_slots,
-                            owner_name,
-                            sub_name: sub.name,
-                            sub_logo: sub.logo_url
+                            owner_name: normalizeOwnerName(group.plan_owner),
+                            sub_name: sub?.name ?? "Unknown",
+                            sub_logo: sub?.logo_url,
+                            group_id: group._id,
+                            account_email: group.account_email,
+                            billing_cycle_start: group.billing_cycle_start,
                         };
                     })
                 );
 
-                return { ...sub, slot_types: slot_types_with_count };
+                // Return one entry per slot type, but all tied to the same group
+                return slot_types_with_count.map(st => ({
+                    ...st,
+                    group_id: group._id,
+                    account_email: group.account_email,
+                    billing_cycle_start: group.billing_cycle_start,
+                    plan_owner: group.plan_owner,
+                }));
             })
         );
 
-        return result;
+        // Flatten the nested arrays
+        return result.flat();
     },
 });
 

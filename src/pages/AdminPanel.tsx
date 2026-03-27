@@ -1297,7 +1297,7 @@ export default function AdminPanel() {
                                         {(allSubscriptions as any[]).map((group: any) => {
                                             const isExpanded = expandedGroup === group._id;
                                             const filledSlots = group.members?.length ?? 0;
-                                            const displayOwner = (group.plan_owner || "admin").trim().replace(/^@+/, "") || "admin";
+                                            const displayOwner = (group.plan_owner || "Unknown").trim().replace(/^@+/, "") || "Unknown";
                                             return (
                                                 <div key={group._id} className="bg-white rounded-3xl border border-black/5 overflow-hidden hover:shadow-lg transition-all">
                                                     {/* Card header — clickable to expand */}
