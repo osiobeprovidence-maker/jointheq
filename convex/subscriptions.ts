@@ -390,6 +390,7 @@ export const adminCreateListing = mutation({
         account_email: v.string(),
         plan_owner: v.string(),
         admin_renewal_date: v.string(),
+        request_id: v.optional(v.string()),
         slot_types: v.array(v.object({
             name: v.string(),
             price: v.number(),
@@ -405,6 +406,32 @@ export const adminCreateListing = mutation({
     },
     handler: async (ctx, args) => {
         const normalizedPlanOwner = normalizeOwnerName(args.plan_owner);
+
+        // Logging the request for debugging duplicate submissions
+        console.log(`[adminCreateListing] platform=${args.platform_name} account=${args.account_email} request_id=${args.request_id}`);
+
+        // Idempotency: if frontend provided a request_id and we already created a group for it, return existing
+        if (args.request_id) {
+            const existingByRequest = await ctx.db.query("groups").filter(q => q.eq(q.field("request_id"), args.request_id)).first();
+            if (existingByRequest) {
+                console.log(`[adminCreateListing] duplicate request detected - returning existing group ${existingByRequest._id}`);
+                return { success: true, groupId: existingByRequest._id };
+            }
+        }
+
+        // Additional safeguard: check for an existing group with same key fields (email + owner + renewal date)
+        const existingByKey = await ctx.db.query("groups")
+            .filter(q => q.and(
+                q.eq(q.field("account_email"), args.account_email),
+                q.eq(q.field("plan_owner"), normalizedPlanOwner),
+                q.eq(q.field("billing_cycle_start"), args.admin_renewal_date),
+            ))
+            .first();
+
+        if (existingByKey) {
+            console.log(`[adminCreateListing] existing group found by key - returning ${existingByKey._id}`);
+            return { success: true, groupId: existingByKey._id };
+        }
 
         // Find or create the catalog row by name (case-insensitive)
         const existing = await ctx.db.query("subscription_catalog")
@@ -435,6 +462,7 @@ export const adminCreateListing = mutation({
             status: "active",
             account_email: args.account_email,
             plan_owner: normalizedPlanOwner,
+            request_id: args.request_id || null,
         });
 
         // PILLAR 2: Create Subscription (Account) record

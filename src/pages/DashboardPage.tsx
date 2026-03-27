@@ -130,6 +130,7 @@ export default function DashboardPage() {
         admin_renewal_date: '',
         slots: [{ name: '', price: 0, capacity: 1, access_type: 'code_access', downloads_enabled: true }]
     });
+    const [isCreatingListing, setIsCreatingListing] = useState(false);
     const [campusModalOpen, setCampusModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
@@ -214,22 +215,30 @@ export default function DashboardPage() {
     };
 
     const handleCreateListing = async () => {
+        if (isCreatingListing) return;
+        setIsCreatingListing(true);
         try {
             const selectedSub = subscriptions.find(s => s._id === listingData.subscription_id);
             if (!selectedSub && !listingData.subscription_id) return toast.error("Please select a platform");
             const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
+
+            // Generate a short unique request id to send to the backend for idempotency
+            (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
 
             await adminCreateListingMutation({
                 platform_name: selectedSub ? selectedSub.name : listingData.subscription_id,
                 account_email: listingData.account_email,
                 plan_owner: normalizedPlanOwner,
                 admin_renewal_date: listingData.admin_renewal_date,
-                slot_types: listingData.slots
+                slot_types: listingData.slots,
+                request_id: (window as any).__listingRequestId || undefined,
             });
             toast.success("Listing created successfully!");
             setShowListingModal(false);
         } catch (error: any) {
             toast.error(error.message || "Failed to create listing");
+        } finally {
+            setIsCreatingListing(false);
         }
     };
 
@@ -1984,10 +1993,10 @@ export default function DashboardPage() {
                                 <div className="p-8 bg-white border-t border-black/5">
                                     <button
                                         onClick={handleCreateListing}
-                                        disabled={!listingData.subscription_id || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
+                                        disabled={isCreatingListing || !listingData.subscription_id || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
                                         className="w-full py-6 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100"
                                     >
-                                        Confirm & Publish to Marketplace
+                                        {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : 'Confirm & Publish to Marketplace'}
                                     </button>
                                 </div>
                             </motion.div>

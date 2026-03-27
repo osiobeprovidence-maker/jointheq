@@ -118,6 +118,7 @@ export default function AdminPanel() {
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [isCreatingListing, setIsCreatingListing] = useState(false);
     const [campusModalOpen, setCampusModalOpen] = useState(false);
     const [campusUserId, setCampusUserId] = useState("");
     const [campusName, setCampusName] = useState("");
@@ -514,8 +515,12 @@ export default function AdminPanel() {
     };
 
     const handleCreateListing = async () => {
+        if (isCreatingListing) return;
+        setIsCreatingListing(true);
         try {
             const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
+            // Generate a short unique request id to send to the backend for idempotency
+            (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
             await adminCreateListingMutation({
                 platform_name: listingData.platform_name,
                 account_email: listingData.account_email,
@@ -526,7 +531,9 @@ export default function AdminPanel() {
                 base_cost: Number(listingData.base_cost),
                 instructions_text: listingData.instructions_text,
                 instructions_image_url: listingData.instructions_image_url,
-                slot_types: listingData.slots
+                slot_types: listingData.slots,
+                // frontend should generate a unique request id per user action
+                request_id: (window as any).__listingRequestId || undefined,
             });
             toast.success("Listing published to marketplace!", { icon: '🚀' });
             setShowListingModal(false);
@@ -537,6 +544,8 @@ export default function AdminPanel() {
             });
         } catch (error: any) {
             toast.error(error.message || "Failed to create listing");
+        } finally {
+            setIsCreatingListing(false);
         }
     };
 
@@ -3306,10 +3315,10 @@ export default function AdminPanel() {
                                 {/* Submit */}
                                 <button
                                     onClick={handleCreateListing}
-                                    disabled={!listingData.platform_name || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
+                                    disabled={isCreatingListing || !listingData.platform_name || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
                                     className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-black/10"
                                 >
-                                    🚀 Confirm & Publish to Marketplace
+                                    {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : '🚀 Confirm & Publish to Marketplace'}
                                 </button>
                             </div>
                         </motion.div>
