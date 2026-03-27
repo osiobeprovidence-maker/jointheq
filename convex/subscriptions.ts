@@ -27,7 +27,11 @@ export const getActiveSubscriptions = query({
                 const groups = await ctx.db
                     .query("groups")
                     .withIndex("by_catalog", (q) => q.eq("subscription_catalog_id", sub._id))
-                    .filter((q) => q.eq(q.field("status"), "active"))
+                    .filter((q) => q.and(
+                        q.eq(q.field("status"), "active"),
+                        // Exclude owner-listed groups from the public marketplace
+                        q.not(q.eq(q.field("plan_owner"), "owner_listed"))
+                    ))
                     .collect();
 
                 // If no groups, still return the subscription with default values
