@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
     LayoutDashboard,
@@ -184,6 +184,7 @@ export default function AdminPanel() {
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const isSuperAdmin = currentUser?.admin_role === "super" || currentUser?.email === "riderezzy@gmail.com";
     const stats = useQuery(api.admin.getPlatformStats);
+    const dailyReport = useQuery(api.adminWorkforce.getDailyReport);
     const subBreakdown = useQuery(api.admin.getSubscriptionBreakdown) || [];
     const allUsers = useQuery(api.admin.getAllUsers) || [];
     const allTickets = useQuery(api.admin.getAllTickets) || [];
