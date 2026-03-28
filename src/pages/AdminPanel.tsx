@@ -228,7 +228,7 @@ export default function AdminPanel() {
     const platformSettings = useQuery(api.admin.getPlatformSettings) || {};
 
     // Selected User Slots Query
-    const selectedUserSlots = useQuery(api.subscriptions.getSlotsByUserId, selectedUser ? { user_id: selectedUser._id as Id<"users"> } : "skip") || [];
+    const liveUserSlots = useQuery(api.subscriptions.getSlotsByUserId, selectedUser ? { user_id: selectedUser._id as Id<"users"> } : "skip") || [];
 
     // User Listings Queries
     const userListings = useQuery(api.listings.getAdminListings, {
@@ -247,6 +247,9 @@ export default function AdminPanel() {
     const userAdminLogs = useQuery(api.admin.getUserAdminLogs, selectedUser ? { userId: selectedUser._id } : "skip") || [];
     const adjustBalanceMut = useMutation(api.admin.adjustUserBalance);
     const adjustBootsMut = useMutation(api.admin.adjustUserBoots);
+
+    // Derived Live User (to ensure modal shows fresh data after mutations)
+    const liveUser = selectedUser ? allUsers.find((u: any) => u._id === selectedUser._id) || selectedUser : null;
 
     // God Mode State
     const [showGodModeModal, setShowGodModeModal] = useState(false);
@@ -1353,9 +1356,10 @@ export default function AdminPanel() {
                                     {/* Desktop Table Header */}
                                     <div className="hidden md:grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b border-black/5">
                                         <div className="col-span-3">User</div>
-                                        <div className="col-span-2 text-center">Q Score</div>
-                                        <div className="col-span-2 text-center">Active Subs</div>
-                                        <div className="col-span-2 text-center">Payments</div>
+                                        <div className="col-span-2 text-center">Wallet Balance</div>
+                                        <div className="col-span-1 text-center">Q Score</div>
+                                        <div className="col-span-1 text-center">Active Subs</div>
+                                        <div className="col-span-2 text-center">Total Payments</div>
                                         <div className="col-span-1 text-center">Status</div>
                                         <div className="col-span-2 text-center">Actions</div>
                                     </div>
@@ -1387,6 +1391,10 @@ export default function AdminPanel() {
                                                         </div>
                                                     </div>
                                                     <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-2xl p-3 mb-3">
+                                                        <div className="text-center">
+                                                            <div className="text-[10px] font-bold text-gray-400 uppercase">Balance</div>
+                                                            <div className="text-sm font-black text-blue-600">{fmt(u.wallet_balance || 0)}</div>
+                                                        </div>
                                                         <div className="text-center">
                                                             <div className="text-[10px] font-bold text-gray-400 uppercase">Subs</div>
                                                             <div className="text-sm font-black">{u.activeSubscriptions}</div>
@@ -1446,8 +1454,9 @@ export default function AdminPanel() {
                                                         {u.username && <div className="text-[10px] text-blue-500 font-bold">@{u.username}</div>}
                                                     </div>
                                                 </div>
-                                                <div className="col-span-2 text-center font-bold text-sm">{u.q_score}</div>
-                                                <div className="col-span-2 text-center font-bold text-sm">{u.activeSubscriptions}</div>
+                                                <div className="col-span-2 text-center font-black text-sm text-blue-600">{fmt(u.wallet_balance || 0)}</div>
+                                                <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.q_score}</div>
+                                                <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.activeSubscriptions}</div>
                                                 <div className="col-span-2 text-center font-bold text-sm text-emerald-600">{fmt(u.totalPayments)}</div>
                                                 <div className="col-span-1 flex justify-center">
                                                     {u.is_banned ? (
@@ -3894,7 +3903,7 @@ export default function AdminPanel() {
             </AnimatePresence>
             {/* User Details Modal (HUB) */}
             <AnimatePresence>
-                {selectedUser && (
+                {liveUser && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedUser(null)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden h-full max-h-[85vh] flex flex-col">
@@ -3902,29 +3911,29 @@ export default function AdminPanel() {
                             <div className="p-6 border-b border-black/5 bg-zinc-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                     <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-[1.25rem] flex items-center justify-center font-black text-2xl shadow-lg flex-shrink-0">
-                                        {selectedUser.full_name?.[0]}
+                                        {liveUser.full_name?.[0]}
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <h2 className="text-2xl font-black truncate">{selectedUser.full_name}</h2>
-                                            {selectedUser.is_banned ? (
+                                            <h2 className="text-2xl font-black truncate">{liveUser.full_name}</h2>
+                                            {liveUser.is_banned ? (
                                                 <span className="px-2.5 py-1 bg-red-100 text-red-600 text-[10px] font-black rounded-full uppercase">Banned</span>
-                                            ) : selectedUser.is_suspended ? (
+                                            ) : liveUser.is_suspended ? (
                                                 <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-wider">Suspended</span>
                                             ) : (
                                                 <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-wider">Active Account</span>
                                             )}
                                         </div>
                                         <p className="text-sm font-medium text-gray-500 mt-0.5 truncate flex items-center gap-2">
-                                            <span className="opacity-70">{selectedUser.email}</span>
-                                            {selectedUser.phone && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
-                                            <span className="text-blue-500 font-bold">{selectedUser.username && `@${selectedUser.username}`}</span>
+                                            <span className="opacity-70">{liveUser.email}</span>
+                                            {liveUser.phone && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
+                                            <span className="text-blue-500 font-bold">{liveUser.username && `@${liveUser.username}`}</span>
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 self-end md:self-auto">
                                     <button onClick={() => {
-                                        setGodModeUserId(selectedUser._id);
+                                        setGodModeUserId(liveUser._id);
                                         setShowGodModeModal(true);
                                     }} className="p-3 bg-white hover:bg-zinc-900 hover:text-white rounded-2xl shadow-sm transition-all border border-black/5 flex items-center gap-2 text-sm font-bold">
                                         <Sparkles size={18} />
@@ -3963,21 +3972,21 @@ export default function AdminPanel() {
                                                     Wallet
                                                     <Wallet size={10} />
                                                 </div>
-                                                <div className="font-black text-xl text-emerald-600">{fmt(selectedUser.wallet_balance || 0)}</div>
+                                                <div className="font-black text-xl text-emerald-600">{fmt(liveUser.wallet_balance || 0)}</div>
                                             </div>
                                             <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
                                                 <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
                                                     Q-Score
                                                     <Trophy size={10} />
                                                 </div>
-                                                <div className="font-black text-xl text-zinc-900">{selectedUser.q_score || 0}</div>
+                                                <div className="font-black text-xl text-zinc-900">{liveUser.q_score || 0}</div>
                                             </div>
                                             <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
                                                 <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
                                                     Subscriptions
                                                     <ShoppingBag size={10} />
                                                 </div>
-                                                <div className="font-black text-xl text-purple-600">{selectedUser.activeSubscriptions || 0}</div>
+                                                <div className="font-black text-xl text-purple-600">{liveUser.activeSubscriptions || 0}</div>
                                             </div>
                                             <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
                                                 <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
@@ -3985,7 +3994,7 @@ export default function AdminPanel() {
                                                     <Clock size={10} />
                                                 </div>
                                                 <div className="font-bold text-sm text-zinc-900">
-                                                    {Math.floor((Date.now() - selectedUser.created_at) / (1000 * 60 * 60 * 24))} Days
+                                                    {Math.floor((Date.now() - liveUser.created_at) / (1000 * 60 * 60 * 24))} Days
                                                 </div>
                                             </div>
                                         </div>
@@ -3995,12 +4004,12 @@ export default function AdminPanel() {
                                             <div className="flex items-center justify-between mb-4">
                                                 <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Active Subscriptions</h3>
                                                 <button onClick={() => {
-                                                    setGodModeUserId(selectedUser._id);
+                                                    setGodModeUserId(liveUser._id);
                                                     setShowGodModeModal(true);
                                                 }} className="text-[10px] font-bold text-blue-500 hover:underline">Add New Slot</button>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {selectedUserSlots.map((m: any, i: number) => (
+                                                {liveUserSlots.map((m: any, i: number) => (
                                                     <div key={`${m._id || i}`} className="bg-white border border-black/10 p-5 rounded-[2rem] flex items-center gap-4 hover:shadow-xl hover:shadow-black/5 transition-all group relative overflow-hidden">
                                                         <div className="absolute top-0 right-0 w-16 h-16 bg-zinc-900 rounded-full -mr-8 -mt-8 opacity-[0.03] group-hover:scale-150 transition-transform duration-500" />
                                                         <div className="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0 shadow-lg">
@@ -4017,7 +4026,7 @@ export default function AdminPanel() {
                                                         <button 
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                setGodModeUserId(selectedUser._id);
+                                                                setGodModeUserId(liveUser._id);
                                                                 setShowGodModeModal(true);
                                                             }}
                                                             className="p-3 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-xl transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
@@ -4026,7 +4035,7 @@ export default function AdminPanel() {
                                                         </button>
                                                     </div>
                                                 ))}
-                                                {selectedUserSlots.length === 0 && (
+                                                {liveUserSlots.length === 0 && (
                                                     <div className="col-span-full py-8 text-center bg-zinc-50 rounded-[2rem] border border-dashed border-black/10">
                                                         <ShoppingBag size={32} className="mx-auto mb-2 opacity-20" />
                                                         <div className="text-sm font-bold text-gray-400">No active subscriptions found</div>
@@ -4039,16 +4048,16 @@ export default function AdminPanel() {
                                         <div className="pt-6 border-t border-black/5">
                                              <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Account Integrity</div>
                                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                {selectedUser.is_suspended ? (
+                                                {liveUser.is_suspended ? (
                                                     <button onClick={async () => {
-                                                        await unsuspendUserMut({ userId: selectedUser._id, executorId: currentUser!._id });
+                                                        await unsuspendUserMut({ userId: liveUser._id, executorId: currentUser!._id });
                                                         toast.success("User unsuspended");
                                                     }} className="p-4 bg-emerald-50 text-emerald-600 rounded-3xl font-black text-xs hover:bg-emerald-100 transition-all flex items-center justify-center gap-2">
                                                         <PlayCircle size={16} /> Restore Access
                                                     </button>
                                                 ) : (
                                                     <button onClick={async () => {
-                                                        await suspendUserMut({ userId: selectedUser._id, executorId: currentUser!._id });
+                                                        await suspendUserMut({ userId: liveUser._id, executorId: currentUser!._id });
                                                         toast.success("Account suspended");
                                                     }} className="p-4 bg-amber-50 text-amber-600 rounded-3xl font-black text-xs hover:bg-amber-100 transition-all flex items-center justify-center gap-2">
                                                         <PauseCircle size={16} /> Suspend Access
@@ -4056,7 +4065,7 @@ export default function AdminPanel() {
                                                 )}
                                                 <button onClick={async () => {
                                                     if (window.confirm("Banning this user will block all access permanently. Proceed?")) {
-                                                        await banUserMut({ userId: selectedUser._id, executorId: currentUser!._id });
+                                                        await banUserMut({ userId: liveUser._id, executorId: currentUser!._id });
                                                         toast.success("User globally banned");
                                                     }
                                                 }} className="p-4 bg-red-50 text-red-600 rounded-3xl font-black text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2">
@@ -4065,7 +4074,7 @@ export default function AdminPanel() {
                                                 <button onClick={() => {
                                                     const role = prompt("Enter role (super, finance, operations, support, campus_manager, admin)");
                                                     if (role) {
-                                                        setAdminRoleMut({ userId: selectedUser._id, role: role as any, executorId: currentUser!._id })
+                                                        setAdminRoleMut({ userId: liveUser._id, role: role as any, executorId: currentUser!._id })
                                                             .then(() => toast.success(`Role updated to ${role}`))
                                                             .catch(e => toast.error(e.message));
                                                     }
@@ -4089,7 +4098,7 @@ export default function AdminPanel() {
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-[10px] uppercase font-black text-emerald-700/50">Current Balance</div>
-                                                        <div className="text-2xl font-black text-emerald-700">{fmt(selectedUser.wallet_balance || 0)}</div>
+                                                        <div className="text-2xl font-black text-emerald-700">{fmt(liveUser.wallet_balance || 0)}</div>
                                                     </div>
                                                 </div>
                                                 <div className="space-y-3">
@@ -4134,7 +4143,7 @@ export default function AdminPanel() {
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-[10px] uppercase font-black text-amber-700/50">Current BOOTS</div>
-                                                        <div className="text-2xl font-black text-amber-700">{(selectedUser.boots_balance || 0).toLocaleString()}</div>
+                                                        <div className="text-2xl font-black text-amber-700">{(liveUser.boots_balance || 0).toLocaleString()}</div>
                                                     </div>
                                                 </div>
                                                 <div className="space-y-3">
