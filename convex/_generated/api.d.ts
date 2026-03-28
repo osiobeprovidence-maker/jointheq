@@ -23,6 +23,7 @@ import type * as init from "../init.js";
 import type * as listings from "../listings.js";
 import type * as lunar from "../lunar.js";
 import type * as maintenance from "../maintenance.js";
+import type * as marketplace from "../marketplace.js";
 import type * as messages from "../messages.js";
 import type * as migrated_subscriptions from "../migrated_subscriptions.js";
 import type * as migration from "../migration.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   listings: typeof listings;
   lunar: typeof lunar;
   maintenance: typeof maintenance;
+  marketplace: typeof marketplace;
   messages: typeof messages;
   migrated_subscriptions: typeof migrated_subscriptions;
   migration: typeof migration;

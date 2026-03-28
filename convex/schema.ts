@@ -464,6 +464,43 @@ export default defineSchema({
     }).index("by_owner", ["owner_id"])
         .index("by_status", ["status"]),
 
+    // Marketplace - consolidated table for marketplace listings (replaces groups for marketplace data)
+    marketplace: defineTable({
+        // Core listing info
+        subscription_catalog_id: v.id("subscription_catalog"),
+        owner_user_id: v.optional(v.id("users")), // Original listing owner (if user-submitted)
+        admin_creator_id: v.optional(v.id("users")), // Admin who created (if admin-created)
+
+        // Listing details
+        platform_name: v.string(),
+        account_email: v.string(),
+        plan_owner: v.string(), // "admin" or username
+        billing_cycle_start: v.string(),
+        status: v.string(), // "active", "paused", "closed"
+
+        // Capacity tracking (denormalized for performance)
+        total_slots: v.number(),
+        filled_slots: v.number(),
+        available_slots: v.number(),
+
+        // Pricing
+        slot_price: v.number(),
+        owner_payout: v.optional(v.number()),
+
+        // Metadata
+        category: v.optional(v.string()),
+        admin_note: v.optional(v.string()),
+        request_id: v.optional(v.string()), // For idempotency
+
+        // Timestamps
+        created_at: v.number(),
+        updated_at: v.number(),
+    }).index("by_catalog", ["subscription_catalog_id"])
+        .index("by_status", ["status"])
+        .index("by_owner", ["owner_user_id"])
+        .index("by_request_id", ["request_id"])
+        .index("by_account_email", ["account_email"]),
+
     reputation: defineTable({
         user_id: v.id("users"),
         score: v.number(),

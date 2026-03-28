@@ -203,7 +203,43 @@ export const approveListing = mutation({
       }
     }
 
-    // 5. Update the Subscription Account record
+    // 5. Create marketplace entry for the new consolidated marketplace table
+    const existingMarketplace = await ctx.db.query("marketplace")
+      .filter(q => q.and(
+        q.eq(q.field("subscription_catalog_id"), catalog!._id),
+        q.eq(q.field("account_email"), listing.login_email),
+        q.eq(q.field("billing_cycle_start"), listing.renewal_date),
+      ))
+      .first();
+
+    if (!existingMarketplace) {
+      await ctx.db.insert("marketplace", {
+        subscription_catalog_id: catalog!._id,
+        owner_user_id: listing.owner_id,
+        admin_creator_id: args.admin_id,
+
+        platform_name: listing.platform,
+        account_email: listing.login_email,
+        plan_owner: "owner_listed",
+        billing_cycle_start: listing.renewal_date,
+        status: "active",
+
+        total_slots: args.total_slots,
+        filled_slots: 0,
+        available_slots: args.total_slots,
+
+        slot_price: args.price_per_slot,
+        owner_payout: args.owner_payout,
+
+        category: args.category || listing.category,
+        admin_note: args.admin_note,
+
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      });
+    }
+
+    // 6. Update the Subscription Account record
     await ctx.db.patch(args.listing_id, {
       status: "Active",
       total_slots: args.total_slots,
