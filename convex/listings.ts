@@ -24,27 +24,34 @@ export const submitListing = mutation({
   },
   handler: async (ctx, args) => {
     const total_slots = SLOT_RULES[args.platform] || 1;
+
     // Idempotency: if frontend provided a request_id, return existing subscription if it exists
     if (args.request_id) {
-      const existingByRequest = await ctx.db.query("subscriptions").filter(q => q.eq(q.field("request_id"), args.request_id)).first();
+      const existingByRequest = await ctx.db.query("subscriptions")
+        .filter(q => q.eq(q.field("request_id"), args.request_id))
+        .first();
       if (existingByRequest) {
+        console.log(`[submitListing] Duplicate prevented - returning existing ${existingByRequest._id}`);
         return existingByRequest._id;
       }
     }
 
     // Prevent duplicates by key: same owner + platform + login_email + renewal_date
-    const existing = await ctx.db.query("subscriptions").filter(q => q.and(
-      q.eq(q.field("owner_id"), args.owner_id),
-      q.eq(q.field("platform"), args.platform),
-      q.eq(q.field("login_email"), args.email),
-      q.eq(q.field("renewal_date"), args.renewal_date),
-    )).first();
+    const existing = await ctx.db.query("subscriptions")
+      .filter(q => q.and(
+        q.eq(q.field("owner_id"), args.owner_id),
+        q.eq(q.field("platform"), args.platform),
+        q.eq(q.field("login_email"), args.email),
+        q.eq(q.field("renewal_date"), args.renewal_date),
+      ))
+      .first();
 
     if (existing) {
+      console.log(`[submitListing] Duplicate prevented by key - returning ${existing._id}`);
       return existing._id;
     }
 
-    return await ctx.db.insert("subscriptions", {
+    const subscriptionId = await ctx.db.insert("subscriptions", {
       owner_id: args.owner_id,
       platform: args.platform,
       login_email: args.email,
@@ -58,6 +65,9 @@ export const submitListing = mutation({
       updated_at: Date.now(),
       request_id: args.request_id || null,
     });
+
+    console.log(`[submitListing] Created new subscription ${subscriptionId}`);
+    return subscriptionId;
   },
 });
 
@@ -75,24 +85,35 @@ export const getOwnerListings = query({
 export const getAdminListings = query({
   args: { status: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    // Only show subscriptions that came from user listings (not admin-created ones)
-    // They are identified by having a login_password set by users
+    let results;
+
+    // Use indexed query when status filter is provided
     if (args.status && args.status !== "All") {
-      const results = await ctx.db
+      results = await ctx.db
         .query("subscriptions")
         .withIndex("by_status", (q) => q.eq("status", args.status!))
         .order("desc")
         .collect();
-      // Enrich with owner name
-      return await Promise.all(results.map(async (s) => {
-        const owner = s.owner_id ? await ctx.db.get(s.owner_id) : null;
-        return { ...s, owner_name: owner?.full_name ?? "Unknown", email: s.login_email };
-      }));
+    } else {
+      // For "All" or no filter, collect all and sort by created_at
+      results = await ctx.db
+        .query("subscriptions")
+        .order("desc")
+        .collect();
     }
-    const results = await ctx.db.query("subscriptions").order("desc").collect();
-    return await Promise.all(results.map(async (s) => {
+
+    // Filter to only show user-submitted listings (have login_password set)
+    // This excludes admin-created marketplace listings
+    const userListings = results.filter(s => s.login_password && s.login_password !== "ADMIN_MANAGED");
+
+    // Enrich with owner name - using Promise.all for parallel execution
+    return await Promise.all(userListings.map(async (s) => {
       const owner = s.owner_id ? await ctx.db.get(s.owner_id) : null;
-      return { ...s, owner_name: owner?.full_name ?? "Unknown", email: s.login_email };
+      return {
+        ...s,
+        owner_name: owner?.full_name ?? "Unknown",
+        email: s.login_email
+      };
     }));
   },
 });
@@ -120,7 +141,7 @@ export const approveListing = mutation({
     let catalog = await ctx.db.query("subscription_catalog")
       .filter(q => q.eq(q.field("name"), listing.platform))
       .first();
-    
+
     if (!catalog) {
       const catalogId = await ctx.db.insert("subscription_catalog", {
         name: listing.platform,

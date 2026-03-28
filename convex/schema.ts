@@ -95,8 +95,10 @@ export default defineSchema({
         instructions_text: v.optional(v.string()),
         instructions_image_url: v.optional(v.string()),
         category: v.optional(v.string()),
+        request_id: v.optional(v.string()),
     }).index("by_owner", ["owner_id"])
-        .index("by_status", ["status"]),
+        .index("by_status", ["status"])
+        .index("by_request_id", ["request_id"]),
 
     // PILLAR 3: Subscription Slots
     subscription_slots: defineTable({
@@ -213,7 +215,7 @@ export default defineSchema({
         plan_owner: v.optional(v.string()),
         request_id: v.optional(v.string()),
     }).index("by_catalog", ["subscription_catalog_id"])
-      .index("by_request_id", ["request_id"]),
+        .index("by_request_id", ["request_id"]),
 
     messages: defineTable({
         sender_id: v.id("users"),
