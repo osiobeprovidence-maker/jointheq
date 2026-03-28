@@ -159,6 +159,7 @@ export default function AdminPanel() {
 
     // Selected User state
     const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "logs">("overview");
 
     // Workforce admin state
     const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
@@ -166,6 +167,15 @@ export default function AdminPanel() {
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [inviteForm, setInviteForm] = useState({ email: "", role: "support", work_username: "" });
     const [taskForm, setTaskForm] = useState({ title: "", description: "", assigned_to: "", deadline: "", priority: "medium", category: "general" });
+
+    // Balance Adjustment state
+    const [balanceAdjustAmount, setBalanceAdjustAmount] = useState("");
+    const [balanceAdjustReason, setBalanceAdjustReason] = useState("");
+    const [balanceAdjustType, setBalanceAdjustType] = useState<"add" | "remove">("add");
+    // BOOTS Adjustment state
+    const [bootsAdjustAmount, setBootsAdjustAmount] = useState("");
+    const [bootsAdjustReason, setBootsAdjustReason] = useState("");
+    const [bootsAdjustType, setBootsAdjustType] = useState<"add" | "remove">("add");
 
     // Payment Review state
     const [paymentFilterStatus, setPaymentFilterStatus] = useState("Awaiting Review");
@@ -232,6 +242,11 @@ export default function AdminPanel() {
     // Leave Requests Query
     const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
     const pendingLeaveCount = pendingLeaveRequests.slots.length + pendingLeaveRequests.migrations.length;
+
+    // User Logs Query
+    const userAdminLogs = useQuery(api.admin.getUserAdminLogs, selectedUser ? { userId: selectedUser._id } : "skip") || [];
+    const adjustBalanceMut = useMutation(api.admin.adjustUserBalance);
+    const adjustBootsMut = useMutation(api.admin.adjustUserBoots);
 
     // God Mode State
     const [showGodModeModal, setShowGodModeModal] = useState(false);
@@ -435,6 +450,42 @@ export default function AdminPanel() {
     const handleOpenGodMode = (userId: Id<"users">) => {
         setGodModeUserId(userId);
         setShowGodModeModal(true);
+    };
+
+    const handleAdjustBalance = async () => {
+        if (!selectedUser || !balanceAdjustAmount || !balanceAdjustReason) return;
+        try {
+            await adjustBalanceMut({
+                userId: selectedUser._id,
+                amount: Number(balanceAdjustAmount),
+                type: balanceAdjustType,
+                reason: balanceAdjustReason,
+                executorId: currentUser!._id
+            });
+            toast.success(`Balance ${balanceAdjustType === "add" ? "increased" : "decreased"} successfully!`);
+            setBalanceAdjustAmount("");
+            setBalanceAdjustReason("");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to adjust balance");
+        }
+    };
+
+    const handleAdjustBoots = async () => {
+        if (!selectedUser || !bootsAdjustAmount || !bootsAdjustReason) return;
+        try {
+            await adjustBootsMut({
+                userId: selectedUser._id,
+                amount: Number(bootsAdjustAmount),
+                type: bootsAdjustType,
+                reason: bootsAdjustReason,
+                executorId: currentUser!._id
+            });
+            toast.success(`BOOTS ${bootsAdjustType === "add" ? "increased" : "decreased"} successfully!`);
+            setBootsAdjustAmount("");
+            setBootsAdjustReason("");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to adjust BOOTS");
+        }
     };
 
     const handleApprovePayment = async (id: any) => {
@@ -3807,7 +3858,7 @@ export default function AdminPanel() {
                                         <li>Delete ALL wallet transactions</li>
                                         <li>Delete ALL funding requests</li>
                                     </ul>
-                                    <p className="text-xs text-red-600 font-bold mt-3">âœ“ Boots balances and history are NOT affected</p>
+                                    <p className="text-xs text-red-600 font-bold mt-3">✓ Boots balances and history are NOT affected</p>
                                 </div>
                                 <p className="text-xs text-gray-500 font-bold">
                                     Type "CONFIRM RESET" to proceed:
@@ -3841,102 +3892,335 @@ export default function AdminPanel() {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* User Details Modal */}
+            {/* User Details Modal (HUB) */}
             <AnimatePresence>
                 {selectedUser && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedUser(null)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden max-h-[90vh] flex flex-col">
-                            <div className="p-6 border-b border-black/5 flex items-center justify-between bg-zinc-50">
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden h-full max-h-[85vh] flex flex-col">
+                            {/* Header Section */}
+                            <div className="p-6 border-b border-black/5 bg-zinc-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center font-black text-xl flex-shrink-0">
+                                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-[1.25rem] flex items-center justify-center font-black text-2xl shadow-lg flex-shrink-0">
                                         {selectedUser.full_name?.[0]}
                                     </div>
                                     <div className="min-w-0">
-                                        <h2 className="text-xl font-black truncate">{selectedUser.full_name}</h2>
-                                        <p className="text-sm font-medium text-gray-500 truncate">{selectedUser.email} {selectedUser.phone ? `Â· ${selectedUser.phone}` : ''} {selectedUser.username && `Â· @${selectedUser.username}`}</p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h2 className="text-2xl font-black truncate">{selectedUser.full_name}</h2>
+                                            {selectedUser.is_banned ? (
+                                                <span className="px-2.5 py-1 bg-red-100 text-red-600 text-[10px] font-black rounded-full uppercase">Banned</span>
+                                            ) : selectedUser.is_suspended ? (
+                                                <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-wider">Suspended</span>
+                                            ) : (
+                                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-wider">Active Account</span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-500 mt-0.5 truncate flex items-center gap-2">
+                                            <span className="opacity-70">{selectedUser.email}</span>
+                                            {selectedUser.phone && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
+                                            <span className="text-blue-500 font-bold">{selectedUser.username && `@${selectedUser.username}`}</span>
+                                        </p>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedUser(null)} className="p-2 bg-white rounded-xl shadow-sm text-gray-400 hover:text-black transition-colors border border-black/5 flex-shrink-0">
-                                    <X size={20} />
-                                </button>
+                                <div className="flex items-center gap-2 self-end md:self-auto">
+                                    <button onClick={() => {
+                                        setGodModeUserId(selectedUser._id);
+                                        setShowGodModeModal(true);
+                                    }} className="p-3 bg-white hover:bg-zinc-900 hover:text-white rounded-2xl shadow-sm transition-all border border-black/5 flex items-center gap-2 text-sm font-bold">
+                                        <Sparkles size={18} />
+                                        God Mode
+                                    </button>
+                                    <button onClick={() => setSelectedUser(null)} className="p-3 bg-white rounded-2xl shadow-sm text-gray-400 hover:text-black transition-all border border-black/5">
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                                {/* Status Row */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-zinc-50 p-4 rounded-2xl">
-                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Status</div>
-                                        <div className="font-bold text-sm">
-                                            {selectedUser.is_banned ? <span className="text-red-500">Banned</span> : selectedUser.is_suspended ? <span className="text-amber-500">Suspended</span> : <span className="text-emerald-500">Active</span>}
+                            {/* Hub Navigation */}
+                            <div className="flex border-b border-black/5 px-6">
+                                {(['overview', 'financials', 'logs'] as const).map(tab => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setUserDetailTab(tab)}
+                                        className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all relative ${userDetailTab === tab ? 'text-zinc-900' : 'text-gray-400 hover:text-gray-600'}`}
+                                    >
+                                        {tab}
+                                        {userDetailTab === tab && (
+                                            <motion.div layoutId="userTabUnderline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Main Hub Content */}
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                                {userDetailTab === 'overview' && (
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        {/* Snapshot Metrics */}
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                                <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
+                                                    Wallet
+                                                    <Wallet size={10} />
+                                                </div>
+                                                <div className="font-black text-xl text-emerald-600">{fmt(selectedUser.wallet_balance || 0)}</div>
+                                            </div>
+                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                                <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
+                                                    Q-Score
+                                                    <Trophy size={10} />
+                                                </div>
+                                                <div className="font-black text-xl text-zinc-900">{selectedUser.q_score || 0}</div>
+                                            </div>
+                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                                <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
+                                                    Subscriptions
+                                                    <ShoppingBag size={10} />
+                                                </div>
+                                                <div className="font-black text-xl text-purple-600">{selectedUser.activeSubscriptions || 0}</div>
+                                            </div>
+                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                                <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
+                                                    Experience
+                                                    <Clock size={10} />
+                                                </div>
+                                                <div className="font-bold text-sm text-zinc-900">
+                                                    {Math.floor((Date.now() - selectedUser.created_at) / (1000 * 60 * 60 * 24))} Days
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Active Slots Section */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Active Subscriptions</h3>
+                                                <button onClick={() => {
+                                                    setGodModeUserId(selectedUser._id);
+                                                    setShowGodModeModal(true);
+                                                }} className="text-[10px] font-bold text-blue-500 hover:underline">Add New Slot</button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {selectedUserSlots.map((m: any, i: number) => (
+                                                    <div key={`${m._id || i}`} className="bg-white border border-black/10 p-5 rounded-[2rem] flex items-center gap-4 hover:shadow-xl hover:shadow-black/5 transition-all group relative overflow-hidden">
+                                                        <div className="absolute top-0 right-0 w-16 h-16 bg-zinc-900 rounded-full -mr-8 -mt-8 opacity-[0.03] group-hover:scale-150 transition-transform duration-500" />
+                                                        <div className="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0 shadow-lg">
+                                                            {m.sub_name?.[0] || m.slot_name?.[0] || '?'}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="font-black text-sm truncate">{m.sub_name || "Unknown"}</div>
+                                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{m.slot_name || "Unknown Slot"}</div>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Renews:</span>
+                                                                <span className="text-[10px] font-bold">{m.renewal_date ? new Date(m.renewal_date).toLocaleDateString() : 'N/A'}</span>
+                                                            </div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setGodModeUserId(selectedUser._id);
+                                                                setShowGodModeModal(true);
+                                                            }}
+                                                            className="p-3 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-xl transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {selectedUserSlots.length === 0 && (
+                                                    <div className="col-span-full py-8 text-center bg-zinc-50 rounded-[2rem] border border-dashed border-black/10">
+                                                        <ShoppingBag size={32} className="mx-auto mb-2 opacity-20" />
+                                                        <div className="text-sm font-bold text-gray-400">No active subscriptions found</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Security Quick Actions */}
+                                        <div className="pt-6 border-t border-black/5">
+                                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Account Integrity</div>
+                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                {selectedUser.is_suspended ? (
+                                                    <button onClick={async () => {
+                                                        await unsuspendUserMut({ userId: selectedUser._id, executorId: currentUser!._id });
+                                                        toast.success("User unsuspended");
+                                                    }} className="p-4 bg-emerald-50 text-emerald-600 rounded-3xl font-black text-xs hover:bg-emerald-100 transition-all flex items-center justify-center gap-2">
+                                                        <PlayCircle size={16} /> Restore Access
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={async () => {
+                                                        await suspendUserMut({ userId: selectedUser._id, executorId: currentUser!._id });
+                                                        toast.success("Account suspended");
+                                                    }} className="p-4 bg-amber-50 text-amber-600 rounded-3xl font-black text-xs hover:bg-amber-100 transition-all flex items-center justify-center gap-2">
+                                                        <PauseCircle size={16} /> Suspend Access
+                                                    </button>
+                                                )}
+                                                <button onClick={async () => {
+                                                    if (window.confirm("Banning this user will block all access permanently. Proceed?")) {
+                                                        await banUserMut({ userId: selectedUser._id, executorId: currentUser!._id });
+                                                        toast.success("User globally banned");
+                                                    }
+                                                }} className="p-4 bg-red-50 text-red-600 rounded-3xl font-black text-xs hover:bg-red-100 transition-all flex items-center justify-center gap-2">
+                                                    <Ban size={16} /> Permanently Ban
+                                                </button>
+                                                <button onClick={() => {
+                                                    const role = prompt("Enter role (super, finance, operations, support, campus_manager, admin)");
+                                                    if (role) {
+                                                        setAdminRoleMut({ userId: selectedUser._id, role: role as any, executorId: currentUser!._id })
+                                                            .then(() => toast.success(`Role updated to ${role}`))
+                                                            .catch(e => toast.error(e.message));
+                                                    }
+                                                }} className="p-4 bg-purple-50 text-purple-700 rounded-3xl font-black text-xs hover:bg-purple-100 transition-all flex items-center justify-center gap-2">
+                                                    <Shield size={16} /> Modify Role
+                                                </button>
+                                             </div>
                                         </div>
                                     </div>
-                                    <div className="bg-zinc-50 p-4 rounded-2xl">
-                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Joined</div>
-                                        <div className="font-bold text-sm">{new Date(selectedUser.created_at).toLocaleDateString()}</div>
-                                    </div>
-                                    <div className="bg-zinc-50 p-4 rounded-2xl">
-                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">Wallet</div>
-                                        <div className="font-bold text-sm text-emerald-600">{fmtCurrency(selectedUser.wallet_balance || 0)}</div>
-                                    </div>
-                                    <div className="bg-zinc-50 p-4 rounded-2xl">
-                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1">BOOTS</div>
-                                        <div className="font-bold text-sm text-amber-500">{(selectedUser.boots_balance || 0).toLocaleString()}</div>
-                                    </div>
-                                </div>
+                                )}
 
-                                {/* Activity */}
-                                <div className="grid grid-cols-3 gap-4 border-t border-black/5 pt-6">
-                                    <div className="bg-zinc-50 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                                        <div className="text-2xl font-black">{selectedUser.q_score || 0}</div>
-                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mt-1">Q Score</div>
-                                    </div>
-                                    <div className="bg-zinc-50 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                                        <div className="text-2xl font-black text-purple-600">{selectedUser.activeSubscriptions || 0}</div>
-                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mt-1">Active Subs</div>
-                                    </div>
-                                    <div className="bg-zinc-50 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                                        <div className="text-lg font-black text-emerald-600">{fmtCurrencyShort(selectedUser.totalPayments || 0)}</div>
-                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mt-1">Total Paid</div>
-                                    </div>
-                                </div>
-
-                                {/* Subscriptions List */}
-                                <div className="border-t border-black/5 pt-6">
-                                    <div className="text-xs font-black uppercase text-gray-400 tracking-widest mb-4">Active Plan Slots</div>
-                                    <div className="space-y-3">
-                                        {selectedUserSlots.map((m: any, i: number) => (
-                                            <div key={`${m._id || i}`} className="bg-white border border-black/5 p-4 rounded-2xl flex justify-between items-center hover:bg-black/[0.01]">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center font-black">
-                                                        {m.sub_name?.[0] || m.slot_name?.[0] || '?'}
+                                {userDetailTab === 'financials' && (
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                                        {/* Wallet Management */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Naira Management */}
+                                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-[2.5rem] border border-emerald-100">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                                        <Wallet size={24} />
                                                     </div>
-                                                    <div>
-                                                        <div className="font-bold text-sm">{m.sub_name || "Unknown"}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold">{m.slot_name || "Unknown Slot"}</div>
+                                                    <div className="text-right">
+                                                        <div className="text-[10px] uppercase font-black text-emerald-700/50">Current Balance</div>
+                                                        <div className="text-2xl font-black text-emerald-700">{fmt(selectedUser.wallet_balance || 0)}</div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="text-[10px] font-black uppercase text-amber-500 tracking-widest mb-0.5">Renews</div>
-                                                    <div className="text-xs font-bold">{m.renewal_date ? new Date(m.renewal_date).toLocaleDateString() : 'N/A'}</div>
+                                                <div className="space-y-3">
+                                                    <div className="flex bg-white/50 rounded-2xl p-1 gap-1">
+                                                        <button 
+                                                            onClick={() => setBalanceAdjustType('add')}
+                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'add' ? 'bg-emerald-500 text-white shadow-md' : 'text-emerald-700 opacity-60'}`}
+                                                        >ADD</button>
+                                                        <button 
+                                                            onClick={() => setBalanceAdjustType('remove')}
+                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-emerald-700 opacity-60'}`}
+                                                        >DEDUCT</button>
+                                                    </div>
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder="Enter Amount (₦)" 
+                                                        value={balanceAdjustAmount}
+                                                        onChange={(e) => setBalanceAdjustAmount(e.target.value)}
+                                                        className="w-full p-4 bg-white/50 border border-emerald-100 rounded-2xl font-bold outline-none focus:ring-2 ring-emerald-400 placeholder:opacity-50"
+                                                    />
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Adjustment Reason" 
+                                                        value={balanceAdjustReason}
+                                                        onChange={(e) => setBalanceAdjustReason(e.target.value)}
+                                                        className="w-full p-4 bg-white/50 border border-emerald-100 rounded-2xl font-bold outline-none focus:ring-2 ring-emerald-400 placeholder:opacity-50 text-sm"
+                                                    />
+                                                    <button 
+                                                        onClick={handleAdjustBalance}
+                                                        className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${balanceAdjustType === 'add' ? 'bg-emerald-500 shadow-emerald-200' : 'bg-red-500 shadow-red-200'}`}
+                                                    >
+                                                        Confirm {balanceAdjustType === 'add' ? 'Funding' : 'Debit'}
+                                                    </button>
                                                 </div>
                                             </div>
-                                        ))}
-                                        {selectedUserSlots.length === 0 && (
-                                            <div className="text-center py-6 text-gray-400 bg-zinc-50 rounded-2xl">
-                                                <ShoppingBag size={32} className="mx-auto mb-2 opacity-50" />
-                                                <div className="text-sm font-bold">No active subscriptions</div>
+
+                                            {/* BOOTS Management */}
+                                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-[2.5rem] border border-amber-100">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                                                        <Zap size={24} />
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-[10px] uppercase font-black text-amber-700/50">Current BOOTS</div>
+                                                        <div className="text-2xl font-black text-amber-700">{(selectedUser.boots_balance || 0).toLocaleString()}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="flex bg-white/50 rounded-2xl p-1 gap-1">
+                                                        <button 
+                                                            onClick={() => setBootsAdjustType('add')}
+                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'add' ? 'bg-amber-500 text-white shadow-md' : 'text-amber-700 opacity-60'}`}
+                                                        >ADD</button>
+                                                        <button 
+                                                            onClick={() => setBootsAdjustType('remove')}
+                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-amber-700 opacity-60'}`}
+                                                        >DEDUCT</button>
+                                                    </div>
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder="Number of BOOTS" 
+                                                        value={bootsAdjustAmount}
+                                                        onChange={(e) => setBootsAdjustAmount(e.target.value)}
+                                                        className="w-full p-4 bg-white/50 border border-amber-100 rounded-2xl font-bold outline-none focus:ring-2 ring-amber-400 placeholder:opacity-50"
+                                                    />
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Reason for adjustment" 
+                                                        value={bootsAdjustReason}
+                                                        onChange={(e) => setBootsAdjustReason(e.target.value)}
+                                                        className="w-full p-4 bg-white/50 border border-amber-100 rounded-2xl font-bold outline-none focus:ring-2 ring-amber-400 placeholder:opacity-50 text-sm"
+                                                    />
+                                                    <button 
+                                                       onClick={handleAdjustBoots}
+                                                       className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${bootsAdjustType === 'add' ? 'bg-amber-500 shadow-amber-200' : 'bg-red-500 shadow-red-200'}`}
+                                                    >
+                                                        Issue BOOTS
+                                                    </button>
+                                                </div>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+
+                                {userDetailTab === 'logs' && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+                                        <div className="bg-white border border-black/5 rounded-[2rem] overflow-hidden">
+                                            <div className="grid grid-cols-12 px-6 py-4 bg-zinc-50 border-b border-black/5 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                <div className="col-span-3">Action</div>
+                                                <div className="col-span-4">Details</div>
+                                                <div className="col-span-3">Admin</div>
+                                                <div className="col-span-2 text-right">Date</div>
+                                            </div>
+                                            <div className="divide-y divide-black/[0.03]">
+                                                {userAdminLogs.map((log: any) => (
+                                                    <div key={log._id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-black/[0.01]">
+                                                        <div className="col-span-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`w-1.5 h-1.5 rounded-full ${log.action_type?.includes('suspend') || log.action_type?.includes('ban') ? 'bg-red-500' : 'bg-blue-500'}`} />
+                                                                <span className="text-xs font-black uppercase tracking-tight">{log.action_type?.replace('_', ' ')}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-span-4 min-w-0 pr-4">
+                                                            <div className="text-xs font-bold text-gray-600 truncate">{log.details}</div>
+                                                            <div className="text-[10px] text-gray-400 italic font-medium truncate">{log.reason || "No reason provided"}</div>
+                                                        </div>
+                                                        <div className="col-span-3">
+                                                            <div className="text-xs font-bold">{log.admin_name}</div>
+                                                            <div className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{log.admin_role}</div>
+                                                        </div>
+                                                        <div className="col-span-2 text-right">
+                                                            <div className="text-[10px] font-bold text-gray-400">{new Date(log.created_at).toLocaleDateString()}</div>
+                                                            <div className="text-[10px] text-gray-300">{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {userAdminLogs.length === 0 && (
+                                                    <div className="py-12 text-center text-gray-400">
+                                                        <Activity size={32} className="mx-auto mb-2 opacity-20" />
+                                                        <div className="text-sm font-bold">No admin logs found for this user</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-
             {/* God Mode Modal */}
             <AnimatePresence>
                 {showGodModeModal && (

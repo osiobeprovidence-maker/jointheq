@@ -442,7 +442,7 @@ export const getPendingLeaveRequests = query({
                 user_name: user?.full_name || "Unknown",
                 user_email: user?.email || "",
                 slot_name: slotType?.name || "Unknown",
-                sub_name: subscription?.name || group?.subscription_catalog_id ? "Subscription" : "Unknown",
+                sub_name: (subscription as any)?.name || group?.subscription_catalog_id ? "Subscription" : "Unknown",
                 renewal_date: slot.renewal_date,
                 price: slotType?.price || 0,
             };
@@ -481,5 +481,127 @@ export const approveLeaveRequest = mutation({
             await ctx.db.delete(args.id);
         }
         return { success: true };
+    }
+});
+
+// ─── User Management Enhancements ───────────────────────────────────────────
+
+export const adjustUserBalance = mutation({
+    args: {
+        userId: v.id("users"),
+        amount: v.number(),
+        type: v.union(v.literal("add"), v.literal("remove")),
+        reason: v.string(),
+        executorId: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const executor = await ctx.db.get(args.executorId);
+        if (!executor?.is_admin) throw new Error("Unauthorized");
+
+        const user = await ctx.db.get(args.userId);
+        if (!user) throw new Error("User not found");
+
+        const currentBalance = user.wallet_balance || 0;
+        const newBalance = args.type === "add" ? currentBalance + args.amount : currentBalance - args.amount;
+
+        if (newBalance < 0 && args.type === "remove") throw new Error("Insufficient balance");
+
+        await ctx.db.patch(args.userId, {
+            wallet_balance: newBalance,
+        });
+
+        // Record transaction
+        await ctx.db.insert("wallet_transactions", {
+            user_id: args.userId,
+            amount: args.amount,
+            type: args.type === "add" ? "funding" : "payment",
+            source: "admin_adjustment",
+            status: "completed",
+            description: `Admin adjustment: ${args.reason}`,
+            created_at: Date.now(),
+        });
+
+        // Log admin action
+        await ctx.db.insert("admin_logs", {
+            admin_id: args.executorId,
+            admin_role: executor.admin_role || "admin",
+            action_type: "balance_adjustment",
+            target_type: "user",
+            target_id: args.userId,
+            target_name: user.full_name,
+            details: `${args.type === "add" ? "Added" : "Removed"} N${args.amount}`,
+            reason: args.reason,
+            created_at: Date.now(),
+        });
+
+        return { success: true, newBalance };
+    }
+});
+
+export const adjustUserBoots = mutation({
+    args: {
+        userId: v.id("users"),
+        amount: v.number(),
+        type: v.union(v.literal("add"), v.literal("remove")),
+        reason: v.string(),
+        executorId: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const executor = await ctx.db.get(args.executorId);
+        if (!executor?.is_admin) throw new Error("Unauthorized");
+
+        const user = await ctx.db.get(args.userId);
+        if (!user) throw new Error("User not found");
+
+        const currentBoots = user.boots_balance || 0;
+        const newBoots = args.type === "add" ? currentBoots + args.amount : currentBoots - args.amount;
+
+        if (newBoots < 0 && args.type === "remove") throw new Error("Insufficient BOOTS");
+
+        await ctx.db.patch(args.userId, {
+            boots_balance: newBoots,
+        });
+
+        // Record BOOTS transaction
+        await ctx.db.insert("boot_transactions", {
+            user_id: args.userId,
+            amount: args.type === "add" ? args.amount : -args.amount,
+            type: "admin_adjustment",
+            description: args.reason,
+            created_at: Date.now(),
+        });
+
+        // Log admin action
+        await ctx.db.insert("admin_logs", {
+            admin_id: args.executorId,
+            admin_role: executor.admin_role || "admin",
+            action_type: "boots_adjustment",
+            target_type: "user",
+            target_id: args.userId,
+            target_name: user.full_name,
+            details: `${args.type === "add" ? "Added" : "Removed"} ${args.amount} BOOTS`,
+            reason: args.reason,
+            created_at: Date.now(),
+        });
+
+        return { success: true, newBoots };
+    }
+});
+
+export const getUserAdminLogs = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        const logs = await ctx.db.query("admin_logs")
+            .withIndex("by_target", q => q.eq("target_type", "user").eq("target_id", args.userId))
+            .order("desc")
+            .collect();
+
+        return await Promise.all(logs.map(async (log) => {
+            const admin = await ctx.db.get(log.admin_id);
+            return {
+                ...log,
+                admin_name: admin?.full_name || "Unknown Admin",
+            };
+        }));
     }
 });
