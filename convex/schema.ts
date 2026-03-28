@@ -211,7 +211,9 @@ export default defineSchema({
         status: v.string(),
         account_email: v.optional(v.string()),
         plan_owner: v.optional(v.string()),
-    }).index("by_catalog", ["subscription_catalog_id"]),
+        request_id: v.optional(v.string()),
+    }).index("by_catalog", ["subscription_catalog_id"])
+      .index("by_request_id", ["request_id"]),
 
     messages: defineTable({
         sender_id: v.id("users"),
@@ -356,16 +358,7 @@ export default defineSchema({
         .index("by_assignee", ["assigned_to"])
         .index("by_admin", ["assigned_admin_id"]),
 
-    admin_logs: defineTable({
-        admin_id: v.id("users"),
-        action: v.string(),
-        target_type: v.optional(v.string()),
-        target_id: v.optional(v.string()),
-        target_name: v.optional(v.string()),
-        details: v.optional(v.string()),
-        created_at: v.number(),
-    }).index("by_admin", ["admin_id"])
-        .index("by_created_at", ["created_at"]),
+
 
     admin_notifications: defineTable({
         admin_id: v.id("users"),

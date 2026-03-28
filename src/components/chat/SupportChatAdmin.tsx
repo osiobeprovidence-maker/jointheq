@@ -13,6 +13,7 @@ import {
     X,
     User,
     ArrowRight,
+    ArrowLeft,
     Shield,
     Filter
 } from "lucide-react";

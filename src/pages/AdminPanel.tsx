@@ -59,7 +59,8 @@ import {
     LogOut,
     Tag,
     Sparkles,
-    UserPlus
+    UserPlus,
+    Trash2
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -159,7 +160,7 @@ export default function AdminPanel() {
 
     // Selected User state
     const [selectedUser, setSelectedUser] = useState<any>(null);
-    const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "logs">("overview");
+    const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "management" | "logs">("overview");
 
     // Workforce admin state
     const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
@@ -251,10 +252,9 @@ export default function AdminPanel() {
     // Derived Live User (to ensure modal shows fresh data after mutations)
     const liveUser = selectedUser ? allUsers.find((u: any) => u._id === selectedUser._id) || selectedUser : null;
 
-    // God Mode State
-    const [showGodModeModal, setShowGodModeModal] = useState(false);
-    const [godModeUserId, setGodModeUserId] = useState<Id<"users"> | null>(null);
+    // Management State (Unified Admin Hub)
     const [selectedSlotForAssignment, setSelectedSlotForAssignment] = useState<Id<"slot_types"> | null>(null);
+    const [selectedGroupForAssignment, setSelectedGroupForAssignment] = useState<Id<"groups"> | null>(null);
     const [overridePaymentStatus, setOverridePaymentStatus] = useState("filled");
     const [overrideReason, setOverrideReason] = useState("");
     const [overrideAmount, setOverrideAmount] = useState("");
@@ -293,7 +293,7 @@ export default function AdminPanel() {
     const allAdminTasks = useQuery(api.adminWorkforce.getAllTasks, {}) || [];
     const adminActivityLogs = useQuery(api.adminWorkforce.getAdminLogs, {}) || [];
     const performanceMetrics = useQuery(api.adminWorkforce.getPerformanceMetrics) || [];
-    const dailyReport = useQuery(api.adminWorkforce.getDailyReport);
+
     const supportStats = useQuery(api.support.getSupportStats, currentUser?._id ? { adminId: currentUser._id as any } : "skip");
 
 
@@ -397,22 +397,49 @@ export default function AdminPanel() {
         } catch (e: any) { toast.error(e.message); }
     };
 
-    // God Mode Handlers
+    // User Management Handlers
     const handleAssignUserToSlot = async () => {
-        if (!godModeUserId || !selectedSlotForAssignment) return;
+        if (!selectedUser || !selectedSlotForAssignment) return;
         try {
             await assignUserToSlot({
                 adminId: currentUser!._id,
-                userId: godModeUserId,
+                userId: selectedUser._id as Id<"users">,
                 slotTypeId: selectedSlotForAssignment,
-                reason: "Manual assignment via God mode"
+                reason: "Manual assignment via Admin Hub"
             });
             toast.success("User assigned to slot!");
-            setShowGodModeModal(false);
-            setGodModeUserId(null);
             setSelectedSlotForAssignment(null);
         } catch (e: any) {
             toast.error(e.message || "Failed to assign user");
+        }
+    };
+
+    const handleMoveUserGroup = async (toGroupId: Id<"groups">) => {
+        if (!selectedUser) return;
+        try {
+            await moveToGroup({
+                adminId: currentUser!._id,
+                userId: selectedUser._id as Id<"users">,
+                toGroupId,
+                reason: "Manual group transfer via Admin Hub"
+            });
+            toast.success("User moved to group!");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to move user");
+        }
+    };
+
+    const handleRemoveFromSlot = async (slotId: Id<"subscription_slots">) => {
+        if (!confirm("Are you sure you want to remove this user from this slot?")) return;
+        try {
+            await removeUserFromSlot({
+                adminId: currentUser!._id,
+                slotId,
+                reason: "Manual removal via Admin Hub"
+            });
+            toast.success("User removed from slot!");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to remove user");
         }
     };
 
@@ -427,7 +454,6 @@ export default function AdminPanel() {
                 reason: overrideReason,
             });
             toast.success("Payment status overridden!");
-            setShowGodModeModal(false);
             setOverrideReason("");
             setOverrideAmount("");
         } catch (e: any) {
@@ -436,23 +462,18 @@ export default function AdminPanel() {
     };
 
     const handleAddToWaitlist = async (subscriptionCatalogId: Id<"subscription_catalog">) => {
-        if (!godModeUserId) return;
+        if (!selectedUser) return;
         try {
             await addToWaitlist({
                 adminId: currentUser!._id,
-                userId: godModeUserId,
+                userId: selectedUser._id as Id<"users">,
                 subscriptionCatalogId,
-                notes: "Added via God mode"
+                notes: "Added via Admin Hub"
             });
             toast.success("User added to waitlist!");
         } catch (e: any) {
             toast.error(e.message || "Failed to add to waitlist");
         }
-    };
-
-    const handleOpenGodMode = (userId: Id<"users">) => {
-        setGodModeUserId(userId);
-        setShowGodModeModal(true);
     };
 
     const handleAdjustBalance = async () => {
@@ -619,14 +640,14 @@ export default function AdminPanel() {
         } catch (e: any) { toast.error(e.message); }
     };
 
-    const handleApproveLeave = async (id: Id<"slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
+    const handleApproveLeave = async (id: Id<"subscription_slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
         try {
-            await approveLeaveRequest({ id, type, executorId: currentUser!._id });
+            await approveLeaveRequest({ id, type });
             toast.success("Leave request approved");
         } catch (e: any) { toast.error(e.message); }
     };
 
-    const handleRejectLeave = async (id: Id<"slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
+    const handleRejectLeave = async (id: Id<"subscription_slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
         toast("Rejection not implemented yet. Contact ops.", { icon: "â„¹ï¸" });
     };
 
@@ -1407,7 +1428,7 @@ export default function AdminPanel() {
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleOpenGodMode(u._id);
+                                                                    setSelectedUser(u);
                                                                 }}
                                                                 className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
                                                                 title="God Mode"
@@ -1454,10 +1475,10 @@ export default function AdminPanel() {
                                                         {u.username && <div className="text-[10px] text-blue-500 font-bold">@{u.username}</div>}
                                                     </div>
                                                 </div>
-                                                <div className="col-span-2 text-center font-black text-sm text-blue-600">{fmt(u.wallet_balance || 0)}</div>
+                                                <div className="col-span-2 text-center font-black text-sm text-emerald-600">{fmt(u.wallet_balance || 0)}</div>
                                                 <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.q_score}</div>
                                                 <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.activeSubscriptions}</div>
-                                                <div className="col-span-2 text-center font-bold text-sm text-emerald-600">{fmt(u.totalPayments)}</div>
+                                                <div className="col-span-2 text-center font-bold text-sm text-zinc-900">{fmt(u.totalPayments)}</div>
                                                 <div className="col-span-1 flex justify-center">
                                                     {u.is_banned ? (
                                                         <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full">Banned</span>
@@ -1468,17 +1489,16 @@ export default function AdminPanel() {
                                                     )}
                                                 </div>
                                                 <div className="col-span-2 flex justify-center gap-1">
-                                                    {/* God Mode Button */}
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleOpenGodMode(u._id);
-                                                        }}
-                                                        className="p-1.5 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
-                                                        title="God Mode"
-                                                    >
-                                                        <Sparkles size={14} />
-                                                    </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedUser(u);
+                                                            }}
+                                                            className="p-1.5 bg-zinc-100 text-zinc-600 rounded-xl hover:bg-zinc-900 hover:text-white transition-all scale-110 shadow-sm"
+                                                            title="Manage User Hub"
+                                                        >
+                                                            <Activity size={14} />
+                                                        </button>
 
                                                     {u.is_suspended ? (
                                                         <button
@@ -3119,7 +3139,7 @@ export default function AdminPanel() {
                                                         <div className="min-w-0">
                                                             <h3 className="font-black text-base truncate">{req.user_name}</h3>
                                                             <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Legacy</span>
+                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-red-50 text-red-600 px-2 py-0.5 rounded-full" onClick={() => setSelectedUser(req.user_id)}>Legacy</span>
                                                                 <span className="text-[10px] font-bold text-gray-600 truncate">{req.user_email}</span>
                                                             </div>
                                                         </div>
@@ -3932,12 +3952,9 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 self-end md:self-auto">
-                                    <button onClick={() => {
-                                        setGodModeUserId(liveUser._id);
-                                        setShowGodModeModal(true);
-                                    }} className="p-3 bg-white hover:bg-zinc-900 hover:text-white rounded-2xl shadow-sm transition-all border border-black/5 flex items-center gap-2 text-sm font-bold">
-                                        <Sparkles size={18} />
-                                        God Mode
+                                    <button onClick={() => setUserDetailTab("management")} className="p-3 bg-white hover:bg-zinc-900 hover:text-white rounded-2xl shadow-sm transition-all border border-black/5 flex items-center gap-2 text-sm font-bold">
+                                        <ShieldCheck size={18} />
+                                        Advanced Controls
                                     </button>
                                     <button onClick={() => setSelectedUser(null)} className="p-3 bg-white rounded-2xl shadow-sm text-gray-400 hover:text-black transition-all border border-black/5">
                                         <X size={20} />
@@ -3946,12 +3963,12 @@ export default function AdminPanel() {
                             </div>
 
                             {/* Hub Navigation */}
-                            <div className="flex border-b border-black/5 px-6">
-                                {(['overview', 'financials', 'logs'] as const).map(tab => (
+                            <div className="flex border-b border-black/5 px-6 bg-white overflow-x-auto no-scrollbar">
+                                {(['overview', 'financials', 'management', 'logs'] as const).map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => setUserDetailTab(tab)}
-                                        className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all relative ${userDetailTab === tab ? 'text-zinc-900' : 'text-gray-400 hover:text-gray-600'}`}
+                                        className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all relative whitespace-nowrap ${userDetailTab === tab ? 'text-zinc-900' : 'text-gray-400 hover:text-gray-600'}`}
                                     >
                                         {tab}
                                         {userDetailTab === tab && (
@@ -3967,83 +3984,65 @@ export default function AdminPanel() {
                                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                         {/* Snapshot Metrics */}
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                            <div className="bg-white p-5 rounded-3xl border border-black/[0.03] shadow-sm">
                                                 <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
                                                     Wallet
-                                                    <Wallet size={10} />
+                                                    <Wallet size={10} className="text-emerald-500" />
                                                 </div>
-                                                <div className="font-black text-xl text-emerald-600">{fmt(liveUser.wallet_balance || 0)}</div>
+                                                <div className="font-black text-2xl text-emerald-600">{fmt(liveUser.wallet_balance || 0)}</div>
                                             </div>
-                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                            <div className="bg-white p-5 rounded-3xl border border-black/[0.03] shadow-sm">
                                                 <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
                                                     Q-Score
-                                                    <Trophy size={10} />
+                                                    <Trophy size={10} className="text-zinc-400" />
                                                 </div>
-                                                <div className="font-black text-xl text-zinc-900">{liveUser.q_score || 0}</div>
+                                                <div className="font-black text-2xl text-zinc-900">{liveUser.q_score || 0}</div>
                                             </div>
-                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                            <div className="bg-white p-5 rounded-3xl border border-black/[0.03] shadow-sm">
                                                 <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
                                                     Subscriptions
-                                                    <ShoppingBag size={10} />
+                                                    <ShoppingBag size={10} className="text-purple-500" />
                                                 </div>
-                                                <div className="font-black text-xl text-purple-600">{liveUser.activeSubscriptions || 0}</div>
+                                                <div className="font-black text-2xl text-purple-600">{liveUser.activeSubscriptions || 0}</div>
                                             </div>
-                                            <div className="bg-zinc-50 p-5 rounded-3xl border border-black/[0.03]">
+                                            <div className="bg-white p-5 rounded-3xl border border-black/[0.03] shadow-sm">
                                                 <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-1.5 flex items-center justify-between">
-                                                    Experience
-                                                    <Clock size={10} />
+                                                    Member Status
+                                                    <Clock size={10} className="text-blue-500" />
                                                 </div>
-                                                <div className="font-bold text-sm text-zinc-900">
-                                                    {Math.floor((Date.now() - liveUser.created_at) / (1000 * 60 * 60 * 24))} Days
+                                                <div className="font-bold text-sm text-zinc-900 h-8 flex items-center capitalize">
+                                                    {liveUser.q_rank || 'Bronze'} Member
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Active Slots Section */}
-                                        <div>
+                                        {/* Active Slots Snapshot */}
+                                        <div className="bg-white p-6 rounded-[2rem] border border-black/5 shadow-sm">
                                             <div className="flex items-center justify-between mb-4">
-                                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Active Subscriptions</h3>
-                                                <button onClick={() => {
-                                                    setGodModeUserId(liveUser._id);
-                                                    setShowGodModeModal(true);
-                                                }} className="text-[10px] font-bold text-blue-500 hover:underline">Add New Slot</button>
+                                                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Active Subscriptions</h3>
+                                                <button onClick={() => setUserDetailTab("management")} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline">Manage All</button>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {liveUserSlots.map((m: any, i: number) => (
-                                                    <div key={`${m._id || i}`} className="bg-white border border-black/10 p-5 rounded-[2rem] flex items-center gap-4 hover:shadow-xl hover:shadow-black/5 transition-all group relative overflow-hidden">
-                                                        <div className="absolute top-0 right-0 w-16 h-16 bg-zinc-900 rounded-full -mr-8 -mt-8 opacity-[0.03] group-hover:scale-150 transition-transform duration-500" />
-                                                        <div className="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0 shadow-lg">
-                                                            {m.sub_name?.[0] || m.slot_name?.[0] || '?'}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="font-black text-sm truncate">{m.sub_name || "Unknown"}</div>
-                                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{m.slot_name || "Unknown Slot"}</div>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Renews:</span>
-                                                                <span className="text-[10px] font-bold">{m.renewal_date ? new Date(m.renewal_date).toLocaleDateString() : 'N/A'}</span>
+                                            <div className="space-y-3">
+                                                {liveUserSlots.map((s: any) => (
+                                                    <div key={s._id} className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 bg-zinc-900 text-white rounded-xl flex items-center justify-center font-black">{s.sub_name?.[0]}</div>
+                                                            <div>
+                                                                <div className="text-sm font-black text-zinc-900">{s.sub_name}</div>
+                                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{s.slot_name}</div>
                                                             </div>
                                                         </div>
-                                                        <button 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setGodModeUserId(liveUser._id);
-                                                                setShowGodModeModal(true);
-                                                            }}
-                                                            className="p-3 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-xl transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
-                                                        >
-                                                            <Edit size={16} />
-                                                        </button>
+                                                        <div className="text-right">
+                                                            <div className="text-[10px] font-black text-amber-500 uppercase">Renews</div>
+                                                            <div className="text-[10px] font-bold">{s.renewal_date ? new Date(s.renewal_date).toLocaleDateString() : 'N/A'}</div>
+                                                        </div>
                                                     </div>
                                                 ))}
                                                 {liveUserSlots.length === 0 && (
-                                                    <div className="col-span-full py-8 text-center bg-zinc-50 rounded-[2rem] border border-dashed border-black/10">
-                                                        <ShoppingBag size={32} className="mx-auto mb-2 opacity-20" />
-                                                        <div className="text-sm font-bold text-gray-400">No active subscriptions found</div>
-                                                    </div>
+                                                    <div className="text-center py-6 text-gray-400 text-xs font-bold bg-zinc-50 rounded-2xl border border-dashed border-black/5">No active slots</div>
                                                 )}
                                             </div>
                                         </div>
-
                                         {/* Security Quick Actions */}
                                         <div className="pt-6 border-t border-black/5">
                                              <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Account Integrity</div>
@@ -4091,92 +4090,202 @@ export default function AdminPanel() {
                                         {/* Wallet Management */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {/* Naira Management */}
-                                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-[2.5rem] border border-emerald-100">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                                        <Wallet size={24} />
+                                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                                <div className="flex items-center justify-between mb-8">
+                                                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-sm">
+                                                        <Wallet size={28} />
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-[10px] uppercase font-black text-emerald-700/50">Current Balance</div>
-                                                        <div className="text-2xl font-black text-emerald-700">{fmt(liveUser.wallet_balance || 0)}</div>
+                                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Available Wallet</div>
+                                                        <div className="text-3xl font-black text-emerald-600">{fmt(liveUser.wallet_balance || 0)}</div>
                                                     </div>
                                                 </div>
-                                                <div className="space-y-3">
-                                                    <div className="flex bg-white/50 rounded-2xl p-1 gap-1">
+                                                <div className="space-y-4">
+                                                    <div className="flex bg-zinc-50 p-1.5 rounded-2xl shadow-inner gap-1">
                                                         <button 
                                                             onClick={() => setBalanceAdjustType('add')}
-                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'add' ? 'bg-emerald-500 text-white shadow-md' : 'text-emerald-700 opacity-60'}`}
-                                                        >ADD</button>
+                                                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'add' ? 'bg-zinc-900 text-white shadow-md' : 'text-gray-400'}`}
+                                                        >Credit</button>
                                                         <button 
                                                             onClick={() => setBalanceAdjustType('remove')}
-                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-emerald-700 opacity-60'}`}
-                                                        >DEDUCT</button>
+                                                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-gray-400'}`}
+                                                        >Debit</button>
                                                     </div>
-                                                    <input 
-                                                        type="number" 
-                                                        placeholder="Enter Amount (₦)" 
-                                                        value={balanceAdjustAmount}
-                                                        onChange={(e) => setBalanceAdjustAmount(e.target.value)}
-                                                        className="w-full p-4 bg-white/50 border border-emerald-100 rounded-2xl font-bold outline-none focus:ring-2 ring-emerald-400 placeholder:opacity-50"
-                                                    />
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Adjustment Reason" 
-                                                        value={balanceAdjustReason}
-                                                        onChange={(e) => setBalanceAdjustReason(e.target.value)}
-                                                        className="w-full p-4 bg-white/50 border border-emerald-100 rounded-2xl font-bold outline-none focus:ring-2 ring-emerald-400 placeholder:opacity-50 text-sm"
-                                                    />
+                                                    <div className="space-y-3">
+                                                        <div className="relative">
+                                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-zinc-400">₦</span>
+                                                            <input 
+                                                                type="number" 
+                                                                placeholder="0.00" 
+                                                                value={balanceAdjustAmount}
+                                                                onChange={(e) => setBalanceAdjustAmount(e.target.value)}
+                                                                className="w-full pl-10 pr-4 py-4 bg-zinc-50 border border-black/5 rounded-2xl font-black text-xl outline-none focus:ring-2 ring-emerald-400 shadow-sm"
+                                                            />
+                                                        </div>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Reason for adjustment" 
+                                                            value={balanceAdjustReason}
+                                                            onChange={(e) => setBalanceAdjustReason(e.target.value)}
+                                                            className="w-full p-4 bg-zinc-50 border border-black/5 rounded-2xl font-bold outline-none focus:ring-2 ring-emerald-400 shadow-sm text-sm"
+                                                        />
+                                                    </div>
                                                     <button 
                                                         onClick={handleAdjustBalance}
-                                                        className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${balanceAdjustType === 'add' ? 'bg-emerald-500 shadow-emerald-200' : 'bg-red-500 shadow-red-200'}`}
+                                                        className={`w-full py-5 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${balanceAdjustType === 'add' ? 'bg-emerald-600' : 'bg-red-600'}`}
                                                     >
-                                                        Confirm {balanceAdjustType === 'add' ? 'Funding' : 'Debit'}
+                                                        Apply {balanceAdjustType === 'add' ? 'Funding' : 'Debit'}
                                                     </button>
                                                 </div>
                                             </div>
 
                                             {/* BOOTS Management */}
-                                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-[2.5rem] border border-amber-100">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                                                        <Zap size={24} />
+                                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                                <div className="flex items-center justify-between mb-8">
+                                                    <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center shadow-sm">
+                                                        <Zap size={28} />
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-[10px] uppercase font-black text-amber-700/50">Current BOOTS</div>
-                                                        <div className="text-2xl font-black text-amber-700">{(liveUser.boots_balance || 0).toLocaleString()}</div>
+                                                        <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">BOOTS Balance</div>
+                                                        <div className="text-3xl font-black text-amber-600">{(liveUser.boots_balance || 0).toLocaleString()}</div>
                                                     </div>
                                                 </div>
-                                                <div className="space-y-3">
-                                                    <div className="flex bg-white/50 rounded-2xl p-1 gap-1">
+                                                <div className="space-y-4">
+                                                    <div className="flex bg-zinc-50 p-1.5 rounded-2xl shadow-inner gap-1">
                                                         <button 
                                                             onClick={() => setBootsAdjustType('add')}
-                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'add' ? 'bg-amber-500 text-white shadow-md' : 'text-amber-700 opacity-60'}`}
-                                                        >ADD</button>
+                                                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'add' ? 'bg-zinc-900 text-white shadow-md' : 'text-gray-400'}`}
+                                                        >Issue</button>
                                                         <button 
                                                             onClick={() => setBootsAdjustType('remove')}
-                                                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-amber-700 opacity-60'}`}
-                                                        >DEDUCT</button>
+                                                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-gray-400'}`}
+                                                        >Revoke</button>
                                                     </div>
-                                                    <input 
-                                                        type="number" 
-                                                        placeholder="Number of BOOTS" 
-                                                        value={bootsAdjustAmount}
-                                                        onChange={(e) => setBootsAdjustAmount(e.target.value)}
-                                                        className="w-full p-4 bg-white/50 border border-amber-100 rounded-2xl font-bold outline-none focus:ring-2 ring-amber-400 placeholder:opacity-50"
-                                                    />
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Reason for adjustment" 
-                                                        value={bootsAdjustReason}
-                                                        onChange={(e) => setBootsAdjustReason(e.target.value)}
-                                                        className="w-full p-4 bg-white/50 border border-amber-100 rounded-2xl font-bold outline-none focus:ring-2 ring-amber-400 placeholder:opacity-50 text-sm"
-                                                    />
+                                                    <div className="space-y-3">
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="0" 
+                                                            value={bootsAdjustAmount}
+                                                            onChange={(e) => setBootsAdjustAmount(e.target.value)}
+                                                            className="w-full px-4 py-4 bg-zinc-50 border border-black/5 rounded-2xl font-black text-xl outline-none focus:ring-2 ring-amber-400 shadow-sm"
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Reason for adjustment" 
+                                                            value={bootsAdjustReason}
+                                                            onChange={(e) => setBootsAdjustReason(e.target.value)}
+                                                            className="w-full p-4 bg-zinc-50 border border-black/5 rounded-2xl font-bold outline-none focus:ring-2 ring-amber-400 shadow-sm text-sm"
+                                                        />
+                                                    </div>
                                                     <button 
                                                        onClick={handleAdjustBoots}
-                                                       className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${bootsAdjustType === 'add' ? 'bg-amber-500 shadow-amber-200' : 'bg-red-500 shadow-red-200'}`}
+                                                       className={`w-full py-5 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${bootsAdjustType === 'add' ? 'bg-amber-500' : 'bg-red-600'}`}
                                                     >
-                                                        Issue BOOTS
+                                                        Update BOOTS
                                                     </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {userDetailTab === 'management' && (
+                                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        {/* Slot Allocation Control */}
+                                        <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                            <div className="flex items-center gap-3 mb-8">
+                                                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-100/50">
+                                                    <Sparkles size={24} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-black text-zinc-900">Subscription Allocation</h3>
+                                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Manual Assignment & Transfers</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                                {/* Active Slots Management */}
+                                                <div className="space-y-4">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Current Assignments</h4>
+                                                    <div className="space-y-3">
+                                                        {liveUserSlots.map((slot: any) => (
+                                                            <div key={slot._id} className="p-4 bg-zinc-50 border border-black/5 rounded-2xl flex items-center justify-between group">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 bg-white border border-black/10 rounded-xl flex items-center justify-center font-black shadow-sm transition-transform">{slot.sub_name?.[0]}</div>
+                                                                    <div>
+                                                                        <div className="text-sm font-black">{slot.sub_name}</div>
+                                                                        <div className="text-[10px] font-bold text-gray-400">Account: {slot.account_email || 'n/a'}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <select 
+                                                                        className="text-[10px] font-black uppercase bg-white border border-black/10 rounded-lg px-2 py-1 outline-none"
+                                                                        onChange={(e) => handleMoveUserGroup(e.target.value as Id<"groups">)}
+                                                                        defaultValue=""
+                                                                    >
+                                                                        <option value="" disabled>Move...</option>
+                                                                        {allSubscriptions
+                                                                            .filter((sub: any) => sub.subscription_name === slot.sub_name && sub._id !== slot.group_id)
+                                                                            .map((g: any) => (
+                                                                                <option key={g._id} value={g._id}>Group {g.account_email?.split('@')[0] || g._id.slice(-4)}</option>
+                                                                            ))}
+                                                                    </select>
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            if (confirm("Quickly override this slot to 'filled'?")) {
+                                                                                setOverridePaymentStatus("filled");
+                                                                                setOverrideReason("One-tap admin fix via User Hub");
+                                                                                handleOverridePayment(slot._id);
+                                                                            }
+                                                                        }}
+                                                                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-zinc-900 hover:text-white transition-all shadow-sm group-hover:scale-105"
+                                                                        title="Quick Fix Status"
+                                                                    >
+                                                                        <RefreshCw size={14} />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleRemoveFromSlot(slot._id)}
+                                                                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                                        title="Remove from Slot"
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {liveUserSlots.length === 0 && <div className="p-6 text-center text-gray-400 italic text-sm">No active slots found.</div>}
+                                                    </div>
+                                                </div>
+
+                                                {/* Assign New Slot */}
+                                                <div className="space-y-4">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Assign New Plan</h4>
+                                                    <div className="bg-zinc-50 border border-black/5 p-6 rounded-3xl space-y-4">
+                                                        <div>
+                                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Choose Plan Type</label>
+                                                            <select 
+                                                                className="w-full p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-purple-400"
+                                                                onChange={(e) => setSelectedSlotForAssignment(e.target.value as Id<"slot_types">)}
+                                                                value={selectedSlotForAssignment || ""}
+                                                            >
+                                                                <option value="">Select a slot type...</option>
+                                                                {allSubscriptions.map((sub: any) => (
+                                                                    <optgroup key={sub._id} label={`${sub.subscription_name} (${sub.account_email || 'admin'})`}>
+                                                                        {(sub.slot_types || []).map((st: any) => (
+                                                                            <option key={st._id} value={st._id}>{st.name} - {fmt(st.price)}</option>
+                                                                        ))}
+                                                                    </optgroup>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <button 
+                                                            disabled={!selectedSlotForAssignment}
+                                                            onClick={handleAssignUserToSlot}
+                                                            className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black shadow-lg disabled:opacity-30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                        >
+                                                            <Plus size={18} /> Assign Plan to User
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -4228,182 +4337,6 @@ export default function AdminPanel() {
                             </div>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
-            {/* God Mode Modal */}
-            <AnimatePresence>
-                {showGodModeModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-                    >
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowGodModeModal(false)} />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
-                        >
-                            {/* Header */}
-                            <div className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
-                                        <Sparkles size={28} />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-black">God Mode</h2>
-                                        <p className="text-sm text-white/80">Advanced user management</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setShowGodModeModal(false)} className="p-3 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                                {/* User Info */}
-                                <div className="bg-zinc-50 p-5 rounded-3xl border border-black/5">
-                                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Target User</div>
-                                    <div className="font-bold text-lg">
-                                        {allUsers.find(u => u._id === godModeUserId)?.full_name || "Unknown"}
-                                    </div>
-                                    <div className="text-sm text-gray-500">
-                                        {allUsers.find(u => u._id === godModeUserId)?.email}
-                                    </div>
-                                </div>
-
-                                {/* Action Tabs */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-5 rounded-3xl border border-purple-100">
-                                        <div className="w-10 h-10 bg-purple-500 text-white rounded-xl flex items-center justify-center mb-3">
-                                            <UserPlus size={20} />
-                                        </div>
-                                        <div className="font-bold text-sm mb-1">Assign to Slot</div>
-                                        <div className="text-xs text-gray-500 mb-3">Add user to subscription</div>
-                                        <select
-                                            value={selectedSlotForAssignment || ""}
-                                            onChange={(e) => setSelectedSlotForAssignment(e.target.value as Id<"slot_types">)}
-                                            className="w-full p-2.5 bg-white border border-purple-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-purple-500"
-                                        >
-                                            <option value="">Select slot type...</option>
-                                            {allSubscriptions.map((group: any) =>
-                                                group.slot_types.map((st: any) => (
-                                                    <option key={st._id} value={st._id}>
-                                                        {st.name} - â‚¦{st.price.toLocaleString()}
-                                                    </option>
-                                                ))
-                                            )}
-                                        </select>
-                                        <button
-                                            onClick={handleAssignUserToSlot}
-                                            disabled={!selectedSlotForAssignment}
-                                            className="w-full mt-2 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-600 transition-colors"
-                                        >
-                                            Assign Now
-                                        </button>
-                                    </div>
-
-                                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-3xl border border-amber-100">
-                                        <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center mb-3">
-                                            <CreditCard size={20} />
-                                        </div>
-                                        <div className="font-bold text-sm mb-1">Override Payment</div>
-                                        <div className="text-xs text-gray-500 mb-3">Mark as PAID/FAILED</div>
-                                        <select
-                                            value={overridePaymentStatus}
-                                            onChange={(e) => setOverridePaymentStatus(e.target.value)}
-                                            className="w-full p-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-amber-500 mb-2"
-                                        >
-                                            <option value="filled">PAID</option>
-                                            <option value="pending">PENDING</option>
-                                            <option value="failed">FAILED</option>
-                                        </select>
-                                        <input
-                                            type="text"
-                                            placeholder="Reason (required)"
-                                            value={overrideReason}
-                                            onChange={(e) => setOverrideReason(e.target.value)}
-                                            className="w-full p-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-amber-500 mb-2"
-                                        />
-                                        <input
-                                            type="number"
-                                            placeholder="Override amount (optional)"
-                                            value={overrideAmount}
-                                            onChange={(e) => setOverrideAmount(e.target.value)}
-                                            className="w-full p-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-amber-500"
-                                        />
-                                    </div>
-
-                                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-3xl border border-emerald-100">
-                                        <div className="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center mb-3">
-                                            <Clock size={20} />
-                                        </div>
-                                        <div className="font-bold text-sm mb-1">Add to Waitlist</div>
-                                        <div className="text-xs text-gray-500 mb-3">Queue for next slot</div>
-                                        <select
-                                            onChange={(e) => {
-                                                if (e.target.value) {
-                                                    handleAddToWaitlist(e.target.value as Id<"subscription_catalog">);
-                                                    e.target.value = "";
-                                                }
-                                            }}
-                                            className="w-full p-2.5 bg-white border border-emerald-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-emerald-500"
-                                        >
-                                            <option value="">Select subscription...</option>
-                                            {allSubscriptions.map((group: any) => (
-                                                <option key={group._id} value={group.subscription_catalog_id || group._id}>
-                                                    {group.subscription_name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-3xl border border-blue-100">
-                                        <div className="w-10 h-10 bg-blue-500 text-white rounded-xl flex items-center justify-center mb-3">
-                                            <Activity size={20} />
-                                        </div>
-                                        <div className="font-bold text-sm mb-1">Quick Actions</div>
-                                        <div className="text-xs text-gray-500 mb-3">User management</div>
-                                        <div className="space-y-2">
-                                            <button
-                                                onClick={() => {
-                                                    if (godModeUserId) {
-                                                        setSelectedUser(allUsers.find(u => u._id === godModeUserId) || null);
-                                                        setShowGodModeModal(false);
-                                                    }
-                                                }}
-                                                className="w-full py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-colors"
-                                            >
-                                                View Full Profile
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    toast.success("Feature: Move to group coming soon");
-                                                }}
-                                                className="w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-50 transition-colors"
-                                            >
-                                                Move to Group
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Warning */}
-                                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex items-start gap-4">
-                                    <AlertTriangle size={24} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <div className="font-bold text-amber-800 text-sm">God Mode Actions are Logged</div>
-                                        <div className="text-xs text-amber-700 mt-1">
-                                            All actions taken in God mode are recorded in the activity logs with your admin ID, timestamp, and reason. Use responsibly.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

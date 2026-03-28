@@ -466,7 +466,7 @@ export const adminCreateListing = mutation({
             status: "active",
             account_email: args.account_email,
             plan_owner: normalizedPlanOwner,
-            request_id: args.request_id || null,
+            request_id: args.request_id || undefined,
         });
 
         // PILLAR 2: Create Subscription (Account) record
