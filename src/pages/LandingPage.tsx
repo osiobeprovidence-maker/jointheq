@@ -28,27 +28,45 @@ export default function LandingPage() {
 
   const user = useQuery(api.users.getByEmail, formData.email ? { email: formData.email } : "skip");
 
+  // Run once on mount: check if the URL contains a verification token
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+
     if (params.get('verified') === 'true' || token) {
+      // Clear the URL first so back-button / re-renders don't re-trigger
+      window.history.replaceState({}, document.title, window.location.pathname);
+
       if (token) {
         setIsLoading(true);
         verifyUser({ token })
-          .then(() => {
-            setSuccess('Account verified successfully! You can now log in.');
+          .then((result) => {
+            if (result.success) {
+              setSuccess(
+                result.alreadyVerified
+                  ? 'Your account is already verified. Please log in.'
+                  : 'Account verified successfully! You can now log in.'
+              );
+            } else {
+              // Graceful error — invalid_token | token_expired | missing_token
+              setError(result.message ?? 'Verification failed. Please try again.');
+            }
             setActiveSection('login');
           })
-          .catch(err => setError(err.message))
+          .catch((err) => {
+            // Only truly unexpected / network errors reach here
+            setError('Verification failed. The link may be invalid or already used.');
+            setActiveSection('login');
+            console.error('[verifyUser] Unexpected error:', err);
+          })
           .finally(() => setIsLoading(false));
       } else {
         setSuccess('Account verified successfully! You can now log in.');
         setActiveSection('login');
       }
-      // Clear URL
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [verifyUser]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — reads window.location once on mount
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

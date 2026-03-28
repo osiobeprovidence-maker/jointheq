@@ -61,7 +61,7 @@ export const resetAllWallets = mutation({
         // Log this action
         await ctx.db.insert("admin_logs", {
             admin_id: args.executed_by,
-            action: "reset_all_wallets",
+            action_type: "reset_all_wallets",
             target_type: "system",
             target_name: `Pre-launch wallet reset - ${resetCount} users affected, ${transactions.length} transactions cleared`,
             created_at: Date.now(),
@@ -101,7 +101,7 @@ export const initializeSuperAdmin = mutation({
 
                 await ctx.db.insert("admin_logs", {
                     admin_id: user._id,
-                    action: "initialized_super_admin",
+                    action_type: "initialized_super_admin",
                     target_type: "user",
                     target_name: `${user.full_name} (${user.email})`,
                     created_at: Date.now(),
@@ -161,7 +161,7 @@ export const grantSuperAdmin = mutation({
 
         await ctx.db.insert("admin_logs", {
             admin_id: args.granted_by,
-            action: "granted_super_admin",
+            action_type: "granted_super_admin",
             target_type: "user",
             target_name: `${target.full_name} (${target.email})`,
             created_at: Date.now(),
@@ -344,23 +344,54 @@ export const createUser = mutation({
 export const verifyUser = mutation({
     args: { token: v.string() },
     handler: async (ctx, args) => {
-        const user = await ctx.db
-            .query("users")
-            .withIndex("by_token", (q) => q.eq("verification_token", args.token))
-            .unique();
-
-        if (!user) throw new Error("Invalid token");
-        if (user.verification_token_expires && new Date(user.verification_token_expires) < new Date()) {
-            throw new Error("Token expired");
+        // Guard: token must be a non-empty string
+        const trimmedToken = args.token?.trim();
+        if (!trimmedToken) {
+            return { success: false, error: "missing_token", message: "Verification token is missing." };
         }
 
+        // Look up user by verification token
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) => q.eq("verification_token", trimmedToken))
+            .unique();
+
+        // Token not found — could be already verified (token was cleared) or never valid
+        if (!user) {
+            // Check if a user with this token was already verified (idempotent success)
+            // We can't look them up by token since it's cleared, so just return a
+            // friendly already-verified message. The frontend handles this gracefully.
+            return { success: false, error: "invalid_token", message: "This verification link is invalid or has already been used. If your account is already verified, please log in." };
+        }
+
+        // Token already consumed (is_verified true but token somehow still present)
+        if (user.is_verified) {
+            // Clear any leftover token fields and return success
+            await ctx.db.patch(user._id, {
+                verification_token: undefined,
+                verification_token_expires: undefined,
+                verification_deadline: undefined,
+            });
+            return { success: true, userId: user._id, alreadyVerified: true };
+        }
+
+        // Check if token has expired
+        if (user.verification_token_expires) {
+            const expiry = new Date(user.verification_token_expires);
+            if (expiry < new Date()) {
+                return { success: false, error: "token_expired", message: "This verification link has expired. Please sign up again or request a new verification email." };
+            }
+        }
+
+        // All checks passed — verify the user
         await ctx.db.patch(user._id, {
             is_verified: true,
             verification_token: undefined,
             verification_token_expires: undefined,
-            verification_deadline: undefined, // Clear the deadline once verified
+            verification_deadline: undefined,
         });
-        return user._id;
+
+        return { success: true, userId: user._id, alreadyVerified: false };
     },
 });
 

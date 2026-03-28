@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
     LayoutDashboard,
@@ -70,10 +70,10 @@ import toast from "react-hot-toast";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fmt = fmtCurrency;
 
 function StatCard({ label, value, sub, icon, color, trend }: {
@@ -111,7 +111,7 @@ function SectionHeader({ title, sub, action }: { title: string; sub?: string; ac
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function AdminPanel() {
     const navigate = useNavigate();
     const user = auth.getCurrentUser();
@@ -370,7 +370,7 @@ export default function AdminPanel() {
                     target_goal: campaignForm.target_goal,
                     created_by: currentUser!._id,
                 });
-                toast.success('Campaign created! 🚀', { icon: '🎯' });
+                toast.success('Campaign created! ðŸš€', { icon: 'ðŸŽ¯' });
             }
             setShowCampaignModal(false);
             setEditingCampaign(null);
@@ -535,7 +535,7 @@ export default function AdminPanel() {
                 // frontend should generate a unique request id per user action
                 request_id: (window as any).__listingRequestId || undefined,
             });
-            toast.success("Listing published to marketplace!", { icon: '🚀' });
+            toast.success("Listing published to marketplace!", { icon: 'ðŸš€' });
             setShowListingModal(false);
             setListingData({
                 platform_name: "", account_email: "", account_password: "", plan_owner: "",
@@ -572,7 +572,7 @@ export default function AdminPanel() {
     };
 
     const handleRejectLeave = async (id: Id<"slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
-        toast("Rejection not implemented yet. Contact ops.", { icon: "ℹ️" });
+        toast("Rejection not implemented yet. Contact ops.", { icon: "â„¹ï¸" });
     };
 
     if (!currentUser?.is_admin) {
@@ -614,7 +614,7 @@ export default function AdminPanel() {
 
     return (
         <div className="min-h-screen bg-[#f5f5f7] flex font-['Inter',sans-serif]">
-            {/* ── Sidebar ── */}
+            {/* â”€â”€ Sidebar â”€â”€ */}
             <aside className="hidden md:flex w-64 flex-col bg-zinc-950 text-white min-h-screen fixed top-0 left-0 z-40">
                 {/* Logo */}
                 <div className="p-6 border-b border-white/5">
@@ -779,7 +779,7 @@ export default function AdminPanel() {
                     </>
                 )}
             </AnimatePresence>
-            {/* ── Mobile Top Bar ── */}
+            {/* â”€â”€ Mobile Top Bar â”€â”€ */}
             <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950 text-white flex items-center justify-between px-4 py-3 h-16 shadow-lg">
                 <div className="flex items-center gap-2">
                     <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center font-black">Q</div>
@@ -795,7 +795,7 @@ export default function AdminPanel() {
                 </div>
             </div>
 
-            {/* ── Mobile Hamburger Menu ── */}
+            {/* â”€â”€ Mobile Hamburger Menu â”€â”€ */}
             <AnimatePresence>
                 {mobileMenuOpen && (
                     <>
@@ -864,7 +864,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Main Content ── */}
+            {/* â”€â”€ Main Content â”€â”€ */}
             <main className="flex-1 md:ml-64 mt-16 md:mt-0 min-h-screen">
                 {/* Top bar (desktop) */}
                 <div className="hidden md:flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 bg-white border-b border-black/5 sticky top-0 z-30">
@@ -899,7 +899,7 @@ export default function AdminPanel() {
                 <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-4 sm:pt-6">
                     <AnimatePresence mode="wait">
 
-                        {/* ═══ DASHBOARD ═══ */}
+                        {/* â•â•â• DASHBOARD â•â•â• */}
                         {activeTab === "dashboard" && (
                             <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
 
@@ -920,9 +920,9 @@ export default function AdminPanel() {
                                                         Your role: <span className="font-black uppercase">{walletResetPermission.role || 'none'}</span>
                                                     </span>
                                                     {walletResetPermission.can_reset ? (
-                                                        <span className="px-3 py-1.5 bg-emerald-500/80 rounded-full font-bold">✓ Authorized</span>
+                                                        <span className="px-3 py-1.5 bg-emerald-500/80 rounded-full font-bold">âœ“ Authorized</span>
                                                     ) : (
-                                                        <span className="px-3 py-1.5 bg-amber-500/80 rounded-full font-bold">✗ {walletResetPermission.reason}</span>
+                                                        <span className="px-3 py-1.5 bg-amber-500/80 rounded-full font-bold">âœ— {walletResetPermission.reason}</span>
                                                     )}
                                                 </div>
                                                 {!walletResetPermission.can_reset && walletResetPermission.role !== 'super' && currentUser?.is_admin && (
@@ -938,7 +938,7 @@ export default function AdminPanel() {
                                                         }}
                                                         className="mt-3 px-4 py-2 bg-white text-red-600 font-bold rounded-xl hover:scale-105 transition-transform text-xs"
                                                     >
-                                                        👑 Grant Yourself Super Admin
+                                                        ðŸ‘‘ Grant Yourself Super Admin
                                                     </button>
                                                 )}
                                             </div>
@@ -954,40 +954,141 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* Users */}
+                                {/* â”€â”€ HERO KPI BANNER â”€â”€ */}
+                                <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-blue-950 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
+                                    <div className="absolute inset-0 pointer-events-none">
+                                        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full -mr-48 -mt-48 blur-3xl" />
+                                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full -ml-32 -mb-32 blur-3xl" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Live Platform Intel</span>
+                                                </div>
+                                                <h2 className="text-xl sm:text-2xl font-black">Command Center</h2>
+                                            </div>
+                                            <div className="text-right hidden sm:block">
+                                                <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Last updated</div>
+                                                <div className="text-xs font-bold text-white/70">{new Date().toLocaleTimeString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+                                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Users size={14} className="text-blue-400" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Users</span>
+                                                </div>
+                                                <div className="text-3xl font-black text-white">{stats?.totalUsers ?? <span className="text-white/30 text-lg">â€”</span>}</div>
+                                                {stats && <div className="text-[10px] text-emerald-400 font-bold mt-1">+{stats.newUsersToday} today</div>}
+                                            </div>
+                                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <DollarSign size={14} className="text-emerald-400" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Revenue</span>
+                                                </div>
+                                                <div className="text-3xl font-black text-white">{stats ? fmtCurrencyShort(stats.totalRevenue) : <span className="text-white/30 text-lg">â€”</span>}</div>
+                                                {stats && <div className="text-[10px] text-emerald-400 font-bold mt-1">+{fmtCurrencyShort(stats.revenueToday)} today</div>}
+                                            </div>
+                                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Zap size={14} className="text-yellow-400" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Slots</span>
+                                                </div>
+                                                <div className="text-3xl font-black text-white">{stats ? `${stats.filledSlots}/${stats.totalSlots}` : <span className="text-white/30 text-lg">â€”</span>}</div>
+                                                {stats && stats.totalSlots > 0 && (
+                                                    <div className="mt-2">
+                                                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${Math.round(stats.filledSlots / stats.totalSlots * 100)}%` }} />
+                                                        </div>
+                                                        <div className="text-[10px] text-emerald-400 font-bold mt-1">{Math.round(stats.filledSlots / stats.totalSlots * 100)}% fill rate</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Star size={14} className="text-purple-400" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/50">BOOTS</span>
+                                                </div>
+                                                <div className="text-3xl font-black text-white">{stats ? (stats.totalBoots).toLocaleString() : <span className="text-white/30 text-lg">â€”</span>}</div>
+                                                {stats && <div className="text-[10px] text-purple-400 font-bold mt-1">+{stats.bootsIssuedToday} today</div>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* â”€â”€ USER METRICS â”€â”€ */}
                                 <div>
                                     <SectionHeader title="User Metrics" sub="Real-time platform user data" />
                                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                                        <StatCard label="Total Users" value={stats?.totalUsers ?? "—"} icon={<Users size={18} />} color="bg-blue-500" sub="All time" />
-                                        <StatCard label="New Today" value={stats?.newUsersToday ?? "—"} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="Since midnight" />
-                                        <StatCard label="Active Users" value={stats?.activeUsers ?? "—"} icon={<Activity size={18} />} color="bg-indigo-500" />
+                                        <StatCard label="Total Users" value={stats?.totalUsers ?? "â€”"} icon={<Users size={18} />} color="bg-blue-500" sub="All time" />
+                                        <StatCard label="New Today" value={stats?.newUsersToday ?? "â€”"} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="Since midnight" />
+                                        <StatCard label="Active Users" value={stats?.activeUsers ?? "â€”"} icon={<Activity size={18} />} color="bg-indigo-500" />
                                         <StatCard label="Suspended" value={stats?.suspendedUsers ?? 0} icon={<PauseCircle size={18} />} color="bg-amber-500" />
                                         <StatCard label="Banned" value={stats?.bannedUsers ?? 0} icon={<Ban size={18} />} color="bg-red-500" />
                                     </div>
                                 </div>
 
-                                {/* Slots */}
+                                {/* â”€â”€ SUBSCRIPTION SLOTS (with fill rate meter) â”€â”€ */}
                                 <div>
                                     <SectionHeader title="Subscription Slots" sub="Marketplace capacity overview" />
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        <StatCard label="Total Slots" value={stats?.totalSlots ?? "—"} icon={<Globe size={18} />} color="bg-violet-500" />
-                                        <StatCard label="Slots Filled" value={stats?.filledSlots ?? "—"} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" trend="up" />
-                                        <StatCard label="Available" value={stats?.availableSlots ?? "—"} icon={<ShoppingBag size={18} />} color="bg-sky-500" />
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div className="bg-white rounded-3xl p-6 border border-black/5 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <Globe size={16} className="text-violet-600" />
+                                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Slot Fill Rate</span>
+                                                </div>
+                                                <div className="text-4xl font-black mb-1">
+                                                    {stats && stats.totalSlots > 0 ? `${Math.round(stats.filledSlots / stats.totalSlots * 100)}%` : 'â€”'}
+                                                </div>
+                                                <div className="text-xs text-gray-400 font-bold">{stats?.filledSlots ?? 'â€”'} of {stats?.totalSlots ?? 'â€”'} slots filled</div>
+                                            </div>
+                                            {stats && stats.totalSlots > 0 && (
+                                                <div className="mt-4">
+                                                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-gradient-to-r from-violet-500 to-indigo-600 rounded-full transition-all duration-1000"
+                                                            style={{ width: `${Math.round(stats.filledSlots / stats.totalSlots * 100)}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-400">
+                                                        <span>Filled</span>
+                                                        <span>{stats.availableSlots} available</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <StatCard label="Total Slots" value={stats?.totalSlots ?? "â€”"} icon={<Globe size={18} />} color="bg-violet-500" />
+                                        <StatCard label="Available" value={stats?.availableSlots ?? "â€”"} icon={<ShoppingBag size={18} />} color="bg-sky-500" />
                                     </div>
                                 </div>
 
-                                {/* Revenue */}
+                                {/* â”€â”€ REVENUE BANNER â”€â”€ */}
                                 <div>
                                     <SectionHeader title="Revenue & Payments" sub="Financial performance" />
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        <StatCard label="Today" value={stats ? fmtCurrency(stats.revenueToday) : "—"} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="vs yesterday" />
-                                        <StatCard label="This Month" value={stats ? fmtCurrency(stats.revenueThisMonth) : "—"} icon={<BarChart3 size={18} />} color="bg-blue-500" />
-                                        <StatCard label="Total Revenue" value={stats ? fmtCurrency(stats.totalRevenue) : "—"} icon={<DollarSign size={18} />} color="bg-indigo-600" />
-                                        <StatCard label="Refunds" value={stats ? fmtCurrency(stats.totalRefunds) : "—"} icon={<RefreshCw size={18} />} color="bg-orange-500" trend="down" />
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        <div className="col-span-2 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-3xl p-6 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-12 -mt-12 blur-2xl" />
+                                            <div className="relative z-10">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <DollarSign size={16} className="text-white/70" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/70">Total Revenue</span>
+                                                </div>
+                                                <div className="text-4xl font-black mb-1">{stats ? fmt(stats.totalRevenue) : 'â€”'}</div>
+                                                <div className="flex gap-3 mt-3 text-[10px] font-bold flex-wrap">
+                                                    <span className="bg-white/20 px-2 py-1 rounded-full">Today: {stats ? fmt(stats.revenueToday) : 'â€”'}</span>
+                                                    <span className="bg-white/20 px-2 py-1 rounded-full">Month: {stats ? fmt(stats.revenueThisMonth) : 'â€”'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <StatCard label="Refunds" value={stats ? fmt(stats.totalRefunds) : "â€”"} icon={<RefreshCw size={18} />} color="bg-orange-500" trend="down" />
+                                        <StatCard label="Total Txns" value={stats?.totalTransactions ?? "â€”"} icon={<BarChart3 size={18} />} color="bg-blue-500" />
                                     </div>
                                 </div>
 
-                                {/* BOOTS & Campaigns */}
+                                {/* â”€â”€ BOOTS & CAMPAIGNS â”€â”€ */}
                                 <div>
                                     <SectionHeader title="BOOTS & Growth" sub="Token economy and campaigns" />
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -998,7 +1099,7 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Migrations */}
+                                {/* â”€â”€ MIGRATIONS â”€â”€ */}
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <SectionHeader title="Offline Migrations" sub="Legacy account transition metrics" />
@@ -1011,75 +1112,173 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Platform Breakdown */}
-                                <div>
-                                    <SectionHeader title="Platform Performance" sub="Subscription service breakdown" />
-                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                        <div className="grid grid-cols-5 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b border-black/5">
-                                            <div className="col-span-2">Service</div>
-                                            <div className="text-center">Groups</div>
-                                            <div className="text-center">Fill Rate</div>
-                                            <div className="text-right">Est. Revenue</div>
-                                        </div>
-                                        {subBreakdown.map((sub: any) => (
-                                            <div key={sub._id} className="grid grid-cols-5 items-center p-4 border-b border-black/3 hover:bg-black/[0.01] transition-colors">
-                                                <div className="col-span-2 flex items-center gap-3">
-                                                    {sub.logo_url ? (
-                                                        <img src={sub.logo_url} alt={sub.name} className="w-8 h-8 rounded-xl object-contain" />
-                                                    ) : (
-                                                        <div className="w-8 h-8 bg-zinc-100 rounded-xl flex items-center justify-center font-bold text-sm">{sub.name[0]}</div>
-                                                    )}
-                                                    <div>
-                                                        <div className="font-bold text-sm">{sub.name}</div>
-                                                        <div className="text-[10px] text-gray-400">{sub.filledSlots}/{sub.totalSlots} slots</div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-center text-sm font-bold">{sub.totalGroups}</div>
-                                                <div className="flex justify-center">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-16 h-1.5 bg-black/5 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${sub.totalSlots > 0 ? (sub.filledSlots / sub.totalSlots * 100) : 0}%` }} />
-                                                        </div>
-                                                        <span className="text-[10px] font-bold text-gray-400">
-                                                            {sub.totalSlots > 0 ? Math.round(sub.filledSlots / sub.totalSlots * 100) : 0}%
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right font-bold text-emerald-600">{fmtCurrency(sub.estimatedRevenue)}</div>
+                                {/* â”€â”€ TWO-COLUMN: Platform Breakdown + Transactions/Snapshots â”€â”€ */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Platform Breakdown */}
+                                    <div>
+                                        <SectionHeader title="Platform Performance" sub="Subscription service breakdown" />
+                                        <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                            <div className="grid grid-cols-5 text-[10px] font-black uppercase tracking-widest text-gray-400 px-5 py-3 border-b border-black/5 bg-gray-50/50">
+                                                <div className="col-span-2">Service</div>
+                                                <div className="text-center">Groups</div>
+                                                <div className="text-center">Fill</div>
+                                                <div className="text-right">Revenue</div>
                                             </div>
-                                        ))}
+                                            {subBreakdown.length === 0 && (
+                                                <div className="text-center py-10 text-gray-400 text-sm font-bold">No subscription data yet</div>
+                                            )}
+                                            {subBreakdown.map((sub: any) => (
+                                                <div key={sub._id} className="grid grid-cols-5 items-center px-5 py-3.5 border-b border-black/[0.03] hover:bg-black/[0.01] transition-colors">
+                                                    <div className="col-span-2 flex items-center gap-3 min-w-0">
+                                                        {sub.logo_url ? (
+                                                            <img src={sub.logo_url} alt={sub.name} className="w-7 h-7 rounded-lg object-contain flex-shrink-0" />
+                                                        ) : (
+                                                            <div className="w-7 h-7 bg-zinc-100 rounded-lg flex items-center justify-center font-black text-xs flex-shrink-0">{sub.name[0]}</div>
+                                                        )}
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-sm truncate">{sub.name.replace(" (Legacy Migration)", "")}</div>
+                                                            <div className="text-[9px] text-gray-400 font-bold">{sub.filledSlots}/{sub.totalSlots} slots</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-center text-sm font-black">{sub.totalGroups}</div>
+                                                    <div className="flex justify-center">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-12 h-1.5 bg-black/5 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${sub.totalSlots > 0 ? (sub.filledSlots / sub.totalSlots * 100) : 0}%` }} />
+                                                            </div>
+                                                            <span className="text-[9px] font-bold text-gray-400">
+                                                                {sub.totalSlots > 0 ? Math.round(sub.filledSlots / sub.totalSlots * 100) : 0}%
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right font-black text-emerald-600 text-xs">{fmtCurrencyShort(sub.estimatedRevenue)}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Right column: Transactions + Snapshots */}
+                                    <div className="space-y-4">
+                                        {/* Recent Transactions */}
+                                        <div>
+                                            <SectionHeader title="Recent Transactions" sub="Latest platform payments" />
+                                            <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                                {recentTxns.length === 0 && (
+                                                    <div className="text-center py-8 text-gray-400 text-sm font-bold">No transactions yet</div>
+                                                )}
+                                                {recentTxns.slice(0, 5).map((t: any) => (
+                                                    <div key={t._id} className="flex items-center justify-between px-4 py-3 border-b border-black/[0.03] hover:bg-black/[0.01]">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${t.type === 'funding' ? 'bg-blue-50 text-blue-600' : t.type === 'payment' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-500'}`}>
+                                                                {t.type === 'funding' ? <Wallet size={14} /> : t.type === 'payment' ? <CheckCircle2 size={14} /> : <RefreshCw size={14} />}
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-bold leading-tight">{t.user_name}</div>
+                                                                <div className="text-[10px] text-gray-400 capitalize">{t.type} Â· {t.description?.slice(0, 22)}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right flex-shrink-0">
+                                                            <div className={`text-sm font-black ${t.type === 'refund' ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                                {t.type === 'refund' ? '-' : '+'}{fmt(t.amount)}
+                                                            </div>
+                                                            <div className="text-[10px] text-gray-400">{new Date(t.created_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <button onClick={() => setActiveTab("payments")} className="w-full py-3 text-xs font-black text-gray-400 hover:text-zinc-900 hover:bg-gray-50 transition-all flex items-center justify-center gap-1">
+                                                    View all {recentTxns.length} transactions <ChevronRight size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Support */}
+                                        <div className="bg-white rounded-3xl border border-black/5 p-5">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <HeadphonesIcon size={15} className="text-sky-600" />
+                                                <span className="text-sm font-black">Support</span>
+                                                {allTickets.filter(t => t.status === "open").length > 0 && (
+                                                    <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                                                        {allTickets.filter(t => t.status === "open").length} open
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 mb-3">
+                                                {[
+                                                    { label: "Open", value: allTickets.filter(t => t.status === "open").length, color: "bg-red-50 text-red-700" },
+                                                    { label: "In Progress", value: allTickets.filter(t => t.status === "in_progress").length, color: "bg-amber-50 text-amber-700" },
+                                                    { label: "Resolved", value: allTickets.filter(t => t.status === "resolved").length, color: "bg-emerald-50 text-emerald-700" },
+                                                ].map(item => (
+                                                    <div key={item.label} className={`rounded-2xl p-3 text-center ${item.color}`}>
+                                                        <div className="text-xl font-black">{item.value}</div>
+                                                        <div className="text-[10px] font-bold uppercase tracking-wide opacity-70">{item.label}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <button onClick={() => setActiveTab("support")} className="w-full py-2 bg-sky-50 text-sky-700 text-xs font-black rounded-xl hover:bg-sky-100 transition-all flex items-center justify-center gap-1">
+                                                Manage Tickets <ChevronRight size={12} />
+                                            </button>
+                                        </div>
+
+                                        {/* Security */}
+                                        <div className="bg-white rounded-3xl border border-black/5 p-5">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <ShieldCheck size={15} className="text-red-500" />
+                                                <span className="text-sm font-black">Security Flags</span>
+                                                {fraudFlags.filter((f: any) => f.status === "open").length > 0 && (
+                                                    <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                                                        {fraudFlags.filter((f: any) => f.status === "open").length} open
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 mb-3">
+                                                {[
+                                                    { label: "Open", value: fraudFlags.filter((f: any) => f.status === "open").length, color: "bg-red-50 text-red-700" },
+                                                    { label: "Reviewed", value: fraudFlags.filter((f: any) => f.status === "reviewed").length, color: "bg-emerald-50 text-emerald-700" },
+                                                    { label: "Total", value: fraudFlags.length, color: "bg-gray-50 text-gray-700" },
+                                                ].map(item => (
+                                                    <div key={item.label} className={`rounded-2xl p-3 text-center ${item.color}`}>
+                                                        <div className="text-xl font-black">{item.value}</div>
+                                                        <div className="text-[10px] font-bold uppercase tracking-wide opacity-70">{item.label}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <button onClick={() => setActiveTab("security")} className="w-full py-2 bg-red-50 text-red-600 text-xs font-black rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-1">
+                                                View Flags <ChevronRight size={12} />
+                                            </button>
+                                        </div>
+
+                                        {/* Admin Team */}
+                                        <div className="bg-white rounded-3xl border border-black/5 p-5">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Shield size={15} className="text-purple-600" />
+                                                <span className="text-sm font-black">Admin Team</span>
+                                                <span className="ml-auto text-[10px] font-black bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">{adminsList.length} members</span>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {adminsList.slice(0, 3).map((admin: any) => (
+                                                    <div key={admin._id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                                                        <div className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center font-black text-xs flex-shrink-0">
+                                                            {admin.full_name?.[0] || "A"}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="text-xs font-bold truncate">{admin.full_name}</div>
+                                                            <div className="text-[10px] text-gray-400 font-bold capitalize">{admin.admin_role || "admin"}</div>
+                                                        </div>
+                                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${admin.is_suspended ? 'bg-red-400' : 'bg-emerald-400'}`} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <button onClick={() => setActiveTab("admins")} className="w-full mt-3 py-2 bg-purple-50 text-purple-700 text-xs font-black rounded-xl hover:bg-purple-100 transition-all flex items-center justify-center gap-1">
+                                                Manage Team <ChevronRight size={12} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Recent Transactions */}
-                                <div>
-                                    <SectionHeader title="Recent Transactions" sub="Latest platform payments" />
-                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                        {recentTxns.slice(0, 10).map((t: any, i: number) => (
-                                            <div key={t._id} className="flex items-center justify-between p-4 border-b border-black/3 hover:bg-black/[0.01]">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-2xl flex items-center justify-center ${t.type === 'funding' ? 'bg-blue-50 text-blue-600' : t.type === 'payment' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
-                                                        {t.type === 'funding' ? <Wallet size={14} /> : t.type === 'payment' ? <CheckCircle2 size={14} /> : <RefreshCw size={14} />}
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-bold">{t.user_name}</div>
-                                                        <div className="text-[10px] text-gray-400">{t.description}</div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className={`text-sm font-black ${t.type === 'refund' ? 'text-red-500' : 'text-emerald-600'}`}>
-                                                        {t.type === 'refund' ? '-' : '+'}{fmtCurrency(t.amount)}
-                                                    </div>
-                                                    <div className="text-[10px] text-gray-400">{new Date(t.created_at).toLocaleDateString()}</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
                             </motion.div>
                         )}
 
-                        {/* ═══ USERS ═══ */}
+                        {/* â•â•â• USERS â•â•â• */}
                         {activeTab === "users" && (
                             <motion.div key="users" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-4 sm:space-y-6">
                                 <SectionHeader
@@ -1270,12 +1469,12 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ MARKETPLACE ═══ */}
+                        {/* â•â•â• MARKETPLACE â•â•â• */}
                         {activeTab === "marketplace" && (
                             <motion.div key="marketplace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader
                                     title="Marketplace Management"
-                                    sub="All subscription listings — tap a card to manage slots"
+                                    sub="All subscription listings â€” tap a card to manage slots"
                                     action={
                                         <button
                                             onClick={() => setShowListingModal(true)}
@@ -1300,7 +1499,7 @@ export default function AdminPanel() {
                                             const displayOwner = (group.plan_owner || "Unknown").trim().replace(/^@+/, "") || "Unknown";
                                             return (
                                                 <div key={group._id} className="bg-white rounded-3xl border border-black/5 overflow-hidden hover:shadow-lg transition-all">
-                                                    {/* Card header — clickable to expand */}
+                                                    {/* Card header â€” clickable to expand */}
                                                     <button
                                                         onClick={() => setExpandedGroup(isExpanded ? null : group._id)}
                                                         className="w-full p-5 flex items-center justify-between text-left"
@@ -1312,7 +1511,7 @@ export default function AdminPanel() {
                                                             <div>
                                                                 <div className="font-black text-base">{group.subscription_name}</div>
                                                                 <div className="text-xs text-gray-400">
-                                                                    {group.account_email} · Owner: {displayOwner}
+                                                                    {group.account_email} Â· Owner: {displayOwner}
                                                                 </div>
                                                                 <div className="text-[10px] text-amber-600 font-bold mt-0.5">
                                                                     Renews {group.billing_cycle_start}
@@ -1360,7 +1559,7 @@ export default function AdminPanel() {
                                                                                                     />
                                                                                                 </div>
                                                                                                 <div>
-                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Price (₦)</label>
+                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Price (â‚¦)</label>
                                                                                                     <input
                                                                                                         type="number"
                                                                                                         value={editingSlot.price}
@@ -1420,10 +1619,10 @@ export default function AdminPanel() {
                                                                                             <div>
                                                                                                 <div className="font-black text-sm">{st.name}</div>
                                                                                                 <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
-                                                                                                    <span className="font-bold text-emerald-600">₦{st.price?.toLocaleString()}</span>
-                                                                                                    <span>·</span>
+                                                                                                    <span className="font-bold text-emerald-600">â‚¦{st.price?.toLocaleString()}</span>
+                                                                                                    <span>Â·</span>
                                                                                                     <span>Capacity: {st.capacity}</span>
-                                                                                                    <span>·</span>
+                                                                                                    <span>Â·</span>
                                                                                                     <span className="capitalize">{st.access_type?.replace(/_/g, " ")}</span>
                                                                                                 </div>
                                                                                             </div>
@@ -1454,7 +1653,7 @@ export default function AdminPanel() {
                                                                                         </div>
                                                                                         <div className="text-xs text-gray-400">
                                                                                             <span className="font-bold text-zinc-600">{m.slot_name}</span>
-                                                                                            {m.renewal && <span> · Renews {m.renewal}</span>}
+                                                                                            {m.renewal && <span> Â· Renews {m.renewal}</span>}
                                                                                         </div>
                                                                                     </div>
                                                                                 ))}
@@ -1469,7 +1668,7 @@ export default function AdminPanel() {
                                                                                 if (!confirm(`Delete the entire "${group.subscription_name}" listing and all its slots?`)) return;
                                                                                 try {
                                                                                     await adminDeleteGroupMut({ group_id: group._id });
-                                                                                    toast("Listing deleted", { icon: "🗑️" });
+                                                                                    toast("Listing deleted", { icon: "ðŸ—‘ï¸" });
                                                                                     setExpandedGroup(null);
                                                                                 } catch (e: any) { toast.error(e.message); }
                                                                             }}
@@ -1490,15 +1689,15 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ PAYMENTS ═══ */}
+                        {/* â•â•â• PAYMENTS â•â•â• */}
                         {activeTab === "payments" && (
                             <motion.div key="payments" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Payment & Revenue" sub="Full financial overview of the platform" />
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                                    <StatCard label="Total Revenue" value={stats ? fmt(stats.totalRevenue) : "—"} icon={<TrendingUp size={18} />} color="bg-emerald-500" />
-                                    <StatCard label="Revenue Today" value={stats ? fmt(stats.revenueToday) : "—"} icon={<DollarSign size={18} />} color="bg-blue-500" />
-                                    <StatCard label="This Month" value={stats ? fmt(stats.revenueThisMonth) : "—"} icon={<BarChart3 size={18} />} color="bg-indigo-500" />
-                                    <StatCard label="Refunds" value={stats ? fmt(stats.totalRefunds) : "—"} icon={<RefreshCw size={18} />} color="bg-orange-500" />
+                                    <StatCard label="Total Revenue" value={stats ? fmt(stats.totalRevenue) : "â€”"} icon={<TrendingUp size={18} />} color="bg-emerald-500" />
+                                    <StatCard label="Revenue Today" value={stats ? fmt(stats.revenueToday) : "â€”"} icon={<DollarSign size={18} />} color="bg-blue-500" />
+                                    <StatCard label="This Month" value={stats ? fmt(stats.revenueThisMonth) : "â€”"} icon={<BarChart3 size={18} />} color="bg-indigo-500" />
+                                    <StatCard label="Refunds" value={stats ? fmt(stats.totalRefunds) : "â€”"} icon={<RefreshCw size={18} />} color="bg-orange-500" />
                                 </div>
 
                                 <SectionHeader title="All Transactions" sub="Last 50 transactions on the platform" />
@@ -1530,7 +1729,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ CAMPAIGNS ═══ */}
+                        {/* â•â•â• CAMPAIGNS â•â•â• */}
                         {activeTab === "campaigns" && (
                             <motion.div key="campaigns" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader
@@ -1756,7 +1955,7 @@ export default function AdminPanel() {
                                                                 </button>
                                                             </>
                                                         )}
-                                                        {w.status !== 'pending' && <span className="text-[10px] text-gray-400">{w.processed_at ? new Date(w.processed_at).toLocaleDateString() : '—'}</span>}
+                                                        {w.status !== 'pending' && <span className="text-[10px] text-gray-400">{w.processed_at ? new Date(w.processed_at).toLocaleDateString() : 'â€”'}</span>}
                                                     </div>
                                                 </div>
                                             ))}
@@ -1772,7 +1971,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ SUPPORT ═══ */}
+                        {/* â•â•â• SUPPORT â•â•â• */}
                         {activeTab === "support" && (
                             <motion.div key="support" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Support Chat" sub="Real-time assistance for users" />
@@ -1817,7 +2016,7 @@ export default function AdminPanel() {
 
                         )}
 
-                        {/* ═══ ADMINS — WORKFORCE CONTROL ROOM ═══ */}
+                        {/* â•â•â• ADMINS â€” WORKFORCE CONTROL ROOM â•â•â• */}
                         {activeTab === "admins" && (
                             <motion.div key="admins" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
 
@@ -1829,12 +2028,12 @@ export default function AdminPanel() {
                                             onClick={() => setAdminSubTab(sub)}
                                             className={`flex-shrink-0 px-5 py-2 rounded-2xl text-sm font-bold transition-all capitalize ${adminSubTab === sub ? "bg-zinc-900 text-white shadow" : "bg-white text-zinc-500 border border-black/8 hover:border-black/20"}`}
                                         >
-                                            {sub === "daily" ? "📊 Daily Report" : sub === "tasks" ? "✅ Tasks" : sub === "team" ? "👥 Team" : sub === "performance" ? "📈 Performance" : "🔍 Audit"}
+                                            {sub === "daily" ? "ðŸ“Š Daily Report" : sub === "tasks" ? "âœ… Tasks" : sub === "team" ? "ðŸ‘¥ Team" : sub === "performance" ? "ðŸ“ˆ Performance" : "ðŸ” Audit"}
                                         </button>
                                     ))}
                                 </div>
 
-                                {/* ── TEAM ── */}
+                                {/* â”€â”€ TEAM â”€â”€ */}
                                 {adminSubTab === "team" && (
                                     <div className="space-y-6">
                                         <SectionHeader
@@ -1876,7 +2075,7 @@ export default function AdminPanel() {
                                                                 )}
                                                                 <div className="text-[10px] text-gray-400 truncate">{admin.email}</div>
                                                                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${roleColor}`}>
-                                                                    {admin.admin_role === "super" ? "⭐ Super Admin" : (admin.admin_role ?? "support") + " admin"}
+                                                                    {admin.admin_role === "super" ? "â­ Super Admin" : (admin.admin_role ?? "support") + " admin"}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -1938,7 +2137,7 @@ export default function AdminPanel() {
                                                                             const reason = prompt("Reason for suspension?");
                                                                             if (!reason) return;
                                                                             await suspendAdminMut({ target_id: admin._id, suspended_by: currentUser._id, reason });
-                                                                            toast("Admin access suspended", { icon: "⏸️" });
+                                                                            toast("Admin access suspended", { icon: "â¸ï¸" });
                                                                         }}
                                                                         className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200 transition-colors"
                                                                     >Suspend</button>
@@ -1967,7 +2166,7 @@ export default function AdminPanel() {
                                                         <div key={inv._id} className="p-4 flex items-center justify-between">
                                                             <div>
                                                                 <div className="font-bold text-sm">{inv.email}</div>
-                                                                <div className="text-xs text-gray-400">@{inv.work_username} · {inv.role} admin · Invited by {inv.invited_by_name}</div>
+                                                                <div className="text-xs text-gray-400">@{inv.work_username} Â· {inv.role} admin Â· Invited by {inv.invited_by_name}</div>
                                                                 <div className="text-[10px] text-amber-600 mt-0.5">Expires {new Date(inv.expires_at).toLocaleDateString()}</div>
                                                             </div>
                                                             <div className="flex gap-2">
@@ -1996,7 +2195,7 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* ── TASKS ── */}
+                                {/* â”€â”€ TASKS â”€â”€ */}
                                 {adminSubTab === "tasks" && (
                                     <div className="space-y-6">
                                         <SectionHeader
@@ -2023,10 +2222,10 @@ export default function AdminPanel() {
                                                     overdue: "bg-red-50 border-red-200",
                                                 };
                                                 const colHeaders: Record<string, string> = {
-                                                    pending: "⏳ Pending",
-                                                    in_progress: "🔵 In Progress",
-                                                    completed: "✅ Completed",
-                                                    overdue: "🔴 Overdue",
+                                                    pending: "â³ Pending",
+                                                    in_progress: "ðŸ”µ In Progress",
+                                                    completed: "âœ… Completed",
+                                                    overdue: "ðŸ”´ Overdue",
                                                 };
                                                 return (
                                                     <div key={col} className={`rounded-3xl border p-4 ${colColors[col]}`}>
@@ -2054,13 +2253,13 @@ export default function AdminPanel() {
                                                                         <div className="flex items-center justify-between">
                                                                             <div className="text-[10px] text-gray-400">
                                                                                 <span className="font-bold text-zinc-600">@{task.assignee_name}</span>
-                                                                                <span className="mx-1">·</span>
+                                                                                <span className="mx-1">Â·</span>
                                                                                 <span>{task.days_until_due > 0 ? `${task.days_until_due}d left` : `${Math.abs(task.days_until_due)}d ago`}</span>
                                                                             </div>
                                                                             {task.status !== "completed" && (
                                                                                 <div className="flex gap-1">
                                                                                     {task.status !== "in_progress" && (
-                                                                                        <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "in_progress" }); toast("Marked in progress", { icon: "🔵" }); }} className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:scale-110 transition-transform" title="Start"><PlayCircle size={11} /></button>
+                                                                                        <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "in_progress" }); toast("Marked in progress", { icon: "ðŸ”µ" }); }} className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:scale-110 transition-transform" title="Start"><PlayCircle size={11} /></button>
                                                                                     )}
                                                                                     <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "completed" }); toast.success("Task complete!"); }} className="p-1 bg-emerald-100 text-emerald-600 rounded-lg hover:scale-110 transition-transform" title="Complete"><CheckCircle2 size={11} /></button>
                                                                                     {isSuperAdmin && (
@@ -2080,7 +2279,7 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* ── DAILY REPORT ── */}
+                                {/* â”€â”€ DAILY REPORT â”€â”€ */}
                                 {adminSubTab === "daily" && (
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
@@ -2097,7 +2296,7 @@ export default function AdminPanel() {
                                             <>
                                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                                     <StatCard label="New Users Today" value={dailyReport.users.new_today} icon={<Users size={18} />} color="bg-blue-500" sub={`vs ${dailyReport.users.new_yesterday} yesterday`} trend={dailyReport.users.trend as any} />
-                                                    <StatCard label="Revenue Today" value={`₦${(dailyReport.revenue.today / 100).toLocaleString()}`} icon={<DollarSign size={18} />} color="bg-emerald-500" sub={`${dailyReport.revenue.transactions_today} transactions`} trend={dailyReport.revenue.trend as any} />
+                                                    <StatCard label="Revenue Today" value={`â‚¦${(dailyReport.revenue.today / 100).toLocaleString()}`} icon={<DollarSign size={18} />} color="bg-emerald-500" sub={`${dailyReport.revenue.transactions_today} transactions`} trend={dailyReport.revenue.trend as any} />
                                                     <StatCard label="Open Tickets" value={dailyReport.support.open_tickets} icon={<HeadphonesIcon size={18} />} color="bg-amber-500" sub={`${dailyReport.support.resolved_today} resolved today`} />
                                                     <StatCard label="Security Flags" value={dailyReport.security.open_flags} icon={<ShieldCheck size={18} />} color="bg-red-500" sub={`${dailyReport.security.flags_today} new today`} trend={dailyReport.security.flags_today > 0 ? "down" : "neutral"} />
                                                 </div>
@@ -2132,16 +2331,16 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* ── PERFORMANCE ── */}
+                                {/* â”€â”€ PERFORMANCE â”€â”€ */}
                                 {adminSubTab === "performance" && (
                                     <div className="space-y-6">
-                                        <SectionHeader title="Admin Performance" sub="Monthly productivity metrics — who is actually working" />
+                                        <SectionHeader title="Admin Performance" sub="Monthly productivity metrics â€” who is actually working" />
                                         <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
                                             <div className="grid grid-cols-6 p-4 text-[10px] font-black uppercase text-gray-400 border-b border-black/5">
                                                 <span>Admin</span>
                                                 <span className="text-center">Role</span>
-                                                <span className="text-center">Tasks ✅</span>
-                                                <span className="text-center">Overdue 🔴</span>
+                                                <span className="text-center">Tasks âœ…</span>
+                                                <span className="text-center">Overdue ðŸ”´</span>
                                                 <span className="text-center">Tickets</span>
                                                 <span className="text-right">On-Time %</span>
                                             </div>
@@ -2166,7 +2365,7 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* ── AUDIT ── */}
+                                {/* â”€â”€ AUDIT â”€â”€ */}
                                 {adminSubTab === "audit" && (
                                     <div className="space-y-6">
                                         <SectionHeader title="Activity Audit Log" sub="Every action taken by every admin, in real time" />
@@ -2187,11 +2386,11 @@ export default function AdminPanel() {
                                                                 <span className="font-black text-sm">@{log.work_username}</span>
                                                                 <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded-full text-[10px] font-bold">{log.admin_role}</span>
                                                                 <span className="text-xs text-gray-400">{log.action.replace(/_/g, " ")}</span>
-                                                                {log.target_name && <span className="text-xs font-bold text-zinc-700 truncate">→ {log.target_name}</span>}
+                                                                {log.target_name && <span className="text-xs font-bold text-zinc-700 truncate">â†’ {log.target_name}</span>}
                                                             </div>
                                                             {log.details && <p className="text-[10px] text-gray-400 mt-0.5">{log.details}</p>}
                                                         </div>
-                                                        <div className="text-[10px] text-gray-400 flex-shrink-0">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {new Date(log.created_at).toLocaleDateString()}</div>
+                                                        <div className="text-[10px] text-gray-400 flex-shrink-0">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} Â· {new Date(log.created_at).toLocaleDateString()}</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -2202,7 +2401,7 @@ export default function AdminPanel() {
                         )}
 
 
-                        {/* ═══ SECURITY ═══ */}
+                        {/* â•â•â• SECURITY â•â•â• */}
                         {activeTab === "security" && (
                             <motion.div key="security" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <SectionHeader title="Security & Fraud Prevention" sub="Monitor suspicious activity and protect platform integrity" />
@@ -2256,7 +2455,7 @@ export default function AdminPanel() {
                                         {(fraudFlags as any[]).length === 0 ? (
                                             <div className="p-12 text-center">
                                                 <ShieldCheck size={32} className="mx-auto mb-3 text-emerald-400" />
-                                                <p className="font-bold text-gray-400">No fraud flags — platform is clean!</p>
+                                                <p className="font-bold text-gray-400">No fraud flags â€” platform is clean!</p>
                                             </div>
                                         ) : (fraudFlags as any[]).map((flag: any) => (
                                             <div key={flag._id} className="p-5 flex items-start gap-4">
@@ -2285,7 +2484,7 @@ export default function AdminPanel() {
                                                         <button
                                                             onClick={async () => {
                                                                 await reviewFlagMut({ flag_id: flag._id, action: "reviewing", reviewer_id: currentUser!._id });
-                                                                toast("Marked as reviewing", { icon: "🔍" });
+                                                                toast("Marked as reviewing", { icon: "ðŸ”" });
                                                             }}
                                                             className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200 transition-colors"
                                                         >Review</button>
@@ -2300,7 +2499,7 @@ export default function AdminPanel() {
                                                             onClick={async () => {
                                                                 if (!confirm("Confirm this fraud flag? This will suspend the user.")) return;
                                                                 await reviewFlagMut({ flag_id: flag._id, action: "confirm", reviewer_id: currentUser!._id });
-                                                                toast.error("Fraud confirmed — user suspended");
+                                                                toast.error("Fraud confirmed â€” user suspended");
                                                             }}
                                                             className="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 transition-colors"
                                                         >Confirm</button>
@@ -2313,7 +2512,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ CAMPUS Q (Territories + Events) ═══ */}
+                        {/* â•â•â• CAMPUS Q (Territories + Events) â•â•â• */}
                         {activeTab === "campus" && (
                             <motion.div key="campus-full" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <SectionHeader
@@ -2367,7 +2566,7 @@ export default function AdminPanel() {
                                                                     <span className="font-black text-sm">{app.user_name}</span>
                                                                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-zinc-100 px-2 py-0.5 rounded-full">{app.university}</span>
                                                                 </div>
-                                                                <div className="text-[10px] text-gray-400 mb-2">{app.user_email} • {app.social_handle || "No social handle"}</div>
+                                                                <div className="text-[10px] text-gray-400 mb-2">{app.user_email} â€¢ {app.social_handle || "No social handle"}</div>
                                                                 <p className="text-xs text-zinc-600 leading-relaxed max-w-lg">
                                                                     <span className="font-bold text-zinc-400 uppercase text-[9px] tracking-tighter">Reason:</span> {app.reason}
                                                                 </p>
@@ -2502,16 +2701,16 @@ export default function AdminPanel() {
                                                             <div className="font-black text-sm">{ev.name}</div>
                                                             <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
                                                                 <MapPin size={10} />{ev.campus_name}, {ev.city}
-                                                                <span>•</span>
+                                                                <span>â€¢</span>
                                                                 <Calendar size={10} />{new Date(ev.event_date).toLocaleDateString()}
-                                                                <span>•</span>
+                                                                <span>â€¢</span>
                                                                 Host: {ev.host_name}
                                                             </div>
                                                             {ev.status === "completed" && (
                                                                 <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500">
-                                                                    <span>👥 {ev.actual_attendance ?? 0} attended</span>
-                                                                    <span>🆕 {ev.new_users_acquired ?? 0} new users</span>
-                                                                    <span>📦 {ev.subscriptions_created ?? 0} subscriptions</span>
+                                                                    <span>ðŸ‘¥ {ev.actual_attendance ?? 0} attended</span>
+                                                                    <span>ðŸ†• {ev.new_users_acquired ?? 0} new users</span>
+                                                                    <span>ðŸ“¦ {ev.subscriptions_created ?? 0} subscriptions</span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -2562,7 +2761,7 @@ export default function AdminPanel() {
                                         ].map(item => (
                                             <div key={item.name} className="bg-white/10 rounded-2xl p-4">
                                                 <div className="text-xs text-white/60 mb-1">{item.name}</div>
-                                                <div className="font-black text-yellow-400">₦{item.commission}</div>
+                                                <div className="font-black text-yellow-400">â‚¦{item.commission}</div>
                                                 <div className="text-[10px] text-white/40">per referral</div>
                                             </div>
                                         ))}
@@ -2617,7 +2816,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ PAYMENTS REVIEW ═══ */}
+                        {/* â•â•â• PAYMENTS REVIEW â•â•â• */}
                         {activeTab === "review_payments" && (
                             <motion.div key="review_payments" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2653,11 +2852,11 @@ export default function AdminPanel() {
                                             <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 hover:shadow-xl transition-all flex flex-col lg:flex-row gap-8 items-start lg:items-center relative overflow-hidden shadow-sm">
                                                 {req.status === 'Awaiting Review' && <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400" />}
                                                 <div className="flex items-center gap-4 min-w-[280px]">
-                                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg">₦</div>
+                                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg">â‚¦</div>
                                                     <div>
                                                         <div className="flex items-baseline gap-2">
-                                                            <span className="font-black text-xl text-indigo-600">₦{req.unique_amount.toLocaleString()}</span>
-                                                            <span className="text-[10px] font-bold text-gray-400">Crediting ₦{req.base_amount.toLocaleString()}</span>
+                                                            <span className="font-black text-xl text-indigo-600">â‚¦{req.unique_amount.toLocaleString()}</span>
+                                                            <span className="text-[10px] font-bold text-gray-400">Crediting â‚¦{req.base_amount.toLocaleString()}</span>
                                                         </div>
                                                         <div className="text-xs font-bold text-gray-600 flex items-center gap-1.5 mt-0.5"><Users size={12} className="text-gray-300" /> {req.sender_name}</div>
                                                     </div>
@@ -2698,7 +2897,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ LISTING REVIEW ═══ */}
+                        {/* â•â•â• LISTING REVIEW â•â•â• */}
                         {activeTab === "user_listings" && (
                             <motion.div key="user_listings" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2739,12 +2938,12 @@ export default function AdminPanel() {
                                                     <div className="space-y-1">
                                                         <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Credentials</p>
                                                         <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5"><Mail size={12} className="text-gray-300" /> {listing.email}</p>
-                                                        <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5"><Lock size={12} className="text-gray-300" /> ••••••••</p>
+                                                        <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5"><Lock size={12} className="text-gray-300" /> â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</p>
                                                     </div>
                                                     <div className="space-y-1">
                                                         <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Pricing</p>
-                                                        <p className="text-xs font-black text-indigo-600">₦{(listing.price_per_slot || 0).toLocaleString()} / Slot</p>
-                                                        <p className="text-[10px] font-bold text-gray-400">Payout: ₦{(listing.owner_payout_amount || 0).toLocaleString()}</p>
+                                                        <p className="text-xs font-black text-indigo-600">â‚¦{(listing.price_per_slot || 0).toLocaleString()} / Slot</p>
+                                                        <p className="text-[10px] font-bold text-gray-400">Payout: â‚¦{(listing.owner_payout_amount || 0).toLocaleString()}</p>
                                                     </div>
                                                     <div className="space-y-1 col-span-2">
                                                         <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Owner</p>
@@ -2774,7 +2973,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ NOTIFICATIONS ═══ */}
+                        {/* â•â•â• NOTIFICATIONS â•â•â• */}
                         {activeTab === "notifications" && (
                             <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Send Notifications" sub="Broadcast updates to all users or a specific individual" />
@@ -2836,7 +3035,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ═══ LEAVE REQUESTS ═══ */}
+                        {/* â•â•â• LEAVE REQUESTS â•â•â• */}
                         {activeTab === "leave_requests" && (
                             <motion.div key="leave_requests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Leave Requests" sub="Approve users wanting to cancel or leave subscriptions" />
@@ -2917,7 +3116,7 @@ export default function AdminPanel() {
                                                         </div>
                                                         <div>
                                                             <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Price</div>
-                                                            <div className="text-sm font-bold text-emerald-600">₦{req.price?.toLocaleString()}</div>
+                                                            <div className="text-sm font-bold text-emerald-600">â‚¦{req.price?.toLocaleString()}</div>
                                                         </div>
                                                         <div>
                                                             <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Renewal</div>
@@ -2945,7 +3144,7 @@ export default function AdminPanel() {
                 </div>
             </main>
 
-            {/* ── Campaign Create / Edit Modal ── */}
+            {/* â”€â”€ Campaign Create / Edit Modal â”€â”€ */}
             <AnimatePresence>
                 {showCampaignModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
@@ -3070,7 +3269,7 @@ export default function AdminPanel() {
 
                                 {/* Submit */}
                                 <button onClick={handleSaveCampaign} className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform shadow-xl shadow-black/10">
-                                    {editingCampaign ? '✅ Save Changes' : '🚀 Create Campaign'}
+                                    {editingCampaign ? 'âœ… Save Changes' : 'ðŸš€ Create Campaign'}
                                 </button>
                             </div>
                         </motion.div>
@@ -3078,7 +3277,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Listing Modal ── */}
+            {/* â”€â”€ Listing Modal â”€â”€ */}
             <AnimatePresence>
                 {showListingModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
@@ -3164,7 +3363,7 @@ export default function AdminPanel() {
                                             <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Password</label>
                                             <input
                                                 type="text"
-                                                placeholder="••••••••"
+                                                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                                 value={listingData.account_password}
                                                 onChange={e => setListingData({ ...listingData, account_password: e.target.value })}
                                                 className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-black transition-all text-sm"
@@ -3180,9 +3379,9 @@ export default function AdminPanel() {
                                             />
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Base Subscription Cost (₦)</label>
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Base Subscription Cost (â‚¦)</label>
                                             <div className="relative">
-                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₦</span>
+                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">â‚¦</span>
                                                 <input
                                                     type="number"
                                                     placeholder="0.00"
@@ -3218,7 +3417,7 @@ export default function AdminPanel() {
                                                     : 'bg-red-50 text-red-500 border border-red-100'
                                                     }`}>
                                                     <AlertCircle size={12} />
-                                                    Profit: ₦{(listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) - listingData.base_cost).toLocaleString()}
+                                                    Profit: â‚¦{(listingData.slots.reduce((sum, s) => sum + (s.price * (s.capacity || 1)), 0) - listingData.base_cost).toLocaleString()}
                                                 </div>
                                             </div>
                                         </div>
@@ -3262,7 +3461,7 @@ export default function AdminPanel() {
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price (₦)</label>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price (â‚¦)</label>
                                                         <input
                                                             type="number"
                                                             placeholder="2500"
@@ -3318,7 +3517,7 @@ export default function AdminPanel() {
                                     disabled={isCreatingListing || !listingData.platform_name || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
                                     className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-black/10"
                                 >
-                                    {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : '🚀 Confirm & Publish to Marketplace'}
+                                    {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'ðŸš€ Confirm & Publish to Marketplace'}
                                 </button>
                             </div>
                         </motion.div>
@@ -3326,7 +3525,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Campus Rep Modal ── */}
+            {/* â”€â”€ Campus Rep Modal â”€â”€ */}
 
             <AnimatePresence>
                 {campusModalOpen && (
@@ -3350,7 +3549,7 @@ export default function AdminPanel() {
                                     >
                                         <option value="" disabled>Select a user</option>
                                         {allUsers.map((u: any) => (
-                                            <option key={u._id} value={u._id}>{u.full_name} – {u.email}</option>
+                                            <option key={u._id} value={u._id}>{u.full_name} â€“ {u.email}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -3393,7 +3592,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Invite Admin Modal ── */}
+            {/* â”€â”€ Invite Admin Modal â”€â”€ */}
             <AnimatePresence>
                 {showInviteModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -3401,7 +3600,7 @@ export default function AdminPanel() {
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h2 className="text-xl font-black">Invite Admin</h2>
-                                    <p className="text-xs text-gray-400 mt-1">They will receive an invitation link — valid 48 hours</p>
+                                    <p className="text-xs text-gray-400 mt-1">They will receive an invitation link â€” valid 48 hours</p>
                                 </div>
                                 <button onClick={() => setShowInviteModal(false)} className="w-9 h-9 bg-zinc-100 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"><X size={16} /></button>
                             </div>
@@ -3421,14 +3620,14 @@ export default function AdminPanel() {
                                 <div>
                                     <label className="block text-xs font-black mb-1.5 text-gray-600">Admin Role</label>
                                     <select value={inviteForm.role} onChange={e => setInviteForm(f => ({ ...f, role: e.target.value }))} className="w-full px-4 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-zinc-900/20">
-                                        <option value="support">Support Admin — Tickets & user issues</option>
-                                        <option value="operations">Operations Admin — Marketplace & subscriptions</option>
-                                        <option value="finance">Finance Admin — Payments & withdrawals</option>
-                                        <option value="campaigns">Campaign Admin — Campaigns & campus</option>
+                                        <option value="support">Support Admin â€” Tickets & user issues</option>
+                                        <option value="operations">Operations Admin â€” Marketplace & subscriptions</option>
+                                        <option value="finance">Finance Admin â€” Payments & withdrawals</option>
+                                        <option value="campaigns">Campaign Admin â€” Campaigns & campus</option>
                                     </select>
                                 </div>
                                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-3">
-                                    <p className="text-xs text-amber-700 font-bold">⚠️ Invitation link expires in 48 hours. The admin sets their password on first login.</p>
+                                    <p className="text-xs text-amber-700 font-bold">âš ï¸ Invitation link expires in 48 hours. The admin sets their password on first login.</p>
                                 </div>
                                 <button
                                     onClick={async () => {
@@ -3436,7 +3635,7 @@ export default function AdminPanel() {
                                         try {
                                             const result = await createInviteMut({ email: inviteForm.email, role: inviteForm.role, work_username: inviteForm.work_username, invited_by: currentUser!._id });
                                             navigator.clipboard.writeText(result.invite_link);
-                                            toast.success("Invitation created! Link copied 🔗");
+                                            toast.success("Invitation created! Link copied ðŸ”—");
                                             setShowInviteModal(false);
                                             setInviteForm({ email: "", role: "support", work_username: "" });
                                         } catch (e: any) { toast.error(e.message); }
@@ -3449,7 +3648,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Create Task Modal ── */}
+            {/* â”€â”€ Create Task Modal â”€â”€ */}
             <AnimatePresence>
                 {showTaskModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -3483,10 +3682,10 @@ export default function AdminPanel() {
                                     <div>
                                         <label className="block text-xs font-black mb-1.5 text-gray-600">Priority</label>
                                         <select value={taskForm.priority} onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value }))} className="w-full px-3 py-3 bg-zinc-50 border border-black/8 rounded-2xl text-sm font-bold outline-none">
-                                            <option value="low">🟢 Low</option>
-                                            <option value="medium">🟡 Medium</option>
-                                            <option value="high">🟠 High</option>
-                                            <option value="urgent">🔴 Urgent</option>
+                                            <option value="low">ðŸŸ¢ Low</option>
+                                            <option value="medium">ðŸŸ¡ Medium</option>
+                                            <option value="high">ðŸŸ  High</option>
+                                            <option value="urgent">ðŸ”´ Urgent</option>
                                         </select>
                                     </div>
                                 </div>
@@ -3519,7 +3718,7 @@ export default function AdminPanel() {
                                                 priority: taskForm.priority,
                                                 category: taskForm.category,
                                             });
-                                            toast.success("Task assigned! Admin notified 📋");
+                                            toast.success("Task assigned! Admin notified ðŸ“‹");
                                             setShowTaskModal(false);
                                             setTaskForm({ title: "", description: "", assigned_to: "", deadline: "", priority: "medium", category: "general" });
                                         } catch (e: any) { toast.error(e.message); }
@@ -3532,7 +3731,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Screenshot Modal (Payments) ── */}
+            {/* â”€â”€ Screenshot Modal (Payments) â”€â”€ */}
             <AnimatePresence>
                 {selectedScreenshot && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8" onClick={() => setSelectedScreenshot(null)}>
@@ -3546,7 +3745,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Listing Verification Modal ── */}
+            {/* â”€â”€ Listing Verification Modal â”€â”€ */}
             <AnimatePresence>
                 {selectedReviewListing && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
@@ -3566,14 +3765,14 @@ export default function AdminPanel() {
                                         <input type="number" value={reviewTotalSlots} onChange={(e) => setReviewTotalSlots(Number(e.target.value))} className="w-full bg-zinc-50 border-none rounded-xl py-3 px-4 font-black" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Price / Slot (₦)</label>
+                                        <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Price / Slot (â‚¦)</label>
                                         <input type="number" value={reviewPricePerSlot} onChange={(e) => setReviewPricePerSlot(Number(e.target.value))} className="w-full bg-zinc-50 border-none rounded-xl py-3 px-4 font-black" />
                                     </div>
                                 </div>
                                 <div className="space-y-2 text-center py-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Monthly Owner Payout (₦)</label>
+                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Monthly Owner Payout (â‚¦)</label>
                                     <input type="number" value={reviewOwnerPayout} onChange={(e) => setReviewOwnerPayout(Number(e.target.value))} className="w-full bg-transparent border-none text-center text-3xl font-black text-indigo-600 outline-none" />
-                                    <p className="text-[10px] font-bold text-indigo-400">Total Marketplace Rev: ₦{(reviewTotalSlots * reviewPricePerSlot).toLocaleString()}</p>
+                                    <p className="text-[10px] font-bold text-indigo-400">Total Marketplace Rev: â‚¦{(reviewTotalSlots * reviewPricePerSlot).toLocaleString()}</p>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Admin Note</label>
@@ -3586,14 +3785,14 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* ── Reset Wallets Confirmation Modal ── */}
+            {/* â”€â”€ Reset Wallets Confirmation Modal â”€â”€ */}
             <AnimatePresence>
                 {showResetConfirm && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                         <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border-4 border-red-500">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
-                                    <h2 className="text-xl font-black text-red-600">⚠️ Confirm Wallet Reset</h2>
+                                    <h2 className="text-xl font-black text-red-600">âš ï¸ Confirm Wallet Reset</h2>
                                     <p className="text-xs text-gray-400 mt-1">This action is IRREVERSIBLE</p>
                                 </div>
                                 <button onClick={() => setShowResetConfirm(false)} className="w-9 h-9 bg-zinc-100 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"><X size={16} /></button>
@@ -3602,12 +3801,12 @@ export default function AdminPanel() {
                                 <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
                                     <p className="text-sm font-bold text-red-800 mb-2">This will:</p>
                                     <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
-                                        <li>Set ALL user wallet balances to ₦0</li>
+                                        <li>Set ALL user wallet balances to â‚¦0</li>
                                         <li>Clear all score history</li>
                                         <li>Delete ALL wallet transactions</li>
                                         <li>Delete ALL funding requests</li>
                                     </ul>
-                                    <p className="text-xs text-red-600 font-bold mt-3">✓ Boots balances and history are NOT affected</p>
+                                    <p className="text-xs text-red-600 font-bold mt-3">âœ“ Boots balances and history are NOT affected</p>
                                 </div>
                                 <p className="text-xs text-gray-500 font-bold">
                                     Type "CONFIRM RESET" to proceed:
@@ -3655,7 +3854,7 @@ export default function AdminPanel() {
                                     </div>
                                     <div className="min-w-0">
                                         <h2 className="text-xl font-black truncate">{selectedUser.full_name}</h2>
-                                        <p className="text-sm font-medium text-gray-500 truncate">{selectedUser.email} {selectedUser.phone ? `· ${selectedUser.phone}` : ''} {selectedUser.username && `· @${selectedUser.username}`}</p>
+                                        <p className="text-sm font-medium text-gray-500 truncate">{selectedUser.email} {selectedUser.phone ? `Â· ${selectedUser.phone}` : ''} {selectedUser.username && `Â· @${selectedUser.username}`}</p>
                                     </div>
                                 </div>
                                 <button onClick={() => setSelectedUser(null)} className="p-2 bg-white rounded-xl shadow-sm text-gray-400 hover:text-black transition-colors border border-black/5 flex-shrink-0">
@@ -3799,7 +3998,7 @@ export default function AdminPanel() {
                                             {allSubscriptions.map((group: any) =>
                                                 group.slot_types.map((st: any) => (
                                                     <option key={st._id} value={st._id}>
-                                                        {st.name} - ₦{st.price.toLocaleString()}
+                                                        {st.name} - â‚¦{st.price.toLocaleString()}
                                                     </option>
                                                 ))
                                             )}
