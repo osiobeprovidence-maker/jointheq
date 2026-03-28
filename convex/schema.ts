@@ -587,7 +587,8 @@ export default defineSchema({
     admin_logs: defineTable({
         admin_id: v.id("users"),
         admin_role: v.optional(v.string()),
-        action_type: v.string(),
+        action_type: v.optional(v.string()),
+        action: v.optional(v.string()),
         target_type: v.optional(v.string()),
         target_id: v.optional(v.string()),
         target_name: v.optional(v.string()),
