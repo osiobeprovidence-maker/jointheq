@@ -596,7 +596,7 @@ export default function AdminPanel() {
         try {
             const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
             // Generate a short unique request id to send to the backend for idempotency
-            (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+            (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
             await adminCreateListingMutation({
                 platform_name: listingData.platform_name,
                 account_email: listingData.account_email,
@@ -1465,30 +1465,30 @@ export default function AdminPanel() {
                                                 </div>
                                                 {/* Desktop Table Row */}
                                                 <div onClick={() => setSelectedUser(u)} className="hidden md:grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01] cursor-pointer">
-                                                <div className="col-span-3 flex items-center gap-3 min-w-0">
-                                                    <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
-                                                        {u.full_name?.[0]}
+                                                    <div className="col-span-3 flex items-center gap-3 min-w-0">
+                                                        <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                                            {u.full_name?.[0]}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-sm truncate">{u.full_name}</div>
+                                                            <div className="text-[10px] text-gray-400 truncate">{u.email}</div>
+                                                            {u.username && <div className="text-[10px] text-blue-500 font-bold">@{u.username}</div>}
+                                                        </div>
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <div className="font-bold text-sm truncate">{u.full_name}</div>
-                                                        <div className="text-[10px] text-gray-400 truncate">{u.email}</div>
-                                                        {u.username && <div className="text-[10px] text-blue-500 font-bold">@{u.username}</div>}
+                                                    <div className="col-span-2 text-center font-black text-sm text-emerald-600">{fmt(u.wallet_balance || 0)}</div>
+                                                    <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.q_score}</div>
+                                                    <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.activeSubscriptions}</div>
+                                                    <div className="col-span-2 text-center font-bold text-sm text-zinc-900">{fmt(u.totalPayments)}</div>
+                                                    <div className="col-span-1 flex justify-center">
+                                                        {u.is_banned ? (
+                                                            <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full">Banned</span>
+                                                        ) : u.is_suspended ? (
+                                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-full">Suspended</span>
+                                                        ) : (
+                                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full">Active</span>
+                                                        )}
                                                     </div>
-                                                </div>
-                                                <div className="col-span-2 text-center font-black text-sm text-emerald-600">{fmt(u.wallet_balance || 0)}</div>
-                                                <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.q_score}</div>
-                                                <div className="col-span-1 text-center font-bold text-sm text-gray-600">{u.activeSubscriptions}</div>
-                                                <div className="col-span-2 text-center font-bold text-sm text-zinc-900">{fmt(u.totalPayments)}</div>
-                                                <div className="col-span-1 flex justify-center">
-                                                    {u.is_banned ? (
-                                                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full">Banned</span>
-                                                    ) : u.is_suspended ? (
-                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-full">Suspended</span>
-                                                    ) : (
-                                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full">Active</span>
-                                                    )}
-                                                </div>
-                                                <div className="col-span-2 flex justify-center gap-1">
+                                                    <div className="col-span-2 flex justify-center gap-1">
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -1500,49 +1500,49 @@ export default function AdminPanel() {
                                                             <Activity size={14} />
                                                         </button>
 
-                                                    {u.is_suspended ? (
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                await unsuspendUserMut({ userId: u._id, executorId: currentUser!._id });
-                                                                toast.success("User unsuspended");
-                                                            }}
-                                                            className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
-                                                            title="Unsuspend"
-                                                        >
-                                                            <PlayCircle size={14} />
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                await suspendUserMut({ userId: u._id, executorId: currentUser!._id });
-                                                                toast.success("User suspended");
-                                                            }}
-                                                            className="p-1.5 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform"
-                                                            title="Suspend"
-                                                        >
-                                                            <PauseCircle size={14} />
-                                                        </button>
-                                                    )}
-                                                    {!u.is_banned && (
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                if (!window.confirm(`Ban ${u.full_name}? This is serious.`)) return;
-                                                                try {
-                                                                    await banUserMut({ userId: u._id, executorId: currentUser!._id });
-                                                                    toast.success("User banned");
-                                                                } catch (err: any) { toast.error(err.message); }
-                                                            }}
-                                                            className="p-1.5 bg-red-50 text-red-500 rounded-xl hover:scale-110 transition-transform"
-                                                            title="Ban"
-                                                        >
-                                                            <Ban size={14} />
-                                                        </button>
-                                                    )}
+                                                        {u.is_suspended ? (
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await unsuspendUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                    toast.success("User unsuspended");
+                                                                }}
+                                                                className="p-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
+                                                                title="Unsuspend"
+                                                            >
+                                                                <PlayCircle size={14} />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await suspendUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                    toast.success("User suspended");
+                                                                }}
+                                                                className="p-1.5 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform"
+                                                                title="Suspend"
+                                                            >
+                                                                <PauseCircle size={14} />
+                                                            </button>
+                                                        )}
+                                                        {!u.is_banned && (
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!window.confirm(`Ban ${u.full_name}? This is serious.`)) return;
+                                                                    try {
+                                                                        await banUserMut({ userId: u._id, executorId: currentUser!._id });
+                                                                        toast.success("User banned");
+                                                                    } catch (err: any) { toast.error(err.message); }
+                                                                }}
+                                                                className="p-1.5 bg-red-50 text-red-500 rounded-xl hover:scale-110 transition-transform"
+                                                                title="Ban"
+                                                            >
+                                                                <Ban size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
                                             </React.Fragment>
                                         ))}
                                     </div>
@@ -1748,8 +1748,8 @@ export default function AdminPanel() {
                                                                             onClick={async () => {
                                                                                 if (!confirm(`Delete the entire "${group.subscription_name}" listing and all its slots?`)) return;
                                                                                 try {
-                                                                                    await adminDeleteGroupMut({ group_id: group._id });
-                                                                                    toast("Listing deleted", { icon: "ðŸ—‘ï¸" });
+                                                                                    await adminDeleteGroupMut({ group_id: group._id, is_marketplace: true });
+                                                                                    toast("Listing deleted", { icon: "🗑️" });
                                                                                     setExpandedGroup(null);
                                                                                 } catch (e: any) { toast.error(e.message); }
                                                                             }}
@@ -4045,8 +4045,8 @@ export default function AdminPanel() {
                                         </div>
                                         {/* Security Quick Actions */}
                                         <div className="pt-6 border-t border-black/5">
-                                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Account Integrity</div>
-                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Account Integrity</div>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                                 {liveUser.is_suspended ? (
                                                     <button onClick={async () => {
                                                         await unsuspendUserMut({ userId: liveUser._id, executorId: currentUser!._id });
@@ -4080,7 +4080,7 @@ export default function AdminPanel() {
                                                 }} className="p-4 bg-purple-50 text-purple-700 rounded-3xl font-black text-xs hover:bg-purple-100 transition-all flex items-center justify-center gap-2">
                                                     <Shield size={16} /> Modify Role
                                                 </button>
-                                             </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -4102,11 +4102,11 @@ export default function AdminPanel() {
                                                 </div>
                                                 <div className="space-y-4">
                                                     <div className="flex bg-zinc-50 p-1.5 rounded-2xl shadow-inner gap-1">
-                                                        <button 
+                                                        <button
                                                             onClick={() => setBalanceAdjustType('add')}
                                                             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'add' ? 'bg-zinc-900 text-white shadow-md' : 'text-gray-400'}`}
                                                         >Credit</button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => setBalanceAdjustType('remove')}
                                                             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${balanceAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-gray-400'}`}
                                                         >Debit</button>
@@ -4114,23 +4114,23 @@ export default function AdminPanel() {
                                                     <div className="space-y-3">
                                                         <div className="relative">
                                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-zinc-400">₦</span>
-                                                            <input 
-                                                                type="number" 
-                                                                placeholder="0.00" 
+                                                            <input
+                                                                type="number"
+                                                                placeholder="0.00"
                                                                 value={balanceAdjustAmount}
                                                                 onChange={(e) => setBalanceAdjustAmount(e.target.value)}
                                                                 className="w-full pl-10 pr-4 py-4 bg-zinc-50 border border-black/5 rounded-2xl font-black text-xl outline-none focus:ring-2 ring-emerald-400 shadow-sm"
                                                             />
                                                         </div>
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Reason for adjustment" 
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Reason for adjustment"
                                                             value={balanceAdjustReason}
                                                             onChange={(e) => setBalanceAdjustReason(e.target.value)}
                                                             className="w-full p-4 bg-zinc-50 border border-black/5 rounded-2xl font-bold outline-none focus:ring-2 ring-emerald-400 shadow-sm text-sm"
                                                         />
                                                     </div>
-                                                    <button 
+                                                    <button
                                                         onClick={handleAdjustBalance}
                                                         className={`w-full py-5 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${balanceAdjustType === 'add' ? 'bg-emerald-600' : 'bg-red-600'}`}
                                                     >
@@ -4152,34 +4152,34 @@ export default function AdminPanel() {
                                                 </div>
                                                 <div className="space-y-4">
                                                     <div className="flex bg-zinc-50 p-1.5 rounded-2xl shadow-inner gap-1">
-                                                        <button 
+                                                        <button
                                                             onClick={() => setBootsAdjustType('add')}
                                                             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'add' ? 'bg-zinc-900 text-white shadow-md' : 'text-gray-400'}`}
                                                         >Issue</button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => setBootsAdjustType('remove')}
                                                             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${bootsAdjustType === 'remove' ? 'bg-red-500 text-white shadow-md' : 'text-gray-400'}`}
                                                         >Revoke</button>
                                                     </div>
                                                     <div className="space-y-3">
-                                                        <input 
-                                                            type="number" 
-                                                            placeholder="0" 
+                                                        <input
+                                                            type="number"
+                                                            placeholder="0"
                                                             value={bootsAdjustAmount}
                                                             onChange={(e) => setBootsAdjustAmount(e.target.value)}
                                                             className="w-full px-4 py-4 bg-zinc-50 border border-black/5 rounded-2xl font-black text-xl outline-none focus:ring-2 ring-amber-400 shadow-sm"
                                                         />
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Reason for adjustment" 
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Reason for adjustment"
                                                             value={bootsAdjustReason}
                                                             onChange={(e) => setBootsAdjustReason(e.target.value)}
                                                             className="w-full p-4 bg-zinc-50 border border-black/5 rounded-2xl font-bold outline-none focus:ring-2 ring-amber-400 shadow-sm text-sm"
                                                         />
                                                     </div>
-                                                    <button 
-                                                       onClick={handleAdjustBoots}
-                                                       className={`w-full py-5 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${bootsAdjustType === 'add' ? 'bg-amber-500' : 'bg-red-600'}`}
+                                                    <button
+                                                        onClick={handleAdjustBoots}
+                                                        className={`w-full py-5 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 ${bootsAdjustType === 'add' ? 'bg-amber-500' : 'bg-red-600'}`}
                                                     >
                                                         Update BOOTS
                                                     </button>
@@ -4218,7 +4218,7 @@ export default function AdminPanel() {
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <select 
+                                                                    <select
                                                                         className="text-[10px] font-black uppercase bg-white border border-black/10 rounded-lg px-2 py-1 outline-none"
                                                                         onChange={(e) => handleMoveUserGroup(e.target.value as Id<"groups">)}
                                                                         defaultValue=""
@@ -4230,7 +4230,7 @@ export default function AdminPanel() {
                                                                                 <option key={g._id} value={g._id}>Group {g.account_email?.split('@')[0] || g._id.slice(-4)}</option>
                                                                             ))}
                                                                     </select>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => {
                                                                             if (confirm("Quickly override this slot to 'filled'?")) {
                                                                                 setOverridePaymentStatus("filled");
@@ -4243,7 +4243,7 @@ export default function AdminPanel() {
                                                                     >
                                                                         <RefreshCw size={14} />
                                                                     </button>
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => handleRemoveFromSlot(slot._id)}
                                                                         className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
                                                                         title="Remove from Slot"
@@ -4263,7 +4263,7 @@ export default function AdminPanel() {
                                                     <div className="bg-zinc-50 border border-black/5 p-6 rounded-3xl space-y-4">
                                                         <div>
                                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Choose Plan Type</label>
-                                                            <select 
+                                                            <select
                                                                 className="w-full p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-purple-400"
                                                                 onChange={(e) => setSelectedSlotForAssignment(e.target.value as Id<"slot_types">)}
                                                                 value={selectedSlotForAssignment || ""}
@@ -4278,7 +4278,7 @@ export default function AdminPanel() {
                                                                 ))}
                                                             </select>
                                                         </div>
-                                                        <button 
+                                                        <button
                                                             disabled={!selectedSlotForAssignment}
                                                             onClick={handleAssignUserToSlot}
                                                             className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black shadow-lg disabled:opacity-30 transition-all active:scale-95 flex items-center justify-center gap-2"

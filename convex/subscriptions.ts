@@ -577,16 +577,41 @@ export const adminUpdateSlotType = mutation({
     }
 });
 
-/** Delete an entire group listing (and its slots) */
+/** Delete an entire group/marketplace listing (and its slots) */
 export const adminDeleteGroup = mutation({
-    args: { group_id: v.id("groups") },
+    args: {
+        group_id: v.union(v.id("groups"), v.id("marketplace")),
+        is_marketplace: v.optional(v.boolean())
+    },
     handler: async (ctx, args) => {
-        // Delete all slots inside this group
-        const slots = await ctx.db.query("subscription_slots")
-            .withIndex("by_group", q => q.eq("group_id", args.group_id))
-            .collect();
-        await Promise.all(slots.map(s => ctx.db.delete(s._id)));
-        await ctx.db.delete(args.group_id);
+        // Delete from marketplace table (new consolidated source)
+        if (args.is_marketplace) {
+            const listing = await ctx.db.get(args.group_id as Id<"marketplace">);
+            if (!listing) throw new Error("Marketplace listing not found");
+
+            // Find and delete associated groups and slots
+            const groups = await ctx.db.query("groups")
+                .filter(q => q.eq(q.field("subscription_catalog_id"), listing.subscription_catalog_id))
+                .collect();
+
+            for (const group of groups) {
+                const slots = await ctx.db.query("subscription_slots")
+                    .withIndex("by_group", q => q.eq("group_id", group._id))
+                    .collect();
+                await Promise.all(slots.map(s => ctx.db.delete(s._id)));
+                await ctx.db.delete(group._id);
+            }
+
+            // Delete the marketplace record
+            await ctx.db.delete(args.group_id as Id<"marketplace">);
+        } else {
+            // Legacy: delete from groups table
+            const slots = await ctx.db.query("subscription_slots")
+                .withIndex("by_group", q => q.eq("group_id", args.group_id as Id<"groups">))
+                .collect();
+            await Promise.all(slots.map(s => ctx.db.delete(s._id)));
+            await ctx.db.delete(args.group_id as Id<"groups">);
+        }
     }
 });
 
