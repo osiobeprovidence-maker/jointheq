@@ -1748,7 +1748,7 @@ export default function AdminPanel() {
                                                                             onClick={async () => {
                                                                                 if (!confirm(`Delete the entire "${group.subscription_name}" listing and all its slots?`)) return;
                                                                                 try {
-                                                                                    await adminDeleteGroupMut({ group_id: group._id, is_marketplace: true });
+                                                                                    await adminDeleteGroupMut({ group_id: group._id });
                                                                                     toast("Listing deleted", { icon: "🗑️" });
                                                                                     setExpandedGroup(null);
                                                                                 } catch (e: any) { toast.error(e.message); }
