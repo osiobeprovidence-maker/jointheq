@@ -56,16 +56,23 @@ export const importSlotTypes = mutation({
         for (const st of args.slot_types) {
             const oldId = st.id;
             delete st.id;
+            // Build a sanitized slot_type object that matches the Convex schema.
+            // Accept either `subscription_id` or legacy `subscription_catalog_id` as the source.
+            const insertObj: any = {
+                subscription_id: st.subscription_id || st.subscription_catalog_id || undefined,
+                name: st.name,
+                price: st.price !== undefined ? Number(st.price) : 0,
+                capacity: st.capacity !== undefined ? Number(st.capacity) : undefined,
+                access_type: st.access_type || undefined,
+                device_limit: st.device_limit !== undefined ? Number(st.device_limit) : 1,
+                downloads_enabled: st.downloads_enabled === 1 || st.downloads_enabled === true || !!st.downloads_enabled,
+                min_q_score: st.min_q_score !== undefined ? Number(st.min_q_score) : 0,
+            };
 
-            const sanitizedST: any = {};
-            for (const key in st) {
-                if (st[key] !== null) sanitizedST[key] = st[key];
-            }
+            // Optional features array
+            if (Array.isArray(st.features)) insertObj.features = st.features.map(String);
 
-            const id = await ctx.db.insert("slot_types", {
-                ...sanitizedST,
-                downloads_enabled: st.downloads_enabled === 1 || st.downloads_enabled === true,
-            });
+            const id = await ctx.db.insert("slot_types", insertObj);
             mapping[oldId] = id;
         }
         return mapping;
