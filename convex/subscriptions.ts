@@ -417,9 +417,20 @@ export const adminCreateListing = mutation({
         // Logging the request for debugging duplicate submissions
         console.log(`[adminCreateListing] platform=${args.platform_name} account=${args.account_email} request_id=${args.request_id}`);
 
-        // Idempotency: if frontend provided a request_id and we already created a group for it, return existing
+        // Idempotency: check marketplace table first (new consolidated source)
         if (args.request_id) {
-            const existingByRequest = await ctx.db.query("groups").filter(q => q.eq(q.field("request_id"), args.request_id)).first();
+            const existingMarketplace = await ctx.db.query("marketplace")
+                .withIndex("by_request_id", q => q.eq("request_id", args.request_id))
+                .first();
+            if (existingMarketplace) {
+                console.log(`[adminCreateListing] duplicate request detected - returning existing marketplace ${existingMarketplace._id}`);
+                return { success: true, marketplaceId: existingMarketplace._id };
+            }
+
+            // Also check groups for backward compatibility
+            const existingByRequest = await ctx.db.query("groups")
+                .filter(q => q.eq(q.field("request_id"), args.request_id))
+                .first();
             if (existingByRequest) {
                 console.log(`[adminCreateListing] duplicate request detected - returning existing group ${existingByRequest._id}`);
                 return { success: true, groupId: existingByRequest._id };
@@ -517,6 +528,34 @@ export const adminCreateListing = mutation({
                 });
             }
         }
+
+        // PILLAR 4: Create marketplace entry for consolidated marketplace table
+        const totalSlots = args.slot_types.reduce((a, b) => a + b.capacity, 0);
+        const slotPrice = args.slot_types[0]?.price ?? 0;
+
+        await ctx.db.insert("marketplace", {
+            subscription_catalog_id: catalogId,
+            admin_creator_id: adminUser?._id,
+
+            platform_name: args.platform_name,
+            account_email: args.account_email,
+            plan_owner: normalizedPlanOwner,
+            billing_cycle_start: args.admin_renewal_date,
+            status: "active",
+
+            total_slots: totalSlots,
+            filled_slots: 0,
+            available_slots: totalSlots,
+
+            slot_price: slotPrice,
+
+            category: args.category || "Streaming",
+            admin_note: undefined,
+            request_id: args.request_id,
+
+            created_at: Date.now(),
+            updated_at: Date.now(),
+        });
 
         return { success: true, groupId };
     }
