@@ -270,7 +270,6 @@ export default function AdminPanel() {
     const addCampusRepMut = useMutation(api.admin.addCampusRep);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
     const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
-    const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
 
     // God Mode Mutations (Enhanced Admin)
@@ -1742,22 +1741,7 @@ export default function AdminPanel() {
                                                                         </div>
                                                                     )}
 
-                                                                    {/* Delete listing */}
-                                                                    <div className="pt-2 border-t border-black/5">
-                                                                        <button
-                                                                            onClick={async () => {
-                                                                                if (!confirm(`Delete the entire "${group.subscription_name}" listing and all its slots?`)) return;
-                                                                                try {
-                                                                                    await adminDeleteGroupMut({ group_id: group._id });
-                                                                                    toast("Listing deleted", { icon: "🗑️" });
-                                                                                    setExpandedGroup(null);
-                                                                                } catch (e: any) { toast.error(e.message); }
-                                                                            }}
-                                                                            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 transition-colors"
-                                                                        >
-                                                                            <X size={13} /> Delete Entire Listing
-                                                                        </button>
-                                                                    </div>
+                                                                    {/* Delete listing - removed (use clearAllMarketplace instead) */}
                                                                 </div>
                                                             </motion.div>
                                                         )}

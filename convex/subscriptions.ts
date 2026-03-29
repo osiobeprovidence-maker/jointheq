@@ -578,34 +578,6 @@ export const adminUpdateSlotType = mutation({
 });
 
 /** Delete an entire group/marketplace listing (and its slots) */
-export const adminDeleteGroup = mutation({
-    args: {
-        group_id: v.id("marketplace"),
-    },
-    handler: async (ctx, args) => {
-        // Delete from marketplace table (new consolidated source)
-        const listing = await ctx.db.get(args.group_id);
-        if (!listing) throw new Error("Marketplace listing not found");
-
-        // Find and delete associated groups and slots
-        const groups = await ctx.db.query("groups")
-            .filter(q => q.eq(q.field("subscription_catalog_id"), listing.subscription_catalog_id))
-            .collect();
-
-        for (const group of groups) {
-            const slots = await ctx.db.query("subscription_slots")
-                .withIndex("by_group", q => q.eq("group_id", group._id))
-                .collect();
-            await Promise.all(slots.map(s => ctx.db.delete(s._id)));
-            await ctx.db.delete(group._id);
-        }
-
-        // Delete the marketplace record
-        await ctx.db.delete(args.group_id);
-    }
-});
-
-/** Get full marketplace data for admin: uses new marketplace table */
 export const getAdminMarketplace = query({
     handler: async (ctx) => {
         // Use the new marketplace table as the primary source

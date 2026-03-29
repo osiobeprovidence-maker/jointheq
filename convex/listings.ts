@@ -405,3 +405,111 @@ export const getMarketplaceListingDetail = query({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN OPERATIONS - Clear & Delete
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ADMIN ONLY: Permanently delete all subscription listings (pending/active/rejected)
+ * ⚠️ WARNING: This cannot be undone!
+ */
+export const clearAllSubscriptions = mutation({
+  args: { admin_id: v.id("users") },
+  handler: async (ctx, args) => {
+    // Verify admin
+    const admin = await ctx.db.get(args.admin_id);
+    if (!admin?.is_admin) {
+      throw new Error("❌ Unauthorized - admin only");
+    }
+
+    // Get all subscriptions
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    
+    // Delete each one
+    let deleted = 0;
+    for (const sub of subscriptions) {
+      await ctx.db.delete(sub._id);
+      deleted++;
+    }
+
+    console.log(`✓ [clearAllSubscriptions] Deleted ${deleted} subscriptions`);
+    return { 
+      success: true, 
+      message: `Permanently deleted ${deleted} subscriptions`, 
+      count: deleted 
+    };
+  },
+});
+
+/**
+ * ADMIN ONLY: Permanently delete all marketplace listings
+ * ⚠️ WARNING: This cannot be undone!
+ */
+export const clearAllMarketplace = mutation({
+  args: { admin_id: v.id("users") },
+  handler: async (ctx, args) => {
+    // Verify admin
+    const admin = await ctx.db.get(args.admin_id);
+    if (!admin?.is_admin) {
+      throw new Error("❌ Unauthorized - admin only");
+    }
+
+    // Get all marketplace listings
+    const listings = await ctx.db.query("marketplace").collect();
+    
+    // Delete each one
+    let deleted = 0;
+    for (const listing of listings) {
+      await ctx.db.delete(listing._id);
+      deleted++;
+    }
+
+    console.log(`✓ [clearAllMarketplace] Deleted ${deleted} marketplace listings`);
+    return { 
+      success: true, 
+      message: `Permanently deleted ${deleted} marketplace listings`, 
+      count: deleted 
+    };
+  },
+});
+
+/**
+ * ADMIN ONLY: Permanently delete ALL listings (both subscriptions and marketplace)
+ * ⚠️ WARNING: This is a full nuclear option - cannot be undone!
+ */
+export const clearAllListings = mutation({
+  args: { admin_id: v.id("users") },
+  handler: async (ctx, args) => {
+    // Verify admin
+    const admin = await ctx.db.get(args.admin_id);
+    if (!admin?.is_admin) {
+      throw new Error("❌ Unauthorized - admin only");
+    }
+
+    // Delete all subscriptions
+    const subscriptions = await ctx.db.query("subscriptions").collect();
+    let subCount = 0;
+    for (const sub of subscriptions) {
+      await ctx.db.delete(sub._id);
+      subCount++;
+    }
+
+    // Delete all marketplace listings
+    const marketplaceListings = await ctx.db.query("marketplace").collect();
+    let marketCount = 0;
+    for (const listing of marketplaceListings) {
+      await ctx.db.delete(listing._id);
+      marketCount++;
+    }
+
+    console.log(`✓ [clearAllListings] Deleted ${subCount} subscriptions + ${marketCount} marketplace listings`);
+    return { 
+      success: true, 
+      message: `Permanently deleted all listings: ${subCount} subscriptions + ${marketCount} marketplace`, 
+      subscriptions_deleted: subCount,
+      marketplace_deleted: marketCount,
+      total_deleted: subCount + marketCount
+    };
+  },
+});
+
