@@ -163,8 +163,9 @@ export const approveListing = mutation({
     const listing = await ctx.db.get(args.listing_id);
     if (!listing) throw new Error("Listing not found");
 
-    // If listing already linked to a group, assume already approved — avoid duplicate group creation
+    // IDEMPOTENCY: If listing already linked to a group, assume already approved
     if ((listing as any).group_id) {
+      console.log(`[approveListing] Already approved - returning ${args.listing_id}`);
       return { success: true };
     }
 
@@ -184,7 +185,7 @@ export const approveListing = mutation({
       catalog = await ctx.db.get(catalogId);
     }
 
-    // 2. Create the Marketplace Group (guarded by existing group with same key)
+    // 2. Create the Group (guarded by existing group with same key)
     const existingGroup = await ctx.db.query("groups").filter(q => q.and(
       q.eq(q.field("subscription_catalog_id"), catalog!._id),
       q.eq(q.field("account_email"), listing.login_email),
@@ -204,21 +205,37 @@ export const approveListing = mutation({
       });
     }
 
-    // 3. Create a Slot Type
-    const slotTypeId = await ctx.db.insert("slot_types", {
-      subscription_catalog_id: catalog!._id,
-      name: "Owner Slot",
-      price: args.price_per_slot,
-      device_limit: 1,
-      downloads_enabled: true,
-      min_q_score: 0,
-      capacity: args.total_slots,
-      access_type: "email_invite",
-    });
+    // 3. Create or find the Slot Type (FIXED: correct field name + duplicate check)
+    const existingSlotType = await ctx.db.query("slot_types")
+      .withIndex("by_subscription", q => q.eq("subscription_id", catalog!._id))
+      .filter(q => q.eq(q.field("name"), "Owner Slot"))
+      .first();
 
-    // 4. Create pre-generated Slots (PILLAR 3)
-    // Avoid creating duplicate slots if they already exist for this subscription + group + slot_type
-    const existingSlots = await ctx.db.query("subscription_slots").withIndex("by_group", (q) => q.eq("group_id", groupId)).filter(q => q.eq(q.field("slot_type_id"), slotTypeId)).collect();
+    let slotTypeId;
+    if (existingSlotType) {
+      slotTypeId = existingSlotType._id;
+      console.log(`[approveListing] Using existing slot_type ${slotTypeId}`);
+    } else {
+      slotTypeId = await ctx.db.insert("slot_types", {
+        subscription_id: catalog!._id,  // FIXED: was subscription_catalog_id
+        name: "Owner Slot",
+        price: args.price_per_slot,
+        device_limit: 1,
+        downloads_enabled: true,
+        min_q_score: 0,
+        capacity: args.total_slots,
+        access_type: "email_invite",
+        // REMOVED: sub_name (not in schema)
+      });
+      console.log(`[approveListing] Created slot_type ${slotTypeId}`);
+    }
+
+    // 4. Create pre-generated Slots (PILLAR 3) - guarded against duplicates
+    const existingSlots = await ctx.db.query("subscription_slots")
+      .withIndex("by_group", q => q.eq("group_id", groupId))
+      .filter(q => q.eq(q.field("slot_type_id"), slotTypeId))
+      .collect();
+
     if (existingSlots.length === 0) {
       for (let i = 1; i <= args.total_slots; i++) {
         await ctx.db.insert("subscription_slots", {
@@ -231,9 +248,12 @@ export const approveListing = mutation({
           created_at: Date.now(),
         });
       }
+      console.log(`[approveListing] Created ${args.total_slots} slots`);
+    } else {
+      console.log(`[approveListing] Slots already exist (${existingSlots.length})`);
     }
 
-    // 5. Create marketplace entry for the new consolidated marketplace table
+    // 5. Create marketplace entry (guarded by existing marketplace with same key)
     const existingMarketplace = await ctx.db.query("marketplace")
       .filter(q => q.and(
         q.eq(q.field("subscription_catalog_id"), catalog!._id),
@@ -267,6 +287,9 @@ export const approveListing = mutation({
         created_at: Date.now(),
         updated_at: Date.now(),
       });
+      console.log(`[approveListing] Created marketplace entry`);
+    } else {
+      console.log(`[approveListing] Marketplace entry already exists ${existingMarketplace._id}`);
     }
 
     // 6. Update the Subscription Account record
@@ -282,6 +305,7 @@ export const approveListing = mutation({
       updated_at: Date.now(),
     });
 
+    console.log(`[approveListing] Successfully approved ${args.listing_id}`);
     return { success: true };
   },
 });
