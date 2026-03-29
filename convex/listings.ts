@@ -74,11 +74,42 @@ export const submitListing = mutation({
 export const getOwnerListings = query({
   args: { owner_id: v.id("users") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    // Get listings from subscriptions table (pending/approved)
+    const subscriptions = await ctx.db
       .query("subscriptions")
       .withIndex("by_owner", (q) => q.eq("owner_id", args.owner_id))
       .order("desc")
       .collect();
+
+    // Get listings from marketplace table (approved and live)
+    const marketplaceListings = await ctx.db
+      .query("marketplace")
+      .withIndex("by_owner", q => q.eq("owner_user_id", args.owner_id))
+      .collect();
+
+    // Combine both - subscriptions show pending/review status, marketplace shows active
+    const combined = [...subscriptions];
+
+    // Add marketplace listings with enriched data
+    for (const listing of marketplaceListings) {
+      const catalog = await ctx.db.get(listing.subscription_catalog_id);
+      combined.push({
+        ...listing,
+        platform: listing.platform_name,
+        login_email: listing.account_email,
+        renewal_date: listing.billing_cycle_start,
+        total_slots: listing.total_slots,
+        slot_price: listing.slot_price,
+        owner_payout_amount: listing.owner_payout,
+        status: listing.status,
+        category: listing.category,
+        platform_logo: catalog?.logo_url,
+        platform_category: catalog?.category,
+        from_marketplace: true,
+      });
+    }
+
+    return combined;
   },
 });
 
