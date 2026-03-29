@@ -503,17 +503,20 @@ export const adminCreateListing = mutation({
         });
 
         for (const st of args.slot_types) {
-            const slotTypeId = await ctx.db.insert("slot_types", {
+            // Sanitize incoming slot type object to match schema
+            const insertObj: any = {
                 subscription_id: catalogId,
                 name: st.name,
-                price: st.price,
-                capacity: st.capacity,
-                access_type: st.access_type,
-                device_limit: 1,
-                downloads_enabled: st.downloads_enabled,
-                min_q_score: 0,
-                features: ["Premium Access"]
-            });
+                price: st.price !== undefined ? Number(st.price) : 0,
+                capacity: st.capacity !== undefined ? Number(st.capacity) : undefined,
+                access_type: st.access_type || undefined,
+                device_limit: st.device_limit !== undefined ? Number(st.device_limit) : 1,
+                downloads_enabled: !!st.downloads_enabled,
+                min_q_score: st.min_q_score !== undefined ? Number(st.min_q_score) : 0,
+            };
+            if (Array.isArray(st.features)) insertObj.features = st.features.map(String);
+
+            const slotTypeId = await ctx.db.insert("slot_types", insertObj);
 
             // PILLAR 3: Pre-generate slots for the Auto Slot Engine
             for (let i = 1; i <= st.capacity; i++) {
