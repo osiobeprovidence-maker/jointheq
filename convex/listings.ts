@@ -513,3 +513,36 @@ export const clearAllListings = mutation({
   },
 });
 
+/**
+ * ADMIN ONLY: Delete a specific marketplace listing by ID
+ */
+export const deleteMarketplaceListing = mutation({
+  args: {
+    marketplace_id: v.id("marketplace"),
+    admin_id: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Verify admin
+    const admin = await ctx.db.get(args.admin_id);
+    if (!admin?.is_admin) {
+      throw new Error("❌ Unauthorized - admin only");
+    }
+
+    // Get the listing
+    const listing = await ctx.db.get(args.marketplace_id);
+    if (!listing) {
+      throw new Error("❌ Marketplace listing not found");
+    }
+
+    // Delete it
+    await ctx.db.delete(args.marketplace_id);
+
+    console.log(`✓ [deleteMarketplaceListing] Deleted marketplace listing ${args.marketplace_id}`);
+    return { 
+      success: true, 
+      message: `Deleted "${listing.platform_name}" listing`,
+      deleted_id: args.marketplace_id
+    };
+  },
+});
+

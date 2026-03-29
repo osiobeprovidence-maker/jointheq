@@ -321,6 +321,7 @@ export default function AdminPanel() {
     // Listing Review Mutations
     const approveListingMut = useMutation(api.listings.approveListing);
     const rejectListingMut = useMutation(api.listings.rejectListing);
+    const deleteMarketplaceListingMut = useMutation(api.listings.deleteMarketplaceListing);
 
     // Settings Mutation
     const updateSettingMut = useMutation(api.admin.updatePlatformSetting);
@@ -1741,7 +1742,27 @@ export default function AdminPanel() {
                                                                         </div>
                                                                     )}
 
-                                                                    {/* Delete listing - removed (use clearAllMarketplace instead) */}
+                                                                    {/* Delete listing button */}
+                                                                    <div className="pt-4 border-t border-black/5">
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                if (!confirm(`Delete "${group.subscription_name}" from marketplace?`)) return;
+                                                                                try {
+                                                                                    await deleteMarketplaceListingMut({ 
+                                                                                        marketplace_id: group._id,
+                                                                                        admin_id: admin!._id as any
+                                                                                    });
+                                                                                    toast.success("Listing deleted!");
+                                                                                    setExpandedGroup(null);
+                                                                                } catch (e: any) { 
+                                                                                    toast.error(e.message); 
+                                                                                }
+                                                                            }}
+                                                                            className="w-full px-4 py-2 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                                                                        >
+                                                                            <Trash2 size={14} /> Delete This Listing
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </motion.div>
                                                         )}
