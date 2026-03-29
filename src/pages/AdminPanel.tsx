@@ -1750,7 +1750,7 @@ export default function AdminPanel() {
                                                                                 try {
                                                                                     await deleteMarketplaceListingMut({ 
                                                                                         marketplace_id: group._id,
-                                                                                        admin_id: admin!._id as any
+                                                                                        admin_id: user!._id as any
                                                                                     });
                                                                                     toast.success("Listing deleted!");
                                                                                     setExpandedGroup(null);
