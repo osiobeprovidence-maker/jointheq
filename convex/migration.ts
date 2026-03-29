@@ -128,7 +128,24 @@ export const importGeneric = mutation({
             if (sanitizedRecord.is_active !== undefined) sanitizedRecord.is_active = sanitizedRecord.is_active === 1 || sanitizedRecord.is_active === true;
             if (sanitizedRecord.downloads_enabled !== undefined) sanitizedRecord.downloads_enabled = sanitizedRecord.downloads_enabled === 1 || sanitizedRecord.downloads_enabled === true;
 
-            await ctx.db.insert(args.table as any, sanitizedRecord);
+            // Extra sanitation for slot_types to ensure schema compliance
+            if (args.table === 'slot_types') {
+                const st: any = sanitizedRecord;
+                const insertObj: any = {
+                    subscription_id: st.subscription_id || st.subscription_catalog_id || undefined,
+                    name: st.name,
+                    price: st.price !== undefined ? Number(st.price) : 0,
+                    capacity: st.capacity !== undefined ? Number(st.capacity) : undefined,
+                    access_type: st.access_type || undefined,
+                    device_limit: st.device_limit !== undefined ? Number(st.device_limit) : 1,
+                    downloads_enabled: !!st.downloads_enabled,
+                    min_q_score: st.min_q_score !== undefined ? Number(st.min_q_score) : 0,
+                };
+                if (Array.isArray(st.features)) insertObj.features = st.features.map(String);
+                await ctx.db.insert('slot_types' as any, insertObj);
+            } else {
+                await ctx.db.insert(args.table as any, sanitizedRecord);
+            }
         }
     },
 });
