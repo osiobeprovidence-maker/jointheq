@@ -706,21 +706,21 @@ export default function DashboardPage() {
                         {/* Marketplace Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {subscriptions
-                                .filter((listing: any) => listing && listing.group_id)
+                                // Backwards-compatible: accept either new `marketplace_id` entries or legacy `group_id`
+                                .filter((listing: any) => listing && (listing.marketplace_id || listing.group_id))
                                 .map((listing: any) => {
-                                    // Each listing is now a single entry (no aggregation)
-                                    // Use group_id as the unique key to prevent merging
+                                    // `listing._id` is the slot_type id; `marketplace_id` is the marketplace row id
                                     const listingCard = {
-                                        _id: listing.group_id,
+                                        _id: listing.marketplace_id || listing.group_id || listing._id,
                                         slot_type_id: listing._id,
                                         sub_name: listing.sub_name,
                                         sub_logo: listing.sub_logo,
                                         category: listing.category,
-                                        name: listing.name,
-                                        price: listing.price,
-                                        total_capacity: listing.total_capacity,
-                                        current_members: listing.current_members,
-                                        open_slots: listing.open_slots,
+                                        name: listing.name || listing.sub_name || 'Subscription',
+                                        price: listing.price || listing.slot_price || 0,
+                                        total_capacity: listing.total_capacity || listing.total_slots || 0,
+                                        current_members: listing.current_members || 0,
+                                        open_slots: listing.open_slots || listing.available_slots || 0,
                                         min_q_score: listing.min_q_score,
                                         features: listing.features || [],
                                         owner_name: listing.owner_name,
@@ -728,7 +728,7 @@ export default function DashboardPage() {
                                         billing_cycle_start: listing.billing_cycle_start,
                                     };
 
-                                    const matchesSearch = listingCard.name.toLowerCase().includes(searchQuery.toLowerCase()) || listingCard.sub_name.toLowerCase().includes(searchQuery.toLowerCase());
+                                    const matchesSearch = (listingCard.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (listingCard.sub_name || '').toLowerCase().includes(searchQuery.toLowerCase());
                                     const matchesFilter = activeFilter === 'All' || (listingCard.category === activeFilter);
                                     if (!matchesSearch || !matchesFilter) return null;
 

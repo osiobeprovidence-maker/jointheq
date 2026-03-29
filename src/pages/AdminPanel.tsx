@@ -320,6 +320,7 @@ export default function AdminPanel() {
 
     // Listing Review Mutations
     const approveListingMut = useMutation(api.listings.approveListing);
+    const createMarketplaceEntryMut = useMutation(api.listings.createMarketplaceEntry);
     const rejectListingMut = useMutation(api.listings.rejectListing);
     const deleteMarketplaceListingMut = useMutation(api.listings.deleteMarketplaceListing);
 
@@ -566,7 +567,16 @@ export default function AdminPanel() {
                 owner_payout: reviewOwnerPayout,
                 admin_note: reviewAdminNote || undefined
             });
-            toast.success("Listing approved and marketplace updated!");
+
+            // Publish to marketplace after approval so consumers can see the listing
+            try {
+                await createMarketplaceEntryMut({ listing_id: selectedReviewListing._id, admin_id: currentUser!._id as any });
+                toast.success("Listing approved and published to marketplace!");
+            } catch (pubErr: any) {
+                console.error("createMarketplaceEntry failed:", pubErr);
+                toast.success("Listing approved. Publishing to marketplace failed: " + (pubErr?.message || "Unknown"));
+            }
+
             setSelectedReviewListing(null);
         } catch (e: any) { toast.error(e.message); }
     };
