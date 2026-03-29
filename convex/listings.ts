@@ -208,7 +208,6 @@ export const approveListing = mutation({
     const slotTypeId = await ctx.db.insert("slot_types", {
       subscription_catalog_id: catalog!._id,
       name: "Owner Slot",
-      sub_name: "Reserved",
       price: args.price_per_slot,
       device_limit: 1,
       downloads_enabled: true,
