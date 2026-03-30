@@ -206,7 +206,7 @@ export const approveListing = mutation({
 
     // 3. Create a Slot Type
     const slotTypeId = await ctx.db.insert("slot_types", {
-      subscription_catalog_id: catalog!._id,
+      subscription_id: catalog!._id,
       name: "Owner Slot",
       price: args.price_per_slot,
       device_limit: 1,

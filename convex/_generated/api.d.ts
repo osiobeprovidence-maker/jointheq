@@ -30,6 +30,7 @@ import type * as migration from "../migration.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as reputation from "../reputation.js";
+import type * as slotTypeSanitizer from "../slotTypeSanitizer.js";
 import type * as slots_engine from "../slots_engine.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as support from "../support.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   notifications: typeof notifications;
   reputation: typeof reputation;
+  slotTypeSanitizer: typeof slotTypeSanitizer;
   slots_engine: typeof slots_engine;
   subscriptions: typeof subscriptions;
   support: typeof support;
