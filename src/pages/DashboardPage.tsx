@@ -706,12 +706,12 @@ export default function DashboardPage() {
                         {/* Marketplace Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {subscriptions
-                                .filter((listing: any) => listing && listing.group_id)
+                                .filter((listing: any) => listing && (listing.marketplace_id || listing.group_id || listing._id))
                                 .map((listing: any) => {
                                     // Each listing is now a single entry (no aggregation)
-                                    // Use group_id as the unique key to prevent merging
+                                    // Prefer marketplace_id because getActiveSubscriptions is sourced from marketplace rows
                                     const listingCard = {
-                                        _id: listing.group_id,
+                                        _id: listing.marketplace_id || listing.group_id || listing._id,
                                         slot_type_id: listing._id,
                                         sub_name: listing.sub_name,
                                         sub_logo: listing.sub_logo,
@@ -724,6 +724,7 @@ export default function DashboardPage() {
                                         min_q_score: listing.min_q_score,
                                         features: listing.features || [],
                                         owner_name: listing.owner_name,
+                                        owner_profile_image_url: listing.owner_profile_image_url,
                                         account_email: listing.account_email,
                                         billing_cycle_start: listing.billing_cycle_start,
                                     };
