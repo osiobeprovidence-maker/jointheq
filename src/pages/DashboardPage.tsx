@@ -291,6 +291,32 @@ export default function DashboardPage() {
 
     const joinSlot = async (slotTypeId: string) => {
         if (!currentUser) return;
+
+        const selectedSlotConfig =
+            (((checkoutSlot as any)?.slot_type_id || checkoutSlot?._id) === slotTypeId
+                ? (checkoutSlot as any)
+                : subscriptions.find((slot: any) => ((slot as any).slot_type_id || slot._id) === slotTypeId)) || null;
+
+        const slotPrice = Number(selectedSlotConfig?.price ?? 0);
+        const slotMinQScore = Number(selectedSlotConfig?.min_q_score ?? 0);
+        const requiredWalletAmount = useBootsForPayment ? slotPrice / 2 : slotPrice;
+        const requiredBootsAmount = useBootsForPayment ? slotPrice / 2 : 0;
+
+        if (requiredBootsAmount > 0 && (currentUser.boots_balance || 0) < requiredBootsAmount) {
+            toast.error("You do not have enough BOOTS for the 50/50 payment split.");
+            return;
+        }
+
+        if ((currentUser.wallet_balance || 0) < requiredWalletAmount) {
+            toast.error("Insufficient wallet balance. Fund your wallet to join this slot.");
+            return;
+        }
+
+        if ((currentUser.q_score || 0) < slotMinQScore) {
+            toast.error("Your Q Score is too low for this slot right now.");
+            return;
+        }
+
         try {
             const result = await joinSlotMutation({
                 user_id: currentUser._id,
