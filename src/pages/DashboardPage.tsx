@@ -488,6 +488,14 @@ export default function DashboardPage() {
     };
 
     const handleRenew = async (slotId: string) => {
+        const slotToRenew = activeSlots.find((slot: any) => slot._id === slotId);
+        const renewalPrice = Number((slotToRenew as any)?.price ?? 0);
+
+        if (renewalPrice > 0 && (currentUser?.wallet_balance || 0) < renewalPrice) {
+            toast.error("Insufficient wallet balance. Fund your wallet to renew this subscription.");
+            return;
+        }
+
         try {
             await renewSlotMutation({ id: slotId as Id<"subscription_slots"> });
             toast.success("Subscription renewed successfully!");

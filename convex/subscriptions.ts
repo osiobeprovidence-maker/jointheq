@@ -162,14 +162,20 @@ export const renewSlot = mutation({
     args: { id: v.id("subscription_slots") },
     handler: async (ctx, args) => {
         const slot = await ctx.db.get(args.id);
-        if (!slot || !slot.user_id || !slot.slot_type_id) throw new Error("Slot not found or inactive");
+        if (!slot || !slot.user_id || !slot.slot_type_id) {
+            throw new Error("This subscription is no longer available to renew.");
+        }
 
         const user = await ctx.db.get(slot.user_id);
         const slotType = await ctx.db.get(slot.slot_type_id);
-        if (!user || !slotType) throw new Error("User or Slot Type not found");
+        if (!user || !slotType) {
+            throw new Error("This subscription is no longer available to renew.");
+        }
 
         const price = slotType.price;
-        if (user.wallet_balance < price) throw new Error("Insufficient balance to renew");
+        if (user.wallet_balance < price) {
+            throw new Error("Insufficient wallet balance. Fund your wallet to renew this subscription.");
+        }
 
         // Deduct balance
         await ctx.db.patch(user._id, {

@@ -28,6 +28,10 @@ export function getUserFacingErrorMessage(
     return "Insufficient wallet balance. Fund your wallet to continue.";
   }
 
+  if (/insufficient balance to renew/i.test(cleaned)) {
+    return "Insufficient wallet balance. Fund your wallet to renew this subscription.";
+  }
+
   if (/insufficient boot balance/i.test(cleaned)) {
     return "You do not have enough BOOTS for the 50/50 payment split.";
   }
@@ -42,6 +46,10 @@ export function getUserFacingErrorMessage(
 
   if (/user or slot type not found|invalid slot type/i.test(cleaned)) {
     return "This listing is no longer available. Please refresh and try again.";
+  }
+
+  if (/slot not found or inactive/i.test(cleaned)) {
+    return "This subscription is no longer available to renew.";
   }
 
   if (/network|failed to fetch|load failed/i.test(cleaned)) {
