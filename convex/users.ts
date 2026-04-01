@@ -207,10 +207,34 @@ export const list = query({
 export const getInvitedUsers = query({
     args: { userId: v.id("users") },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const invitedUsers = await ctx.db
             .query("users")
             .withIndex("by_referred_by", (q) => q.eq("referred_by", args.userId))
+            .order("desc")
             .collect();
+
+        return await Promise.all(
+            invitedUsers.map(async (invitedUser) => {
+                const completedPayments = await ctx.db
+                    .query("wallet_transactions")
+                    .withIndex("by_user", (q) => q.eq("user_id", invitedUser._id))
+                    .collect();
+
+                const firstCompletedSubscriptionPayment = completedPayments
+                    .filter(
+                        (transaction) =>
+                            transaction.status === "completed" &&
+                            (transaction.type === "subscription" || transaction.type === "subscription_renewal")
+                    )
+                    .sort((a, b) => a.created_at - b.created_at)[0];
+
+                return {
+                    ...invitedUser,
+                    has_first_payment: !!firstCompletedSubscriptionPayment,
+                    first_payment_at: firstCompletedSubscriptionPayment?.created_at,
+                };
+            })
+        );
     },
 });
 
@@ -305,10 +329,25 @@ export const createUser = mutation({
 
         let referredById: any = undefined;
         if (normalizedReferredByCode) {
-            const referrer = await ctx.db
+            let referrer = await ctx.db
                 .query("users")
                 .withIndex("by_referral_code", (q) => q.eq("referral_code", normalizedReferredByCode))
                 .unique();
+
+            if (!referrer) {
+                const normalizedReferralUsername = normalizedReferredByCode
+                    .toLowerCase()
+                    .replace(/^@+/, "")
+                    .replace(/[^a-z0-9_]/g, "");
+
+                if (normalizedReferralUsername) {
+                    referrer = await ctx.db
+                        .query("users")
+                        .withIndex("by_username", (q) => q.eq("username", normalizedReferralUsername))
+                        .unique();
+                }
+            }
+
             if (referrer) {
                 referredById = referrer._id;
             }

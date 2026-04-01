@@ -134,6 +134,9 @@ export default function DashboardPage() {
     const [campusModalOpen, setCampusModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+    const referralLink = currentUser
+        ? `${window.location.origin}/r/${encodeURIComponent(currentUser.referral_code)}`
+        : '';
 
     // Wallet State
     const [fundAmount, setFundAmount] = useState<string>('');
@@ -1084,7 +1087,7 @@ export default function DashboardPage() {
                                     <code className="text-lg font-bold tracking-wider">{currentUser?.referral_code}</code>
                                     <button
                                         onClick={() => {
-                                            navigator.clipboard.writeText(`https://jointheq.sbs/?ref=${currentUser?.referral_code}`);
+                                            navigator.clipboard.writeText(referralLink);
                                             toast.success("Link copied!");
                                         }}
                                         className="text-sm font-bold text-blue-600 hover:scale-105 transition-transform"
@@ -1127,16 +1130,33 @@ export default function DashboardPage() {
                                                     {invited.full_name[0]}
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold">{invited.full_name}</div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <div className="font-bold">{invited.full_name}</div>
+                                                        {invited.has_first_payment && (
+                                                            <div className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-wider border border-blue-100">1st Payment</div>
+                                                        )}
+                                                    </div>
                                                     <div className="text-xs text-gray-400">Joined {new Date(invited.created_at).toLocaleDateString()}</div>
+                                                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                                        <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${invited.is_verified
+                                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                            : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                            }`}>
+                                                            {invited.is_verified ? 'Verified' : 'Pending Verify'}
+                                                        </div>
+                                                        <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${invited.has_first_payment
+                                                            ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                            : 'bg-zinc-50 text-zinc-500 border-zinc-200'
+                                                            }`}>
+                                                            {invited.has_first_payment
+                                                                ? `Paid ${new Date(invited.first_payment_at).toLocaleDateString()}`
+                                                                : 'Awaiting 1st Payment'}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div>
-                                                {invited.is_verified ? (
-                                                    <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold uppercase tracking-wider border border-emerald-100">Verified</div>
-                                                ) : (
-                                                    <div className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold uppercase tracking-wider border border-amber-100">Pending Verify</div>
-                                                )}
+                                            <div className="text-right text-xs text-gray-400 font-medium">
+                                                {invited.has_first_payment ? 'Reward-ready referral' : 'Waiting for first payment'}
                                             </div>
                                         </div>
                                     ))}
@@ -1330,8 +1350,7 @@ export default function DashboardPage() {
                             </button>
                             <button
                                 onClick={() => {
-                                    const link = `joinq.com/r/${currentUser?.username || 'join'}`;
-                                    navigator.clipboard.writeText(link);
+                                    navigator.clipboard.writeText(referralLink);
                                     toast.success("Referral link copied!");
                                 }}
                                 className="w-full py-5 bg-white border border-black/5 text-zinc-900 shadow-sm rounded-[2.5rem] font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"

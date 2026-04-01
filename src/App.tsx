@@ -1,6 +1,6 @@
 
 import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/auth/AuthGuards";
@@ -36,6 +36,17 @@ function RouteFallback() {
   );
 }
 
+function ReferralRedirect() {
+  const { refCode } = useParams();
+  const normalizedRefCode = refCode?.trim();
+
+  if (!normalizedRefCode) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Navigate to={`/?ref=${encodeURIComponent(normalizedRefCode)}`} replace />;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -44,6 +55,7 @@ export default function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/r/:refCode" element={<ReferralRedirect />} />
           <Route path="/console" element={<ConsoleLogin />} />
 
           {/* Protected Routes */}

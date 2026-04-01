@@ -10,6 +10,7 @@ import { Logo } from '../components/ui/Logo';
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup'>('hero');
   const navigate = useNavigate();
+  const referredByCode = new URLSearchParams(window.location.search).get('ref')?.trim();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +33,7 @@ export default function LandingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    const ref = params.get('ref')?.trim();
 
     if (params.get('verified') === 'true' || token) {
       // Clear the URL first so back-button / re-renders don't re-trigger
@@ -64,6 +66,8 @@ export default function LandingPage() {
         setSuccess('Account verified successfully! You can now log in.');
         setActiveSection('login');
       }
+    } else if (ref) {
+      setActiveSection('signup');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // intentionally empty — reads window.location once on mount
@@ -81,10 +85,6 @@ export default function LandingPage() {
     try {
       const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const referredByCode = new URLSearchParams(window.location.search)
-        .get('ref')
-        ?.trim()
-        .toUpperCase();
       const usernameBase = (formData.name || formData.email.split('@')[0])
         .toLowerCase()
         .replace(/[^a-z0-9_]/g, "")
@@ -99,7 +99,7 @@ export default function LandingPage() {
         password_hash: formData.password,
         verification_token: token,
         verification_token_expires: expires,
-        referred_by_code: referredByCode || undefined
+        referred_by_code: referredByCode?.toUpperCase() || undefined
       });
 
       await sendEmail({
@@ -590,6 +590,11 @@ export default function LandingPage() {
 
                 {error && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">{error}</div>}
                 {success && <div className="mb-4 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100">{success}</div>}
+                {referredByCode && (
+                  <div className="mb-4 p-4 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold border border-blue-100">
+                    Referral detected: <span className="font-black">{referredByCode}</span>
+                  </div>
+                )}
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
@@ -663,6 +668,11 @@ export default function LandingPage() {
 
                 {error && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">{error}</div>}
                 {success && <div className="mb-4 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100">{success}</div>}
+                {referredByCode && (
+                  <div className="mb-4 p-4 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold border border-blue-100">
+                    Referral detected: <span className="font-black">{referredByCode}</span>
+                  </div>
+                )}
 
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div>
@@ -765,3 +775,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
