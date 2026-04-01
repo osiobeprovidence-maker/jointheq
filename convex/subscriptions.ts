@@ -85,6 +85,7 @@ export const getActiveSubscriptions = query({
                 // Return one entry per slot type
                 return slotTypesWithCount.map(st => ({
                     ...st,
+                    category: listing.category,
                     marketplace_id: listing._id,
                     account_email: listing.account_email,
                     billing_cycle_start: listing.billing_cycle_start,
@@ -110,11 +111,13 @@ export const getSlotsByUserId = query({
         const standardSlots = await Promise.all(
             slots.map(async (slot) => {
                 const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
-                const sub = slotType ? await ctx.db.get((slotType as any).subscription_id) : null;
+                const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
                 return {
                     ...slot,
                     slot_name: (slotType as any)?.name,
-                    sub_name: (sub as any)?.name,
+                    sub_name: (account as any)?.platform || (account as any)?.name,
+                    login_email: (account as any)?.login_email,
+                    login_password: (account as any)?.login_password,
                     price: (slotType as any)?.price,
                     access_type: (slotType as any)?.access_type,
                 };

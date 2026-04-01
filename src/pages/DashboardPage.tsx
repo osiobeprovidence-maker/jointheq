@@ -2380,11 +2380,20 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
                         </ul>
                     </div>
                 );
-            case 'login_with_code':
+                        case 'login_with_code':
                 return (
                     <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
-                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Login Email</div>
-                        <div className="p-2 bg-white rounded-xl text-center font-mono text-sm mb-4 border border-black/5">{slot.sub_name.toLowerCase().replace(/\s/g, '')}@jointheq.sbs</div>
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Login Details</div>
+                        <div className="p-3 bg-white rounded-xl font-mono text-[11px] mb-4 border border-black/5 flex flex-col gap-2">
+                            <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Email</span>
+                                <span className="font-medium text-black">{(slot as any).login_email || `${slot.sub_name.toLowerCase().replace(/\s/g, '')}@jointheq.sbs`}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Password</span>
+                                <span className="font-medium text-black">{(slot as any).login_password || 'Request from Support'}</span>
+                            </div>
+                        </div>
 
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
                         <ul className="text-sm space-y-2 mb-4">
