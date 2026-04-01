@@ -18,13 +18,17 @@ export const getActiveSubscriptions = query({
         // Get marketplace listings from the new consolidated table
         const marketplaceListings = await ctx.db.query("marketplace")
             .withIndex("by_status", q => q.eq("status", "active"))
-            .filter(q => q.neq(q.field("plan_owner"), "owner_listed"))
             .collect();
 
         const result = await Promise.all(
             marketplaceListings.map(async (listing) => {
                 // Get the subscription catalog info for this listing
                 const catalog = await ctx.db.get(listing.subscription_catalog_id);
+                const owner = listing.owner_user_id
+                    ? await ctx.db.get(listing.owner_user_id)
+                    : null;
+                const ownerName = owner?.full_name ?? normalizeOwnerName(listing.plan_owner);
+                const ownerProfileImage = owner?.profile_image_url;
 
                 // Get slot types for this catalog
                 const slotTypes = await ctx.db.query("slot_types")
@@ -57,7 +61,8 @@ export const getActiveSubscriptions = query({
                             total_capacity: totalCapacity,
                             current_members: currentMembers,
                             open_slots: openSlots,
-                            owner_name: listing.plan_owner,
+                            owner_name: ownerName,
+                            owner_profile_image_url: ownerProfileImage,
                             sub_name: catalog?.name ?? "Unknown",
                             sub_logo: catalog?.logo_url,
                             account_email: listing.account_email,
