@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
+import { getUserFacingErrorMessage } from "../lib/errors";
 import { MainLayout } from "../layouts/MainLayout";
 import { useNavigate } from "react-router-dom";
 
@@ -59,7 +60,7 @@ export default function MigrationPage() {
       toast.success("Migration submitted successfully!");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to submit migration. Please try again.");
+      toast.error(getUserFacingErrorMessage(error, "Failed to submit migration. Please try again."));
     } finally {
       setLoading(false);
     }

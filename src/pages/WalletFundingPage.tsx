@@ -22,6 +22,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import { fmtCurrency } from "../lib/utils";
 import { MainLayout } from "../layouts/MainLayout";
+import { getUserFacingErrorMessage } from "../lib/errors";
 import toast from "react-hot-toast";
 
 type Method = "paystack" | "manual";
@@ -140,7 +141,7 @@ export default function WalletFundingPage() {
       setStep(2);
       setTimeLeft(900);
     } catch (e: any) {
-      toast.error(e.message || "Failed to generate unique amount");
+      toast.error(getUserFacingErrorMessage(e, "Failed to generate unique amount"));
     } finally {
       setIsLoading(false);
     }
@@ -180,7 +181,7 @@ export default function WalletFundingPage() {
       toast.success("Verification request submitted");
       navigate("/dashboard");
     } catch (e: any) {
-      toast.error(e.message || "Failed to submit request");
+      toast.error(getUserFacingErrorMessage(e, "Failed to submit request"));
     } finally {
       setIsLoading(false);
     }

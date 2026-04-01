@@ -58,6 +58,7 @@ import { MainLayout } from "../layouts/MainLayout";
 import { UserSlot, SlotType } from "../types";
 import toast from "react-hot-toast";
 import SupportChatUser from "../components/chat/SupportChatUser";
+import { getUserFacingErrorMessage } from "../lib/errors";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -233,7 +234,7 @@ export default function DashboardPage() {
             toast.success("Listing created successfully!");
             setShowListingModal(false);
         } catch (error: any) {
-            toast.error(error.message || "Failed to create listing");
+            toast.error(getUserFacingErrorMessage(error, "Failed to create listing"));
         } finally {
             setIsCreatingListing(false);
         }
@@ -246,7 +247,7 @@ export default function DashboardPage() {
             setAdminInviteEmail('');
             toast.success("Admin added successfully");
         } catch (error: any) {
-            toast.error(error.message);
+            toast.error(getUserFacingErrorMessage(error, "Failed to add admin"));
         }
     };
 
@@ -256,7 +257,7 @@ export default function DashboardPage() {
             await removeAdminMutation({ userId: adminId, executorId: currentUser._id });
             toast.success("Admin removed successfully");
         } catch (error: any) {
-            toast.error(error.message);
+            toast.error(getUserFacingErrorMessage(error, "Failed to remove admin"));
         }
     };
 
@@ -307,7 +308,7 @@ export default function DashboardPage() {
                 setActiveTab('dashboard');
             }
         } catch (error: any) {
-            toast.error(error.message || "Failed to join slot");
+            toast.error(getUserFacingErrorMessage(error, "Failed to join slot"));
         }
     };
 
@@ -456,7 +457,7 @@ export default function DashboardPage() {
             toast.success(`Successfully left ${cancellingSlot.name} subscription`);
             setCancellingSlot(null);
         } catch (error: any) {
-            toast.error(error.message || "Failed to leave subscription");
+            toast.error(getUserFacingErrorMessage(error, "Failed to leave subscription"));
         }
     };
 
@@ -465,7 +466,7 @@ export default function DashboardPage() {
             await renewSlotMutation({ id: slotId as Id<"subscription_slots"> });
             toast.success("Subscription renewed successfully!");
         } catch (error: any) {
-            toast.error(error.message || "Failed to renew subscription");
+            toast.error(getUserFacingErrorMessage(error, "Failed to renew subscription"));
         }
     };
 
@@ -474,7 +475,7 @@ export default function DashboardPage() {
             await toggleAutoRenewMutation({ id: slotId as any, auto_renew: val });
             toast.success(`Auto-renewal ${val ? 'enabled' : 'disabled'}`);
         } catch (error: any) {
-            toast.error(error.message || "Failed to update auto-renewal");
+            toast.error(getUserFacingErrorMessage(error, "Failed to update auto-renewal"));
         }
     };
 
@@ -1730,7 +1731,7 @@ export default function DashboardPage() {
                                                             });
                                                             toast.success("Profile updated successfully!");
                                                             setEditingUsername(false);
-                                                        } catch (e: any) { toast.error(e.message); }
+                                                        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to update profile")); }
                                                         finally { setUsernameLoading(false); }
                                                     }}
                                                     disabled={usernameLoading}
@@ -2127,7 +2128,7 @@ export default function DashboardPage() {
                                                                     onClick={async (e) => {
                                                                         try {
                                                                             await markAsReadMutation({ notification_id: notif._id });
-                                                                        } catch (e: any) { toast.error(e.message); }
+                                                                        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to mark notification as read")); }
                                                                     }}
                                                                     className="p-1 hover:bg-blue-50 rounded-full text-blue-500 hover:text-blue-700 transition-colors"
                                                                     title="Mark as seen"
@@ -2140,7 +2141,7 @@ export default function DashboardPage() {
                                                                     if (window.confirm("Remove this notification?")) {
                                                                         try {
                                                                             await removeNotificationMutation({ notification_id: notif._id });
-                                                                        } catch (e: any) { toast.error(e.message); }
+                                                                        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to remove notification")); }
                                                                     }
                                                                 }}
                                                                 className="p-1 hover:bg-red-50 rounded-full text-zinc-300 hover:text-red-500 transition-colors"

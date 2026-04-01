@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
+import { getUserFacingErrorMessage } from "../lib/errors";
 import toast from "react-hot-toast";
 
 // ─── Commission table for Campus Q ──────────────────────────────────────────
@@ -104,7 +105,7 @@ export default function CampaignDetailPage() {
             });
             toast.success("🎉 You've joined the campaign!", { duration: 3000 });
             setActiveTab("activity");
-        } catch (e: any) { toast.error(e.message); }
+        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to join campaign")); }
     };
 
     const copyReferralLink = () => {
@@ -137,7 +138,7 @@ export default function CampaignDetailPage() {
             });
             toast.success("Withdrawal request submitted! Processed within 2 business days.");
             setShowWithdrawModal(false);
-        } catch (e: any) { toast.error(e.message); }
+        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to submit withdrawal")); }
     };
 
     const handleBuyTicket = async (count: number) => {
@@ -156,7 +157,7 @@ export default function CampaignDetailPage() {
             });
             toast.success(`🎟️ Successfully bought ${count} ticket(s)!`);
         } catch (e: any) {
-            toast.error(e.message);
+            toast.error(getUserFacingErrorMessage(e, "Failed to buy raffle ticket"));
         }
     };
 

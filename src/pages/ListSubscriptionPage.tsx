@@ -26,6 +26,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
+import { getUserFacingErrorMessage } from "../lib/errors";
 import { MainLayout } from "../layouts/MainLayout";
 
 const CATEGORIES = [
@@ -107,7 +108,7 @@ export default function ListSubscriptionPage() {
         toast.success("Listing already submitted!");
         setStep(3);
       } else {
-        toast.error(e.message || "Failed to submit listing");
+        toast.error(getUserFacingErrorMessage(e, "Failed to submit listing"));
       }
     } finally {
       setIsLoading(false);

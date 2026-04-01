@@ -1,5 +1,6 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import { getUserFacingErrorMessage } from "../lib/errors";
 
 interface Props {
     children: ReactNode;
@@ -26,6 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     public render() {
         if (this.state.hasError) {
+            const friendlyMessage = getUserFacingErrorMessage(this.state.error);
             return (
                 <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center p-6 text-center">
                     <div className="max-w-md">
@@ -39,11 +41,9 @@ export class ErrorBoundary extends Component<Props, State> {
                         >
                             Refresh Page
                         </button>
-                        {this.state.error && (
-                            <pre className="mt-8 p-4 bg-red-50 text-red-600 rounded-lg text-left text-xs overflow-auto max-h-40">
-                                {this.state.error.message}
-                            </pre>
-                        )}
+                        <div className="mt-8 p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+                            {friendlyMessage}
+                        </div>
                     </div>
                 </div>
             );
