@@ -30,14 +30,14 @@ export const getActiveSubscriptions = query({
                 const ownerName = owner?.full_name ?? normalizeOwnerName(listing.plan_owner);
                 const ownerProfileImage = owner?.profile_image_url;
 
-                // Get slot types for this catalog
-                const slotTypes = await ctx.db.query("slot_types")
-                    .withIndex("by_subscription", q => q.eq("subscription_id", listing.subscription_catalog_id))
-                    .collect();
-
-                // Get slots for this listing via groups (backward compatibility)
+                // Get the groups that belong to this exact listing
                 const allGroups = await ctx.db.query("groups")
-                    .filter(q => q.eq(q.field("subscription_catalog_id"), listing.subscription_catalog_id))
+                    .withIndex("by_catalog", q => q.eq("subscription_catalog_id", listing.subscription_catalog_id))
+                    .filter(q => q.and(
+                        q.eq(q.field("account_email"), listing.account_email),
+                        q.eq(q.field("billing_cycle_start"), listing.billing_cycle_start),
+                        q.eq(q.field("plan_owner"), listing.plan_owner)
+                    ))
                     .collect();
 
                 const allSlots = [];
@@ -48,9 +48,18 @@ export const getActiveSubscriptions = query({
                     allSlots.push(...groupSlots);
                 }
 
+                const slotTypeIds = [...new Set(
+                    allSlots
+                        .map(slot => slot.slot_type_id)
+                        .filter((slotTypeId): slotTypeId is Id<"slot_types"> => !!slotTypeId)
+                )];
+
+                const slotTypes = await Promise.all(slotTypeIds.map((slotTypeId) => ctx.db.get(slotTypeId)));
+                const validSlotTypes = slotTypes.filter((slotType): slotType is NonNullable<typeof slotType> => !!slotType);
+
                 // Calculate slot counts per slot type
                 const slotTypesWithCount = await Promise.all(
-                    slotTypes.map(async (st) => {
+                    validSlotTypes.map(async (st) => {
                         const slotsForThisType = allSlots.filter(s => s.slot_type_id === st._id);
                         const totalCapacity = slotsForThisType.length;
                         const currentMembers = slotsForThisType.filter(s => s.status === "filled").length;
@@ -621,9 +630,14 @@ export const getAdminMarketplace = query({
             const owner = listing.owner_user_id ? await ctx.db.get(listing.owner_user_id) : null;
             const admin = listing.admin_creator_id ? await ctx.db.get(listing.admin_creator_id) : null;
 
-            // Get slots via groups (backward compatibility)
+            // Get only the groups that belong to this listing
             const allGroups = await ctx.db.query("groups")
-                .filter(q => q.eq(q.field("subscription_catalog_id"), listing.subscription_catalog_id))
+                .withIndex("by_catalog", q => q.eq("subscription_catalog_id", listing.subscription_catalog_id))
+                .filter(q => q.and(
+                    q.eq(q.field("account_email"), listing.account_email),
+                    q.eq(q.field("billing_cycle_start"), listing.billing_cycle_start),
+                    q.eq(q.field("plan_owner"), listing.plan_owner)
+                ))
                 .collect();
 
             const allSlots = [];
@@ -634,9 +648,13 @@ export const getAdminMarketplace = query({
                 allSlots.push(...groupSlots);
             }
 
-            const slotTypes = await ctx.db.query("slot_types")
-                .withIndex("by_subscription", q => q.eq("subscription_id", listing.subscription_catalog_id))
-                .collect();
+            const slotTypeIds = [...new Set(
+                allSlots
+                    .map(slot => slot.slot_type_id)
+                    .filter((slotTypeId): slotTypeId is Id<"slot_types"> => !!slotTypeId)
+            )];
+            const slotTypes = (await Promise.all(slotTypeIds.map((slotTypeId) => ctx.db.get(slotTypeId))))
+                .filter((slotType): slotType is NonNullable<typeof slotType> => !!slotType);
 
             const members = await Promise.all(allSlots.map(async (s) => {
                 const u: Doc<"users"> | null = s.user_id
@@ -663,6 +681,8 @@ export const getAdminMarketplace = query({
                 owner_name: owner?.full_name,
                 owner_email: owner?.email,
                 admin_name: admin?.full_name,
+                primary_group_id: allGroups[0]?._id,
+                group_ids: allGroups.map(group => group._id),
                 member_count: allSlots.length,
                 members,
                 slot_types: slotTypes,

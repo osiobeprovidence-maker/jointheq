@@ -335,7 +335,7 @@ export const adminMoveUserToGroup = mutation({
     args: {
         adminId: v.id("users"),
         userId: v.id("users"),
-        toGroupId: v.id("groups"),
+        toGroupId: v.union(v.id("groups"), v.id("marketplace")),
         reason: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
@@ -343,7 +343,32 @@ export const adminMoveUserToGroup = mutation({
         if (!admin?.is_admin) throw new Error("Unauthorized");
 
         const user = await ctx.db.get(args.userId);
-        const toGroup = await ctx.db.get(args.toGroupId);
+        let resolvedToGroupId: Id<"groups"> | undefined;
+        let toGroup = null;
+
+        const targetRecord = await ctx.db.get(args.toGroupId as any);
+        if (targetRecord && !("total_slots" in targetRecord)) {
+            resolvedToGroupId = targetRecord._id as Id<"groups">;
+            toGroup = targetRecord;
+        } else if (targetRecord && "total_slots" in targetRecord) {
+            const marketplaceListing: any = targetRecord;
+            if (marketplaceListing) {
+                const matchingGroup = await ctx.db.query("groups")
+                    .withIndex("by_catalog", q => q.eq("subscription_catalog_id", marketplaceListing.subscription_catalog_id))
+                    .filter(q => q.and(
+                        q.eq(q.field("account_email"), marketplaceListing.account_email),
+                        q.eq(q.field("billing_cycle_start"), marketplaceListing.billing_cycle_start),
+                        q.eq(q.field("plan_owner"), marketplaceListing.plan_owner)
+                    ))
+                    .first();
+
+                if (matchingGroup) {
+                    resolvedToGroupId = matchingGroup._id;
+                    toGroup = matchingGroup;
+                }
+            }
+        }
+
         if (!user || !toGroup) throw new Error("User or target group not found");
 
         // Find user's current slot
@@ -368,7 +393,7 @@ export const adminMoveUserToGroup = mutation({
         // Find available slot in target group
         const targetSlotType = currentSlots[0]?.slot_type_id;
         const targetSlot = await ctx.db.query("subscription_slots")
-            .withIndex("by_group", q => q.eq("group_id", args.toGroupId))
+            .withIndex("by_group", q => q.eq("group_id", resolvedToGroupId!))
             .filter(q => q.and(
                 q.eq(q.field("slot_type_id"), targetSlotType!),
                 q.eq(q.field("status"), "open")
@@ -388,11 +413,11 @@ export const adminMoveUserToGroup = mutation({
 
         // Log group change
         await ctx.db.insert("group_changes", {
-            group_id: args.toGroupId,
+            group_id: resolvedToGroupId!,
             user_id: args.userId,
             action: "user_moved",
             from_group_id: fromGroupId,
-            to_group_id: args.toGroupId,
+            to_group_id: resolvedToGroupId!,
             admin_id: args.adminId,
             reason: args.reason,
             created_at: Date.now(),
@@ -403,9 +428,9 @@ export const adminMoveUserToGroup = mutation({
             args.adminId,
             "group_transfer",
             "group",
-            args.toGroupId,
+            resolvedToGroupId!,
             user.full_name,
-            `Moved user from ${fromGroupId || "none"} to ${toGroup.account_email || args.toGroupId}`,
+            `Moved user from ${fromGroupId || "none"} to ${toGroup.account_email || resolvedToGroupId!}`,
             args.reason
         );
 

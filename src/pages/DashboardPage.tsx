@@ -1841,7 +1841,7 @@ export default function DashboardPage() {
                                     </div>
 
                                     <button
-                                        onClick={() => joinSlot(checkoutSlot._id)}
+                                        onClick={() => joinSlot(((checkoutSlot as any).slot_type_id || checkoutSlot._id) as string)}
                                         className="w-full py-5 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-black/10"
                                     >
                                         Confirm & Pay ₦{useBootsForPayment ? (checkoutSlot.price / 2).toLocaleString() : checkoutSlot.price.toLocaleString()}

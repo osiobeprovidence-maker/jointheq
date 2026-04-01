@@ -1555,7 +1555,7 @@ export default function AdminPanel() {
                             <motion.div key="marketplace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader
                                     title="Marketplace Management"
-                                    sub="All subscription listings â€” tap a card to manage slots"
+                                    sub="All subscription listings - tap a card to manage slots"
                                     action={
                                         <button
                                             onClick={() => setShowListingModal(true)}
@@ -1592,7 +1592,7 @@ export default function AdminPanel() {
                                                             <div>
                                                                 <div className="font-black text-base">{group.subscription_name}</div>
                                                                 <div className="text-xs text-gray-400">
-                                                                    {group.account_email} Â· Owner: {displayOwner}
+                                                                    {group.account_email} - Owner: {displayOwner}
                                                                 </div>
                                                                 <div className="text-[10px] text-amber-600 font-bold mt-0.5">
                                                                     Renews {group.billing_cycle_start}
@@ -1640,7 +1640,7 @@ export default function AdminPanel() {
                                                                                                     />
                                                                                                 </div>
                                                                                                 <div>
-                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Price (â‚¦)</label>
+                                                                                                    <label className="text-[10px] font-black text-gray-400 uppercase">Price (NGN)</label>
                                                                                                     <input
                                                                                                         type="number"
                                                                                                         value={editingSlot.price}
@@ -1700,10 +1700,10 @@ export default function AdminPanel() {
                                                                                             <div>
                                                                                                 <div className="font-black text-sm">{st.name}</div>
                                                                                                 <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
-                                                                                                    <span className="font-bold text-emerald-600">â‚¦{st.price?.toLocaleString()}</span>
-                                                                                                    <span>Â·</span>
+                                                                                                    <span className="font-bold text-emerald-600">NGN {st.price?.toLocaleString()}</span>
+                                                                                                    <span>-</span>
                                                                                                     <span>Capacity: {st.capacity}</span>
-                                                                                                    <span>Â·</span>
+                                                                                                    <span>-</span>
                                                                                                     <span className="capitalize">{st.access_type?.replace(/_/g, " ")}</span>
                                                                                                 </div>
                                                                                             </div>
@@ -3542,7 +3542,7 @@ export default function AdminPanel() {
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price (â‚¦)</label>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price (NGN)</label>
                                                         <input
                                                             type="number"
                                                             placeholder="2500"
@@ -4225,9 +4225,9 @@ export default function AdminPanel() {
                                                                     >
                                                                         <option value="" disabled>Move...</option>
                                                                         {allSubscriptions
-                                                                            .filter((sub: any) => sub.subscription_name === slot.sub_name && sub._id !== slot.group_id)
+                                                                            .filter((sub: any) => sub.subscription_name === slot.sub_name && sub.primary_group_id && sub.primary_group_id !== slot.group_id)
                                                                             .map((g: any) => (
-                                                                                <option key={g._id} value={g._id}>Group {g.account_email?.split('@')[0] || g._id.slice(-4)}</option>
+                                                                                <option key={g._id} value={g.primary_group_id}>Group {g.account_email?.split('@')[0] || g.primary_group_id?.slice(-4)}</option>
                                                                             ))}
                                                                     </select>
                                                                     <button
