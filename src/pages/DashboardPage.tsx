@@ -171,17 +171,11 @@ export default function DashboardPage() {
     const removeCardMutation = useMutation(api.users.removeCard);
     const updateUsernameMutation = useMutation(api.users.updateUsername);
     const updateProfileMutation = useMutation(api.users.updateProfile);
-    const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
     const renewSlotMutation = useMutation(api.subscriptions.renewSlot);
     const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
     const markAsReadMutation = useMutation(api.notifications.markAsRead);
     const markAllAsReadMutation = useMutation(api.notifications.markAllAsRead);
     const removeNotificationMutation = useMutation(api.notifications.remove);
-
-    const walletResetPermission = useQuery(
-        api.users.canResetWallets,
-        currentUser?._id ? { user_id: currentUser._id } : "skip"
-    );
 
     // Username edit state
     const [editingUsername, setEditingUsername] = useState(false);
@@ -288,21 +282,6 @@ export default function DashboardPage() {
         }
     };
 
-    // Auto-initialize super admin for authorized emails
-    useEffect(() => {
-        const authorizedAdmins = ["riderezzy@gmail.com", "reinvoursehung@gmail.com"];
-        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) &&
-            walletResetPermission !== undefined && walletResetPermission.role !== "super") {
-            initializeSuperAdminMut({}).then(() => {
-                toast.success("Super admin initialized! Refreshing...");
-                setTimeout(() => {
-                    // Force re-fetch user data or just reload
-                    window.location.reload();
-                }, 1500);
-            }).catch(e => console.log("Init already done or error:", e.message));
-        }
-    }, [currentUser, walletResetPermission, initializeSuperAdminMut]);
-
     useEffect(() => {
         if (activeTab === 'notifications' && currentUser) {
             markAllAsReadMutation({ user_id: currentUser._id }).catch(console.error);
@@ -371,6 +350,36 @@ export default function DashboardPage() {
         }
     };
 
+    const showDesktopNotification = async (title: string, options: NotificationOptions) => {
+        if (typeof window === "undefined" || typeof Notification === "undefined") {
+            return false;
+        }
+
+        if (Notification.permission !== "granted") {
+            return false;
+        }
+
+        if ("serviceWorker" in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                if (registration) {
+                    await registration.showNotification(title, options);
+                    return true;
+                }
+            } catch (error) {
+                console.warn("Service worker notification failed:", error);
+            }
+        }
+
+        try {
+            new window.Notification(title, options);
+            return true;
+        } catch (error) {
+            console.warn("Window notification failed:", error);
+            return false;
+        }
+    };
+
     // Notification Permission & Watcher
     const requestNotificationPermission = async () => {
         if (!("Notification" in window)) {
@@ -383,8 +392,7 @@ export default function DashboardPage() {
 
         if (permission === "granted") {
             toast.success("Notifications enabled!", { icon: '🔔' });
-            // Show a test notification
-            new Notification("Notifications Enabled", {
+            await showDesktopNotification("Notifications Enabled", {
                 body: "You will now receive real-time updates from JoinTheQ.",
                 icon: "/logo.png"
             });
@@ -405,8 +413,7 @@ export default function DashboardPage() {
             const latest = notifications[0];
             // Only notify if unread and we haven't shown it yet
             if (!latest.is_read && latest._id !== lastNotifId) {
-                // Throttle/check to avoid spam if multiple arrive
-                new Notification(latest.title, {
+                void showDesktopNotification(latest.title, {
                     body: latest.message,
                     icon: "/logo.png"
                 });

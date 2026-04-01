@@ -373,29 +373,6 @@ export default function AdminPanel() {
     // Settings Mutation
     const updateSettingMut = useMutation(api.admin.updatePlatformSetting);
 
-    // Pre-Launch Reset Mutation
-    const resetAllWalletsMut = useMutation(api.users.resetAllWallets);
-    const grantSuperAdminMut = useMutation(api.users.grantSuperAdmin);
-    const initializeSuperAdminMut = useMutation(api.users.initializeSuperAdmin);
-    const [showResetConfirm, setShowResetConfirm] = useState(false);
-    const walletResetPermission = useQuery(
-        api.users.canResetWallets,
-        currentUser?._id ? { user_id: currentUser._id } : "skip"
-    );
-
-
-    // Auto-initialize super admin for authorized emails
-    useEffect(() => {
-        const authorizedAdmins = ["riderezzy@gmail.com", "reinvoursehung@gmail.com"];
-        if (currentUser?.email && authorizedAdmins.includes(currentUser.email) &&
-            walletResetPermission !== undefined && walletResetPermission.role !== "super") {
-            initializeSuperAdminMut({}).then(() => {
-                toast.success("Super admin initialized! Refreshing...");
-                setTimeout(() => window.location.reload(), 1500);
-            }).catch(e => console.log("Init already done or error:", e.message));
-        }
-    }, [currentUser, walletResetPermission]);
-
     const handleSaveCampaign = async () => {
 
         if (!campaignForm.name || !campaignForm.description || !campaignForm.start_date || !campaignForm.end_date) {
@@ -1026,56 +1003,6 @@ export default function AdminPanel() {
                         {activeTab === "dashboard" && (
                             <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
 
-                                {/* Pre-Launch Actions */}
-                                {walletResetPermission && (
-                                    <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-[2.5rem] p-8 text-white shadow-2xl">
-                                        <div className="flex items-start justify-between gap-6">
-                                            <div className="flex-1">
-                                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest mb-3">
-                                                    <ShieldCheck size={12} /> Pre-Launch Setup
-                                                </div>
-                                                <h2 className="text-2xl font-black mb-2">Reset All Wallet Balances</h2>
-                                                <p className="text-sm font-medium text-red-100 max-w-xl mb-3">
-                                                    Clear all user wallet balances and funding history. This action is irreversible.
-                                                </p>
-                                                <div className="flex items-center gap-3 text-xs">
-                                                    <span className="px-3 py-1.5 bg-white/20 rounded-full font-bold">
-                                                        Your role: <span className="font-black uppercase">{walletResetPermission.role || 'none'}</span>
-                                                    </span>
-                                                    {walletResetPermission.can_reset ? (
-                                                        <span className="px-3 py-1.5 bg-emerald-500/80 rounded-full font-bold">âœ“ Authorized</span>
-                                                    ) : (
-                                                        <span className="px-3 py-1.5 bg-amber-500/80 rounded-full font-bold">âœ— {walletResetPermission.reason}</span>
-                                                    )}
-                                                </div>
-                                                {!walletResetPermission.can_reset && walletResetPermission.role !== 'super' && currentUser?.is_admin && (
-                                                    <button
-                                                        onClick={async () => {
-                                                            try {
-                                                                await grantSuperAdminMut({ target_id: currentUser!._id, granted_by: currentUser!._id });
-                                                                toast.success('Super admin role granted! You can now reset wallets.');
-                                                                // Refresh permission check
-                                                            } catch (e: any) {
-                                                                toast.error(e.message);
-                                                            }
-                                                        }}
-                                                        className="mt-3 px-4 py-2 bg-white text-red-600 font-bold rounded-xl hover:scale-105 transition-transform text-xs"
-                                                    >
-                                                        ðŸ‘‘ Grant Yourself Super Admin
-                                                    </button>
-                                                )}
-                                            </div>
-                                            {walletResetPermission.can_reset && (
-                                                <button
-                                                    onClick={() => setShowResetConfirm(true)}
-                                                    className="px-6 py-4 bg-white text-red-600 font-black rounded-2xl shadow-xl hover:scale-105 transition-transform flex items-center gap-2 text-sm"
-                                                >
-                                                    <RefreshCw size={18} /> Reset Wallets
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
 
                                 {/* â”€â”€ HERO KPI BANNER â”€â”€ */}
                                 <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-blue-950 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
@@ -3952,61 +3879,6 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* â”€â”€ Reset Wallets Confirmation Modal â”€â”€ */}
-            <AnimatePresence>
-                {showResetConfirm && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border-4 border-red-500">
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h2 className="text-xl font-black text-red-600">âš ï¸ Confirm Wallet Reset</h2>
-                                    <p className="text-xs text-gray-400 mt-1">This action is IRREVERSIBLE</p>
-                                </div>
-                                <button onClick={() => setShowResetConfirm(false)} className="w-9 h-9 bg-zinc-100 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"><X size={16} /></button>
-                            </div>
-                            <div className="space-y-4 mb-6">
-                                <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
-                                    <p className="text-sm font-bold text-red-800 mb-2">This will:</p>
-                                    <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
-                                        <li>Set ALL user wallet balances to â‚¦0</li>
-                                        <li>Clear all score history</li>
-                                        <li>Delete ALL wallet transactions</li>
-                                        <li>Delete ALL funding requests</li>
-                                    </ul>
-                                    <p className="text-xs text-red-600 font-bold mt-3">✓ Boots balances and history are NOT affected</p>
-                                </div>
-                                <p className="text-xs text-gray-500 font-bold">
-                                    Type "CONFIRM RESET" to proceed:
-                                </p>
-                                <input
-                                    type="text"
-                                    placeholder="CONFIRM RESET"
-                                    id="resetConfirmInput"
-                                    className="w-full px-4 py-3 bg-zinc-50 border border-red-300 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-red-500"
-                                />
-                            </div>
-                            <button
-                                onClick={async () => {
-                                    const input = (document.getElementById('resetConfirmInput') as HTMLInputElement)?.value;
-                                    if (input !== 'CONFIRM RESET') {
-                                        return toast.error('Type "CONFIRM RESET" exactly to proceed');
-                                    }
-                                    try {
-                                        const result = await resetAllWalletsMut({ executed_by: currentUser!._id });
-                                        toast.success(`Wallets reset! ${result.users_reset} users, ${result.transactions_cleared} transactions cleared`);
-                                        setShowResetConfirm(false);
-                                    } catch (e: any) {
-                                        toast.error(e.message);
-                                    }
-                                }}
-                                className="w-full py-4 bg-red-600 text-white rounded-2xl font-black hover:bg-red-700 transition-colors"
-                            >
-                                Yes, Reset All Wallets
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
             {/* User Details Modal (HUB) */}
             <AnimatePresence>
                 {liveUser && (
