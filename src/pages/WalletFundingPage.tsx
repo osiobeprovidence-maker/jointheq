@@ -1,39 +1,64 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { 
-  ArrowLeft, 
-  CreditCard, 
-  Banknote, 
-  Copy, 
-  CheckCircle2, 
-  Clock, 
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  ArrowLeft,
+  CreditCard,
+  Banknote,
+  Copy,
+  CheckCircle2,
+  Clock,
   ChevronRight,
   ShieldCheck,
   AlertCircle,
   Camera,
-  Upload,
-  Loader2
+  Loader2,
+  Plus,
+  Wallet as WalletIcon,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import toast from "react-hot-toast";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import { fmtCurrency } from "../lib/utils";
+import { MainLayout } from "../layouts/MainLayout";
+import toast from "react-hot-toast";
 
 type Method = "paystack" | "manual";
+
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
-const BANKS = ["Moniepoint", "Opay", "PalmPay", "GTBank", "Zenith Bank", "Access Bank", "First Bank", "UBA", "Kuda", "Other"];
+const BANKS = [
+  "Moniepoint",
+  "Opay",
+  "PalmPay",
+  "GTBank",
+  "Zenith Bank",
+  "Access Bank",
+  "First Bank",
+  "UBA",
+  "Kuda",
+  "Other",
+];
 
 export default function WalletFundingPage() {
+  const navigate = useNavigate();
   const user = auth.getCurrentUser();
+  const currentUser = useQuery(
+    api.users.getById,
+    user?._id ? { id: user._id as Id<"users"> } : "skip",
+  );
+  const manualRequests =
+    useQuery(
+      api.funding.getUserManualRequests,
+      currentUser ? { user_id: currentUser._id } : "skip",
+    ) || [];
+
   const [method, setMethod] = useState<Method | null>(null);
   const [baseAmount, setBaseAmount] = useState<number | "">("");
   const [uniqueAmount, setUniqueAmount] = useState<number | null>(null);
   const [step, setStep] = useState(1);
-  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes
+  const [timeLeft, setTimeLeft] = useState(900);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Manual form fields
   const [senderName, setSenderName] = useState("");
   const [bankUsed, setBankUsed] = useState("");
   const [reference, setReference] = useState("");
@@ -43,33 +68,71 @@ export default function WalletFundingPage() {
   const generateUploadUrl = useMutation(api.funding.generateUploadUrl);
   const submitManual = useMutation(api.funding.submitManualFunding);
 
-  // Timer logic
   useEffect(() => {
-    if (step === 2 && timeLeft > 0) {
-      const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    if (step === 2 && method === "manual" && timeLeft > 0) {
+      const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
       return () => clearInterval(timer);
-    } else if (timeLeft === 0 && step === 2) {
-      toast.error("Transfer window expired. Please start over.");
-      setStep(1);
-      setUniqueAmount(null);
     }
-  }, [step, timeLeft]);
+
+    if (step === 2 && method === "manual" && timeLeft === 0) {
+      toast.error("Transfer window expired. Please start over.");
+      resetManualFlow();
+    }
+  }, [method, step, timeLeft]);
+
+  const resetManualFlow = () => {
+    setStep(1);
+    setMethod("manual");
+    setUniqueAmount(null);
+    setTimeLeft(900);
+    setSenderName("");
+    setBankUsed("");
+    setReference("");
+    setSelectedFile(null);
+  };
+
+  const resetAll = () => {
+    setMethod(null);
+    setStep(1);
+    setUniqueAmount(null);
+    setTimeLeft(900);
+    setSenderName("");
+    setBankUsed("");
+    setReference("");
+    setSelectedFile(null);
+  };
+
+  const goBack = () => {
+    if (method === "manual" && step === 2) {
+      setStep(1);
+      return;
+    }
+
+    if (method) {
+      resetAll();
+      return;
+    }
+
+    navigate("/dashboard");
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard!");
+    toast.success("Copied to clipboard");
   };
 
   const handleStartManual = async () => {
-    if (!baseAmount || baseAmount < 1000) {
-      return toast.error("Minimum funding amount is ₦1,000");
+    if (!baseAmount || Number(baseAmount) < 1000) {
+      toast.error("Minimum funding amount is N1,000");
+      return;
     }
+
     setIsLoading(true);
     try {
       const unique = await generateUnique({ base_amount: Number(baseAmount) });
@@ -84,10 +147,15 @@ export default function WalletFundingPage() {
   };
 
   const handleSubmitManual = async () => {
-    if (!senderName || !bankUsed) return toast.error("Please fill in sender name and bank used");
+    if (!user?._id || !senderName || !bankUsed || uniqueAmount === null) {
+      toast.error("Please complete the required fields");
+      return;
+    }
+
     setIsLoading(true);
     try {
       let screenshotId = undefined;
+
       if (selectedFile) {
         const postUrl = await generateUploadUrl();
         const result = await fetch(postUrl, {
@@ -100,17 +168,17 @@ export default function WalletFundingPage() {
       }
 
       await submitManual({
-        user_id: user!._id as any,
+        user_id: user._id as Id<"users">,
         base_amount: Number(baseAmount),
-        unique_amount: uniqueAmount!,
+        unique_amount: uniqueAmount,
         sender_name: senderName,
         bank_name: bankUsed,
         screenshot_id: screenshotId,
         reference: reference || undefined,
       });
 
-      toast.success("Verification request submitted!");
-      window.location.href = "/dashboard";
+      toast.success("Verification request submitted");
+      navigate("/dashboard");
     } catch (e: any) {
       toast.error(e.message || "Failed to submit request");
     } finally {
@@ -118,283 +186,568 @@ export default function WalletFundingPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#F4F5F8] text-zinc-900 font-sans pb-20">
-      {/* Header */}
-      <header className="max-w-xl mx-auto px-6 pt-12 pb-8 flex items-center justify-between">
-        <button 
-          onClick={() => step > 1 ? setStep(step - 1) : method ? setMethod(null) : window.location.href = "/dashboard"} 
-          className="p-3 bg-white rounded-2xl shadow-sm hover:scale-105 transition-all text-zinc-400"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="text-right">
-          <h1 className="text-xl font-black tracking-tight">Fund Wallet</h1>
-          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Secure Payments</p>
-        </div>
-      </header>
+  const handlePaystack = () => {
+    if (!baseAmount || Number(baseAmount) < 500) {
+      toast.error("Minimum Paystack funding amount is N500");
+      return;
+    }
 
-      <main className="max-w-xl mx-auto px-6">
+    toast("Paystack checkout is not wired yet on this page.", {
+      icon: "i",
+    });
+  };
+
+  const handleLayoutTabChange = (tab: string) => {
+    if (tab === "wallet") return;
+    if (tab === "admin") {
+      navigate("/admin");
+      return;
+    }
+    if (tab === "migrate") {
+      navigate("/migrate");
+      return;
+    }
+    navigate("/dashboard");
+  };
+
+  const pendingRequests = manualRequests.filter(
+    (request) => request.status === "Awaiting Review",
+  );
+
+  return (
+    <MainLayout
+      activeTab="wallet"
+      setActiveTab={handleLayoutTabChange}
+      qScore={currentUser?.q_score || 0}
+    >
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            <button
+              onClick={goBack}
+              className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-black/5 flex items-center justify-center text-zinc-500 hover:text-black hover:shadow-md transition-all shrink-0"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Fund Wallet</h1>
+              <p className="text-gray-500 mt-1">
+                Manage wallet top-ups with the same secure flow used across the
+                platform.
+              </p>
+            </div>
+          </div>
+          <div className="text-xs font-black uppercase tracking-[0.28em] text-zinc-400">
+            Secure Payments
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.06)] overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
+          <div className="relative z-10 text-center mb-8">
+            <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-2">
+              Available Balance
+            </h3>
+            <motion.div
+              key={currentUser?.wallet_balance}
+              animate={{ scale: [1, 1.04, 1] }}
+              transition={{ duration: 0.3 }}
+              className="text-5xl font-extrabold text-zinc-900 tracking-tight"
+            >
+              {fmtCurrency(currentUser?.wallet_balance || 0)}
+            </motion.div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div>
+              <p className="text-zinc-500 text-sm font-medium mb-3">
+                Choose a fast card payment or a manual bank transfer. This page
+                now follows the same shell, spacing, and card rhythm as the rest
+                of the wallet experience.
+              </p>
+              <div className="flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+                <span className="px-3 py-1 bg-zinc-100 rounded-full">
+                  Instant top-up
+                </span>
+                <span className="px-3 py-1 bg-zinc-100 rounded-full">
+                  Manual verification
+                </span>
+                <span className="px-3 py-1 bg-zinc-100 rounded-full">
+                  Fraud checks
+                </span>
+              </div>
+            </div>
+            <div className="bg-zinc-900 text-white p-6 rounded-[2rem] shadow-xl">
+              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-white/40 mb-2">
+                Funding Window
+              </div>
+              <div className="text-2xl font-black mb-2">
+                {method === "manual" && step === 2
+                  ? formatTime(timeLeft)
+                  : "Ready"}
+              </div>
+              <p className="text-sm text-white/70">
+                Manual transfers are held for up to 15 minutes once a unique
+                amount is generated.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {pendingRequests.length > 0 && (
+          <div className="bg-amber-50/50 border border-amber-100 rounded-[2rem] p-8">
+            <h3 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-6 flex items-center gap-2">
+              <Clock size={16} /> Pending Verification
+            </h3>
+            <div className="space-y-4">
+              {pendingRequests.map((request) => (
+                <div
+                  key={request._id}
+                  className="bg-white p-6 rounded-2xl border border-amber-200/50 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+                      <WalletIcon size={22} />
+                    </div>
+                    <div>
+                      <div className="font-black text-lg text-indigo-600">
+                        {fmtCurrency(request.unique_amount)}
+                      </div>
+                      <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                        Sent for {fmtCurrency(request.base_amount)} credit
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs font-medium text-amber-700 bg-amber-100/50 px-4 py-2 rounded-full border border-amber-200 italic">
+                    Your transfer is awaiting verification.
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {!method && (
-            <motion.div 
-              key="select-method"
+            <motion.div
+              key="method-select"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
+              className="grid grid-cols-1 xl:grid-cols-2 gap-8"
             >
-              <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-indigo-200 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                <div className="relative z-10">
-                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
-                      <Banknote size={24} />
-                   </div>
-                   <h2 className="text-2xl font-black mb-2">Top Up Balance</h2>
-                   <p className="text-indigo-100 text-sm font-medium leading-relaxed">
-                     Select a payment method below to add funds to your wallet instantly or via transfer.
-                   </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <button
-                  onClick={() => setMethod("paystack")}
-                  className="group bg-white p-6 rounded-[2rem] border border-black/5 flex items-center justify-between hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5 transition-all outline-none"
-                >
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-                      <CreditCard size={24} />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-black text-lg">Paystack</div>
-                      <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Instant • ₦50 Fee</div>
-                    </div>
-                  </div>
-                  <ChevronRight size={20} className="text-zinc-200 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
-                </button>
-
-                <button
-                   onClick={() => setMethod("manual")}
-                   className="group bg-white p-6 rounded-[2rem] border border-black/5 flex items-center justify-between hover:border-amber-200 hover:shadow-xl hover:shadow-amber-500/5 transition-all outline-none"
-                >
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-                      <Banknote size={24} />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-black text-lg">Manual Transfer</div>
-                      <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Fraud-Proof • ₦0 Fee</div>
-                    </div>
-                  </div>
-                  <ChevronRight size={20} className="text-zinc-200 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {method === "manual" && step === 1 && (
-            <motion.div 
-              key="manual-step-1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-8"
-            >
-              <div className="space-y-4">
-                <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-2">How much do you want to fund?</label>
-                <div className="relative">
-                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-zinc-400">₦</span>
-                  <input 
-                    type="number" 
-                    placeholder="1000"
-                    value={baseAmount}
-                    onChange={(e) => setBaseAmount(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full bg-white border-none rounded-[2rem] py-8 pl-14 pr-8 text-3xl font-black shadow-sm focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2 px-2">
-                  {QUICK_AMOUNTS.map(amt => (
-                    <button 
-                      key={amt}
-                      onClick={() => setBaseAmount(amt)}
-                      className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all ${baseAmount === amt ? 'bg-black text-white' : 'bg-white text-zinc-500 hover:bg-zinc-100'}`}
-                    >
-                      {fmtCurrency(amt)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-[2rem] p-8 flex gap-5">
-                <div className="w-12 h-12 bg-amber-200 text-amber-700 rounded-2xl flex items-center justify-center shrink-0">
-                  <ShieldCheck size={24} />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-black text-amber-900">Fraud-Resistant System</h4>
-                  <p className="text-xs font-medium text-amber-700 leading-relaxed">
-                    We will generate a **unique verification amount** (e.g. ₦1,027). Transferring this exact amount helps us verify your payment in minutes without a bank app connection.
-                  </p>
-                </div>
-              </div>
-
-              <button 
-                disabled={!baseAmount || baseAmount < 1000 || isLoading}
-                onClick={handleStartManual}
-                className="w-full py-6 bg-black text-white font-black rounded-3xl shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3"
+              <button
+                onClick={() => {
+                  setMethod("paystack");
+                  setStep(1);
+                }}
+                className="group bg-white p-8 rounded-[2.5rem] border border-black/5 text-left shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-xl hover:border-emerald-200 transition-all"
               >
-                {isLoading ? <Loader2 className="animate-spin" /> : <ChevronRight size={20} />}
-                Generate Transfer Amount
+                <div className="flex items-start justify-between gap-6 mb-8">
+                  <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                    <CreditCard size={24} />
+                  </div>
+                  <ChevronRight className="text-zinc-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black tracking-tight">Paystack</h2>
+                  <p className="text-sm text-zinc-500 leading-relaxed">
+                    Fastest route for instant funding with a flat N50 processing
+                    fee.
+                  </p>
+                  <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 pt-2">
+                    Instant • Card payment
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setMethod("manual");
+                  setStep(1);
+                }}
+                className="group bg-white p-8 rounded-[2.5rem] border border-black/5 text-left shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-xl hover:border-amber-200 transition-all"
+              >
+                <div className="flex items-start justify-between gap-6 mb-8">
+                  <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                    <Banknote size={24} />
+                  </div>
+                  <ChevronRight className="text-zinc-300 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black tracking-tight">
+                    Manual Transfer
+                  </h2>
+                  <p className="text-sm text-zinc-500 leading-relaxed">
+                    A guided bank transfer flow with unique verification amounts
+                    and zero processing fee.
+                  </p>
+                  <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 pt-2">
+                    Fraud-resistant • Bank transfer
+                  </div>
+                </div>
               </button>
             </motion.div>
           )}
 
-          {method === "manual" && step === 2 && (
-            <motion.div 
-              key="manual-step-2"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="space-y-8"
+          {method === "manual" && step === 1 && (
+            <motion.div
+              key="manual-amount"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-8"
             >
-              <div className="bg-white rounded-[3rem] p-10 shadow-xl shadow-black/[0.03] border border-black/5 overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-6">
-                   <div className="bg-red-50 text-red-600 px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2">
-                     <Clock size={14} /> {formatTime(timeLeft)}
-                   </div>
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
+                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.24em] mb-3">
+                  Manual Transfer
                 </div>
-                
-                <div className="text-center space-y-3 mb-12 mt-4">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount to Transfer</p>
-                  <h2 className="text-5xl font-black tracking-tight text-indigo-600">{fmtCurrency(uniqueAmount || 0)}</h2>
-                  <p className="text-sm font-bold text-red-500 px-8">Transfer the exact amount above including the extra digits for verification.</p>
-                </div>
+                <h2 className="text-2xl font-black tracking-tight mb-2">
+                  Generate your transfer amount
+                </h2>
+                <p className="text-zinc-500 text-sm mb-8">
+                  Enter the amount you want credited. We will add small unique
+                  digits so the transfer can be verified quickly.
+                </p>
 
-                <div className="space-y-6">
-                  <div className="p-6 bg-zinc-50 rounded-3xl space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Bank</span>
-                      <span className="font-black">Moniepoint</span>
-                    </div>
-                    <div className="flex justify-between items-center group" onClick={() => copyToClipboard("9049861561")}>
-                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Account Number</span>
-                      <div className="flex items-center gap-2 cursor-pointer">
-                        <span className="font-black text-lg">9049861561</span>
-                        <Copy size={16} className="text-zinc-300 group-hover:text-indigo-600" />
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Account Name</span>
-                      <span className="font-black text-right">Cratebux and Logistics</span>
-                    </div>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-zinc-400">
+                      N
+                    </span>
+                    <input
+                      type="number"
+                      placeholder="1000"
+                      value={baseAmount}
+                      onChange={(e) =>
+                        setBaseAmount(
+                          e.target.value ? Number(e.target.value) : "",
+                        )
+                      }
+                      className="w-full bg-zinc-50 border border-black/5 rounded-[2rem] py-8 pl-14 pr-8 text-3xl font-black focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_AMOUNTS.map((amount) => (
+                      <button
+                        key={amount}
+                        onClick={() => setBaseAmount(amount)}
+                        className={`px-5 py-3 rounded-2xl text-sm font-bold transition-all ${
+                          baseAmount === amount
+                            ? "bg-zinc-900 text-white shadow-lg"
+                            : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                        }`}
+                      >
+                        {fmtCurrency(amount)}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-6">
-                <h3 className="text-sm font-black uppercase tracking-widest text-center">Confirm Your Details</h3>
-                <div className="space-y-4">
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Sender's Full Name</label>
-                     <input 
-                       type="text" 
-                       placeholder="e.g. John Doe"
-                       value={senderName}
-                       onChange={(e) => setSenderName(e.target.value)}
-                       className="w-full bg-white border-none rounded-2xl py-4 px-6 font-bold shadow-sm focus:ring-4 focus:ring-indigo-500/10 outline-none"
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Bank You Sent From</label>
-                     <select 
-                       value={bankUsed}
-                       onChange={(e) => setBankUsed(e.target.value)}
-                       className="w-full bg-white border-none rounded-2xl py-4 px-6 font-bold shadow-sm focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none"
-                     >
-                       <option value="">Select Bank</option>
-                       {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-                     </select>
-                   </div>
-                   <div className="space-y-2">
-                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-2">Proof of Transfer (Optional)</label>
-                     <div 
-                        onClick={() => document.getElementById('file-upload')?.click()}
-                        className="w-full bg-white border-2 border-dashed border-zinc-100 rounded-2xl py-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/10 transition-all"
-                     >
-                       {selectedFile ? (
-                         <div className="flex items-center gap-2 text-indigo-600 font-bold">
-                           <CheckCircle2 size={16} /> {selectedFile.name.length > 20 ? selectedFile.name.substring(0, 20) + '...' : selectedFile.name}
-                         </div>
-                       ) : (
-                         <>
-                           <Camera size={24} className="text-zinc-300" />
-                           <span className="text-xs font-bold text-zinc-400">Upload Transfer Screenshot</span>
-                         </>
-                       )}
-                       <input 
-                         id="file-upload" 
-                         type="file" 
-                         accept="image/*" 
-                         className="hidden" 
-                         onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                       />
-                     </div>
-                   </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-[2.5rem] p-8">
+                  <div className="w-12 h-12 bg-amber-200 text-amber-700 rounded-2xl flex items-center justify-center mb-5">
+                    <ShieldCheck size={22} />
+                  </div>
+                  <h3 className="font-black text-amber-900 mb-2">
+                    Fraud-resistant flow
+                  </h3>
+                  <p className="text-sm font-medium text-amber-700 leading-relaxed">
+                    The unique amount lets the system match your transfer without
+                    needing direct bank integration.
+                  </p>
                 </div>
 
-                <div className="flex gap-4 p-6 bg-blue-50/50 border border-blue-100 rounded-3xl">
-                   <AlertCircle size={20} className="text-blue-500 shrink-0" />
-                   <p className="text-[10px] font-bold text-blue-700 leading-relaxed uppercase tracking-tight">
-                     Wallet credits: {fmtCurrency(Number(baseAmount))}. The unique digits are only for verification purposes.
-                   </p>
-                 </div>
-
-                <button 
-                  disabled={!senderName || !bankUsed || isLoading}
-                  onClick={handleSubmitManual}
-                  className="w-full py-6 bg-indigo-600 text-white font-black rounded-3xl shadow-2xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                <button
+                  disabled={!baseAmount || Number(baseAmount) < 1000 || isLoading}
+                  onClick={handleStartManual}
+                  className="w-full py-5 bg-zinc-900 text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3"
                 >
-                  {isLoading ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
-                  I Have Sent the Money
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : (
+                    <ChevronRight size={18} />
+                  )}
+                  Generate Transfer Amount
                 </button>
               </div>
             </motion.div>
           )}
 
-          {method === "paystack" && (
-            <motion.div 
-              key="paystack-flow"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+          {method === "manual" && step === 2 && (
+            <motion.div
+              key="manual-details"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="space-y-8"
             >
-              <div className="space-y-4">
-                <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-2">Enter Amount</label>
-                <div className="relative">
-                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-zinc-400">₦</span>
-                  <input 
-                    type="number" 
-                    placeholder="5000"
-                    value={baseAmount}
-                    onChange={(e) => setBaseAmount(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full bg-white border-none rounded-[2rem] py-8 pl-14 pr-8 text-3xl font-black shadow-sm focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
-                  />
-                </div>
-                {baseAmount && (
-                  <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-center font-bold text-sm">
-                    Total to pay: ₦{(Number(baseAmount) + 50).toLocaleString()} <span className="text-[10px] uppercase opacity-60 ml-2">(₦50 processing fee)</span>
+              <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-8">
+                <div className="bg-white rounded-[2.5rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5">
+                  <div className="flex items-start justify-between gap-4 mb-8">
+                    <div>
+                      <div className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.24em] mb-2">
+                        Transfer Now
+                      </div>
+                      <h2 className="text-2xl font-black tracking-tight">
+                        Send the exact amount
+                      </h2>
+                    </div>
+                    <div className="bg-red-50 text-red-600 px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2 shrink-0">
+                      <Clock size={14} /> {formatTime(timeLeft)}
+                    </div>
                   </div>
-                )}
+
+                  <div className="text-center py-8 px-4 bg-indigo-50 rounded-[2rem] mb-8">
+                    <div className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.24em] mb-2">
+                      Amount To Transfer
+                    </div>
+                    <div className="text-5xl font-black tracking-tight text-indigo-600">
+                      {fmtCurrency(uniqueAmount || 0)}
+                    </div>
+                    <p className="text-sm font-bold text-red-500 mt-3">
+                      Transfer this exact amount, including the extra digits.
+                    </p>
+                  </div>
+
+                  <div className="p-6 bg-zinc-50 rounded-[2rem] space-y-4">
+                    <InfoRow
+                      label="Bank"
+                      value="Moniepoint"
+                    />
+                    <InfoRow
+                      label="Account Number"
+                      value="9049861561"
+                      copyValue="9049861561"
+                      onCopy={copyToClipboard}
+                    />
+                    <InfoRow
+                      label="Account Name"
+                      value="Cratebux and Logistics"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2.5rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5">
+                  <div className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.24em] mb-3">
+                    Confirm Your Details
+                  </div>
+                  <h2 className="text-2xl font-black tracking-tight mb-2">
+                    Complete verification
+                  </h2>
+                  <p className="text-zinc-500 text-sm mb-8">
+                    Tell us who sent the transfer and optionally attach proof so
+                    the review goes faster.
+                  </p>
+
+                  <div className="space-y-5">
+                    <FieldLabel text="Sender's Full Name" />
+                    <input
+                      type="text"
+                      placeholder="e.g. John Doe"
+                      value={senderName}
+                      onChange={(e) => setSenderName(e.target.value)}
+                      className="w-full bg-zinc-50 border border-black/5 rounded-2xl py-4 px-5 font-bold focus:ring-4 focus:ring-black/5 outline-none"
+                    />
+
+                    <FieldLabel text="Bank You Sent From" />
+                    <select
+                      value={bankUsed}
+                      onChange={(e) => setBankUsed(e.target.value)}
+                      className="w-full bg-zinc-50 border border-black/5 rounded-2xl py-4 px-5 font-bold focus:ring-4 focus:ring-black/5 outline-none appearance-none"
+                    >
+                      <option value="">Select bank</option>
+                      {BANKS.map((bank) => (
+                        <option key={bank} value={bank}>
+                          {bank}
+                        </option>
+                      ))}
+                    </select>
+
+                    <FieldLabel text="Reference (Optional)" />
+                    <input
+                      type="text"
+                      placeholder="Transaction reference"
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      className="w-full bg-zinc-50 border border-black/5 rounded-2xl py-4 px-5 font-bold focus:ring-4 focus:ring-black/5 outline-none"
+                    />
+
+                    <FieldLabel text="Proof of Transfer (Optional)" />
+                    <div
+                      onClick={() =>
+                        document.getElementById("file-upload")?.click()
+                      }
+                      className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-[2rem] py-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/30 transition-all"
+                    >
+                      {selectedFile ? (
+                        <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm text-center px-4">
+                          <CheckCircle2 size={16} />
+                          {selectedFile.name.length > 28
+                            ? `${selectedFile.name.slice(0, 28)}...`
+                            : selectedFile.name}
+                        </div>
+                      ) : (
+                        <>
+                          <Camera size={24} className="text-zinc-300" />
+                          <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                            Upload transfer screenshot
+                          </span>
+                        </>
+                      )}
+                      <input
+                        id="file-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          setSelectedFile(e.target.files?.[0] || null)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <button 
-                disabled={!baseAmount || baseAmount < 500}
-                className="w-full py-6 bg-emerald-500 text-white font-black rounded-3xl shadow-2xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all"
+              <div className="bg-blue-50/60 border border-blue-100 rounded-[2rem] p-6 flex gap-4">
+                <AlertCircle size={20} className="text-blue-500 shrink-0 mt-0.5" />
+                <p className="text-xs font-bold text-blue-700 leading-relaxed uppercase tracking-wide">
+                  Wallet credit is {fmtCurrency(Number(baseAmount) || 0)}. The
+                  extra digits are only for verification and do not change your
+                  credited amount.
+                </p>
+              </div>
+
+              <button
+                disabled={!senderName || !bankUsed || isLoading}
+                onClick={handleSubmitManual}
+                className="w-full py-5 bg-zinc-900 text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
-                Proceed to Payment
+                {isLoading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <ShieldCheck size={18} />
+                )}
+                I Have Sent The Money
               </button>
             </motion.div>
           )}
+
+          {method === "paystack" && (
+            <motion.div
+              key="paystack"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-8"
+            >
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5">
+                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.24em] mb-3">
+                  Paystack
+                </div>
+                <h2 className="text-2xl font-black tracking-tight mb-2">
+                  Instant card funding
+                </h2>
+                <p className="text-zinc-500 text-sm mb-8">
+                  Enter the amount you want to add. Paystack charges a flat N50
+                  processing fee on this flow.
+                </p>
+
+                <div className="space-y-4">
+                  <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-zinc-400">
+                      N
+                    </span>
+                    <input
+                      type="number"
+                      placeholder="5000"
+                      value={baseAmount}
+                      onChange={(e) =>
+                        setBaseAmount(
+                          e.target.value ? Number(e.target.value) : "",
+                        )
+                      }
+                      className="w-full bg-zinc-50 border border-black/5 rounded-[2rem] py-8 pl-14 pr-8 text-3xl font-black focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                    />
+                  </div>
+
+                  {baseAmount ? (
+                    <div className="p-5 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-bold">
+                      Total to pay: {fmtCurrency(Number(baseAmount) + 50)}
+                      <span className="text-[10px] uppercase tracking-[0.18em] opacity-60 ml-2">
+                        includes N50 fee
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] shadow-xl">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-5">
+                    <CreditCard size={22} />
+                  </div>
+                  <h3 className="text-xl font-black mb-2">Fast checkout</h3>
+                  <p className="text-sm text-white/70 leading-relaxed">
+                    This page now matches the product shell, but Paystack itself
+                    still needs a final checkout handoff to be fully wired.
+                  </p>
+                </div>
+
+                <button
+                  disabled={!baseAmount || Number(baseAmount) < 500}
+                  onClick={handlePaystack}
+                  className="w-full py-5 bg-zinc-900 text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                >
+                  <Plus size={18} />
+                  Proceed To Payment
+                </button>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
-      </main>
+      </div>
+    </MainLayout>
+  );
+}
+
+function FieldLabel({ text }: { text: string }) {
+  return (
+    <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-[0.24em] ml-1">
+      {text}
+    </label>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  copyValue,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  copyValue?: string;
+  onCopy?: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+        {label}
+      </span>
+      <div className="flex items-center gap-2 text-right">
+        <span className="font-black">{value}</span>
+        {copyValue && onCopy ? (
+          <button
+            onClick={() => onCopy(copyValue)}
+            className="text-zinc-300 hover:text-indigo-600 transition-colors"
+          >
+            <Copy size={15} />
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
