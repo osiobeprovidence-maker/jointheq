@@ -312,8 +312,8 @@ export const joinSlot = mutation({
             .withIndex("by_user", (q) => q.eq("user_id", user._id))
             .collect();
 
-        // If this is the only slot (the one we just inserted), reward the referrer
-        if (existingSlots.length === 1) {
+        // If this is the user's first slot and they were actually referred, reward the referrer.
+        if (existingSlots.length === 1 && user.referred_by) {
             await awardReputation(ctx, user.referred_by, {
                 score: 50,
                 boots: 30,
