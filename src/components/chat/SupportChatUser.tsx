@@ -21,6 +21,34 @@ interface SupportChatUserProps {
     onBack?: () => void;
 }
 
+type SupportContact = {
+    name: string;
+    label: string;
+    phone: string;
+};
+
+const getSupportContacts = (platformSettings: Record<string, any>): SupportContact[] => {
+    const contacts = Array.isArray(platformSettings?.whatsapp_support_contacts)
+        ? platformSettings.whatsapp_support_contacts
+        : [];
+
+    return contacts
+        .filter((contact: any) => contact && typeof contact.phone === "string" && contact.phone.trim())
+        .map((contact: any, index: number) => ({
+            name: typeof contact.name === "string" && contact.name.trim() ? contact.name.trim() : `Support ${index + 1}`,
+            label: typeof contact.label === "string" && contact.label.trim() ? contact.label.trim() : "WhatsApp Support",
+            phone: contact.phone.trim(),
+        }))
+        .slice(0, 3);
+};
+
+const buildWhatsAppLink = (phone: string, message?: string) => {
+    const normalizedPhone = phone.replace(/[^0-9]/g, "");
+    return message
+        ? `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`
+        : `https://wa.me/${normalizedPhone}`;
+};
+
 export default function SupportChatUser({ userId, onBack }: SupportChatUserProps) {
     const [content, setContent] = useState("");
     const [image, setImage] = useState<string | null>(null);
@@ -32,6 +60,8 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
     const chatWithAI = useAction(api.support_actions.chatWithAI);
     const escalateToAgent = useMutation(api.support.escalateToAgent);
     const platformSettings = useQuery(api.admin.getPlatformSettings) || {};
+    const supportContacts = getSupportContacts(platformSettings);
+    const supportMessage = "Hi, I need support with my JoinTheQ account.";
 
     const conversation = data?.conversation;
     const messages = data?.messages || [];
@@ -106,22 +136,39 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
                 <p className="text-gray-400 mb-8 max-w-sm">
                     Need help with your account, payments, or campaigns? Our verified support team is online and ready to assist you.
                 </p>
-                <div className="flex flex-col gap-3 w-full max-w-xs">
+                <div className="flex flex-col gap-3 w-full max-w-sm">
                     <button
                         onClick={handleStart}
                         className="w-full px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
                     >
                         <Send size={18} /> Start a Conversation
                     </button>
-                    {platformSettings?.whatsapp_number && (
-                        <a
-                            href={`https://wa.me/${platformSettings.whatsapp_number.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full px-8 py-4 bg-[#25D366] text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-xl shadow-[#25D366]/20"
-                        >
-                            <MessageSquare size={18} /> WhatsApp Support
-                        </a>
+                    {supportContacts.length > 0 && (
+                        <div className="w-full text-left">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 text-center">
+                                Choose a WhatsApp support line
+                            </div>
+                            <div className="grid gap-3">
+                                {supportContacts.map((contact, index) => (
+                                    <a
+                                        key={`${contact.phone}-${index}`}
+                                        href={buildWhatsAppLink(contact.phone, supportMessage)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full px-5 py-4 bg-[#25D366] text-white rounded-2xl font-bold flex items-center justify-between gap-3 hover:scale-[1.02] transition-transform shadow-xl shadow-[#25D366]/20"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <MessageSquare size={18} />
+                                            <div>
+                                                <div className="text-sm font-black">{contact.name}</div>
+                                                <div className="text-[10px] uppercase tracking-widest text-white/75">{contact.label}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-xs font-bold text-white/80">{contact.phone}</div>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -154,17 +201,18 @@ export default function SupportChatUser({ userId, onBack }: SupportChatUserProps
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    {platformSettings?.whatsapp_number && (
-                        <a 
-                            href={`https://wa.me/${platformSettings.whatsapp_number.replace(/[^0-9]/g, '')}?text=${encodeURIComponent("Hi, I need support with my JoinTheQ account.")}`}
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {supportContacts.map((contact, index) => (
+                        <a
+                            key={`${contact.phone}-${index}`}
+                            href={buildWhatsAppLink(contact.phone, supportMessage)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#25D366]/10 border border-[#25D366]/20 rounded-lg hover:bg-[#25D366]/20 transition-all text-[#25D366] flex items-center gap-1"
                         >
-                            WhatsApp
+                            {contact.name}
                         </a>
-                    )}
+                    ))}
                     {conversation.handled_by === 'ai' && (
                         <button 
                             onClick={() => {

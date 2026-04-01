@@ -77,6 +77,44 @@ type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns"
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fmt = fmtCurrency;
 
+type SupportContact = {
+    name: string;
+    label: string;
+    phone: string;
+};
+
+const buildSupportContacts = (platformSettings: Record<string, any>): SupportContact[] => {
+    const configuredContacts = Array.isArray(platformSettings?.whatsapp_support_contacts)
+        ? platformSettings.whatsapp_support_contacts
+        : [];
+
+    const normalizedContacts = configuredContacts
+        .slice(0, 3)
+        .map((contact: any, index: number) => ({
+            name: typeof contact?.name === "string" && contact.name.trim() ? contact.name.trim() : `Support ${index + 1}`,
+            label: typeof contact?.label === "string" && contact.label.trim() ? contact.label.trim() : "General Support",
+            phone: typeof contact?.phone === "string" ? contact.phone.trim() : "",
+        }));
+
+    while (normalizedContacts.length < 3) {
+        normalizedContacts.push({
+            name: `Support ${normalizedContacts.length + 1}`,
+            label: normalizedContacts.length === 0 ? "General Support" : normalizedContacts.length === 1 ? "Payments Help" : "Account Help",
+            phone: "",
+        });
+    }
+
+    if (!normalizedContacts[0].phone && typeof platformSettings?.whatsapp_number === "string" && platformSettings.whatsapp_number.trim()) {
+        normalizedContacts[0] = {
+            name: normalizedContacts[0].name || "Support 1",
+            label: normalizedContacts[0].label || "General Support",
+            phone: platformSettings.whatsapp_number.trim(),
+        };
+    }
+
+    return normalizedContacts;
+};
+
 function StatCard({ label, value, sub, icon, color, trend }: {
     label: string; value: React.ReactNode; sub?: string; icon: React.ReactNode;
     color: string; trend?: "up" | "down" | "neutral";
@@ -228,6 +266,10 @@ export default function AdminPanel() {
     // Settings Query
     const platformSettings = useQuery(api.admin.getPlatformSettings) || {};
 
+    useEffect(() => {
+        setSupportContacts(buildSupportContacts(platformSettings));
+    }, [platformSettings?.whatsapp_number, JSON.stringify(platformSettings?.whatsapp_support_contacts || [])]);
+
     // Selected User Slots Query
     const liveUserSlots = useQuery(api.subscriptions.getSlotsByUserId, selectedUser ? { user_id: selectedUser._id as Id<"users"> } : "skip") || [];
 
@@ -258,6 +300,11 @@ export default function AdminPanel() {
     const [overridePaymentStatus, setOverridePaymentStatus] = useState("filled");
     const [overrideReason, setOverrideReason] = useState("");
     const [overrideAmount, setOverrideAmount] = useState("");
+    const [supportContacts, setSupportContacts] = useState<SupportContact[]>([
+        { name: "Support 1", label: "General Support", phone: "" },
+        { name: "Support 2", label: "Payments Help", phone: "" },
+        { name: "Support 3", label: "Account Help", phone: "" },
+    ]);
 
     // Mutations
     const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
@@ -2065,29 +2112,68 @@ export default function AdminPanel() {
                                 </div>
 
                                 {/* WhatsApp Config */}
-                                <div className="bg-white p-5 rounded-3xl border border-black/5 flex flex-col md:flex-row md:items-center gap-4 justify-between">
+                                <div className="bg-white p-5 rounded-3xl border border-black/5 space-y-5">
                                     <div>
-                                        <div className="font-black text-sm">WhatsApp Support Number</div>
-                                        <div className="text-xs text-gray-400 mt-1">Users clicking the WhatsApp support button will be redirected here.</div>
+                                        <div className="font-black text-sm">WhatsApp Support Contacts</div>
+                                        <div className="text-xs text-gray-400 mt-1">Add up to 3 support lines so users can choose exactly who they want to contact.</div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            defaultValue={platformSettings?.whatsapp_number || ""}
-                                            id="whatsapp_input"
-                                            placeholder="e.g. +1234567890"
-                                            className="w-48 px-4 py-2 bg-zinc-50 border border-black/5 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-emerald-500/20"
-                                        />
+                                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                                        {supportContacts.map((contact, index) => (
+                                            <div key={index} className="bg-zinc-50 border border-black/5 rounded-2xl p-4 space-y-3">
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Contact {index + 1}</div>
+                                                <input
+                                                    value={contact.name}
+                                                    onChange={(e) => {
+                                                        const next = [...supportContacts];
+                                                        next[index] = { ...next[index], name: e.target.value };
+                                                        setSupportContacts(next);
+                                                    }}
+                                                    placeholder="Display name"
+                                                    className="w-full px-4 py-2 bg-white border border-black/5 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-emerald-500/20"
+                                                />
+                                                <input
+                                                    value={contact.label}
+                                                    onChange={(e) => {
+                                                        const next = [...supportContacts];
+                                                        next[index] = { ...next[index], label: e.target.value };
+                                                        setSupportContacts(next);
+                                                    }}
+                                                    placeholder="Short label"
+                                                    className="w-full px-4 py-2 bg-white border border-black/5 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-emerald-500/20"
+                                                />
+                                                <input
+                                                    value={contact.phone}
+                                                    onChange={(e) => {
+                                                        const next = [...supportContacts];
+                                                        next[index] = { ...next[index], phone: e.target.value };
+                                                        setSupportContacts(next);
+                                                    }}
+                                                    placeholder="e.g. +2348012345678"
+                                                    className="w-full px-4 py-2 bg-white border border-black/5 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-emerald-500/20"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-end">
                                         <button
                                             onClick={async () => {
-                                                const val = (document.getElementById('whatsapp_input') as HTMLInputElement).value;
                                                 try {
-                                                    await updateSettingMut({ key: "whatsapp_number", value: val, executorId: currentUser!._id as any });
-                                                    toast.success("WhatsApp number updated!");
+                                                    const sanitizedContacts = supportContacts
+                                                        .map((contact, index) => ({
+                                                            name: contact.name.trim() || `Support ${index + 1}`,
+                                                            label: contact.label.trim() || "General Support",
+                                                            phone: contact.phone.trim(),
+                                                        }))
+                                                        .filter((contact) => contact.phone);
+
+                                                    await updateSettingMut({ key: "whatsapp_support_contacts", value: sanitizedContacts, executorId: currentUser!._id as any });
+                                                    await updateSettingMut({ key: "whatsapp_number", value: sanitizedContacts[0]?.phone || "", executorId: currentUser!._id as any });
+                                                    toast.success("WhatsApp contacts updated!");
                                                 } catch (e: any) { toast.error(e.message); }
                                             }}
                                             className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-sm font-black hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
                                         >
-                                            Save
+                                            Save Contacts
                                         </button>
                                     </div>
                                 </div>

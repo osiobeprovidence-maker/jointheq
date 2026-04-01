@@ -1,6 +1,31 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+const normalizeSupportContacts = (settingsMap: Record<string, any>) => {
+    const rawContacts = Array.isArray(settingsMap.whatsapp_support_contacts)
+        ? settingsMap.whatsapp_support_contacts
+        : [];
+
+    const contacts = rawContacts
+        .filter((contact: any) => contact && typeof contact.phone === "string" && contact.phone.trim())
+        .map((contact: any, index: number) => ({
+            name: typeof contact.name === "string" && contact.name.trim() ? contact.name.trim() : `Support ${index + 1}`,
+            label: typeof contact.label === "string" && contact.label.trim() ? contact.label.trim() : "WhatsApp Support",
+            phone: contact.phone.trim(),
+        }))
+        .slice(0, 3);
+
+    if (contacts.length === 0 && typeof settingsMap.whatsapp_number === "string" && settingsMap.whatsapp_number.trim()) {
+        contacts.push({
+            name: "Support 1",
+            label: "General Support",
+            phone: settingsMap.whatsapp_number.trim(),
+        });
+    }
+
+    return contacts;
+};
+
 // ─── Platform Overview ───────────────────────────────────────────────────────
 
 export const getPlatformStats = query({
@@ -347,6 +372,9 @@ export const getPlatformSettings = query({
         for (const s of settings) {
             settingsMap[s.key] = s.value;
         }
+        const supportContacts = normalizeSupportContacts(settingsMap);
+        settingsMap.whatsapp_support_contacts = supportContacts;
+        settingsMap.whatsapp_number = supportContacts[0]?.phone || settingsMap.whatsapp_number || "";
         return settingsMap;
     }
 });
