@@ -22,6 +22,7 @@ import {
 
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from "motion/react";
 import { auth } from "../lib/auth";
@@ -31,15 +32,16 @@ interface MainLayoutProps {
     children: ReactNode;
     activeTab: string;
     setActiveTab: (tab: any) => void;
+    qScore?: number;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab }) => {
+export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab, qScore: qScoreOverride }) => {
     const user = auth.getCurrentUser();
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const qScore = user?.q_score || 0;
+    const qScore = qScoreOverride ?? user?.q_score ?? 0;
     const isAdminMode = location.pathname.startsWith('/admin');
 
     const getRank = (score: number) => {
@@ -94,7 +96,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                                 <span className="font-semibold">{item.label}</span>
                             </div>
                             {item.id === 'notifications' && (
-                                <NotificationBadge unreadCount={useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id } : "skip") || 0} />
+                                <NotificationBadge unreadCount={useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id as Id<"users"> } : "skip") || 0} />
                             )}
                         </button>
                     ))}

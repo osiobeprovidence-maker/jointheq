@@ -54,7 +54,7 @@ export default function AdminEnhancedPage() {
     const [overrideStatus, setOverrideStatus] = useState("filled");
 
     // Admin role check
-    const adminRole = useQuery(api.adminEnhanced.getAdminRole, user?._id ? { adminId: user._id } : "skip");
+    const adminRole = useQuery(api.adminEnhanced.getAdminRole, user?._id ? { adminId: user._id as Id<"users"> } : "skip");
     
     // Dashboard metrics
     const metrics = useQuery(api.adminEnhanced.getAdminDashboardMetrics);
@@ -84,7 +84,7 @@ export default function AdminEnhancedPage() {
         if (!user || !selectedUser || !selectedSlotType) return;
         try {
             await assignUserToSlot({
-                adminId: user._id,
+                adminId: user._id as Id<"users">,
                 userId: selectedUser,
                 slotTypeId: selectedSlotType,
                 reason: "Manual assignment via enhanced admin panel"
@@ -102,7 +102,7 @@ export default function AdminEnhancedPage() {
         if (!user || !selectedSlot || !overrideReason) return;
         try {
             await overridePayment({
-                adminId: user._id,
+                adminId: user._id as Id<"users">,
                 slotId: selectedSlot,
                 newStatus: overrideStatus,
                 overrideAmount: overrideAmount ? Number(overrideAmount) : undefined,

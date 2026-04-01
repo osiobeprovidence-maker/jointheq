@@ -20,6 +20,7 @@ export interface User {
   full_name: string;
   username?: string;
   university?: string;
+  profile_image_url?: string;
   q_score: number;
   q_rank: string;
   wallet_balance: number;

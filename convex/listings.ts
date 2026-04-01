@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 const SLOT_RULES: Record<string, number> = {
   "Netflix Premium": 8,
@@ -88,7 +88,9 @@ export const getOwnerListings = query({
       .collect();
 
     // Combine both - subscriptions show pending/review status, marketplace shows active
-    const combined = [...subscriptions];
+    const combined: Array<Record<string, unknown>> = subscriptions.map((subscription) => ({
+      ...subscription,
+    }));
 
     // Add marketplace listings with enriched data
     for (const listing of marketplaceListings) {
@@ -139,7 +141,9 @@ export const getAdminListings = query({
 
     // Enrich with owner name - using Promise.all for parallel execution
     return await Promise.all(userListings.map(async (s) => {
-      const owner = s.owner_id ? await ctx.db.get(s.owner_id) : null;
+      const owner: Doc<"users"> | null = s.owner_id
+        ? await ctx.db.get(s.owner_id as Id<"users">)
+        : null;
       return {
         ...s,
         owner_name: owner?.full_name ?? "Unknown",

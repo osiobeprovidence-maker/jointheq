@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { awardReputation } from "./reputation";
 import { api } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 
 const normalizeOwnerName = (owner?: string) => {
     const cleaned = (owner || "").trim().replace(/^@+/, "");
@@ -634,8 +634,12 @@ export const getAdminMarketplace = query({
                 .collect();
 
             const members = await Promise.all(allSlots.map(async (s) => {
-                const u = s.user_id ? await ctx.db.get(s.user_id) : null;
-                const st = s.slot_type_id ? await ctx.db.get(s.slot_type_id) : null;
+                const u: Doc<"users"> | null = s.user_id
+                    ? await ctx.db.get(s.user_id as Id<"users">)
+                    : null;
+                const st: Doc<"slot_types"> | null = s.slot_type_id
+                    ? await ctx.db.get(s.slot_type_id as Id<"slot_types">)
+                    : null;
                 return {
                     slot_id: s._id,
                     user_name: u?.full_name ?? "Empty Slot",

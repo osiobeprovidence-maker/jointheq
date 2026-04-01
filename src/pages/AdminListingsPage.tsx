@@ -15,8 +15,7 @@ import {
   ExternalLink,
   Loader2,
   Tag,
-  AlertCircle,
-  TrendingRight
+  AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
