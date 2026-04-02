@@ -221,7 +221,7 @@ export default function DashboardPage() {
             const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
 
             // Generate a short unique request id to send to the backend for idempotency
-            (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+            (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
             await adminCreateListingMutation({
                 platform_name: selectedSub ? selectedSub.name : listingData.subscription_id,
@@ -2323,10 +2323,39 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
     const [allocation, setAllocation] = useState(slot.allocation || '');
 
     const renderAccessInstructions = () => {
+        const hasCredentials = (slot as any).login_email || (slot as any).login_password;
+        const actualEmail = (slot as any).login_email;
+        const actualPassword = (slot as any).login_password;
+
+        // Render login details section if credentials exist
+        const renderLoginDetails = () => {
+            if (!hasCredentials) return null;
+            return (
+                <div className="mb-6">
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Login Details</div>
+                    <div className="p-3 bg-white rounded-xl font-mono text-[11px] mb-4 border border-black/5 flex flex-col gap-2">
+                        {actualEmail && (
+                            <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Email</span>
+                                <span className="font-medium text-black break-all">{actualEmail}</span>
+                            </div>
+                        )}
+                        {actualPassword && (
+                            <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Password</span>
+                                <span className="font-medium text-black break-all">{actualPassword}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
         switch (slot.access_type) {
             case 'code_access':
                 return (
                     <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        {renderLoginDetails()}
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
                         <ul className="text-sm space-y-2 mb-4">
                             <li className="flex gap-2 items-start"><span className="text-black/30 text-xs mt-0.5">•</span> Click "Open Chat Support"</li>
@@ -2344,6 +2373,7 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
             case 'invite_link':
                 return (
                     <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        {renderLoginDetails()}
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
                         <ul className="text-sm space-y-2 mb-4">
                             <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">1.</span> Open Chat Support for your invite link</li>
@@ -2360,6 +2390,7 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
             case 'email_invite':
                 return (
                     <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                        {renderLoginDetails()}
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
                         <ul className="text-sm space-y-2 mb-4">
                             <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">1.</span> Open Chat Support</li>
@@ -2380,21 +2411,10 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
                         </ul>
                     </div>
                 );
-                        case 'login_with_code':
+            case 'login_with_code':
                 return (
                     <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
-                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Login Details</div>
-                        <div className="p-3 bg-white rounded-xl font-mono text-[11px] mb-4 border border-black/5 flex flex-col gap-2">
-                            <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
-                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Email</span>
-                                <span className="font-medium text-black">{(slot as any).login_email || `${slot.sub_name.toLowerCase().replace(/\s/g, '')}@jointheq.sbs`}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
-                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Password</span>
-                                <span className="font-medium text-black">{(slot as any).login_password || 'Request from Support'}</span>
-                            </div>
-                        </div>
-
+                        {renderLoginDetails()}
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
                         <ul className="text-sm space-y-2 mb-4">
                             <li className="flex gap-2 items-start"><span className="text-black/30 opacity-80 text-[10px] mt-1 font-mono">1.</span> Login using the email above</li>
@@ -2409,20 +2429,11 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
                     </div>
                 );
             default:
-                if ((slot as any).login_email || (slot as any).login_password) {
-                     return (
-                         <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
-                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Login Details</div>
-                            <div className="p-3 bg-white rounded-xl font-mono text-[11px] mb-4 border border-black/5 flex flex-col gap-2">
-                                <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
-                                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Email</span>
-                                    <span className="font-medium text-black break-all">{(slot as any).login_email || `${(slot as any).sub_name?.toLowerCase().replace(/\s/g, '')}@jointheq.sbs`}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
-                                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Password</span>
-                                    <span className="font-medium text-black break-all">{(slot as any).login_password || 'Request from Support'}</span>
-                                </div>
-                            </div>
+                // For unknown access types, show credentials if available
+                if (hasCredentials) {
+                    return (
+                        <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">
+                            {renderLoginDetails()}
                             <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Instructions</div>
                             <p className="text-sm text-gray-500 mb-4">
                                 Login using the credentials above. Open Chat Support to activate your slot or if you need any assistance getting started.
@@ -2432,8 +2443,8 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
                                 <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not change password</li>
                                 <li className="flex gap-2 items-start"><span className="text-red-400 text-xs mt-0.5">•</span> Do not remove profiles</li>
                             </ul>
-                         </div>
-                     );
+                        </div>
+                    );
                 }
                 return (
                     <div className="bg-[#f4f5f8] p-4 rounded-3xl mb-6">

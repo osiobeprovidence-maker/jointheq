@@ -112,11 +112,14 @@ export const getSlotsByUserId = query({
             slots.map(async (slot) => {
                 const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
                 const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
+                const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
+
                 return {
                     ...slot,
                     slot_name: (slotType as any)?.name,
                     sub_name: (account as any)?.platform || (account as any)?.name,
-                    login_email: (account as any)?.login_email,
+                    // Primary: get from subscriptions table, fallback to group.account_email
+                    login_email: (account as any)?.login_email || (group as any)?.account_email,
                     login_password: (account as any)?.login_password,
                     price: (slotType as any)?.price,
                     access_type: (slotType as any)?.access_type,
