@@ -127,13 +127,26 @@ export default function OwnerEarningsPage() {
                               </div>
                               <div className="space-y-1">
                                  <h4 className="font-black text-lg tracking-tight">{l.platform}</h4>
-                                 <div className="flex items-center gap-3">
-                                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{l.login_email}</span>
-                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${l.status === 'Active' ? 'bg-emerald-50 text-emerald-600' :
-                                       l.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                                 <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-3">
+                                       <span className="text-xs font-bold text-zinc-400 tracking-widest bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
+                                          {l.login_email}
+                                       </span>
+                                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                          l.status === 'Active' ? 'bg-emerald-50 text-emerald-600' :
+                                          l.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
                                        }`}>
-                                       {l.status}
-                                    </span>
+                                          {l.status}
+                                       </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                       <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                                          Password:
+                                       </span>
+                                       <span className="text-xs font-bold text-zinc-500 tracking-wider">
+                                          {l.login_password || "None provided"}
+                                       </span>
+                                    </div>
                                  </div>
                               </div>
                            </div>
