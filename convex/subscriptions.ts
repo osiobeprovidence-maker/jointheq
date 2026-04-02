@@ -817,3 +817,52 @@ export const seedMarketplace = mutation({
         });
     }
 });
+
+/**
+ * Migration: Sync credentials from groups to subscriptions for old listings
+ * Run this once to fix existing listings where login_email/login_password may be missing
+ */
+export const migrateCredentialsToSubscriptions = mutation({
+    args: {},
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.query("users").filter(q => q.eq(q.field("is_admin"), true)).first();
+        if (!admin) throw new Error("Admin required");
+
+        // Get all groups with account_email
+        const groups = await ctx.db.query("groups").collect();
+        let updated = 0;
+        let skipped = 0;
+
+        for (const group of groups) {
+            if (!group.account_email) {
+                skipped++;
+                continue;
+            }
+
+            // Find subscriptions linked to this group
+            const subscriptions = await ctx.db.query("subscriptions")
+                .filter(q => q.eq(q.field("group_id"), group._id))
+                .collect();
+
+            for (const sub of subscriptions) {
+                // Only update if login_email is missing
+                if (!sub.login_email || sub.login_email === "ADMIN_MANAGED") {
+                    await ctx.db.patch(sub._id, {
+                        login_email: group.account_email,
+                        updated_at: Date.now(),
+                    });
+                    updated++;
+                } else {
+                    skipped++;
+                }
+            }
+        }
+
+        return {
+            success: true,
+            updated,
+            skipped,
+            message: `Updated ${updated} subscriptions with credentials from groups`
+        };
+    },
+});
