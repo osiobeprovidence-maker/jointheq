@@ -12,6 +12,33 @@ const SLOT_RULES: Record<string, number> = {
   "Other": 1
 };
 
+const MARKETPLACE_CATEGORIES = new Set([
+  "Streaming",
+  "Music",
+  "Design",
+  "AI",
+  "Productivity",
+  "Gaming",
+  "VPN",
+  "Software",
+  "Utility",
+  "Education",
+]);
+
+const normalizeMarketplaceCategory = (category?: string, fallback?: string) => {
+  const normalized = (category || "").trim();
+  if (MARKETPLACE_CATEGORIES.has(normalized)) {
+    return normalized;
+  }
+
+  const fallbackNormalized = (fallback || "").trim();
+  if (MARKETPLACE_CATEGORIES.has(fallbackNormalized)) {
+    return fallbackNormalized;
+  }
+
+  return "Streaming";
+};
+
 export const submitListing = mutation({
   args: {
     owner_id: v.id("users"),
@@ -166,6 +193,7 @@ export const approveListing = mutation({
   handler: async (ctx, args) => {
     const listing = await ctx.db.get(args.listing_id);
     if (!listing) throw new Error("Listing not found");
+    const normalizedCategory = normalizeMarketplaceCategory(args.category, listing.category);
 
     // If listing already linked to a group, assume already approved — avoid duplicate group creation
     if ((listing as any).group_id) {
@@ -180,12 +208,18 @@ export const approveListing = mutation({
     if (!catalog) {
       const catalogId = await ctx.db.insert("subscription_catalog", {
         name: listing.platform,
-        category: args.category || listing.category || "Streaming",
+        category: normalizedCategory,
         description: `Owner-listed ${listing.platform}`,
         base_cost: args.owner_payout,
         is_active: true,
       });
       catalog = await ctx.db.get(catalogId);
+    } else {
+      await ctx.db.patch(catalog._id, {
+        category: normalizedCategory,
+        base_cost: args.owner_payout,
+      });
+      catalog = await ctx.db.get(catalog._id);
     }
 
     // 2. Create the Marketplace Group (guarded by existing group with same key)
@@ -265,10 +299,24 @@ export const approveListing = mutation({
         slot_price: args.price_per_slot,
         owner_payout: args.owner_payout,
 
-        category: args.category || listing.category,
+        category: normalizedCategory,
         admin_note: args.admin_note,
 
         created_at: Date.now(),
+        updated_at: Date.now(),
+      });
+    } else {
+      await ctx.db.patch(existingMarketplace._id, {
+        owner_user_id: listing.owner_id,
+        admin_creator_id: args.admin_id,
+        platform_name: listing.platform,
+        plan_owner: "owner_listed",
+        total_slots: args.total_slots,
+        available_slots: Math.max(args.total_slots - existingMarketplace.filled_slots, 0),
+        slot_price: args.price_per_slot,
+        owner_payout: args.owner_payout,
+        category: normalizedCategory,
+        admin_note: args.admin_note,
         updated_at: Date.now(),
       });
     }
@@ -279,7 +327,7 @@ export const approveListing = mutation({
       total_slots: args.total_slots,
       slot_price: args.price_per_slot,
       owner_payout_amount: args.owner_payout,
-      category: args.category || listing.category,
+      category: normalizedCategory,
       group_id: groupId,
       platform_catalog_id: catalog!._id,
       admin_note: args.admin_note,

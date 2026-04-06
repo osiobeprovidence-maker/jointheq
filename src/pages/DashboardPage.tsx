@@ -65,6 +65,33 @@ import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 import CampusJoinCard from "../components/campus/CampusJoinCard";
 import CampusApplicationModal from "../components/campus/CampusApplicationModal";
 
+const MARKETPLACE_CATEGORIES = [
+    "Streaming",
+    "Music",
+    "Design",
+    "AI",
+    "Productivity",
+    "Gaming",
+    "VPN",
+    "Software",
+    "Utility",
+    "Education",
+] as const;
+
+const normalizeMarketplaceCategory = (category?: string, fallback?: string) => {
+    const normalized = (category || "").trim();
+    if (MARKETPLACE_CATEGORIES.includes(normalized as typeof MARKETPLACE_CATEGORIES[number])) {
+        return normalized;
+    }
+
+    const fallbackNormalized = (fallback || "").trim();
+    if (MARKETPLACE_CATEGORIES.includes(fallbackNormalized as typeof MARKETPLACE_CATEGORIES[number])) {
+        return fallbackNormalized;
+    }
+
+    return "Streaming";
+};
+
 export default function DashboardPage() {
     const navigate = useNavigate();
     const recommendedAvatars = [
@@ -728,7 +755,7 @@ export default function DashboardPage() {
                                 className="md:hidden w-full bg-white border border-black/10 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-black/10"
                                 aria-label="Filter marketplace categories"
                             >
-                                {['All', 'Streaming', 'Music', 'Design', 'AI', 'Productivity', 'Gaming', 'VPN', 'Software', 'Utility', 'Education'].map((filter) => (
+                                {['All', ...MARKETPLACE_CATEGORIES].map((filter) => (
                                     <option key={filter} value={filter}>
                                         {filter}
                                     </option>
@@ -736,7 +763,7 @@ export default function DashboardPage() {
                             </select>
 
                             <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                                {['All', 'Streaming', 'Music', 'Design', 'AI', 'Productivity', 'Gaming', 'VPN', 'Software', 'Utility', 'Education'].map((filter) => (
+                                {['All', ...MARKETPLACE_CATEGORIES].map((filter) => (
                                     <button
                                         key={filter}
                                         onClick={() => setActiveFilter(filter)}
@@ -753,6 +780,11 @@ export default function DashboardPage() {
                             {subscriptions
                                 .filter((listing: any) => listing && (listing.marketplace_id || listing.group_id || listing._id))
                                 .map((listing: any) => {
+                                    const listingCategory = normalizeMarketplaceCategory(listing.category, listing.platform_category);
+                                    const selectedFilter = activeFilter === 'All' ? 'All' : normalizeMarketplaceCategory(activeFilter);
+                                    const searchableName = (listing.name || '').toLowerCase();
+                                    const searchableSubName = (listing.sub_name || '').toLowerCase();
+
                                     // Each listing is now a single entry (no aggregation)
                                     // Prefer marketplace_id because getActiveSubscriptions is sourced from marketplace rows
                                     const listingCard = {
@@ -760,7 +792,7 @@ export default function DashboardPage() {
                                         slot_type_id: listing._id,
                                         sub_name: listing.sub_name,
                                         sub_logo: listing.sub_logo,
-                                        category: listing.category,
+                                        category: listingCategory,
                                         name: listing.name,
                                         price: listing.price,
                                         total_capacity: listing.total_capacity,
@@ -774,8 +806,8 @@ export default function DashboardPage() {
                                         billing_cycle_start: listing.billing_cycle_start,
                                     };
 
-                                    const matchesSearch = listingCard.name.toLowerCase().includes(searchQuery.toLowerCase()) || listingCard.sub_name.toLowerCase().includes(searchQuery.toLowerCase());
-                                    const matchesFilter = activeFilter === 'All' || (listingCard.category === activeFilter);
+                                    const matchesSearch = searchableName.includes(searchQuery.toLowerCase()) || searchableSubName.includes(searchQuery.toLowerCase());
+                                    const matchesFilter = selectedFilter === 'All' || listingCard.category === selectedFilter;
                                     if (!matchesSearch || !matchesFilter) return null;
 
                                     return (

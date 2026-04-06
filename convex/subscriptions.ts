@@ -9,6 +9,33 @@ const normalizeOwnerName = (owner?: string) => {
     return cleaned || "Unknown";
 };
 
+const MARKETPLACE_CATEGORIES = new Set([
+    "Streaming",
+    "Music",
+    "Design",
+    "AI",
+    "Productivity",
+    "Gaming",
+    "VPN",
+    "Software",
+    "Utility",
+    "Education",
+]);
+
+const normalizeMarketplaceCategory = (category?: string, fallback?: string) => {
+    const normalized = (category || "").trim();
+    if (MARKETPLACE_CATEGORIES.has(normalized)) {
+        return normalized;
+    }
+
+    const fallbackNormalized = (fallback || "").trim();
+    if (MARKETPLACE_CATEGORIES.has(fallbackNormalized)) {
+        return fallbackNormalized;
+    }
+
+    return "Streaming";
+};
+
 /**
  * Returns EACH listing as a separate item (no aggregation across listings).
  * Uses the new marketplace table for consolidated data.
@@ -24,6 +51,7 @@ export const getActiveSubscriptions = query({
             marketplaceListings.map(async (listing) => {
                 // Get the subscription catalog info for this listing
                 const catalog = await ctx.db.get(listing.subscription_catalog_id);
+                const effectiveCategory = normalizeMarketplaceCategory(listing.category, catalog?.category);
                 const owner = listing.owner_user_id
                     ? await ctx.db.get(listing.owner_user_id)
                     : null;
@@ -85,7 +113,8 @@ export const getActiveSubscriptions = query({
                 // Return one entry per slot type
                 return slotTypesWithCount.map(st => ({
                     ...st,
-                    category: listing.category,
+                    category: effectiveCategory,
+                    platform_category: catalog?.category,
                     marketplace_id: listing._id,
                     account_email: listing.account_email,
                     billing_cycle_start: listing.billing_cycle_start,
@@ -439,6 +468,7 @@ export const adminCreateListing = mutation({
     },
     handler: async (ctx, args) => {
         const normalizedPlanOwner = normalizeOwnerName(args.plan_owner);
+        const normalizedCategory = normalizeMarketplaceCategory(args.category);
 
         // Logging the request for debugging duplicate submissions
         console.log(`[adminCreateListing] platform=${args.platform_name} account=${args.account_email} request_id=${args.request_id}`);
@@ -449,6 +479,19 @@ export const adminCreateListing = mutation({
                 .withIndex("by_request_id", q => q.eq("request_id", args.request_id))
                 .first();
             if (existingMarketplace) {
+                await ctx.db.patch(existingMarketplace._id, {
+                    category: normalizedCategory,
+                    updated_at: Date.now(),
+                });
+
+                const existingCatalog = await ctx.db.get(existingMarketplace.subscription_catalog_id);
+                if (existingCatalog) {
+                    await ctx.db.patch(existingCatalog._id, {
+                        category: normalizedCategory,
+                        ...(args.base_cost !== undefined && { base_cost: args.base_cost }),
+                    });
+                }
+
                 console.log(`[adminCreateListing] duplicate request detected - returning existing marketplace ${existingMarketplace._id}`);
                 return { success: true, marketplaceId: existingMarketplace._id };
             }
@@ -458,6 +501,29 @@ export const adminCreateListing = mutation({
                 .filter(q => q.eq(q.field("request_id"), args.request_id))
                 .first();
             if (existingByRequest) {
+                const existingCatalog = await ctx.db.get(existingByRequest.subscription_catalog_id);
+                if (existingCatalog) {
+                    await ctx.db.patch(existingCatalog._id, {
+                        category: normalizedCategory,
+                        ...(args.base_cost !== undefined && { base_cost: args.base_cost }),
+                    });
+                }
+
+                const existingMarketplace = await ctx.db.query("marketplace")
+                    .filter(q => q.and(
+                        q.eq(q.field("subscription_catalog_id"), existingByRequest.subscription_catalog_id),
+                        q.eq(q.field("account_email"), args.account_email),
+                        q.eq(q.field("billing_cycle_start"), args.admin_renewal_date),
+                    ))
+                    .first();
+
+                if (existingMarketplace) {
+                    await ctx.db.patch(existingMarketplace._id, {
+                        category: normalizedCategory,
+                        updated_at: Date.now(),
+                    });
+                }
+
                 console.log(`[adminCreateListing] duplicate request detected - returning existing group ${existingByRequest._id}`);
                 return { success: true, groupId: existingByRequest._id };
             }
@@ -473,6 +539,42 @@ export const adminCreateListing = mutation({
             .first();
 
         if (existingByKey) {
+            const existingCatalog = await ctx.db.get(existingByKey.subscription_catalog_id);
+            if (existingCatalog) {
+                await ctx.db.patch(existingCatalog._id, {
+                    category: normalizedCategory,
+                    ...(args.base_cost !== undefined && { base_cost: args.base_cost }),
+                });
+            }
+
+            const existingMarketplace = await ctx.db.query("marketplace")
+                .filter(q => q.and(
+                    q.eq(q.field("subscription_catalog_id"), existingByKey.subscription_catalog_id),
+                    q.eq(q.field("account_email"), args.account_email),
+                    q.eq(q.field("billing_cycle_start"), args.admin_renewal_date),
+                    q.eq(q.field("plan_owner"), normalizedPlanOwner),
+                ))
+                .first();
+
+            if (existingMarketplace) {
+                await ctx.db.patch(existingMarketplace._id, {
+                    category: normalizedCategory,
+                    updated_at: Date.now(),
+                });
+            }
+
+            const existingSubscription = await ctx.db.query("subscriptions")
+                .filter(q => q.eq(q.field("group_id"), existingByKey._id))
+                .first();
+
+            if (existingSubscription) {
+                await ctx.db.patch(existingSubscription._id, {
+                    category: normalizedCategory,
+                    ...(args.base_cost !== undefined && { base_cost: args.base_cost }),
+                    updated_at: Date.now(),
+                });
+            }
+
             console.log(`[adminCreateListing] existing group found by key - returning ${existingByKey._id}`);
             return { success: true, groupId: existingByKey._id };
         }
@@ -487,13 +589,13 @@ export const adminCreateListing = mutation({
             catalogId = await ctx.db.insert("subscription_catalog", {
                 name: args.platform_name,
                 description: `${args.platform_name} subscription`,
-                category: args.category || "Streaming",
+                category: normalizedCategory,
                 is_active: true,
                 base_cost: args.base_cost || 0,
             });
         } else if (args.category || args.base_cost !== undefined) {
             await ctx.db.patch(catalogId, {
-                ...(args.category && { category: args.category }),
+                ...(args.category && { category: normalizedCategory }),
                 ...(args.base_cost !== undefined && { base_cost: args.base_cost })
             });
         }
@@ -517,6 +619,7 @@ export const adminCreateListing = mutation({
             login_email: args.account_email,
             login_password: args.login_password || "ADMIN_MANAGED",
             base_cost: args.base_cost || 0,
+            category: normalizedCategory,
             instructions_text: args.instructions_text,
             instructions_image_url: args.instructions_image_url,
             renewal_date: args.admin_renewal_date,
@@ -575,7 +678,7 @@ export const adminCreateListing = mutation({
 
             slot_price: slotPrice,
 
-            category: args.category || "Streaming",
+            category: normalizedCategory,
             admin_note: undefined,
             request_id: args.request_id,
 
