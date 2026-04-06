@@ -529,8 +529,15 @@ export const adjustUserBalance = mutation({
         const user = await ctx.db.get(args.userId);
         if (!user) throw new Error("User not found");
 
+        const normalizedAmount = Math.abs(args.amount);
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+            throw new Error("Enter a valid amount");
+        }
+
         const currentBalance = user.wallet_balance || 0;
-        const newBalance = args.type === "add" ? currentBalance + args.amount : currentBalance - args.amount;
+        const newBalance = args.type === "add"
+            ? currentBalance + normalizedAmount
+            : currentBalance - normalizedAmount;
 
         if (newBalance < 0 && args.type === "remove") throw new Error("Insufficient balance");
 
@@ -541,7 +548,7 @@ export const adjustUserBalance = mutation({
         // Record transaction
         await ctx.db.insert("wallet_transactions", {
             user_id: args.userId,
-            amount: args.amount,
+            amount: normalizedAmount,
             type: args.type === "add" ? "funding" : "payment",
             source: "admin_adjustment",
             status: "completed",
@@ -557,7 +564,7 @@ export const adjustUserBalance = mutation({
             target_type: "user",
             target_id: args.userId,
             target_name: user.full_name,
-            details: `${args.type === "add" ? "Added" : "Removed"} N${args.amount}`,
+            details: `${args.type === "add" ? "Added" : "Removed"} N${normalizedAmount}`,
             reason: args.reason,
             created_at: Date.now(),
         });
@@ -581,8 +588,15 @@ export const adjustUserBoots = mutation({
         const user = await ctx.db.get(args.userId);
         if (!user) throw new Error("User not found");
 
+        const normalizedAmount = Math.abs(args.amount);
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+            throw new Error("Enter a valid amount");
+        }
+
         const currentBoots = user.boots_balance || 0;
-        const newBoots = args.type === "add" ? currentBoots + args.amount : currentBoots - args.amount;
+        const newBoots = args.type === "add"
+            ? currentBoots + normalizedAmount
+            : currentBoots - normalizedAmount;
 
         if (newBoots < 0 && args.type === "remove") throw new Error("Insufficient BOOTS");
 
@@ -593,7 +607,7 @@ export const adjustUserBoots = mutation({
         // Record BOOTS transaction
         await ctx.db.insert("boot_transactions", {
             user_id: args.userId,
-            amount: args.type === "add" ? args.amount : -args.amount,
+            amount: args.type === "add" ? normalizedAmount : -normalizedAmount,
             type: "admin_adjustment",
             description: args.reason,
             created_at: Date.now(),
@@ -607,7 +621,7 @@ export const adjustUserBoots = mutation({
             target_type: "user",
             target_id: args.userId,
             target_name: user.full_name,
-            details: `${args.type === "add" ? "Added" : "Removed"} ${args.amount} BOOTS`,
+            details: `${args.type === "add" ? "Added" : "Removed"} ${normalizedAmount} BOOTS`,
             reason: args.reason,
             created_at: Date.now(),
         });

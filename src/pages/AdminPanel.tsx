@@ -502,10 +502,15 @@ export default function AdminPanel() {
 
     const handleAdjustBalance = async () => {
         if (!selectedUser || !balanceAdjustAmount || !balanceAdjustReason) return;
+        const normalizedAmount = Math.abs(Number(balanceAdjustAmount));
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+            toast.error("Enter a valid amount");
+            return;
+        }
         try {
             await adjustBalanceMut({
                 userId: selectedUser._id,
-                amount: Number(balanceAdjustAmount),
+                amount: normalizedAmount,
                 type: balanceAdjustType,
                 reason: balanceAdjustReason,
                 executorId: currentUser!._id
@@ -520,10 +525,15 @@ export default function AdminPanel() {
 
     const handleAdjustBoots = async () => {
         if (!selectedUser || !bootsAdjustAmount || !bootsAdjustReason) return;
+        const normalizedAmount = Math.abs(Number(bootsAdjustAmount));
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+            toast.error("Enter a valid amount");
+            return;
+        }
         try {
             await adjustBootsMut({
                 userId: selectedUser._id,
-                amount: Number(bootsAdjustAmount),
+                amount: normalizedAmount,
                 type: bootsAdjustType,
                 reason: bootsAdjustReason,
                 executorId: currentUser!._id
@@ -4074,9 +4084,11 @@ export default function AdminPanel() {
                                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-zinc-400">₦</span>
                                                             <input
                                                                 type="number"
+                                                                min="0"
+                                                                step="0.01"
                                                                 placeholder="0.00"
                                                                 value={balanceAdjustAmount}
-                                                                onChange={(e) => setBalanceAdjustAmount(e.target.value)}
+                                                                onChange={(e) => setBalanceAdjustAmount(e.target.value.startsWith('-') ? e.target.value.slice(1) : e.target.value)}
                                                                 className="w-full pl-10 pr-4 py-4 bg-zinc-50 border border-black/5 rounded-2xl font-black text-xl outline-none focus:ring-2 ring-emerald-400 shadow-sm"
                                                             />
                                                         </div>
@@ -4122,9 +4134,11 @@ export default function AdminPanel() {
                                                     <div className="space-y-3">
                                                         <input
                                                             type="number"
+                                                            min="0"
+                                                            step="1"
                                                             placeholder="0"
                                                             value={bootsAdjustAmount}
-                                                            onChange={(e) => setBootsAdjustAmount(e.target.value)}
+                                                            onChange={(e) => setBootsAdjustAmount(e.target.value.startsWith('-') ? e.target.value.slice(1) : e.target.value)}
                                                             className="w-full px-4 py-4 bg-zinc-50 border border-black/5 rounded-2xl font-black text-xl outline-none focus:ring-2 ring-amber-400 shadow-sm"
                                                         />
                                                         <input
