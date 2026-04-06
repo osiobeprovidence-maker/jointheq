@@ -3914,8 +3914,9 @@ export default function AdminPanel() {
                                         </div>
                                         <p className="text-sm font-medium text-gray-500 mt-0.5 truncate flex items-center gap-2">
                                             <span className="opacity-70">{liveUser.email}</span>
-                                            {liveUser.phone && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
                                             <span className="text-blue-500 font-bold">{liveUser.username && `@${liveUser.username}`}</span>
+                                            {liveUser.phone && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
+                                            {liveUser.phone && <span className="font-semibold text-gray-500">{liveUser.phone}</span>}
                                         </p>
                                     </div>
                                 </div>
