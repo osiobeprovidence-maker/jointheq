@@ -61,7 +61,7 @@ import SupportChatUser from "../components/chat/SupportChatUser";
 import { getUserFacingErrorMessage } from "../lib/errors";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import CampusJoinCard from "../components/campus/CampusJoinCard";
 import CampusApplicationModal from "../components/campus/CampusApplicationModal";
 
@@ -445,7 +445,7 @@ export default function DashboardPage() {
         setNotifPermission(permission);
 
         if (permission === "granted") {
-            toast.success("Notifications enabled!", { icon: '🔔' });
+            toast.success("Notifications enabled!");
             await showDesktopNotification("Notifications Enabled", {
                 body: "You will now receive real-time updates from JoinTheQ.",
                 icon: "/logo.png"
@@ -636,7 +636,7 @@ export default function DashboardPage() {
                                     </div>
                                     <div>
                                         <div className="text-xs font-semibold uppercase tracking-wider opacity-50">Coins</div>
-                                        <div className="text-xl font-bold">₦{currentUser?.wallet_balance?.toLocaleString() || 0}</div>
+                                        <div className="text-xl font-bold">{"\u20A6"}{currentUser?.wallet_balance?.toLocaleString() || 0}</div>
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  flex items-center gap-4">
@@ -653,7 +653,7 @@ export default function DashboardPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <StatCard title="Active Slots" value={activeSlots.length.toString()} icon={<Zap size={20} />} color="bg-blue-500" />
-                            <StatCard title="Monthly Spend" value={`₦${activeSlots.reduce((acc, s) => acc + s.price, 0).toLocaleString()}`} icon={<TrendingUp size={20} />} color="bg-purple-500" />
+                            <StatCard title="Monthly Spend" value={`\u20A6${activeSlots.reduce((acc, s) => acc + s.price, 0).toLocaleString()}`} icon={<TrendingUp size={20} />} color="bg-purple-500" />
                             <StatCard title="Q Rank" value={currentUser?.q_rank || getRank(currentUser?.q_score || 0)} icon={<ShieldCheck size={20} />} color="bg-emerald-500" />
                         </div>
 
@@ -968,7 +968,7 @@ export default function DashboardPage() {
 
                                     {currentUser?.direct_debit_card ? (
                                         <div className="mb-6 bg-white/5 p-5 rounded-2xl border border-white/10 backdrop-blur-sm">
-                                            <div className="text-xl font-mono tracking-widest break-all mb-4">•••• •••• •••• {currentUser.direct_debit_card.last4}</div>
+                                            <div className="text-xl font-mono tracking-widest break-all mb-4">**** **** **** {currentUser.direct_debit_card.last4}</div>
                                             <div className="flex justify-between items-end">
                                                 <div>
                                                     <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Brand</div>
@@ -1021,7 +1021,7 @@ export default function DashboardPage() {
                                                             cardDetails: { last4: "4242", brand: "Visa", expiry: "12/26", auth_token: "simulated_auth_token_" + Date.now() }
                                                         });
                                                         toast.dismiss(loadingToast);
-                                                        toast.success("Card linked automatically!", { icon: '💳' });
+                                                        toast.success("Card linked automatically!");
                                                     }, 2000);
                                                 } catch (e: any) {
                                                     toast.error("Failed to link card");
@@ -1058,7 +1058,7 @@ export default function DashboardPage() {
                                                 </div>
                                             </div>
                                             <div className={`font-bold ${tx.type === 'funding' ? 'text-emerald-600' : tx.type === 'payment' ? 'text-zinc-900' : 'text-blue-600'}`}>
-                                                {tx.type === 'funding' ? '+' : tx.type === 'payment' ? '-' : ''}₦{(tx.amount || 0).toLocaleString()}
+                                                {tx.type === 'funding' ? '+' : tx.type === 'payment' ? '-' : ''}{"\u20A6"}{(tx.amount || 0).toLocaleString()}
                                             </div>
                                         </div>
                                     ))
@@ -1469,7 +1469,7 @@ export default function DashboardPage() {
                                         </div>
                                         <div>
                                             <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Earned</div>
-                                            <div className="text-2xl font-black">₦{campusRepInfo.total_earned.toLocaleString()}</div>
+                                            <div className="text-2xl font-black">{"\u20A6"}{campusRepInfo.total_earned.toLocaleString()}</div>
                                         </div>
                                         <div>
                                             <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Rank</div>
@@ -1542,22 +1542,22 @@ export default function DashboardPage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
                                 <div>
                                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Total Earned</div>
-                                    <div className="text-2xl font-bold text-emerald-400">₦{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
+                                    <div className="text-2xl font-bold text-emerald-400">{"\u20A6"}{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
                                 </div>
                                 <div>
                                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Pending</div>
-                                    <div className="text-2xl font-bold text-blue-400">₦6,000</div>
+                                    <div className="text-2xl font-bold text-blue-400">{"\u20A6"}6,000</div>
                                 </div>
                                 <div>
                                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Available</div>
-                                    <div className="text-2xl font-bold">₦{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
+                                    <div className="text-2xl font-bold">{"\u20A6"}{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
                                 </div>
                             </div>
                             <button
                                 disabled={(currentUser?.wallet_balance || 0) < 5000}
                                 className="w-full py-5 bg-white text-zinc-900 rounded-[2.5rem] font-bold hover:scale-[1.01] transition-transform disabled:opacity-30"
                             >
-                                {(currentUser?.wallet_balance || 0) < 5000 ? "Minimum withdrawal ₦5,000" : "Withdraw Funds"}
+                                {(currentUser?.wallet_balance || 0) < 5000 ? "Minimum withdrawal \u20A65,000" : "Withdraw Funds"}
                             </button>
                         </div>
 
@@ -1866,7 +1866,7 @@ export default function DashboardPage() {
                                                     </div>
                                                     <div>
                                                         <div className="font-bold">100% Coins</div>
-                                                        <div className="text-xs text-gray-400">Pay ₦{checkoutSlot.price.toLocaleString()} from your wallet</div>
+                                                        <div className="text-xs text-gray-400">Pay {"\u20A6"}{checkoutSlot.price.toLocaleString()} from your wallet</div>
                                                     </div>
                                                 </div>
                                                 {!useBootsForPayment && <Check size={20} className="text-black" />}
@@ -1882,7 +1882,7 @@ export default function DashboardPage() {
                                                     </div>
                                                     <div>
                                                         <div className="font-bold">Boots + Coins (50/50)</div>
-                                                        <div className="text-xs text-gray-400">₦{(checkoutSlot.price / 2).toLocaleString()} + {(checkoutSlot.price / 2).toLocaleString()} Boots</div>
+                                                        <div className="text-xs text-gray-400">{"\u20A6"}{(checkoutSlot.price / 2).toLocaleString()} + {(checkoutSlot.price / 2).toLocaleString()} Boots</div>
                                                     </div>
                                                 </div>
                                                 {useBootsForPayment && <Check size={20} className="text-black" />}
@@ -1918,7 +1918,7 @@ export default function DashboardPage() {
                                         onClick={() => joinSlot(((checkoutSlot as any).slot_type_id || checkoutSlot._id) as string)}
                                         className="w-full py-5 bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] rounded-[2rem] font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-black/10"
                                     >
-                                        Confirm & Pay ₦{useBootsForPayment ? (checkoutSlot.price / 2).toLocaleString() : checkoutSlot.price.toLocaleString()}
+                                        Confirm & Pay {"\u20A6"}{useBootsForPayment ? (checkoutSlot.price / 2).toLocaleString() : checkoutSlot.price.toLocaleString()}
                                     </button>
                                 </div>
                             </motion.div>
@@ -2051,7 +2051,7 @@ export default function DashboardPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Slot Price (₦)</label>
+                                                            <label className="text-[10px] font-bold text-gray-400 ml-1 uppercase tracking-wider">Slot Price (NGN)</label>
                                                             <input
                                                                 type="number"
                                                                 placeholder="2500"
@@ -2599,7 +2599,7 @@ function MarketplaceSlotCard({ slot, onJoin, userQScore }: { slot: any, onJoin: 
                             <h3 className="font-black text-base">{slot.sub_name}</h3>
                             {isPopular && (
                                 <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-black flex items-center gap-1">
-                                    🔥 Popular
+                                    Popular
                                 </span>
                             )}
                             {slot.category && (
