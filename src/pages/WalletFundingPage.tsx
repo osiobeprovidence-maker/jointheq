@@ -4,8 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
-  CreditCard,
-  Banknote,
   Copy,
   CheckCircle2,
   Clock,
@@ -14,7 +12,6 @@ import {
   AlertCircle,
   Camera,
   Loader2,
-  Plus,
   Wallet as WalletIcon,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -24,8 +21,6 @@ import { fmtCurrency } from "../lib/utils";
 import { MainLayout } from "../layouts/MainLayout";
 import { getUserFacingErrorMessage } from "../lib/errors";
 import toast from "react-hot-toast";
-
-type Method = "paystack" | "manual";
 
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
 const BANKS = [
@@ -54,7 +49,6 @@ export default function WalletFundingPage() {
       currentUser ? { user_id: currentUser._id } : "skip",
     ) || [];
 
-  const [method, setMethod] = useState<Method | null>(null);
   const [baseAmount, setBaseAmount] = useState<number | "">("");
   const [uniqueAmount, setUniqueAmount] = useState<number | null>(null);
   const [step, setStep] = useState(1);
@@ -70,30 +64,18 @@ export default function WalletFundingPage() {
   const submitManual = useMutation(api.funding.submitManualFunding);
 
   useEffect(() => {
-    if (step === 2 && method === "manual" && timeLeft > 0) {
+    if (step === 2 && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
       return () => clearInterval(timer);
     }
 
-    if (step === 2 && method === "manual" && timeLeft === 0) {
+    if (step === 2 && timeLeft === 0) {
       toast.error("Transfer window expired. Please start over.");
       resetManualFlow();
     }
-  }, [method, step, timeLeft]);
+  }, [step, timeLeft]);
 
   const resetManualFlow = () => {
-    setStep(1);
-    setMethod("manual");
-    setUniqueAmount(null);
-    setTimeLeft(900);
-    setSenderName("");
-    setBankUsed("");
-    setReference("");
-    setSelectedFile(null);
-  };
-
-  const resetAll = () => {
-    setMethod(null);
     setStep(1);
     setUniqueAmount(null);
     setTimeLeft(900);
@@ -104,13 +86,8 @@ export default function WalletFundingPage() {
   };
 
   const goBack = () => {
-    if (method === "manual" && step === 2) {
+    if (step === 2) {
       setStep(1);
-      return;
-    }
-
-    if (method) {
-      resetAll();
       return;
     }
 
@@ -187,17 +164,6 @@ export default function WalletFundingPage() {
     }
   };
 
-  const handlePaystack = () => {
-    if (!baseAmount || Number(baseAmount) < 500) {
-      toast.error("Minimum Paystack funding amount is N500");
-      return;
-    }
-
-    toast("Paystack checkout is not wired yet on this page.", {
-      icon: "i",
-    });
-  };
-
   const handleLayoutTabChange = (tab: string) => {
     if (tab === "wallet") return;
     if (tab === "admin") {
@@ -233,8 +199,7 @@ export default function WalletFundingPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Fund Wallet</h1>
               <p className="text-gray-500 mt-1">
-                Manage wallet top-ups with the same secure flow used across the
-                platform.
+                Fund your wallet through the manual transfer review flow.
               </p>
             </div>
           </div>
@@ -262,16 +227,16 @@ export default function WalletFundingPage() {
           <div className="border-t border-gray-100 pt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <div>
               <p className="text-zinc-500 text-sm font-medium mb-3">
-                Choose a fast card payment or a manual bank transfer. This page
-                now follows the same shell, spacing, and card rhythm as the rest
-                of the wallet experience.
+                Manual bank transfer is the active funding method right now.
+                This page still follows the same shell, spacing, and card rhythm
+                as the rest of the wallet experience.
               </p>
               <div className="flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
                 <span className="px-3 py-1 bg-zinc-100 rounded-full">
-                  Instant top-up
+                  Manual verification
                 </span>
                 <span className="px-3 py-1 bg-zinc-100 rounded-full">
-                  Manual verification
+                  Bank transfer only
                 </span>
                 <span className="px-3 py-1 bg-zinc-100 rounded-full">
                   Fraud checks
@@ -283,9 +248,7 @@ export default function WalletFundingPage() {
                 Funding Window
               </div>
               <div className="text-2xl font-black mb-2">
-                {method === "manual" && step === 2
-                  ? formatTime(timeLeft)
-                  : "Ready"}
+                {step === 2 ? formatTime(timeLeft) : "Manual Only"}
               </div>
               <p className="text-sm text-white/70">
                 Manual transfers are held for up to 15 minutes once a unique
@@ -329,69 +292,7 @@ export default function WalletFundingPage() {
         )}
 
         <AnimatePresence mode="wait">
-          {!method && (
-            <motion.div
-              key="method-select"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 xl:grid-cols-2 gap-8"
-            >
-              <button
-                onClick={() => {
-                  setMethod("paystack");
-                  setStep(1);
-                }}
-                className="group bg-white p-8 rounded-[2.5rem] border border-black/5 text-left shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-xl hover:border-emerald-200 transition-all"
-              >
-                <div className="flex items-start justify-between gap-6 mb-8">
-                  <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-                    <CreditCard size={24} />
-                  </div>
-                  <ChevronRight className="text-zinc-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-black tracking-tight">Paystack</h2>
-                  <p className="text-sm text-zinc-500 leading-relaxed">
-                    Fastest route for instant funding with a flat N50 processing
-                    fee.
-                  </p>
-                  <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 pt-2">
-                    Instant • Card payment
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setMethod("manual");
-                  setStep(1);
-                }}
-                className="group bg-white p-8 rounded-[2.5rem] border border-black/5 text-left shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-xl hover:border-amber-200 transition-all"
-              >
-                <div className="flex items-start justify-between gap-6 mb-8">
-                  <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-                    <Banknote size={24} />
-                  </div>
-                  <ChevronRight className="text-zinc-300 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-black tracking-tight">
-                    Manual Transfer
-                  </h2>
-                  <p className="text-sm text-zinc-500 leading-relaxed">
-                    A guided bank transfer flow with unique verification amounts
-                    and zero processing fee.
-                  </p>
-                  <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 pt-2">
-                    Fraud-resistant • Bank transfer
-                  </div>
-                </div>
-              </button>
-            </motion.div>
-          )}
-
-          {method === "manual" && step === 1 && (
+          {step === 1 && (
             <motion.div
               key="manual-amount"
               initial={{ opacity: 0, y: 10 }}
@@ -477,7 +378,7 @@ export default function WalletFundingPage() {
             </motion.div>
           )}
 
-          {method === "manual" && step === 2 && (
+          {step === 2 && (
             <motion.div
               key="manual-details"
               initial={{ opacity: 0, y: 10 }}
@@ -636,78 +537,6 @@ export default function WalletFundingPage() {
             </motion.div>
           )}
 
-          {method === "paystack" && (
-            <motion.div
-              key="paystack"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-8"
-            >
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5">
-                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.24em] mb-3">
-                  Paystack
-                </div>
-                <h2 className="text-2xl font-black tracking-tight mb-2">
-                  Instant card funding
-                </h2>
-                <p className="text-zinc-500 text-sm mb-8">
-                  Enter the amount you want to add. Paystack charges a flat N50
-                  processing fee on this flow.
-                </p>
-
-                <div className="space-y-4">
-                  <div className="relative">
-                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-zinc-400">
-                      N
-                    </span>
-                    <input
-                      type="number"
-                      placeholder="5000"
-                      value={baseAmount}
-                      onChange={(e) =>
-                        setBaseAmount(
-                          e.target.value ? Number(e.target.value) : "",
-                        )
-                      }
-                      className="w-full bg-zinc-50 border border-black/5 rounded-[2rem] py-8 pl-14 pr-8 text-3xl font-black focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                    />
-                  </div>
-
-                  {baseAmount ? (
-                    <div className="p-5 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-bold">
-                      Total to pay: {fmtCurrency(Number(baseAmount) + 50)}
-                      <span className="text-[10px] uppercase tracking-[0.18em] opacity-60 ml-2">
-                        includes N50 fee
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] shadow-xl">
-                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-5">
-                    <CreditCard size={22} />
-                  </div>
-                  <h3 className="text-xl font-black mb-2">Fast checkout</h3>
-                  <p className="text-sm text-white/70 leading-relaxed">
-                    This page now matches the product shell, but Paystack itself
-                    still needs a final checkout handoff to be fully wired.
-                  </p>
-                </div>
-
-                <button
-                  disabled={!baseAmount || Number(baseAmount) < 500}
-                  onClick={handlePaystack}
-                  className="w-full py-5 bg-zinc-900 text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-                >
-                  <Plus size={18} />
-                  Proceed To Payment
-                </button>
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
     </MainLayout>
@@ -752,3 +581,5 @@ function InfoRow({
     </div>
   );
 }
+
+

@@ -48,7 +48,7 @@ export const addTransaction = mutation({
             user_id: args.user_id,
             amount: args.amount,
             type: args.type,
-            source: args.type === "funding" ? "paystack" : "wallet",
+            source: args.type === "funding" ? "bank_transfer" : "wallet",
             status: "completed",
             description: args.description,
             fee: args.fee,
@@ -56,3 +56,4 @@ export const addTransaction = mutation({
         });
     },
 });
+
