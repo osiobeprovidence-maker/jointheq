@@ -641,3 +641,115 @@ export const cleanupDuplicates = mutation({
     },
 });
 
+export const socialLogin = mutation({
+    args: { 
+        email: v.string(), 
+        full_name: v.string(),
+        provider: v.string(), 
+        provider_id: v.string(),
+        profile_image_url: v.optional(v.string())
+    },
+    handler: async (ctx, args) => {
+        const normalizedEmail = args.email.trim().toLowerCase();
+        
+        let user = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+            .unique();
+
+        if (user) {
+            // Check if locked out
+            const now = Date.now();
+            if (user.lockout_until && now < user.lockout_until) {
+                const minutesRemaining = Math.ceil((user.lockout_until - now) / (60 * 1000));
+                return {
+                    success: false,
+                    error: `Account locked. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? 's' : ''}.`,
+                    isLocked: true,
+                    lockoutMinutes: minutesRemaining
+                };
+            }
+
+            // Update if necessary
+            const updates: any = {
+                failed_login_attempts: 0,
+                lockout_until: undefined,
+                is_verified: true, // Social logins are verified by definition
+            };
+            
+            if (args.profile_image_url && !user.profile_image_url) {
+                updates.profile_image_url = args.profile_image_url;
+            }
+
+            await ctx.db.patch(user._id, updates);
+
+            // Fetch the updated user
+            user = await ctx.db.get(user._id);
+            
+            return {
+                success: true,
+                user,
+                isVerified: true
+            };
+        }
+
+        // Create new user for social login
+        const referralBase = (
+            args.full_name.split(" ")[0] ||
+            normalizedEmail.split("@")[0] ||
+            "USER"
+        )
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "")
+            .slice(0, 10) || "USER";
+
+        const buildFallbackReferralCode = () =>
+            `Q-${referralBase}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+        let resolvedReferralCode = buildFallbackReferralCode();
+        let referralCollisionChecks = 0;
+        
+        while (referralCollisionChecks < 10) {
+            const existingReferral = await ctx.db
+                .query("users")
+                .withIndex("by_referral_code", (q) => q.eq("referral_code", resolvedReferralCode))
+                .unique();
+
+            if (!existingReferral) {
+                break;
+            }
+
+            resolvedReferralCode = buildFallbackReferralCode();
+            referralCollisionChecks += 1;
+        }
+
+        const usernameBase = (args.full_name || normalizedEmail.split('@')[0])
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, "")
+            .slice(0, 20);
+        const username = `${usernameBase || "user"}${Math.floor(100 + Math.random() * 900)}`;
+
+        const userId = await ctx.db.insert("users", {
+            email: normalizedEmail,
+            full_name: args.full_name,
+            profile_image_url: args.profile_image_url,
+            referral_code: resolvedReferralCode,
+            username: username,
+            q_score: 0,
+            q_rank: "Rookie",
+            wallet_balance: 0,
+            boots_balance: 0,
+            score_history: [],
+            boots_history: [],
+            penalty_history: [],
+            is_admin: false,
+            role: "user",
+            is_verified: true, // Social login means verified email
+            created_at: Date.now(),
+        });
+        
+        const newUser = await ctx.db.get(userId);
+        return { success: true, user: newUser, isVerified: true };
+    },
+});
+
