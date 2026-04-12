@@ -784,11 +784,13 @@ export default function DashboardPage() {
                                     const selectedFilter = activeFilter === 'All' ? 'All' : normalizeMarketplaceCategory(activeFilter);
                                     const searchableName = (listing.name || '').toLowerCase();
                                     const searchableSubName = (listing.sub_name || '').toLowerCase();
+                                    const primaryListingId = listing.marketplace_id || listing.group_id || listing._id;
 
                                     // Each listing is now a single entry (no aggregation)
                                     // Prefer marketplace_id because getActiveSubscriptions is sourced from marketplace rows
                                     const listingCard = {
-                                        _id: listing.marketplace_id || listing.group_id || listing._id,
+                                        _id: primaryListingId,
+                                        card_key: `${primaryListingId}:${listing._id}`,
                                         slot_type_id: listing._id,
                                         sub_name: listing.sub_name,
                                         sub_logo: listing.sub_logo,
@@ -808,21 +810,21 @@ export default function DashboardPage() {
 
                                     const matchesSearch = searchableName.includes(searchQuery.toLowerCase()) || searchableSubName.includes(searchQuery.toLowerCase());
                                     const matchesFilter = selectedFilter === 'All' || listingCard.category === selectedFilter;
-                                    if (!matchesSearch || !matchesFilter) return null;
-
-                                    return (
-                                        <MarketplaceSlotCard
-                                            key={listingCard._id}
-                                            slot={listingCard}
-                                            onJoin={() => {
-                                                setCheckoutSlot(listingCard as unknown as SlotType);
-                                                setUseBootsForPayment(false);
-                                                setEnableAutoDebit(false);
-                                            }}
-                                            userQScore={currentUser?.q_score || 0}
-                                        />
-                                    );
-                                })}
+                                    return matchesSearch && matchesFilter ? listingCard : null;
+                                })
+                                .filter((listingCard: any) => !!listingCard)
+                                .map((listingCard: any) => (
+                                    <MarketplaceSlotCard
+                                        key={listingCard.card_key}
+                                        slot={listingCard}
+                                        onJoin={() => {
+                                            setCheckoutSlot(listingCard as unknown as SlotType);
+                                            setUseBootsForPayment(false);
+                                            setEnableAutoDebit(false);
+                                        }}
+                                        userQScore={currentUser?.q_score || 0}
+                                    />
+                                ))}
                         </div>
                     </motion.div>
                 )}
