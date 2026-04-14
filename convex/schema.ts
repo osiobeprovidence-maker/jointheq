@@ -28,6 +28,8 @@ export default defineSchema({
         password_hash: v.optional(v.string()),
         verification_token: v.optional(v.string()),
         verification_token_expires: v.optional(v.string()),
+        reset_password_token: v.optional(v.string()),
+        reset_password_token_expires: v.optional(v.number()),
         verification_deadline: v.optional(v.number()),
         direct_debit_card: v.optional(v.object({
             last4: v.string(),
@@ -68,6 +70,7 @@ export default defineSchema({
         .index("by_referred_by", ["referred_by"])
         .index("by_phone", ["phone"])
         .index("by_token", ["verification_token"])
+        .index("by_reset_password_token", ["reset_password_token"])
         .index("by_is_admin", ["is_admin"])
         .index("by_work_username", ["work_username"])
         .index("by_fraud", ["is_fraud_flagged"]),

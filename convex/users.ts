@@ -267,6 +267,110 @@ export const verifyUser = mutation({
     },
 });
 
+export const requestPasswordReset = mutation({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+        const normalizedEmail = args.email.trim().toLowerCase();
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+            .unique();
+
+        if (!user) {
+            return { success: true };
+        }
+
+        const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const expiresAt = Date.now() + 60 * 60 * 1000;
+
+        await ctx.db.patch(user._id, {
+            reset_password_token: token,
+            reset_password_token_expires: expiresAt,
+        });
+
+        return {
+            success: true,
+            email: user.email,
+            name: user.full_name,
+            token,
+        };
+    },
+});
+
+export const validatePasswordResetToken = query({
+    args: { token: v.string() },
+    handler: async (ctx, args) => {
+        const trimmedToken = args.token?.trim();
+        if (!trimmedToken) {
+            return { valid: false, message: "Reset link is missing." };
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_reset_password_token", (q) => q.eq("reset_password_token", trimmedToken))
+            .unique();
+
+        if (!user) {
+            return { valid: false, message: "This reset link is invalid or has already been used." };
+        }
+
+        if (!user.reset_password_token_expires || user.reset_password_token_expires < Date.now()) {
+            return { valid: false, message: "This reset link has expired. Request a new one to continue." };
+        }
+
+        return {
+            valid: true,
+            email: user.email,
+        };
+    },
+});
+
+export const resetPassword = mutation({
+    args: {
+        token: v.string(),
+        new_password: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const trimmedToken = args.token?.trim();
+        const trimmedPassword = args.new_password?.trim();
+
+        if (!trimmedToken) {
+            return { success: false, error: "Reset link is missing." };
+        }
+
+        if (!trimmedPassword || trimmedPassword.length < 6) {
+            return { success: false, error: "Password must be at least 6 characters." };
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_reset_password_token", (q) => q.eq("reset_password_token", trimmedToken))
+            .unique();
+
+        if (!user) {
+            return { success: false, error: "This reset link is invalid or has already been used." };
+        }
+
+        if (!user.reset_password_token_expires || user.reset_password_token_expires < Date.now()) {
+            await ctx.db.patch(user._id, {
+                reset_password_token: undefined,
+                reset_password_token_expires: undefined,
+            });
+            return { success: false, error: "This reset link has expired. Request a new one to continue." };
+        }
+
+        await ctx.db.patch(user._id, {
+            password_hash: bcrypt.hashSync(trimmedPassword, 10),
+            reset_password_token: undefined,
+            reset_password_token_expires: undefined,
+            failed_login_attempts: 0,
+            lockout_until: undefined,
+        });
+
+        return { success: true };
+    },
+});
+
 export const updatePhone = mutation({
     args: { id: v.id("users"), phone: v.string() },
     handler: async (ctx, args) => {

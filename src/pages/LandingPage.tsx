@@ -9,7 +9,7 @@ import { Logo } from '../components/ui/Logo';
 import { signInWithPopup } from 'firebase/auth';
 import { auth as firebaseAuth, googleProvider, appleProvider } from '../lib/firebase';
 export default function LandingPage() {
-  const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup'>('hero');
+  const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup' | 'forgot' | 'reset'>('hero');
   const navigate = useNavigate();
   const referredByCode = new URLSearchParams(window.location.search).get('ref')?.trim();
 
@@ -19,25 +19,40 @@ export default function LandingPage() {
 
   const createUser = useMutation(api.users.createUser);
   const sendEmail = useAction(api.actions.sendVerificationEmail);
+  const sendPasswordResetEmail = useAction(api.actions.sendPasswordResetEmail);
   const verifyUser = useMutation(api.users.verifyUser);
   const login = useMutation(api.users.login);
   const socialLogin = useMutation(api.users.socialLogin);
+  const requestPasswordReset = useMutation(api.users.requestPasswordReset);
+  const resetPassword = useMutation(api.users.resetPassword);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     password: ''
   });
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
 
   const user = useQuery(api.users.getByEmail, formData.email ? { email: formData.email } : "skip");
+  const resetTokenStatus = useQuery(
+    api.users.validatePasswordResetToken,
+    resetToken ? { token: resetToken } : "skip",
+  );
 
   // Run once on mount: check if the URL contains a verification token
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    const reset = params.get('reset')?.trim();
     const ref = params.get('ref')?.trim();
 
-    if (params.get('verified') === 'true' || token) {
+    if (reset) {
+      setResetToken(reset);
+      setActiveSection('reset');
+    } else if (params.get('verified') === 'true' || token) {
       // Clear the URL first so back-button / re-renders don't re-trigger
       window.history.replaceState({}, document.title, window.location.pathname);
 
@@ -146,6 +161,74 @@ export default function LandingPage() {
       }
     } catch (err: any) {
       setError(err.message || 'Login error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await requestPasswordReset({ email: forgotEmail });
+
+      if (response?.token && response?.email && response?.name) {
+        await sendPasswordResetEmail({
+          email: response.email,
+          name: response.name,
+          token: response.token,
+          baseUrl: window.location.origin,
+        });
+      }
+
+      setSuccess('If that email exists in Q, a password reset link has been sent.');
+      setActiveSection('forgot');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send reset link. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    if (resetPasswordValue.length < 6) {
+      setError('Password must be at least 6 characters.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (resetPasswordValue !== resetPasswordConfirm) {
+      setError('Passwords do not match.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const result = await resetPassword({
+        token: resetToken,
+        new_password: resetPasswordValue,
+      });
+
+      if (result.success) {
+        setSuccess('Password reset successful. You can now log in.');
+        setResetPasswordValue('');
+        setResetPasswordConfirm('');
+        setResetToken('');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setActiveSection('login');
+      } else {
+        setError(result.error || 'Unable to reset password.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Unable to reset password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -269,7 +352,7 @@ export default function LandingPage() {
                       onClick={() => setActiveSection('signup')}
                       className="px-8 py-4 bg-black text-white rounded-2xl font-bold text-lg hover:scale-[1.02] transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 group"
                     >
-                      Try 7 Days Free
+                      Get Started
                       <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </button>
                   </motion.div>
@@ -603,7 +686,7 @@ export default function LandingPage() {
                     onClick={() => setActiveSection('signup')}
                     className="px-10 py-5 bg-white border border-black/10 text-black rounded-2xl font-bold text-xl hover:bg-black/5 transition-all"
                   >
-                    Try 7 Days Free
+                    Get Started
                   </button>
                 </div>
                 <div className="text-sm font-bold text-black/40 uppercase tracking-widest space-y-2">
@@ -672,6 +755,20 @@ export default function LandingPage() {
                       />
                     </div>
                   </div>
+                  <div className="mt-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotEmail(formData.email);
+                        setError('');
+                        setSuccess('');
+                        setActiveSection('forgot');
+                      }}
+                      className="text-sm font-bold text-black/60 hover:text-black hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -725,6 +822,158 @@ export default function LandingPage() {
                     Sign up
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeSection === 'forgot' && (
+            <motion.div
+              key="forgot"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="max-w-md mx-auto px-6 pt-12"
+            >
+              <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-black/5 border border-black/5">
+                <div className="text-center mb-8">
+                  <Logo className="w-16 h-16 mx-auto mb-6" />
+                  <h2 className="text-3xl font-bold mb-2">Reset Password</h2>
+                  <p className="text-black/60">Enter your email and we’ll send you a reset link.</p>
+                </div>
+
+                {error && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">{error}</div>}
+                {success && <div className="mb-4 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100">{success}</div>}
+
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold mb-2">Email Address</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
+                        <Mail size={20} />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform mt-6 disabled:opacity-50"
+                  >
+                    {isLoading ? 'Sending reset link...' : 'Send Reset Link'}
+                  </button>
+                </form>
+
+                <div className="mt-8 text-center text-sm text-black/60">
+                  Remember your password?{' '}
+                  <button
+                    onClick={() => {
+                      setError('');
+                      setSuccess('');
+                      setActiveSection('login');
+                    }}
+                    className="text-black font-bold hover:underline"
+                  >
+                    Back to login
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeSection === 'reset' && (
+            <motion.div
+              key="reset"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="max-w-md mx-auto px-6 pt-12"
+            >
+              <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-black/5 border border-black/5">
+                <div className="text-center mb-8">
+                  <Logo className="w-16 h-16 mx-auto mb-6" />
+                  <h2 className="text-3xl font-bold mb-2">Choose New Password</h2>
+                  <p className="text-black/60">Set a new password for your Q account.</p>
+                </div>
+
+                {resetTokenStatus && !resetTokenStatus.valid && (
+                  <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">
+                    {resetTokenStatus.message}
+                  </div>
+                )}
+                {error && <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">{error}</div>}
+                {success && <div className="mb-4 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100">{success}</div>}
+
+                {resetTokenStatus === undefined ? (
+                  <div className="text-sm text-black/60 text-center py-8">Checking reset link...</div>
+                ) : resetTokenStatus.valid ? (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2">New Password</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
+                          <Lock size={20} />
+                        </div>
+                        <input
+                          type="password"
+                          required
+                          value={resetPasswordValue}
+                          onChange={(e) => setResetPasswordValue(e.target.value)}
+                          className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
+                          placeholder="At least 6 characters"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2">Confirm Password</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
+                          <Lock size={20} />
+                        </div>
+                        <input
+                          type="password"
+                          required
+                          value={resetPasswordConfirm}
+                          onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                          className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
+                          placeholder="Repeat new password"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform mt-6 disabled:opacity-50"
+                    >
+                      {isLoading ? 'Saving new password...' : 'Update Password'}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="space-y-6">
+                    <p className="text-sm text-black/60 text-center">
+                      This reset link can’t be used anymore. Request a fresh one to continue.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError('');
+                        setSuccess('');
+                        setActiveSection('forgot');
+                      }}
+                      className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform"
+                    >
+                      Request New Reset Link
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
