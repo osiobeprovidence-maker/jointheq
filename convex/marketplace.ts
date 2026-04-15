@@ -130,18 +130,47 @@ export const getPublicMarketplace = query({
             .filter(q => q.neq(q.field("plan_owner"), "owner_listed"))
             .collect();
 
-        return await Promise.all(listings.map(async (listing) => {
+        const visibleListings = await Promise.all(listings.map(async (listing) => {
+            const groups = await ctx.db.query("groups")
+                .withIndex("by_catalog", q => q.eq("subscription_catalog_id", listing.subscription_catalog_id))
+                .filter(q => q.and(
+                    q.eq(q.field("account_email"), listing.account_email),
+                    q.eq(q.field("billing_cycle_start"), listing.billing_cycle_start),
+                    q.eq(q.field("plan_owner"), listing.plan_owner)
+                ))
+                .collect();
+
+            let openSlots = 0;
+            let filledSlots = 0;
+
+            for (const group of groups) {
+                const slots = await ctx.db.query("subscription_slots")
+                    .withIndex("by_group", q => q.eq("group_id", group._id))
+                    .collect();
+
+                openSlots += slots.filter((slot) => slot.status === "open").length;
+                filledSlots += slots.filter((slot) => slot.status === "filled").length;
+            }
+
+            if (openSlots <= 0) {
+                return null;
+            }
+
             const catalog = await ctx.db.get(listing.subscription_catalog_id);
             const owner = listing.owner_user_id ? await ctx.db.get(listing.owner_user_id) : null;
 
             return {
                 ...listing,
+                filled_slots: filledSlots,
+                available_slots: openSlots,
                 platform_logo: catalog?.logo_url,
                 platform_category: catalog?.category,
                 owner_name: owner?.full_name,
                 owner_username: owner?.username,
             };
         }));
+
+        return visibleListings.filter((listing): listing is NonNullable<typeof listing> => !!listing);
     },
 });
 

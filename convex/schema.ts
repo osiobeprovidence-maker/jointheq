@@ -25,6 +25,12 @@ export default defineSchema({
         is_verified: v.boolean(),
         profile_image_url: v.optional(v.string()),
         university: v.optional(v.string()),
+        last_sign_in_at: v.optional(v.number()),
+        last_sign_in_provider: v.optional(v.string()),
+        sign_in_history: v.optional(v.array(v.object({
+            provider: v.string(),
+            signed_in_at: v.number(),
+        }))),
         password_hash: v.optional(v.string()),
         verification_token: v.optional(v.string()),
         verification_token_expires: v.optional(v.string()),

@@ -13,6 +13,11 @@ export interface PenaltyEntry {
   created_at: number;
 }
 
+export interface SignInHistoryEntry {
+  provider: string;
+  signed_in_at: number;
+}
+
 export interface User {
   _id: string;
   email: string;
@@ -35,6 +40,9 @@ export interface User {
   admin_role?: string;
   is_verified: boolean;
   created_at: number;
+  last_sign_in_at?: number;
+  last_sign_in_provider?: string;
+  sign_in_history?: SignInHistoryEntry[];
 }
 
 export interface Device {

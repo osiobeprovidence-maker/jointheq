@@ -90,26 +90,10 @@ export const adminAssignUserToSlot = mutation({
         const slotType = await ctx.db.get(args.slotTypeId);
         if (!user || !slotType) throw new Error("User or Slot Type not found");
 
-        // Check for duplicate assignment
         const groups = await ctx.db.query("groups")
             .withIndex("by_catalog", q => q.eq("subscription_catalog_id", slotType.subscription_id as Id<"subscription_catalog">))
             .filter(q => q.eq(q.field("status"), "active"))
             .collect();
-
-        for (const group of groups) {
-            const existingSlot = await ctx.db.query("subscription_slots")
-                .withIndex("by_group", q => q.eq("group_id", group._id))
-                .filter(q => q.and(
-                    q.eq(q.field("slot_type_id"), args.slotTypeId),
-                    q.eq(q.field("user_id"), args.userId),
-                    q.eq(q.field("status"), "filled")
-                ))
-                .first();
-
-            if (existingSlot) {
-                throw new Error("User already has an active slot in this subscription");
-            }
-        }
 
         // Find available slot
         let targetSlot = null;

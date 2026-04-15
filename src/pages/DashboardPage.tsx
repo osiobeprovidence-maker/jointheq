@@ -78,6 +78,30 @@ const MARKETPLACE_CATEGORIES = [
     "Education",
 ] as const;
 
+function formatSignInProvider(provider?: string) {
+    switch ((provider || "").toLowerCase()) {
+        case "google":
+            return "Google";
+        case "apple":
+            return "Apple";
+        case "password":
+            return "Email + Password";
+        default:
+            return provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : "Unknown";
+    }
+}
+
+function formatSignInDate(timestamp?: number) {
+    if (!timestamp) return "Not recorded yet";
+    return new Date(timestamp).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
 const normalizeMarketplaceCategory = (category?: string, fallback?: string) => {
     const normalized = (category || "").trim();
     if (MARKETPLACE_CATEGORIES.includes(normalized as typeof MARKETPLACE_CATEGORIES[number])) {
@@ -1443,6 +1467,56 @@ export default function DashboardPage() {
                                 <Bell size={20} />
                                 {notifPermission === 'granted' ? 'Alerts On' : 'Enable Alerts'}
                             </button>
+                        </div>
+
+                        <div className="bg-white border-none shadow-[0_20px_50px_rgba(0,0,0,0.04)] p-8 rounded-[3rem]">
+                            <div className="flex items-start justify-between gap-4 mb-6">
+                                <div>
+                                    <h3 className="text-lg font-bold">Sign-In History</h3>
+                                    <p className="text-sm text-gray-500">Your most recent login methods are saved here.</p>
+                                </div>
+                                <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
+                                    Last used {formatSignInProvider(currentUser?.last_sign_in_provider)}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                                <div className="p-5 bg-gray-50 rounded-[2rem]">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Last Sign-In Method</div>
+                                    <div className="text-lg font-bold text-zinc-900">{formatSignInProvider(currentUser?.last_sign_in_provider)}</div>
+                                </div>
+                                <div className="p-5 bg-gray-50 rounded-[2rem]">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Last Sign-In Time</div>
+                                    <div className="text-lg font-bold text-zinc-900">{formatSignInDate(currentUser?.last_sign_in_at)}</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                {(currentUser?.sign_in_history?.length ?? 0) > 0 ? (
+                                    currentUser!.sign_in_history!.map((entry, index) => (
+                                        <div key={`${entry.provider}-${entry.signed_in_at}-${index}`} className="flex items-center justify-between p-4 bg-gray-50 rounded-[2rem]">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-gray-500">
+                                                    <Clock size={18} />
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-zinc-900">{formatSignInProvider(entry.provider)}</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {index === 0 ? "Most recent sign-in" : "Previous sign-in"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right text-sm text-gray-500 font-medium">
+                                                {formatSignInDate(entry.signed_in_at)}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-6 bg-gray-50 rounded-[2rem] text-sm text-gray-500">
+                                        No sign-in history has been recorded yet.
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* 9. Campus Rep Panel (Conditional) */}

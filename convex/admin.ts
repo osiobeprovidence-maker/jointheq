@@ -26,11 +26,12 @@ const normalizeSupportContacts = (settingsMap: Record<string, any>) => {
     return contacts;
 };
 
+const isLiveMarketplaceStatus = (status?: string) => status === "active" || status === "paused";
+
 // ─── Platform Overview ───────────────────────────────────────────────────────
 
 export const getPlatformStats = query({
     handler: async (ctx) => {
-        const now = Date.now();
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const todayMs = startOfToday.getTime();
@@ -40,15 +41,13 @@ export const getPlatformStats = query({
         startOfMonth.setHours(0, 0, 0, 0);
         const monthMs = startOfMonth.getTime();
 
-        const [users, slots, transactions, bootTransactions, campaigns, campaignParticipants, migrations, migratedSubs] = await Promise.all([
+        const [users, marketplaceListings, transactions, bootTransactions, campaigns, campaignParticipants] = await Promise.all([
             ctx.db.query("users").collect(),
-            ctx.db.query("subscription_slots").collect(),
+            ctx.db.query("marketplace").collect(),
             ctx.db.query("wallet_transactions").collect(),
             ctx.db.query("boot_transactions").collect(),
             ctx.db.query("campaigns").collect(),
             ctx.db.query("campaign_participants").collect(),
-            ctx.db.query("migration_records").collect(),
-            ctx.db.query("migrated_subscriptions").collect(),
         ]);
 
         const totalUsers = users.length;
@@ -57,12 +56,25 @@ export const getPlatformStats = query({
         const suspendedUsers = users.filter(u => u.is_suspended).length;
         const bannedUsers = users.filter(u => u.is_banned).length;
 
-        const activeMigratedSubs = migratedSubs.filter(m => m.status !== "failed").length;
-        const filledSlots = slots.filter(s => s.user_id && s.status === "filled").length + activeMigratedSubs;
-        const totalSlots = slots.length + activeMigratedSubs;
-        const availableSlots = slots.length - slots.filter(s => s.user_id && s.status === "filled").length;
+        const liveMarketplaceListings = marketplaceListings.filter((listing) =>
+            isLiveMarketplaceStatus(listing.status),
+        );
+        const filledSlots = liveMarketplaceListings.reduce(
+            (sum, listing) => sum + (listing.filled_slots || 0),
+            0,
+        );
+        const totalSlots = liveMarketplaceListings.reduce(
+            (sum, listing) => sum + (listing.total_slots || 0),
+            0,
+        );
+        const availableSlots = liveMarketplaceListings.reduce(
+            (sum, listing) => sum + (listing.available_slots || 0),
+            0,
+        );
 
-        const paymentTxns = transactions.filter(t => t.type === "payment");
+        const paymentTxns = transactions.filter(
+            (t) => t.type === "payment" || t.type === "subscription" || t.type === "subscription_renewal",
+        );
         const fundingTxns = transactions.filter(t => t.type === "funding");
         const refundTxns = transactions.filter(t => t.type === "refund");
 
@@ -78,14 +90,18 @@ export const getPlatformStats = query({
         const totalRefunds = refundTxns.reduce((s, t) => s + t.amount, 0);
         const totalFunded = fundingTxns.reduce((s, t) => s + t.amount, 0);
 
-        const totalBoots = users.reduce((s, u) => s + (u.boots_balance || 0), 0);
+        const totalBoots = users.reduce((sum, user) => sum + (user.boots_balance || 0), 0);
         const bootsIssuedToday = bootTransactions
             .filter(t => t.created_at >= todayMs && t.amount > 0)
             .reduce((s, t) => s + t.amount, 0);
 
         const activeCampaigns = campaigns.filter(c => c.status === "active").length;
-        const totalMigrations = migrations.length + migratedSubs.length;
-        const pendingMigrations = migrations.filter(m => m.status === "pending").length + migratedSubs.filter(m => m.status === "pending").length;
+        const activeCampaignIds = new Set(
+            campaigns.filter((campaign) => campaign.status === "active").map((campaign) => campaign._id),
+        );
+        const totalCampaignParticipants = campaignParticipants.filter((participant) =>
+            activeCampaignIds.has(participant.campaign_id),
+        ).length;
 
         return {
             // Users
@@ -110,90 +126,69 @@ export const getPlatformStats = query({
             bootsIssuedToday,
             // Campaigns
             activeCampaigns,
-            totalCampaignParticipants: campaignParticipants.length,
+            totalCampaignParticipants,
             // Migrations
-            totalMigrations,
-            pendingMigrations,
+            totalMigrations: 0,
+            pendingMigrations: 0,
         };
     }
 });
 
 export const getSubscriptionBreakdown = query({
     handler: async (ctx) => {
-        const catalogItems = await ctx.db.query("subscription_catalog").collect();
-        const migratedSubs = await ctx.db.query("migrated_subscriptions").collect();
-        const activeMigratedSubs = migratedSubs.filter(m => m.status !== "failed");
+        const [catalogItems, marketplaceListings] = await Promise.all([
+            ctx.db.query("subscription_catalog").collect(),
+            ctx.db.query("marketplace").collect(),
+        ]);
 
-        const breakDownTemp = await Promise.all(catalogItems.map(async (item) => {
-            const slotTypes = await ctx.db.query("slot_types")
-                .withIndex("by_subscription", q => q.eq("subscription_id", item._id))
-                .collect();
+        const liveMarketplaceListings = marketplaceListings.filter((listing) =>
+            isLiveMarketplaceStatus(listing.status),
+        );
 
-            const groups = await ctx.db.query("groups")
-                .withIndex("by_catalog", q => q.eq("subscription_catalog_id", item._id))
-                .collect();
+        const catalogById = new Map(catalogItems.map((item) => [item._id, item]));
+        const aggregated = new Map<string, {
+            _id: string;
+            name: string;
+            logo_url?: string;
+            totalGroups: number;
+            totalSlots: number;
+            filledSlots: number;
+            availableSlots: number;
+            estimatedRevenue: number;
+            is_active: boolean;
+        }>();
 
-            let totalSlots = 0;
-            let filledSlots = 0;
-            let revenue = 0;
+        for (const listing of liveMarketplaceListings) {
+            const catalog = catalogById.get(listing.subscription_catalog_id);
+            const key = listing.subscription_catalog_id;
+            const existing = aggregated.get(key);
 
-            for (const group of groups) {
-                const slots = await ctx.db.query("subscription_slots")
-                    .withIndex("by_group", q => q.eq("group_id", group._id))
-                    .collect();
-
-                totalSlots += slots.length;
-                filledSlots += slots.filter(s => s.user_id && s.status === "filled").length;
-
-                for (const slot of slots.filter(s => s.user_id && s.status === "filled")) {
-                    const slotType = await ctx.db.get(slot.slot_type_id);
-                    revenue += slotType?.price || 0;
-                }
+            if (existing) {
+                existing.totalGroups += 1;
+                existing.totalSlots += listing.total_slots || 0;
+                existing.filledSlots += listing.filled_slots || 0;
+                existing.availableSlots += listing.available_slots || 0;
+                existing.estimatedRevenue += (listing.filled_slots || 0) * (listing.slot_price || 0);
+                continue;
             }
 
-            // Include relevant migrated subscriptions
-            const relevantMigrated = activeMigratedSubs.filter(m => m.platform.toLowerCase().includes(item.name.toLowerCase()) || item.name.toLowerCase().includes(m.platform.toLowerCase()));
-            totalSlots += relevantMigrated.length;
-            filledSlots += relevantMigrated.length;
-
-            return {
-                ...item,
-                totalGroups: groups.length,
-                totalSlots,
-                filledSlots,
-                availableSlots: totalSlots - filledSlots,
-                estimatedRevenue: revenue,
-            };
-        }));
-
-        // Find unmatched migrated platforms
-        const matchedPlatforms = new Set(catalogItems.map(c => c.name.toLowerCase()));
-        const unmatchedSubs = activeMigratedSubs.filter(m => {
-            return !matchedPlatforms.has(m.platform.toLowerCase()) &&
-                !Array.from(matchedPlatforms).some(p => m.platform.toLowerCase().includes(p) || p.includes(m.platform.toLowerCase()));
-        });
-
-        // Group unmatched subs by platform
-        const unmatchedGroups: Record<string, typeof unmatchedSubs> = {};
-        for (const sub of unmatchedSubs) {
-            const key = sub.platform;
-            if (!unmatchedGroups[key]) unmatchedGroups[key] = [];
-            unmatchedGroups[key].push(sub);
+            aggregated.set(key, {
+                _id: key,
+                name: catalog?.name || listing.platform_name || "Unknown",
+                logo_url: catalog?.logo_url,
+                totalGroups: 1,
+                totalSlots: listing.total_slots || 0,
+                filledSlots: listing.filled_slots || 0,
+                availableSlots: listing.available_slots || 0,
+                estimatedRevenue: (listing.filled_slots || 0) * (listing.slot_price || 0),
+                is_active: true,
+            });
         }
 
-        const unmatchedBreakdown = Object.entries(unmatchedGroups).map(([platform, subs]) => ({
-            _id: "migrated_" + platform,
-            name: platform + " (Legacy Migration)",
-            logo_url: "",
-            totalGroups: 0,
-            totalSlots: subs.length,
-            filledSlots: subs.length,
-            availableSlots: 0,
-            estimatedRevenue: 0,
-            is_active: true,
-        }));
-
-        return [...breakDownTemp, ...unmatchedBreakdown];
+        return Array.from(aggregated.values()).sort((a, b) => {
+            if (b.filledSlots !== a.filledSlots) return b.filledSlots - a.filledSlots;
+            return a.name.localeCompare(b.name);
+        });
     }
 });
 

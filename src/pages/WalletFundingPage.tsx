@@ -23,6 +23,7 @@ import { getUserFacingErrorMessage } from "../lib/errors";
 import toast from "react-hot-toast";
 
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
+const GUEST_ONBOARDING_SELECTION_KEY = "guest_onboarding_selection";
 const BANKS = [
   "Moniepoint",
   "Opay",
@@ -58,10 +59,35 @@ export default function WalletFundingPage() {
   const [bankUsed, setBankUsed] = useState("");
   const [reference, setReference] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<null | {
+    slotTypeId: string;
+    subscriptionName: string;
+    slotName: string;
+    price: number;
+    category?: string;
+    selectedAt?: number;
+  }>(null);
 
   const generateUnique = useMutation(api.funding.generateUniqueAmount);
   const generateUploadUrl = useMutation(api.funding.generateUploadUrl);
   const submitManual = useMutation(api.funding.submitManualFunding);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedSelection = window.sessionStorage.getItem(
+      GUEST_ONBOARDING_SELECTION_KEY,
+    );
+
+    if (!storedSelection) return;
+
+    try {
+      setSelectedPlan(JSON.parse(storedSelection));
+    } catch (error) {
+      console.warn("Failed to parse guest onboarding selection", error);
+      window.sessionStorage.removeItem(GUEST_ONBOARDING_SELECTION_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     if (step === 2 && timeLeft > 0) {
@@ -257,6 +283,33 @@ export default function WalletFundingPage() {
             </div>
           </div>
         </div>
+
+        {selectedPlan && (
+          <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-500 mb-2">
+                Selected During Guest Onboarding
+              </div>
+              <div className="text-xl font-black text-zinc-900">
+                {selectedPlan.subscriptionName}
+              </div>
+              <div className="text-sm font-bold text-zinc-500">
+                {selectedPlan.slotName} · Target plan price {fmtCurrency(selectedPlan.price || 0)}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.removeItem(GUEST_ONBOARDING_SELECTION_KEY);
+                setSelectedPlan(null);
+                toast.success("Selected plan cleared");
+              }}
+              className="px-4 py-2 rounded-full bg-white text-sm font-bold text-zinc-700 border border-blue-100 hover:bg-blue-50 transition-all"
+            >
+              Clear Selection
+            </button>
+          </div>
+        )}
 
         {pendingRequests.length > 0 && (
           <div className="bg-amber-50/50 border border-amber-100 rounded-[2rem] p-8">

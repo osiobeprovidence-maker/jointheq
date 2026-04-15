@@ -154,6 +154,7 @@ function SectionHeader({ title, sub, action }: { title: string; sub?: string; ac
 export default function AdminPanel() {
     const navigate = useNavigate();
     const user = auth.getCurrentUser();
+    const guestOnboardingLink = typeof window !== "undefined" ? `${window.location.origin}/guest-onboarding` : "/guest-onboarding";
     const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -1091,6 +1092,63 @@ export default function AdminPanel() {
                                 </div>
 
                                 {/* Ã¢â€â‚¬Ã¢â€â‚¬ SUBSCRIPTION SLOTS (with fill rate meter) Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                <div>
+                                    <SectionHeader title="Guest Onboarding" sub="Share this with guests so they can create an account first, then pay by transfer." />
+                                    <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                                        <div className="rounded-[2.5rem] bg-white border border-black/5 p-6 shadow-sm">
+                                            <div className="flex items-start justify-between gap-4 mb-5">
+                                                <div>
+                                                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600 mb-3">
+                                                        <UserPlus size={12} />
+                                                        Admin-shareable
+                                                    </div>
+                                                    <h3 className="text-2xl font-black tracking-tight text-zinc-900">Guest onboarding link</h3>
+                                                    <p className="text-sm text-gray-500 mt-2 max-w-2xl">
+                                                        Guests fill one simple form, get their Join the Queue account created, then continue to choose a plan and fund their wallet through manual bank transfer.
+                                                    </p>
+                                                </div>
+                                                <div className="hidden sm:flex h-14 w-14 items-center justify-center rounded-3xl bg-zinc-950 text-white shadow-xl shadow-black/10">
+                                                    <Share2 size={20} />
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-[2rem] bg-zinc-50 border border-black/5 px-5 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <div className="text-[10px] font-black uppercase tracking-[0.24em] text-gray-400 mb-1">Share URL</div>
+                                                    <div className="text-sm font-bold text-zinc-800 break-all">{guestOnboardingLink}</div>
+                                                </div>
+                                                <div className="flex gap-2 shrink-0">
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(guestOnboardingLink);
+                                                            toast.success("Guest onboarding link copied!");
+                                                        }}
+                                                        className="px-4 py-3 rounded-2xl bg-zinc-900 text-white text-xs font-black uppercase tracking-wider hover:bg-black transition-all"
+                                                    >
+                                                        Copy Link
+                                                    </button>
+                                                    <button
+                                                        onClick={() => window.open(guestOnboardingLink, "_blank", "noopener,noreferrer")}
+                                                        className="px-4 py-3 rounded-2xl bg-white border border-black/5 text-xs font-black uppercase tracking-wider text-zinc-700 hover:bg-zinc-50 transition-all"
+                                                    >
+                                                        Open Page
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 shadow-xl">
+                                            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-white/60 mb-3">How It Works</div>
+                                            <div className="space-y-4 text-sm font-medium text-white/85">
+                                                <div>1. Guest opens the link from WhatsApp or any DM.</div>
+                                                <div>2. The form creates the account immediately inside Join the Queue.</div>
+                                                <div>3. The guest picks a service and moves into the normal wallet funding flow.</div>
+                                                <div>4. Later, they can just log in with the same account for renewals and future payments.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <SectionHeader title="Subscription Slots" sub="Marketplace capacity overview" />
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

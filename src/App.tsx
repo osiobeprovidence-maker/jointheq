@@ -24,6 +24,7 @@ const ListSubscriptionPage = lazy(() => import("./pages/ListSubscriptionPage"));
 const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
 const MigrationPage = lazy(() => import("./pages/MigrationPage"));
+const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
 
 function RouteFallback() {
   return (
@@ -56,6 +57,7 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/r/:refCode" element={<ReferralRedirect />} />
+          <Route path="/guest-onboarding" element={<GuestOnboardingPage />} />
           <Route path="/console" element={<ConsoleLogin />} />
 
           {/* Protected Routes */}

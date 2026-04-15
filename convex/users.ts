@@ -3,6 +3,32 @@ import { mutation, query } from "./_generated/server";
 import { awardReputation } from "./reputation";
 import bcrypt from "bcryptjs";
 
+const MAX_SIGN_IN_HISTORY = 10;
+
+function normalizeSignInProvider(provider: string | undefined) {
+    const value = provider?.trim().toLowerCase();
+    if (!value) return "password";
+    if (value === "email" || value === "password") return "password";
+    return value;
+}
+
+function buildSignInTrackingPatch(
+    user: { sign_in_history?: Array<{ provider: string; signed_in_at: number }> } | null,
+    provider: string,
+    signedInAt: number,
+) {
+    const normalizedProvider = normalizeSignInProvider(provider);
+    const previousHistory = Array.isArray(user?.sign_in_history) ? user.sign_in_history : [];
+
+    return {
+        last_sign_in_at: signedInAt,
+        last_sign_in_provider: normalizedProvider,
+        sign_in_history: [
+            { provider: normalizedProvider, signed_in_at: signedInAt },
+            ...previousHistory,
+        ].slice(0, MAX_SIGN_IN_HISTORY),
+    };
+}
 
 export const getByEmail = query({
     args: { email: v.string() },
@@ -208,6 +234,7 @@ export const createUser = mutation({
             is_verified: false,
             verification_deadline: Date.now() + 3 * 24 * 60 * 60 * 1000,
             created_at: Date.now(),
+            sign_in_history: [],
         });
         return userId;
     },
@@ -483,7 +510,8 @@ export const login = mutation({
         // Successful login - reset failed attempts
         const updateData: any = {
             failed_login_attempts: 0,
-            lockout_until: undefined
+            lockout_until: undefined,
+            ...buildSignInTrackingPatch(user, "password", now),
         };
 
         if (user.email === 'riderezzy@gmail.com' && !user.is_admin) {
@@ -495,10 +523,12 @@ export const login = mutation({
 
         await ctx.db.patch(user._id, updateData);
 
+        const updatedUser = await ctx.db.get(user._id);
+
         // Return user with verification status info
         return {
             success: true,
-            user,
+            user: updatedUser ?? { ...user, ...updateData },
             isVerified: user.is_verified,
             verificationDeadline: user.verification_deadline,
             daysRemaining: user.verification_deadline ?
@@ -779,6 +809,7 @@ export const socialLogin = mutation({
                 failed_login_attempts: 0,
                 lockout_until: undefined,
                 is_verified: true, // Social logins are verified by definition
+                ...buildSignInTrackingPatch(user, args.provider, now),
             };
             
             if (args.profile_image_url && !user.profile_image_url) {
@@ -850,6 +881,14 @@ export const socialLogin = mutation({
             role: "user",
             is_verified: true, // Social login means verified email
             created_at: Date.now(),
+            last_sign_in_at: Date.now(),
+            last_sign_in_provider: normalizeSignInProvider(args.provider),
+            sign_in_history: [
+                {
+                    provider: normalizeSignInProvider(args.provider),
+                    signed_in_at: Date.now(),
+                },
+            ],
         });
         
         const newUser = await ctx.db.get(userId);

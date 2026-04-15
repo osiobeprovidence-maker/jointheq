@@ -110,8 +110,10 @@ export const getActiveSubscriptions = query({
                     })
                 );
 
-                // Return one entry per slot type
-                return slotTypesWithCount.map(st => ({
+                // Only expose slot types that still have at least one open slot to end users.
+                return slotTypesWithCount
+                    .filter((st) => st.open_slots > 0)
+                    .map(st => ({
                     ...st,
                     category: effectiveCategory,
                     platform_category: catalog?.category,
