@@ -26,7 +26,10 @@ const normalizeSupportContacts = (settingsMap: Record<string, any>) => {
     return contacts;
 };
 
-const isLiveMarketplaceStatus = (status?: string) => status === "active" || status === "paused";
+const isLiveMarketplaceStatus = (status?: string) => status === "active";
+
+const normalizeMarketplacePlatformName = (name?: string) =>
+    (name || "").trim().replace(/\s+/g, " ").toLowerCase();
 
 // ─── Platform Overview ───────────────────────────────────────────────────────
 
@@ -57,7 +60,7 @@ export const getPlatformStats = query({
         const bannedUsers = users.filter(u => u.is_banned).length;
 
         const liveMarketplaceListings = marketplaceListings.filter((listing) =>
-            isLiveMarketplaceStatus(listing.status),
+            isLiveMarketplaceStatus(listing.status) && (listing.total_slots || 0) > 0,
         );
         const filledSlots = liveMarketplaceListings.reduce(
             (sum, listing) => sum + (listing.filled_slots || 0),
@@ -142,7 +145,7 @@ export const getSubscriptionBreakdown = query({
         ]);
 
         const liveMarketplaceListings = marketplaceListings.filter((listing) =>
-            isLiveMarketplaceStatus(listing.status),
+            isLiveMarketplaceStatus(listing.status) && (listing.total_slots || 0) > 0,
         );
 
         const catalogById = new Map(catalogItems.map((item) => [item._id, item]));
@@ -160,7 +163,8 @@ export const getSubscriptionBreakdown = query({
 
         for (const listing of liveMarketplaceListings) {
             const catalog = catalogById.get(listing.subscription_catalog_id);
-            const key = listing.subscription_catalog_id;
+            const displayName = (catalog?.name || listing.platform_name || "Unknown").trim();
+            const key = normalizeMarketplacePlatformName(displayName) || listing.subscription_catalog_id;
             const existing = aggregated.get(key);
 
             if (existing) {
@@ -174,7 +178,7 @@ export const getSubscriptionBreakdown = query({
 
             aggregated.set(key, {
                 _id: key,
-                name: catalog?.name || listing.platform_name || "Unknown",
+                name: displayName,
                 logo_url: catalog?.logo_url,
                 totalGroups: 1,
                 totalSlots: listing.total_slots || 0,
