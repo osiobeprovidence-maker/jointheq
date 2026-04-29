@@ -425,6 +425,23 @@ export const updatePhone = mutation({
     },
 });
 
+export const initializeMissingPhones = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const users = await ctx.db.query("users").collect();
+        let updated = 0;
+
+        for (const user of users) {
+            if (user.phone === undefined) {
+                await ctx.db.patch(user._id, { phone: "" });
+                updated += 1;
+            }
+        }
+
+        return { success: true, updated };
+    },
+});
+
 export const login = mutation({
     args: { identifier: v.string(), password: v.string() },
     handler: async (ctx, args) => {
@@ -887,6 +904,7 @@ export const socialLogin = mutation({
         const userId = await ctx.db.insert("users", {
             email: normalizedEmail,
             full_name: args.full_name,
+            phone: "",
             profile_image_url: args.profile_image_url,
             referral_code: resolvedReferralCode,
             username: username,
