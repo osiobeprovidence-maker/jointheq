@@ -401,6 +401,11 @@ export const resetPassword = mutation({
 export const updatePhone = mutation({
     args: { id: v.id("users"), phone: v.string() },
     handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.id);
+        if (!user) {
+            throw new Error("User not found");
+        }
+
         const normalizedPhone = args.phone.trim();
         if (!normalizedPhone) {
             throw new Error("Phone number is required");
@@ -416,6 +421,7 @@ export const updatePhone = mutation({
         }
 
         await ctx.db.patch(args.id, { phone: normalizedPhone });
+        return await ctx.db.get(args.id);
     },
 });
 

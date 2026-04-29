@@ -599,8 +599,8 @@ export default function DashboardPage() {
 
         setIsUpdatingPhone(true);
         try {
-            await updatePhoneMutation({ id: currentUser._id, phone: normalizedPhone });
-            auth.login({ ...(currentUser as any), phone: normalizedPhone });
+            const updatedUser = await updatePhoneMutation({ id: currentUser._id, phone: normalizedPhone });
+            auth.login((updatedUser || { ...(currentUser as any), phone: normalizedPhone }) as any);
             toast.success("Phone number updated!");
             return true;
         } catch (error) {
