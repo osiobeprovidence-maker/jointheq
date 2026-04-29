@@ -3,6 +3,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { awardReputation } from "./reputation";
 import { api } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
+import { createNotification, createNotificationForAllUsers } from "./notificationHelpers";
 
 const normalizeOwnerName = (owner?: string) => {
     const cleaned = (owner || "").trim().replace(/^@+/, "");
@@ -240,6 +241,13 @@ export const renewSlot = mutation({
             auto_renew: true
         });
 
+        await createNotification(ctx, {
+            userId: user._id,
+            title: "Subscription renewed",
+            message: `${slotType.name} was renewed for N${price.toLocaleString()}.`,
+            type: "subscription",
+        });
+
         return { success: true };
     },
 });
@@ -401,6 +409,31 @@ export const joinSlot = mutation({
             created_at: Date.now(),
         });
 
+        await createNotification(ctx, {
+            userId: user._id,
+            title: "Subscription joined",
+            message: `You joined ${subName} - ${st.name}. Check your dashboard and support chat for access steps.`,
+            type: "subscription",
+        });
+
+        if (coins_to_use > 0) {
+            await createNotification(ctx, {
+                userId: user._id,
+                title: "Subscription payment successful",
+                message: `N${coins_to_use.toLocaleString()} was paid from your wallet for ${st.name}.`,
+                type: "payment",
+            });
+        }
+
+        if (user.referred_by && existingSlots.length === 1) {
+            await createNotification(ctx, {
+                userId: user.referred_by,
+                title: "Referral reward earned",
+                message: `${user.full_name} made their first subscription payment. Your referral reward has been added.`,
+                type: "promotion",
+            });
+        }
+
         return { success: true };
     },
 });
@@ -424,9 +457,16 @@ export const leaveSlot = mutation({
         try {
             const slot = await ctx.db.get(args.id);
             if (slot && (slot as any).user_id) {
+                const userId = (slot as any).user_id;
                 await ctx.db.patch(args.id, {
                     auto_renew: false,
                     status: "closing",
+                });
+                await createNotification(ctx, {
+                    userId,
+                    title: "Leave request received",
+                    message: "Your subscription leave request is scheduled for review at the end of the billing cycle.",
+                    type: "subscription",
                 });
                 return { success: true, type: "slot", message: "Removal scheduled for end of cycle" };
             }
@@ -436,8 +476,15 @@ export const leaveSlot = mutation({
         try {
             const migration = await ctx.db.get(args.id);
             if (migration && (migration as any).user_id) {
+                const userId = (migration as any).user_id;
                 await ctx.db.patch(args.id, {
                     status: "closing"
+                });
+                await createNotification(ctx, {
+                    userId,
+                    title: "Leave request received",
+                    message: "Your migrated subscription leave request has been received.",
+                    type: "subscription",
                 });
                 return { success: true, type: "migration" };
             }
@@ -686,6 +733,12 @@ export const adminCreateListing = mutation({
 
             created_at: Date.now(),
             updated_at: Date.now(),
+        });
+
+        await createNotificationForAllUsers(ctx, {
+            title: "New subscription available",
+            message: `${args.platform_name} is now live in the marketplace from N${slotPrice.toLocaleString()} per slot.`,
+            type: "subscription",
         });
 
         return { success: true, groupId };

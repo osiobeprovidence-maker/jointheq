@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { createNotification } from "./notificationHelpers";
 import { Id } from "./_generated/dataModel";
 
 // ─── User Functions ─────────────────────────────────────────────────────────
@@ -212,6 +213,13 @@ export const sendAIMessage = mutation({
             last_message_at: Date.now(),
         });
 
+        await createNotification(ctx, {
+            userId: conversation.user_id,
+            title: "New support message",
+            message: args.content.length > 120 ? `${args.content.slice(0, 117)}...` : args.content,
+            type: "message",
+        });
+
         return msgId;
     },
 });
@@ -255,6 +263,15 @@ export const sendMessage = mutation({
             last_message_at: Date.now(),
             updated_at: Date.now(),
         });
+
+        if (args.senderRole === "admin" || args.senderRole === "ai") {
+            await createNotification(ctx, {
+                userId: conversation.user_id,
+                title: args.senderRole === "admin" ? "New support reply" : "Support update",
+                message: args.content.length > 120 ? `${args.content.slice(0, 117)}...` : args.content,
+                type: "message",
+            });
+        }
 
         return messageId;
     },

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { createNotification } from "./notificationHelpers";
 
 export const generateUniqueAmount = mutation({
   args: {
@@ -43,7 +44,7 @@ export const submitManualFunding = mutation({
     reference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("manual_funding_requests", {
+    const requestId = await ctx.db.insert("manual_funding_requests", {
       user_id: args.user_id,
       base_amount: args.base_amount,
       unique_amount: args.unique_amount,
@@ -54,6 +55,15 @@ export const submitManualFunding = mutation({
       status: "Awaiting Review",
       created_at: Date.now(),
     });
+
+    await createNotification(ctx, {
+      userId: args.user_id,
+      title: "Payment proof submitted",
+      message: `We received your wallet funding request for N${args.base_amount.toLocaleString()}. Admin review is now pending.`,
+      type: "funding",
+    });
+
+    return requestId;
   },
 });
 
@@ -124,6 +134,13 @@ export const approveFunding = mutation({
       created_at: Date.now(),
     });
 
+    await createNotification(ctx, {
+      userId: request.user_id,
+      title: "Wallet funded",
+      message: `Your payment was approved and N${request.base_amount.toLocaleString()} has been added to your wallet.`,
+      type: "payment",
+    });
+
     return { success: true };
   },
 });
@@ -144,6 +161,15 @@ export const rejectFunding = mutation({
       processed_at: Date.now(),
       processed_by: args.admin_id,
       admin_note: args.admin_note,
+    });
+
+    await createNotification(ctx, {
+      userId: request.user_id,
+      title: "Payment review failed",
+      message: args.admin_note
+        ? `Your wallet funding request was rejected: ${args.admin_note}`
+        : "Your wallet funding request was rejected. Please check the transfer details and try again.",
+      type: "alert",
     });
 
     return { success: true };

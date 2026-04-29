@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { createNotification } from "./notificationHelpers";
 
 export const list = query({
     args: { user_id: v.id("users") },
@@ -50,6 +51,23 @@ export const remove = mutation({
     args: { notification_id: v.id("notifications") },
     handler: async (ctx, args) => {
         await ctx.db.delete(args.notification_id);
+        return { success: true };
+    },
+});
+
+export const sendTest = mutation({
+    args: { user_id: v.id("users") },
+    handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.user_id);
+        if (!user) throw new Error("User not found");
+
+        await createNotification(ctx, {
+            userId: args.user_id,
+            title: "Notifications are working",
+            message: "This is a test alert from JoinTheQ. You will see updates here for payments, listings, subscriptions, and admin messages.",
+            type: "system",
+        });
+
         return { success: true };
     },
 });

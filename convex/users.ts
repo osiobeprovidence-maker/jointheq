@@ -401,7 +401,21 @@ export const resetPassword = mutation({
 export const updatePhone = mutation({
     args: { id: v.id("users"), phone: v.string() },
     handler: async (ctx, args) => {
-        await ctx.db.patch(args.id, { phone: args.phone });
+        const normalizedPhone = args.phone.trim();
+        if (!normalizedPhone) {
+            throw new Error("Phone number is required");
+        }
+
+        const existingPhone = await ctx.db
+            .query("users")
+            .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
+            .unique();
+
+        if (existingPhone && existingPhone._id !== args.id) {
+            throw new Error("Phone number already registered");
+        }
+
+        await ctx.db.patch(args.id, { phone: normalizedPhone });
     },
 });
 

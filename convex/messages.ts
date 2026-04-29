@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { createNotification } from "./notificationHelpers";
 
 export const getMessages = query({
     args: { user_id: v.id("users") },
@@ -26,9 +27,20 @@ export const sendMessage = mutation({
         is_from_admin: v.boolean(),
     },
     handler: async (ctx, args) => {
-        return await ctx.db.insert("messages", {
+        const messageId = await ctx.db.insert("messages", {
             ...args,
             created_at: Date.now(),
         });
+
+        if (args.is_from_admin && args.receiver_id) {
+            await createNotification(ctx, {
+                userId: args.receiver_id,
+                title: "New admin message",
+                message: args.content.length > 120 ? `${args.content.slice(0, 117)}...` : args.content,
+                type: "message",
+            });
+        }
+
+        return messageId;
     },
 });

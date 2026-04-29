@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, ChangeEvent, Key, ReactNode } from "react";
+import React, { useState, useEffect, ChangeEvent, FormEvent, Key, ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
     Zap,
@@ -102,6 +102,13 @@ function formatSignInDate(timestamp?: number) {
     });
 }
 
+function urlBase64ToUint8Array(base64String: string) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = `${base64String}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
+
 const normalizeMarketplaceCategory = (category?: string, fallback?: string) => {
     const normalized = (category || "").trim();
     if (MARKETPLACE_CATEGORIES.includes(normalized as typeof MARKETPLACE_CATEGORIES[number])) {
@@ -142,6 +149,13 @@ export default function DashboardPage() {
         }
     }, []);
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("tab") === "notifications") {
+            setActiveTab("notifications");
+        }
+    }, []);
+
     // Convex Real-time Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const subscriptions = useQuery(api.subscriptions.getActiveSubscriptions) || [];
@@ -159,11 +173,19 @@ export default function DashboardPage() {
             auth.login(currentUser as any);
         }
     }, [currentUser]);
+
+    useEffect(() => {
+        if (currentUser?.phone?.trim()) {
+            setRequiredPhone('');
+        }
+    }, [currentUser?.phone]);
+
     const adminMarketplace = useQuery(api.subscriptions.getAdminMarketplace) || [];
     const campusRepInfo = useQuery(api.users.getCampusRep, currentUser ? { userId: currentUser._id } : "skip");
     const transactions = useQuery(api.transactions.getTransactions, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const manualRequests = useQuery(api.funding.getUserManualRequests, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const notifications = useQuery(api.notifications.list, currentUser ? { user_id: currentUser._id } : "skip") || [];
+    const pushStatus = useQuery(api.push.getSubscriptionStatus, currentUser ? { user_id: currentUser._id } : "skip");
 
     // State for forms
     const [selectedChatUserId, setSelectedChatUserId] = useState<Id<"users"> | null>(null);
@@ -172,6 +194,7 @@ export default function DashboardPage() {
     const [chatInput, setChatInput] = useState('');
     const [chatImage, setChatImage] = useState<string | null>(null);
     const [newPhone, setNewPhone] = useState('');
+    const [requiredPhone, setRequiredPhone] = useState('');
     const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
     const [adminInviteEmail, setAdminInviteEmail] = useState('');
     const [showListingModal, setShowListingModal] = useState(false);
@@ -228,6 +251,8 @@ export default function DashboardPage() {
     const markAsReadMutation = useMutation(api.notifications.markAsRead);
     const markAllAsReadMutation = useMutation(api.notifications.markAllAsRead);
     const removeNotificationMutation = useMutation(api.notifications.remove);
+    const sendTestNotificationMutation = useMutation(api.notifications.sendTest);
+    const savePushSubscriptionMutation = useMutation(api.push.saveSubscription);
 
     // Username edit state
     const [editingUsername, setEditingUsername] = useState(false);
@@ -465,17 +490,80 @@ export default function DashboardPage() {
             return;
         }
 
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+            toast.error("This browser does not support background push notifications");
+            return;
+        }
+
+        if (!currentUser) {
+            toast.error("Please log in to enable notifications");
+            return;
+        }
+
+        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        if (!vapidPublicKey) {
+            toast.error("Push public key is not configured yet");
+            return;
+        }
+
         const permission = await Notification.requestPermission();
         setNotifPermission(permission);
 
         if (permission === "granted") {
-            toast.success("Notifications enabled!");
-            await showDesktopNotification("Notifications Enabled", {
-                body: "You will now receive real-time updates from JoinTheQ.",
-                icon: "/logo.png"
-            });
+            try {
+                const registration = await navigator.serviceWorker.register("/sw.js");
+                const readyRegistration = await navigator.serviceWorker.ready;
+                const existingSubscription = await readyRegistration.pushManager.getSubscription();
+                const subscription = existingSubscription || await readyRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                });
+                const serialized = subscription.toJSON();
+
+                if (!serialized.endpoint || !serialized.keys?.p256dh || !serialized.keys?.auth) {
+                    throw new Error("Browser did not return a complete push subscription");
+                }
+
+                await savePushSubscriptionMutation({
+                    user_id: currentUser._id,
+                    endpoint: serialized.endpoint,
+                    expiration_time: subscription.expirationTime ?? undefined,
+                    keys: {
+                        p256dh: serialized.keys.p256dh,
+                        auth: serialized.keys.auth,
+                    },
+                    user_agent: navigator.userAgent,
+                });
+
+                toast.success("Background notifications enabled!");
+                await registration.showNotification("Notifications Enabled", {
+                    body: "You will receive JoinTheQ updates even when this tab is closed.",
+                    icon: "/favicon.ico",
+                });
+            } catch (error: any) {
+                console.error("Push subscription failed:", error);
+                toast.error(getUserFacingErrorMessage(error, "Failed to enable background notifications"));
+            }
         } else if (permission === "denied") {
             toast.error("Notification permission denied");
+        }
+    };
+
+    const sendTestNotification = async () => {
+        if (!currentUser) return;
+
+        try {
+            await sendTestNotificationMutation({ user_id: currentUser._id });
+            toast.success("Test notification sent");
+
+            if (notifPermission === "granted") {
+                await showDesktopNotification("Notifications are working", {
+                    body: "This is your browser test alert from JoinTheQ.",
+                    icon: "/favicon.ico",
+                });
+            }
+        } catch (error: any) {
+            toast.error(getUserFacingErrorMessage(error, "Failed to send test notification"));
         }
     };
 
@@ -500,18 +588,42 @@ export default function DashboardPage() {
         }
     }, [notifications, notifPermission, lastNotifId]);
 
-    const updatePhone = async () => {
-        if (!currentUser || !newPhone) return;
+    const savePhoneNumber = async (phone: string) => {
+        if (!currentUser) return false;
+
+        const normalizedPhone = phone.trim();
+        if (!normalizedPhone) {
+            toast.error("Please enter your phone number");
+            return false;
+        }
+
         setIsUpdatingPhone(true);
         try {
-            await updatePhoneMutation({ id: currentUser._id, phone: newPhone });
-            setNewPhone('');
+            await updatePhoneMutation({ id: currentUser._id, phone: normalizedPhone });
+            auth.login({ ...(currentUser as any), phone: normalizedPhone });
             toast.success("Phone number updated!");
+            return true;
         } catch (error) {
             console.error("Error updating phone:", error);
-            toast.error("Error updating phone");
+            toast.error(getUserFacingErrorMessage(error, "Error updating phone"));
+            return false;
         } finally {
             setIsUpdatingPhone(false);
+        }
+    };
+
+    const updatePhone = async () => {
+        const saved = await savePhoneNumber(newPhone);
+        if (saved) {
+            setNewPhone('');
+        }
+    };
+
+    const handleRequiredPhoneSubmit = async (event: FormEvent) => {
+        event.preventDefault();
+        const saved = await savePhoneNumber(requiredPhone);
+        if (saved) {
+            setRequiredPhone('');
         }
     };
 
@@ -601,6 +713,8 @@ export default function DashboardPage() {
             </div>
         );
     }
+
+    const requiresPhoneNumber = !!currentUser && !currentUser.phone?.trim();
 
     return (
         <MainLayout
@@ -2237,6 +2351,28 @@ export default function DashboardPage() {
                                     <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={sendTestNotification}
+                                        className="px-4 py-2 bg-zinc-900 text-white rounded-full text-xs font-bold hover:bg-black transition-colors"
+                                    >
+                                        Send Test
+                                    </button>
+                                    {notifPermission !== 'granted' && (
+                                        <button
+                                            onClick={requestNotificationPermission}
+                                            className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors"
+                                        >
+                                            Enable Browser Alerts
+                                        </button>
+                                    )}
+                                    {notifPermission === 'granted' && !pushStatus?.enabled && (
+                                        <button
+                                            onClick={requestNotificationPermission}
+                                            className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors"
+                                        >
+                                            Enable Background Alerts
+                                        </button>
+                                    )}
                                     {notifications.some((n: any) => !n.is_read) && (
                                         <button
                                             onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
@@ -2255,8 +2391,11 @@ export default function DashboardPage() {
                                             <div className="flex items-start gap-4">
                                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'alert' ? 'bg-red-100 text-red-600' :
                                                     notif.type === 'promotion' ? 'bg-amber-100 text-amber-600' :
-                                                        notif.type === 'subscription' ? 'bg-blue-100 text-blue-600' :
-                                                            'bg-zinc-100 text-zinc-600'
+                                                        notif.type === 'payment' || notif.type === 'funding' ? 'bg-emerald-100 text-emerald-600' :
+                                                            notif.type === 'listing' ? 'bg-purple-100 text-purple-600' :
+                                                                notif.type === 'message' || notif.type === 'admin' ? 'bg-sky-100 text-sky-600' :
+                                                                    notif.type === 'subscription' ? 'bg-blue-100 text-blue-600' :
+                                                                        'bg-zinc-100 text-zinc-600'
                                                     }`}>
                                                     <Bell size={20} />
                                                 </div>
@@ -2307,6 +2446,59 @@ export default function DashboardPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+            </AnimatePresence>
+            <AnimatePresence>
+                {requiresPhoneNumber && (
+                    <motion.div
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/70 px-4 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <motion.form
+                            onSubmit={handleRequiredPhoneSubmit}
+                            initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 18 }}
+                            className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl sm:p-8"
+                        >
+                            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                                <Phone size={26} />
+                            </div>
+                            <h2 className="mb-2 text-2xl font-black text-zinc-950">Add your phone number</h2>
+                            <p className="mb-6 text-sm leading-6 text-zinc-500">
+                                We need a phone number on your account before you continue. This helps support reach you about subscriptions, payments, and account updates.
+                            </p>
+                            <label className="mb-2 block text-[11px] font-black uppercase tracking-widest text-zinc-400">
+                                Phone Number
+                            </label>
+                            <input
+                                type="tel"
+                                value={requiredPhone}
+                                onChange={(event) => setRequiredPhone(event.target.value)}
+                                placeholder="+234 800 000 0000"
+                                autoFocus
+                                required
+                                className="mb-5 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-bold text-zinc-950 outline-none transition focus:border-blue-500 focus:bg-white"
+                            />
+                            <button
+                                type="submit"
+                                disabled={isUpdatingPhone}
+                                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 py-4 text-sm font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {isUpdatingPhone ? (
+                                    <>
+                                        <Clock size={16} className="animate-spin" /> Saving
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={16} /> Save and Continue
+                                    </>
+                                )}
+                            </button>
+                        </motion.form>
+                    </motion.div>
+                )}
             </AnimatePresence>
         </MainLayout >
     );

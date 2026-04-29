@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { awardReputation } from "./reputation";
+import { createNotification } from "./notificationHelpers";
 
 export const getTransactions = query({
     args: { user_id: v.id("users") },
@@ -44,7 +45,7 @@ export const addTransaction = mutation({
             });
         }
 
-        return await ctx.db.insert("wallet_transactions", {
+        const transactionId = await ctx.db.insert("wallet_transactions", {
             user_id: args.user_id,
             amount: args.amount,
             type: args.type,
@@ -54,6 +55,17 @@ export const addTransaction = mutation({
             fee: args.fee,
             created_at: Date.now(),
         });
+
+        await createNotification(ctx, {
+            userId: args.user_id,
+            title: args.type === "funding" ? "Wallet funded" : "Wallet updated",
+            message: args.type === "funding"
+                ? `N${net_amount.toLocaleString()} has been added to your wallet.`
+                : `${args.description} for N${args.amount.toLocaleString()}.`,
+            type: args.type === "funding" ? "funding" : "payment",
+        });
+
+        return transactionId;
     },
 });
 

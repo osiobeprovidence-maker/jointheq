@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { createNotification, createNotificationForAllUsers } from "./notificationHelpers";
 
 const SLOT_RULES: Record<string, number> = {
   "Netflix Premium": 8,
@@ -91,6 +92,13 @@ export const submitListing = mutation({
       created_at: Date.now(),
       updated_at: Date.now(),
       request_id: args.request_id || null,
+    });
+
+    await createNotification(ctx, {
+      userId: args.owner_id,
+      title: "Listing submitted",
+      message: `Your ${args.platform} listing is under review. We will notify you when it goes live.`,
+      type: "listing",
     });
 
     console.log(`[submitListing] Created new subscription ${subscriptionId}`);
@@ -334,6 +342,21 @@ export const approveListing = mutation({
       updated_at: Date.now(),
     });
 
+    if (listing.owner_id) {
+      await createNotification(ctx, {
+        userId: listing.owner_id,
+        title: "Listing approved",
+        message: `Your ${listing.platform} listing is now live in the marketplace.`,
+        type: "listing",
+      });
+    }
+
+    await createNotificationForAllUsers(ctx, {
+      title: "New subscription available",
+      message: `${listing.platform} is now available in the marketplace from N${args.price_per_slot.toLocaleString()} per slot.`,
+      type: "subscription",
+    });
+
     return { success: true };
   },
 });
@@ -350,5 +373,17 @@ export const rejectListing = mutation({
       admin_note: args.admin_note,
       updated_at: Date.now(),
     });
+
+    const listing = await ctx.db.get(args.listing_id);
+    if (listing?.owner_id) {
+      await createNotification(ctx, {
+        userId: listing.owner_id,
+        title: "Listing needs changes",
+        message: args.admin_note
+          ? `Your listing was rejected: ${args.admin_note}`
+          : "Your listing was rejected. Please review the details and submit again.",
+        type: "alert",
+      });
+    }
   },
 });

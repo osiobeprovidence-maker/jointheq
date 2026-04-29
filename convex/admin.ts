@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { createNotification } from "./notificationHelpers";
 
 const normalizeSupportContacts = (settingsMap: Record<string, any>) => {
     const rawContacts = Array.isArray(settingsMap.whatsapp_support_contacts)
@@ -553,6 +554,15 @@ export const adjustUserBalance = mutation({
             status: "completed",
             description: `Admin adjustment: ${args.reason}`,
             created_at: Date.now(),
+        });
+
+        await createNotification(ctx, {
+            userId: args.userId,
+            title: args.type === "add" ? "Wallet balance updated" : "Wallet balance adjusted",
+            message: args.type === "add"
+                ? `Admin added N${normalizedAmount.toLocaleString()} to your wallet. Reason: ${args.reason}`
+                : `Admin removed N${normalizedAmount.toLocaleString()} from your wallet. Reason: ${args.reason}`,
+            type: args.type === "add" ? "funding" : "payment",
         });
 
         // Log admin action

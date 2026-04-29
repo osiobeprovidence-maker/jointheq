@@ -632,6 +632,18 @@ export default defineSchema({
     // ─── ENHANCED ADMIN SYSTEM ────────────────────────────────────────────────
 
     // Admin Activity Logs
+    push_subscriptions: defineTable({
+        user_id: v.id("users"),
+        endpoint: v.string(),
+        expiration_time: v.optional(v.number()),
+        p256dh: v.string(),
+        auth: v.string(),
+        user_agent: v.optional(v.string()),
+        created_at: v.number(),
+        updated_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_endpoint", ["endpoint"]),
+
     admin_logs: defineTable({
         admin_id: v.id("users"),
         admin_role: v.optional(v.string()),
