@@ -92,6 +92,12 @@ const PROOF_TYPES = [
     "Short text proof",
 ];
 
+const WALLET_FUNDING_BANK_DETAILS = {
+    bank: "Moniepoint",
+    accountNumber: "9049861561",
+    accountName: "Cratebux and Logistic",
+};
+
 function formatSignInProvider(provider?: string) {
     switch ((provider || "").toLowerCase()) {
         case "google":
@@ -200,7 +206,6 @@ export default function DashboardPage() {
     const adminMarketplace = useQuery(api.subscriptions.getAdminMarketplace) || [];
     const campusRepInfo = useQuery(api.users.getCampusRep, currentUser ? { userId: currentUser._id } : "skip");
     const transactions = useQuery(api.transactions.getTransactions, currentUser ? { user_id: currentUser._id } : "skip") || [];
-    const manualRequests = useQuery(api.funding.getUserManualRequests, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const notifications = useQuery(api.notifications.list, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const pushStatus = useQuery(api.push.getSubscriptionStatus, currentUser ? { user_id: currentUser._id } : "skip");
 
@@ -246,11 +251,15 @@ export default function DashboardPage() {
         : '';
 
     // Wallet State
-    const [fundAmount, setFundAmount] = useState<string>('');
-    const [bootsModalOpen, setBootsModalOpen] = useState(false);
+    const [showWalletFundingDetails, setShowWalletFundingDetails] = useState(false);
 
     const handleFundSubmit = () => {
-        navigate('/fund-wallet');
+        setShowWalletFundingDetails(true);
+    };
+
+    const copyWalletAccountNumber = async () => {
+        await navigator.clipboard.writeText(WALLET_FUNDING_BANK_DETAILS.accountNumber);
+        toast.success("Account number copied");
     };
 
     const taskTotalCost = Number(taskForm.bootsReward || 0) * Number(taskForm.requiredCompletions || 0) * taskRate;
@@ -366,8 +375,6 @@ export default function DashboardPage() {
     const makeAdminMutation = useMutation(api.users.makeAdmin);
     const removeAdminMutation = useMutation(api.users.removeAdmin);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
-    const updateCardMutation = useMutation(api.users.updateCard);
-    const removeCardMutation = useMutation(api.users.removeCard);
     const updateUsernameMutation = useMutation(api.users.updateUsername);
     const updateProfileMutation = useMutation(api.users.updateProfile);
     const renewSlotMutation = useMutation(api.subscriptions.renewSlot);
@@ -1313,310 +1320,137 @@ export default function DashboardPage() {
                     <motion.div key="wallet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <header>
                             <h1 className="text-3xl font-bold tracking-tight">Wallet</h1>
-                            <p className="text-gray-500 mt-1">Manage your funds and rewards.</p>
+                            <p className="text-gray-500 mt-1">Manage your JoinTheQ wallet balance and funding history.</p>
                         </header>
 
-                        {/* 1. WALLET BALANCE SECTION */}
-                        <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.06)] overflow-hidden relative">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50 mix-blend-multiply pointer-events-none"></div>
-
-                            <div className="text-center mb-8">
-                                <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-2">Available Balance</h3>
+                        <div className="rounded-[2rem] border border-black/5 bg-white p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] sm:p-8">
+                            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
+                                        Current Balance
+                                    </div>
                                 <motion.div
                                     key={currentUser?.wallet_balance}
-                                    animate={{ scale: [1, 1.05, 1] }}
+                                        animate={{ scale: [1, 1.03, 1] }}
                                     transition={{ duration: 0.3 }}
-                                    className="text-5xl font-extrabold text-zinc-900 tracking-tight"
+                                        className="mt-3 text-5xl font-black tracking-tight text-zinc-950"
                                 >
                                     {fmtCurrency(currentUser?.wallet_balance || 0)}
                                 </motion.div>
-                            </div>
-
-                            <div className="border-t border-gray-100 pt-8 max-w-sm mx-auto text-center">
-                                <p className="text-zinc-400 text-sm font-medium mb-6">
-                                    Top up your wallet instantly or via manual bank transfer.
-                                </p>
+                                    <p className="mt-3 max-w-md text-sm font-medium text-zinc-500">
+                                        Fund your wallet by transferring to the official JoinTheQ account.
+                                    </p>
+                                </div>
                                 <button
                                     onClick={handleFundSubmit}
-                                    className="w-full py-5 bg-black text-white font-black rounded-[2rem] shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-[1.5rem] bg-zinc-950 px-6 py-4 text-sm font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.01] hover:bg-black active:scale-95 sm:w-auto"
                                 >
-                                    <Plus size={20} />
+                                    <Plus size={18} />
                                     Fund Wallet
                                 </button>
                             </div>
                         </div>
 
-                        {/* MANUAL FUNDING STATUS SECTION */}
-                        {manualRequests.filter(r => r.status === 'Awaiting Review').length > 0 && (
-                            <div className="bg-amber-50/50 border border-amber-100 rounded-[2rem] p-8">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-6 flex items-center gap-2">
-                                    <Clock size={16} /> Pending Verification
-                                </h3>
-                                <div className="space-y-4">
-                                    {manualRequests.filter(r => r.status === 'Awaiting Review').map((req) => (
-                                        <div key={req._id} className="bg-white p-6 rounded-2xl border border-amber-200/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
-                                                    <Wallet size={24} />
-                                                </div>
-                                                <div>
-                                                    <div className="font-black text-lg text-indigo-600">{fmtCurrency(req.unique_amount)}</div>
-                                                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                                        Sent for {fmtCurrency(req.base_amount)} Credit
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-xs font-medium text-amber-700 bg-amber-100/50 px-4 py-2 rounded-full border border-amber-200 italic">
-                                                Your transfer has been received and is pending admin verification.
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* 2. BOOTS WALLET (GAMIFIED REWARDS) */}
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(37,99,235,0.08)] relative overflow-hidden">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-bold uppercase tracking-widest text-blue-800/60">Boots Balance</h3>
-                                        <button onClick={() => setBootsModalOpen(true)} className="text-blue-500 hover:text-blue-700 transition-colors">
-                                            <Info size={16} />
-                                        </button>
-                                    </div>
-                                    <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center text-blue-500 shadow-sm backdrop-blur-sm">
-                                        <Sparkles size={18} />
-                                    </div>
-                                </div>
-
-                                <motion.div
-                                    key={currentUser?.boots_balance}
-                                    animate={{ scale: [1, 1.1, 1], filter: ["hue-rotate(0deg)", "hue-rotate(90deg)", "hue-rotate(0deg)"] }}
-                                    transition={{ duration: 0.5 }}
-                                    className="text-4xl font-extrabold text-blue-900 mb-6"
+                        <AnimatePresence>
+                            {showWalletFundingDetails && (
+                                <motion.section
+                                    key="wallet-funding-details"
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -8 }}
+                                    className="rounded-[2rem] border border-black/5 bg-white p-6 shadow-[0_12px_34px_rgba(15,23,42,0.05)] sm:p-8"
                                 >
-                                    {(currentUser?.boots_balance || 0).toLocaleString()} BOOTS
-                                </motion.div>
-
-                                <div className="mb-6">
-                                    <div className="flex justify-between text-xs font-bold text-blue-800/60 mb-2">
-                                        <span>Next reward at 100 BOOTS</span>
-                                        <span>{Math.min((currentUser?.boots_balance || 0), 100)}/100</span>
-                                    </div>
-                                    <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${Math.min(((currentUser?.boots_balance || 0) / 100) * 100, 100)}%` }}
-                                            className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setActiveTab('referrals')}
-                                        className="flex-1 py-3 bg-white text-blue-600 font-bold text-sm rounded-xl shadow-sm hover:shadow-md transition-all"
-                                    >
-                                        Earn Boots
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('marketplace')}
-                                        className="flex-1 py-3 bg-blue-600 text-white font-bold text-sm rounded-xl shadow-inner hover:bg-blue-700 transition-all"
-                                    >
-                                        Use Boots
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* 3. LINKED CARD FOR AUTO PAYMENTS */}
-                            <div className="bg-zinc-900 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group flex flex-col justify-between">
-                                <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors"></div>
-
-                                <div className="relative z-10 z-[2]">
-                                    <div className="flex justify-between items-start mb-6">
+                                    <div className="mb-6 flex items-start justify-between gap-4">
                                         <div>
-                                            <h3 className="text-xl font-bold mb-1">Auto Payment Card</h3>
-                                            <p className="text-zinc-400 text-xs leading-relaxed max-w-[200px]">
-                                                Link your card to enable automatic subscription renewals.
+                                            <h2 className="text-2xl font-black tracking-tight">Fund Wallet</h2>
+                                            <p className="mt-1 text-sm font-medium text-zinc-500">
+                                                Copy the account number and make your transfer.
                                             </p>
                                         </div>
-                                        {currentUser?.direct_debit_card ? (
-                                            <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-500/30">Active</div>
-                                        ) : (
-                                            <ShieldCheck size={24} className="opacity-50" />
-                                        )}
+                                        <button
+                                            onClick={() => setShowWalletFundingDetails(false)}
+                                            className="rounded-full p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                                            aria-label="Close funding details"
+                                        >
+                                            <X size={18} />
+                                        </button>
                                     </div>
 
-                                    {currentUser?.direct_debit_card ? (
-                                        <div className="mb-6 bg-white/5 p-5 rounded-2xl border border-white/10 backdrop-blur-sm">
-                                            <div className="text-xl font-mono tracking-widest break-all mb-4">**** **** **** {currentUser.direct_debit_card.last4}</div>
-                                            <div className="flex justify-between items-end">
+                                    <div className="max-w-2xl rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08)] sm:p-6">
+                                        <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+                                            <div className="space-y-4">
                                                 <div>
-                                                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Brand</div>
-                                                    <div className="font-bold text-sm">{currentUser.direct_debit_card.brand}</div>
+                                                    <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">Bank Name</div>
+                                                    <div className="mt-1 text-lg font-black text-zinc-950">{WALLET_FUNDING_BANK_DETAILS.bank}</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-1">Expiry</div>
-                                                    <div className="font-bold text-sm">{currentUser.direct_debit_card.expiry}</div>
+                                                    <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">Account Number</div>
+                                                    <div className="mt-1 break-all text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">
+                                                        {WALLET_FUNDING_BANK_DETAILS.accountNumber}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">Account Name</div>
+                                                    <div className="mt-1 text-base font-bold text-zinc-500">{WALLET_FUNDING_BANK_DETAILS.accountName}</div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="mb-6 flex-1 flex items-center justify-center">
-                                            <p className="text-zinc-500 text-sm font-medium italic">No card linked yet</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex gap-3 relative z-10">
-                                    {currentUser?.direct_debit_card ? (
-                                        <div className="flex gap-2 w-full">
-                                            <button className="flex-1 py-3 bg-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/20 transition-all border border-white/5">
-                                                Manage Card
-                                            </button>
                                             <button
-                                                onClick={async () => {
-                                                    if (confirm("Are you sure you want to remove your card? Automatic renewals will be disabled.")) {
-                                                        const tid = toast.loading("Removing card...");
-                                                        try {
-                                                            await removeCardMutation({ userId: currentUser._id });
-                                                            toast.success("Card removed successfully", { id: tid });
-                                                        } catch (e) {
-                                                            toast.error("Failed to remove card", { id: tid });
-                                                        }
-                                                    }
-                                                }}
-                                                className="px-4 py-3 bg-red-500/10 text-red-500 font-bold text-sm rounded-xl hover:bg-red-500/20 transition-all border border-red-500/20"
+                                                type="button"
+                                                onClick={copyWalletAccountNumber}
+                                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-4 text-sm font-black text-white transition-all hover:bg-black active:scale-95 sm:w-auto"
                                             >
-                                                Remove
+                                                <Copy size={18} />
+                                                Copy Account Number
                                             </button>
                                         </div>
-                                    ) : (
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    const loadingToast = toast.loading("Securely connecting to payment gateway...");
-                                                    setTimeout(async () => {
-                                                        await updateCardMutation({
-                                                            userId: currentUser!._id,
-                                                            cardDetails: { last4: "4242", brand: "Visa", expiry: "12/26", auth_token: "simulated_auth_token_" + Date.now() }
-                                                        });
-                                                        toast.dismiss(loadingToast);
-                                                        toast.success("Card linked automatically!");
-                                                    }, 2000);
-                                                } catch (e: any) {
-                                                    toast.error("Failed to link card");
-                                                }
-                                            }}
-                                            className="w-full py-3 bg-white text-zinc-900 font-bold text-sm rounded-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Plus size={16} /> Link Card
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                                    </div>
+                                    <p className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                                        After payment, your wallet will be credited once your transfer is confirmed.
+                                            </p>
+                                </motion.section>
+                            )}
+                        </AnimatePresence>
 
-                        {/* 4. TRANSACTION HISTORY */}
-                        <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
-                            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                                <Activity className="text-gray-400" size={20} /> Recent Activity
-                            </h3>
+                        <div className="rounded-[2rem] border border-black/5 bg-white p-6 shadow-[0_12px_34px_rgba(15,23,42,0.05)] sm:p-8">
+                            <div className="mb-6 flex items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-black tracking-tight">Wallet transaction history</h2>
+                                    <p className="mt-1 text-sm font-medium text-zinc-500">Your wallet funding and payment activity.</p>
+                                </div>
+                                <Activity className="hidden text-zinc-300 sm:block" size={24} />
+                            </div>
 
                             <div className="space-y-4">
                                 {transactions && transactions.length > 0 ? (
                                     transactions.slice(0, 5).map((tx, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100/50 hover:bg-gray-50 transition-colors">
+                                        <div key={idx} className="flex items-center justify-between gap-4 rounded-2xl border border-gray-100/70 bg-gray-50/60 p-4 transition-colors hover:bg-gray-50">
                                             <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'funding' ? 'bg-emerald-100 text-emerald-600' :
+                                                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tx.type === 'funding' ? 'bg-emerald-100 text-emerald-600' :
                                                     tx.type === 'payment' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
                                                     }`}>
                                                     {tx.type === 'funding' ? <Plus size={16} /> : tx.type === 'payment' ? <Zap size={16} /> : <Sparkles size={16} />}
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0">
                                                     <div className="font-bold text-sm capitalize">{tx.description || tx.type.replace('_', ' ')}</div>
                                                     <div className="text-xs text-gray-400">{new Date(tx.created_at).toLocaleDateString()}</div>
                                                 </div>
                                             </div>
-                                            <div className={`font-bold ${tx.type === 'funding' ? 'text-emerald-600' : tx.type === 'payment' ? 'text-zinc-900' : 'text-blue-600'}`}>
+                                            <div className={`shrink-0 font-bold ${tx.type === 'funding' ? 'text-emerald-600' : tx.type === 'payment' ? 'text-zinc-900' : 'text-blue-600'}`}>
                                                 {tx.type === 'funding' ? '+' : tx.type === 'payment' ? '-' : ''}{"\u20A6"}{(tx.amount || 0).toLocaleString()}
                                             </div>
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                        No recent activity to show.
+                                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center">
+                                        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-300">
+                                            <Wallet size={22} />
+                                        </div>
+                                        <h3 className="font-black text-zinc-900">No wallet transactions yet</h3>
+                                        <p className="mt-2 text-sm font-medium text-zinc-400">Your wallet funding history will appear here.</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-
-                        {/* BOOTS Info Modal */}
-                        <AnimatePresence>
-                            {bootsModalOpen && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                                    onClick={() => setBootsModalOpen(false)}
-                                >
-                                    <motion.div
-                                        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                                        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                                        onClick={e => e.stopPropagation()}
-                                        className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative"
-                                    >
-                                        <button
-                                            onClick={() => setBootsModalOpen(false)}
-                                            className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors"
-                                        >
-                                            <X size={20} />
-                                        </button>
-
-                                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mb-6">
-                                            <Sparkles size={28} />
-                                        </div>
-
-                                        <h2 className="text-2xl font-bold mb-2 text-zinc-900">What are BOOTS?</h2>
-                                        <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                                            BOOTS are reward points you earn on JoinTheQ for being an active community member.
-                                        </p>
-
-                                        <div className="space-y-6">
-                                            <div>
-                                                <h4 className="font-bold text-sm mb-3 flex items-center gap-2 text-emerald-600">
-                                                    <Plus size={16} /> Ways to earn BOOTS
-                                                </h4>
-                                                <ul className="text-sm text-gray-600 space-y-2">
-                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Inviting friends</li>
-                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Completing campus ambassador missions</li>
-                                                </ul>
-                                            </div>
-
-                                            <div>
-                                                <h4 className="font-bold text-sm mb-3 flex items-center gap-2 text-blue-600">
-                                                    <Check size={16} /> Ways to use BOOTS
-                                                </h4>
-                                                <ul className="text-sm text-gray-600 space-y-2">
-                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Subscription discounts</li>
-                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Exclusive giveaways</li>
-                                                </ul>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={() => setBootsModalOpen(false)}
-                                            className="w-full mt-8 py-4 bg-zinc-900 text-white font-bold rounded-2xl hover:scale-[1.02] active:scale-95 transition-transform"
-                                        >
-                                            Got it!
-                                        </button>
-                                    </motion.div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </motion.div>
                 )}
 
