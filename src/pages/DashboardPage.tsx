@@ -675,9 +675,13 @@ export default function DashboardPage() {
 
     const sendTestNotification = async () => {
         if (!currentUser) return;
+        if (!currentUser.is_admin) {
+            toast.error("Only admins can send test notifications");
+            return;
+        }
 
         try {
-            await sendTestNotificationMutation({ user_id: currentUser._id });
+            await sendTestNotificationMutation({ admin_id: currentUser._id });
             toast.success("Test notification sent");
 
             if (notifPermission === "granted") {
@@ -2641,12 +2645,14 @@ export default function DashboardPage() {
                                     <p className="text-gray-500 mt-1">Updates on your subscriptions and platform activity.</p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={sendTestNotification}
-                                        className="px-4 py-2 bg-zinc-900 text-white rounded-full text-xs font-bold hover:bg-black transition-colors"
-                                    >
-                                        Send Test
-                                    </button>
+                                    {currentUser?.is_admin && (
+                                        <button
+                                            onClick={sendTestNotification}
+                                            className="px-4 py-2 bg-zinc-900 text-white rounded-full text-xs font-bold hover:bg-black transition-colors"
+                                        >
+                                            Send Test
+                                        </button>
+                                    )}
                                     {notifPermission !== 'granted' && (
                                         <button
                                             onClick={requestNotificationPermission}

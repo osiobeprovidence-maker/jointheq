@@ -56,13 +56,14 @@ export const remove = mutation({
 });
 
 export const sendTest = mutation({
-    args: { user_id: v.id("users") },
+    args: { admin_id: v.id("users") },
     handler: async (ctx, args) => {
-        const user = await ctx.db.get(args.user_id);
-        if (!user) throw new Error("User not found");
+        const admin = await ctx.db.get(args.admin_id);
+        if (!admin) throw new Error("User not found");
+        if (!admin.is_admin) throw new Error("Administrator privileges required");
 
         await createNotification(ctx, {
-            userId: args.user_id,
+            userId: args.admin_id,
             title: "Notifications are working",
             message: "This is a test alert from JoinTheQ. You will see updates here for payments, listings, subscriptions, and admin messages.",
             type: "system",
