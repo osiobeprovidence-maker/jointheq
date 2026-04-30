@@ -11,6 +11,7 @@ export default defineSchema({
         work_username: v.optional(v.string()),
         role: v.optional(v.string()), // "subscriber" | "owner" | "admin"
         wallet_balance: v.number(),
+        boot_balance: v.optional(v.number()),
         boots_balance: v.number(),
         created_at: v.number(),
         q_score: v.number(),
@@ -257,8 +258,47 @@ export default defineSchema({
         amount: v.number(),
         type: v.string(),
         description: v.string(),
+        task_id: v.optional(v.id("tasks")),
         created_at: v.number(),
     }).index("by_user", ["user_id"]),
+
+    tasks: defineTable({
+        creatorUserId: v.id("users"),
+        title: v.string(),
+        type: v.string(),
+        description: v.string(),
+        instructions: v.string(),
+        externalUrl: v.optional(v.string()),
+        bootsReward: v.number(),
+        requiredCompletions: v.number(),
+        completedCount: v.number(),
+        proofType: v.string(),
+        deadline: v.number(),
+        totalCost: v.number(),
+        paymentSource: v.string(),
+        status: v.string(),
+        createdAt: v.number(),
+        reviewedAt: v.optional(v.number()),
+        reviewedBy: v.optional(v.id("users")),
+        adminNote: v.optional(v.string()),
+    }).index("by_status", ["status"])
+        .index("by_creator", ["creatorUserId"])
+        .index("by_deadline", ["deadline"]),
+
+    task_submissions: defineTable({
+        taskId: v.id("tasks"),
+        userId: v.id("users"),
+        proofType: v.string(),
+        proofValue: v.optional(v.string()),
+        screenshotUrl: v.optional(v.string()),
+        status: v.string(),
+        submittedAt: v.number(),
+        reviewedAt: v.optional(v.number()),
+        reviewedBy: v.optional(v.id("users")),
+        adminNote: v.optional(v.string()),
+    }).index("by_task", ["taskId"])
+        .index("by_user", ["userId"])
+        .index("by_status", ["status"]),
 
     support_conversations: defineTable({
         user_id: v.id("users"),

@@ -425,23 +425,6 @@ export const updatePhone = mutation({
     },
 });
 
-export const initializeMissingPhones = mutation({
-    args: {},
-    handler: async (ctx) => {
-        const users = await ctx.db.query("users").collect();
-        let updated = 0;
-
-        for (const user of users) {
-            if (user.phone === undefined) {
-                await ctx.db.patch(user._id, { phone: "" });
-                updated += 1;
-            }
-        }
-
-        return { success: true, updated };
-    },
-});
-
 export const login = mutation({
     args: { identifier: v.string(), password: v.string() },
     handler: async (ctx, args) => {
@@ -621,6 +604,51 @@ export const resetQScores = mutation({
             boots_history: [],
             penalty_history: [],
         });
+    },
+});
+
+export const normalizeUserReputationFields = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const users = await ctx.db.query("users").collect();
+        let updated = 0;
+
+        for (const user of users) {
+            const patch: {
+                boots_balance?: number;
+                q_rank?: string;
+                score_history?: Array<any>;
+                boots_history?: Array<any>;
+                penalty_history?: Array<any>;
+            } = {};
+
+            if (user.boots_balance === undefined) {
+                patch.boots_balance = user.boot_balance ?? 0;
+            }
+
+            if (user.q_rank === undefined) {
+                patch.q_rank = "Rookie";
+            }
+
+            if (user.score_history === undefined) {
+                patch.score_history = [];
+            }
+
+            if (user.boots_history === undefined) {
+                patch.boots_history = [];
+            }
+
+            if (user.penalty_history === undefined) {
+                patch.penalty_history = [];
+            }
+
+            if (Object.keys(patch).length > 0) {
+                await ctx.db.patch(user._id, patch);
+                updated += 1;
+            }
+        }
+
+        return { success: true, updated };
     },
 });
 
@@ -898,13 +926,32 @@ export const socialLogin = mutation({
         const usernameBase = (args.full_name || normalizedEmail.split('@')[0])
             .toLowerCase()
             .replace(/[^a-z0-9_]/g, "")
-            .slice(0, 20);
-        const username = `${usernameBase || "user"}${Math.floor(100 + Math.random() * 900)}`;
+            .slice(0, 18) || "user";
+
+        let username = usernameBase;
+        let usernameCollisionChecks = 0;
+
+        while (usernameCollisionChecks < 20) {
+            const existingUsername = await ctx.db
+                .query("users")
+                .withIndex("by_username", (q) => q.eq("username", username))
+                .unique();
+
+            if (!existingUsername) {
+                break;
+            }
+
+            username = `${usernameBase}${Math.floor(1000 + Math.random() * 9000)}`;
+            usernameCollisionChecks += 1;
+        }
+
+        if (usernameCollisionChecks >= 20) {
+            throw new Error("Unable to generate username. Please try again.");
+        }
 
         const userId = await ctx.db.insert("users", {
             email: normalizedEmail,
             full_name: args.full_name,
-            phone: "",
             profile_image_url: args.profile_image_url,
             referral_code: resolvedReferralCode,
             username: username,

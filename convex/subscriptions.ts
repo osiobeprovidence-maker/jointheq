@@ -271,10 +271,12 @@ export const joinSlot = mutation({
         let boots_to_use = 0;
         let coins_to_use = total_price;
 
+        const currentBoots = user.boots_balance ?? user.boot_balance ?? 0;
+
         if (args.use_boots) {
             boots_to_use = total_price / 2;
             coins_to_use = total_price / 2;
-            if (user.boots_balance < boots_to_use) {
+            if (currentBoots < boots_to_use) {
                 throw new Error("You do not have enough BOOTS for the 50/50 payment split.");
             }
         }
@@ -315,7 +317,7 @@ export const joinSlot = mutation({
         // Update balances
         await ctx.db.patch(user._id, {
             wallet_balance: user.wallet_balance - coins_to_use,
-            boots_balance: user.boots_balance - boots_to_use,
+            boots_balance: currentBoots - boots_to_use,
         });
 
         // Record transactions

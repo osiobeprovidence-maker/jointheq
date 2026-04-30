@@ -38,6 +38,7 @@ import type * as slots_engine from "../slots_engine.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as support from "../support.js";
 import type * as support_actions from "../support_actions.js";
+import type * as tasks from "../tasks.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
@@ -78,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   subscriptions: typeof subscriptions;
   support: typeof support;
   support_actions: typeof support_actions;
+  tasks: typeof tasks;
   transactions: typeof transactions;
   users: typeof users;
 }>;

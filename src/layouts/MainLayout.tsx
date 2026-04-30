@@ -3,7 +3,6 @@ import React, { ReactNode, useState } from "react";
 import {
     LayoutDashboard,
     ShoppingBag,
-    Sparkles,
     Wallet,
     Users,
     MessageCircle,
@@ -17,7 +16,8 @@ import {
     Bell,
     User,
     ChevronRight,
-    Settings
+    Settings,
+    ListTodo
 } from "lucide-react";
 
 import { useQuery } from "convex/react";
@@ -56,8 +56,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
-        { id: 'migrate', label: 'Migrate Account', icon: <ShieldCheck size={20} /> },
-        { id: 'campaigns', label: 'Campaigns', icon: <Sparkles size={20} /> },
+        { id: 'tasks', label: 'Tasks', icon: <ListTodo size={20} /> },
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
         { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
         { id: 'history', label: 'History', icon: <Clock size={20} /> },

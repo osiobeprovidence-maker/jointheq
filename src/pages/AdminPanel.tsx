@@ -60,7 +60,8 @@ import {
     Tag,
     Sparkles,
     UserPlus,
-    Trash2
+    Trash2,
+    ListTodo
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -72,7 +73,7 @@ import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests";
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "tasks" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const fmt = fmtCurrency;
@@ -229,6 +230,9 @@ export default function AdminPanel() {
     const [reviewPricePerSlot, setReviewPricePerSlot] = useState<number>(0);
     const [reviewOwnerPayout, setReviewOwnerPayout] = useState<number>(0);
     const [reviewAdminNote, setReviewAdminNote] = useState("");
+    const [taskReviewStatus, setTaskReviewStatus] = useState("Pending Admin Approval");
+    const [submissionReviewStatus, setSubmissionReviewStatus] = useState("Pending Review");
+    const [taskAdminNote, setTaskAdminNote] = useState("");
 
     // Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
@@ -248,6 +252,8 @@ export default function AdminPanel() {
         selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
     );
     const withdrawals = useQuery(api.campaigns.getWithdrawals, {}) || [];
+    const adminReviewTasks = useQuery(api.tasks.adminListTasks, { status: taskReviewStatus }) || [];
+    const adminTaskSubmissions = useQuery(api.tasks.adminListSubmissions, { status: submissionReviewStatus }) || [];
     // Security / Fraud
     const fraudFlags = useQuery(api.fraud.getFraudFlags, {}) || [];
     const fraudSummary = useQuery(api.fraud.getFraudSummary);
@@ -335,6 +341,10 @@ export default function AdminPanel() {
     const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
     const editCampaignMut = useMutation(api.campaigns.editCampaign);
     const processWithdrawalMut = useMutation(api.campaigns.processWithdrawal);
+    const approveTaskMut = useMutation(api.tasks.approveTask);
+    const rejectTaskMut = useMutation(api.tasks.rejectTask);
+    const approveSubmissionMut = useMutation(api.tasks.approveSubmission);
+    const rejectSubmissionMut = useMutation(api.tasks.rejectSubmission);
     // Workforce Queries
     const workforceAdmins = useQuery(api.adminWorkforce.getAdminTeam) || [];
     const invitations = useQuery(api.adminWorkforce.getInvitations) || [];
@@ -707,6 +717,7 @@ export default function AdminPanel() {
         { id: "marketplace", label: "Marketplace", icon: <ShoppingBag size={18} />, sub: "Subscription Inventory" },
         { id: "payments", label: "Payments", icon: <CreditCard size={18} />, sub: "Transaction History" },
         { id: "campaigns", label: "Campaigns", icon: <Megaphone size={18} />, sub: "Growth & Commissions" },
+        { id: "tasks", label: "Tasks", icon: <ListTodo size={18} />, sub: "Task Reviews & BOOTS" },
         { id: "security", label: "Security", icon: <ShieldCheck size={18} />, sub: "Fraud & Anti-Spam" },
         { id: "support", label: "Support", icon: <HeadphonesIcon size={18} />, sub: "Customer Experience" },
         { id: "admins", label: "Admins", icon: <Shield size={18} />, sub: "Workforce & Tasks" },
@@ -2095,6 +2106,98 @@ export default function AdminPanel() {
                         )}
 
                         {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â SUPPORT Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {activeTab === "tasks" && (
+                            <motion.div key="tasks" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
+                                <SectionHeader title="Tasks Review" sub="Approve promoted tasks and release BOOTS after proof review" />
+
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                        <div className="p-6 border-b border-black/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                            <div>
+                                                <h3 className="font-black">Submitted Tasks</h3>
+                                                <p className="text-xs text-gray-400 mt-1">User-created tasks wait here before going live.</p>
+                                            </div>
+                                            <select value={taskReviewStatus} onChange={(e) => setTaskReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
+                                                {["Pending Admin Approval", "Active", "Paused", "Rejected", "Completed", "All"].map((status) => <option key={status} value={status}>{status}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="divide-y divide-black/5">
+                                            {(adminReviewTasks as any[]).map((task: any) => (
+                                                <div key={task._id} className="p-5 space-y-4">
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div>
+                                                            <div className="font-black">{task.title}</div>
+                                                            <div className="text-xs text-gray-400 mt-1">{task.type} - {task.bootsReward} BOOTS - {task.completedCount}/{task.requiredCompletions}</div>
+                                                        </div>
+                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${task.status === "Active" ? "bg-emerald-100 text-emerald-700" : task.status === "Rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{task.status}</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-500 leading-relaxed">{task.description}</p>
+                                                    <div className="grid grid-cols-2 gap-3 text-xs font-bold text-gray-500">
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Cost: {fmt(task.totalCost)}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Deadline: {new Date(task.deadline).toLocaleDateString()}</div>
+                                                    </div>
+                                                    {task.status === "Pending Admin Approval" && (
+                                                        <div className="flex gap-2">
+                                                            <button onClick={async () => { await approveTaskMut({ taskId: task._id, adminId: currentUser!._id }); toast.success("Task approved"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve</button>
+                                                            <button onClick={async () => { await rejectTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.error("Task rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {adminReviewTasks.length === 0 && (
+                                                <div className="p-12 text-center text-gray-400">
+                                                    <ListTodo size={34} className="mx-auto mb-3 opacity-20" />
+                                                    <p className="font-bold">No tasks in this status.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                        <div className="p-6 border-b border-black/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                            <div>
+                                                <h3 className="font-black">Proof Review</h3>
+                                                <p className="text-xs text-gray-400 mt-1">Approve proof to release BOOTS rewards.</p>
+                                            </div>
+                                            <select value={submissionReviewStatus} onChange={(e) => setSubmissionReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
+                                                {["Pending Review", "Completed", "Rejected", "All"].map((status) => <option key={status} value={status}>{status}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="p-5 border-b border-black/5">
+                                            <input value={taskAdminNote} onChange={(e) => setTaskAdminNote(e.target.value)} placeholder="Optional rejection reason" className="w-full bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
+                                        </div>
+                                        <div className="divide-y divide-black/5">
+                                            {(adminTaskSubmissions as any[]).map((submission: any) => (
+                                                <div key={submission._id} className="p-5 space-y-4">
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div>
+                                                            <div className="font-black">{submission.task?.title || "Deleted task"}</div>
+                                                            <div className="text-xs text-gray-400 mt-1">{submission.user?.full_name || "Unknown user"} - {submission.proofType}</div>
+                                                        </div>
+                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${submission.status === "Completed" ? "bg-blue-100 text-blue-700" : submission.status === "Rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{submission.status}</span>
+                                                    </div>
+                                                    {submission.proofValue && <div className="bg-zinc-50 rounded-2xl p-4 text-sm text-gray-600 break-words">{submission.proofValue}</div>}
+                                                    {submission.screenshotUrl && <div className="text-xs font-bold text-blue-600">Screenshot uploaded: {submission.screenshotUrl}</div>}
+                                                    {submission.status === "Pending Review" && (
+                                                        <div className="flex gap-2">
+                                                            <button onClick={async () => { await approveSubmissionMut({ submissionId: submission._id, adminId: currentUser!._id }); toast.success("Proof approved and BOOTS released"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve Proof</button>
+                                                            <button onClick={async () => { await rejectSubmissionMut({ submissionId: submission._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.error("Proof rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject Proof</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {adminTaskSubmissions.length === 0 && (
+                                                <div className="p-12 text-center text-gray-400">
+                                                    <CheckCircle2 size={34} className="mx-auto mb-3 opacity-20" />
+                                                    <p className="font-bold">No proof submissions in this status.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
                         {activeTab === "support" && (
                             <motion.div key="support" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Support Chat" sub="Real-time assistance for users" />

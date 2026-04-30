@@ -9,7 +9,6 @@ const LandingPage = lazy(() => import("./pages/LandingPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const AdminEnhancedPage = lazy(() => import("./pages/AdminEnhancedPage"));
-const CampaignDetailPage = lazy(() => import("./pages/CampaignDetailPage"));
 const ConsoleLogin = lazy(() =>
   import("./pages/Console").then((module) => ({ default: module.ConsoleLogin })),
 );
@@ -23,7 +22,6 @@ const AdminPaymentsPage = lazy(() => import("./pages/AdminPaymentsPage"));
 const ListSubscriptionPage = lazy(() => import("./pages/ListSubscriptionPage"));
 const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
-const MigrationPage = lazy(() => import("./pages/MigrationPage"));
 const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
 
 function RouteFallback() {
@@ -126,14 +124,9 @@ export default function App() {
             }
           />
 
-          {/* Campaign Detail Page */}
           <Route
             path="/campaigns/:campaignId"
-            element={
-              <ProtectedRoute>
-                <CampaignDetailPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/dashboard" replace />}
           />
 
           <Route
@@ -165,11 +158,7 @@ export default function App() {
 
           <Route
             path="/migrate"
-            element={
-              <ProtectedRoute>
-                <MigrationPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/dashboard" replace />}
           />
 
           {/* Admin Routes (Console) */}

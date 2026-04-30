@@ -24,6 +24,11 @@ import toast from "react-hot-toast";
 
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
 const GUEST_ONBOARDING_SELECTION_KEY = "guest_onboarding_selection";
+const FUNDING_BANK_DETAILS = {
+  bank: "Moniepoint",
+  accountNumber: "9049861561",
+  accountName: "Cratebux and Logistic",
+};
 const BANKS = [
   "Moniepoint",
   "Opay",
@@ -131,6 +136,11 @@ export default function WalletFundingPage() {
     toast.success("Copied to clipboard");
   };
 
+  const copyBankAccountNumber = () => {
+    navigator.clipboard.writeText(FUNDING_BANK_DETAILS.accountNumber);
+    toast.success("Account number copied");
+  };
+
   const handleStartManual = async () => {
     if (!baseAmount || Number(baseAmount) < 1000) {
       toast.error("Minimum funding amount is N1,000");
@@ -194,10 +204,6 @@ export default function WalletFundingPage() {
     if (tab === "wallet") return;
     if (tab === "admin") {
       navigate("/admin");
-      return;
-    }
-    if (tab === "migrate") {
-      navigate("/migrate");
       return;
     }
     navigate("/dashboard");
@@ -283,6 +289,16 @@ export default function WalletFundingPage() {
             </div>
           </div>
         </div>
+
+        <section className="space-y-4">
+          <h2 className="text-2xl font-black tracking-tight">
+            Fund via bank transfer
+          </h2>
+          <BankTransferCard onCopy={copyBankAccountNumber} />
+          <p className="text-sm font-medium text-zinc-500">
+            Transfer to this account to fund your JoinTheQ wallet.
+          </p>
+        </section>
 
         {selectedPlan && (
           <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -470,17 +486,17 @@ export default function WalletFundingPage() {
                   <div className="p-6 bg-zinc-50 rounded-[2rem] space-y-4">
                     <InfoRow
                       label="Bank"
-                      value="Moniepoint"
+                      value={FUNDING_BANK_DETAILS.bank}
                     />
                     <InfoRow
                       label="Account Number"
-                      value="9049861561"
-                      copyValue="9049861561"
+                      value={FUNDING_BANK_DETAILS.accountNumber}
+                      copyValue={FUNDING_BANK_DETAILS.accountNumber}
                       onCopy={copyToClipboard}
                     />
                     <InfoRow
                       label="Account Name"
-                      value="Cratebux and Logistics"
+                      value={FUNDING_BANK_DETAILS.accountName}
                     />
                   </div>
                 </div>
@@ -601,6 +617,55 @@ function FieldLabel({ text }: { text: string }) {
     <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-[0.24em] ml-1">
       {text}
     </label>
+  );
+}
+
+function BankTransferCard({ onCopy }: { onCopy: () => void }) {
+  return (
+    <div className="bg-white border border-black/5 rounded-[2rem] p-5 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)] max-w-xl">
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-1">
+            Bank
+          </div>
+          <div className="text-lg font-black text-zinc-900">
+            {FUNDING_BANK_DETAILS.bank}
+          </div>
+        </div>
+        <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <WalletIcon size={20} />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 border border-zinc-100 p-4">
+        <div className="min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-1">
+            Account Number
+          </div>
+          <div className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950 break-all">
+            {FUNDING_BANK_DETAILS.accountNumber}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onCopy}
+          aria-label="Copy account number"
+          title="Copy account number"
+          className="w-11 h-11 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 hover:bg-indigo-600 active:scale-95 transition-all"
+        >
+          <Copy size={18} />
+        </button>
+      </div>
+
+      <div className="mt-4">
+        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-1">
+          Account Name
+        </div>
+        <div className="text-sm sm:text-base font-bold text-zinc-500">
+          {FUNDING_BANK_DETAILS.accountName}
+        </div>
+      </div>
+    </div>
   );
 }
 

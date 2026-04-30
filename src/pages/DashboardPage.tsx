@@ -12,12 +12,9 @@ import {
     Sparkles,
     Trophy,
     Check,
-    Gift,
-    Rocket,
     Users,
     Activity,
     AlertCircle,
-    Calendar,
     Settings,
     Shield,
     User as UserIcon,
@@ -39,7 +36,6 @@ import {
     CheckCircle2,
     Copy,
     ExternalLink as LinkIcon,
-    Award,
     TrendingUp as ChartIcon,
     DollarSign,
     Users as TeamIcon,
@@ -47,7 +43,9 @@ import {
     Edit,
     BadgeDollarSign,
     Bell,
-    Repeat
+    Repeat,
+    ListTodo,
+    Upload
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
@@ -63,7 +61,6 @@ import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import CampusJoinCard from "../components/campus/CampusJoinCard";
-import CampusApplicationModal from "../components/campus/CampusApplicationModal";
 
 const MARKETPLACE_CATEGORIES = [
     "Streaming",
@@ -77,6 +74,23 @@ const MARKETPLACE_CATEGORIES = [
     "Utility",
     "Education",
 ] as const;
+
+const TASK_TYPES = [
+    "Social Follow",
+    "YouTube Subscribe",
+    "Watch a Video",
+    "Join Telegram",
+    "Share a Post",
+    "Visit a Website",
+    "Platform Sign Up",
+];
+
+const PROOF_TYPES = [
+    "Screenshot upload",
+    "Username input",
+    "Link submission",
+    "Short text proof",
+];
 
 function formatSignInProvider(provider?: string) {
     switch ((provider || "").toLowerCase()) {
@@ -130,7 +144,7 @@ export default function DashboardPage() {
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
     ];
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'wallet' | 'referrals' | 'history' | 'campaigns' | 'profile' | 'support' | 'notifications'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'tasks' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [enableAutoDebit, setEnableAutoDebit] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -160,7 +174,10 @@ export default function DashboardPage() {
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const subscriptions = useQuery(api.subscriptions.getActiveSubscriptions) || [];
     const activeSlots = useQuery(api.subscriptions.getSlotsByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
-    const campaigns = useQuery(api.campaigns.list) || [];
+    const availableTasks = useQuery(api.tasks.listAvailable, currentUser ? { userId: currentUser._id } : "skip") || [];
+    const taskStats = useQuery(api.tasks.getStats, currentUser ? { userId: currentUser._id } : "skip");
+    const createdTasks = useQuery(api.tasks.getMyCreatedTasks, currentUser ? { userId: currentUser._id } : "skip") || [];
+    const taskRate = useQuery(api.tasks.getTaskRate, {}) || 1;
     const devices = useQuery(api.devices.listByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const chatUsers = useQuery(api.users.list) || [];
     const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
@@ -206,9 +223,24 @@ export default function DashboardPage() {
         slots: [{ name: '', price: 0, capacity: 1, access_type: 'code_access', downloads_enabled: true }]
     });
     const [isCreatingListing, setIsCreatingListing] = useState(false);
-    const [campusModalOpen, setCampusModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+    const [taskTab, setTaskTab] = useState<'earn' | 'create'>('earn');
+    const [selectedTask, setSelectedTask] = useState<any | null>(null);
+    const [proofValue, setProofValue] = useState('');
+    const [proofFile, setProofFile] = useState<File | null>(null);
+    const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+    const [taskForm, setTaskForm] = useState({
+        title: '',
+        type: 'Social Follow',
+        description: '',
+        instructions: '',
+        externalUrl: '',
+        bootsReward: 10,
+        requiredCompletions: 10,
+        proofType: 'Screenshot upload',
+        deadline: '',
+    });
     const referralLink = currentUser
         ? `${window.location.origin}/r/${encodeURIComponent(currentUser.referral_code)}`
         : '';
@@ -219,6 +251,99 @@ export default function DashboardPage() {
 
     const handleFundSubmit = () => {
         navigate('/fund-wallet');
+    };
+
+    const taskTotalCost = Number(taskForm.bootsReward || 0) * Number(taskForm.requiredCompletions || 0) * taskRate;
+
+    const resetTaskProof = () => {
+        setProofValue('');
+        setProofFile(null);
+        setSelectedTask(null);
+    };
+
+    const handleSubmitTaskProof = async () => {
+        if (!currentUser?._id || !selectedTask) return;
+        if (!proofValue.trim() && !proofFile) {
+            toast.error("Please add proof before submitting.");
+            return;
+        }
+
+        setIsSubmittingTask(true);
+        try {
+            let screenshotUrl = undefined;
+            if (proofFile) {
+                const postUrl = await generateTaskUploadUrl();
+                const result = await fetch(postUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": proofFile.type },
+                    body: proofFile,
+                });
+                const { storageId } = await result.json();
+                screenshotUrl = storageId;
+            }
+
+            await submitTaskMutation({
+                taskId: selectedTask._id,
+                userId: currentUser._id,
+                proofType: selectedTask.proofType,
+                proofValue: proofValue || undefined,
+                screenshotUrl,
+            });
+
+            toast.success("Task submitted for review");
+            resetTaskProof();
+        } catch (error: any) {
+            toast.error(getUserFacingErrorMessage(error, "Failed to submit task"));
+        } finally {
+            setIsSubmittingTask(false);
+        }
+    };
+
+    const handleCreateTask = async (event: FormEvent) => {
+        event.preventDefault();
+        if (!currentUser?._id) return;
+        if (!taskForm.title.trim() || !taskForm.description.trim() || !taskForm.instructions.trim() || !taskForm.deadline) {
+            toast.error("Please complete all required fields.");
+            return;
+        }
+        if (taskTotalCost > (currentUser.wallet_balance || 0)) {
+            toast.error("Insufficient wallet balance. Please fund your wallet to create this task.");
+            return;
+        }
+
+        setIsSubmittingTask(true);
+        try {
+            await createTaskMutation({
+                creatorUserId: currentUser._id,
+                title: taskForm.title.trim(),
+                type: taskForm.type,
+                description: taskForm.description.trim(),
+                instructions: taskForm.instructions.trim(),
+                externalUrl: taskForm.externalUrl.trim() || undefined,
+                bootsReward: Number(taskForm.bootsReward),
+                requiredCompletions: Number(taskForm.requiredCompletions),
+                proofType: taskForm.proofType,
+                deadline: new Date(taskForm.deadline).getTime(),
+            });
+
+            toast.success("Task created and sent for admin approval");
+            setTaskForm({
+                title: '',
+                type: 'Social Follow',
+                description: '',
+                instructions: '',
+                externalUrl: '',
+                bootsReward: 10,
+                requiredCompletions: 10,
+                proofType: 'Screenshot upload',
+                deadline: '',
+            });
+            setTaskTab('earn');
+        } catch (error: any) {
+            toast.error(getUserFacingErrorMessage(error, "Failed to create task"));
+        } finally {
+            setIsSubmittingTask(false);
+        }
     };
 
     const messagesUserId = currentUser?.is_admin ? (selectedChatUserId || currentUser._id) : currentUser?._id;
@@ -235,10 +360,9 @@ export default function DashboardPage() {
     const leaveSlotMutation = useMutation(api.subscriptions.leaveSlot);
     const resetQScoresMutation = useMutation(api.users.resetQScores);
     const seedMarketplaceMutation = useMutation(api.subscriptions.seedMarketplace);
-    const participateInCampaignMutation = useMutation(api.campaigns.participate);
-    const createCampaignMutation = useMutation(api.campaigns.create);
-    const updateCampaignStatusMutation = useMutation(api.campaigns.updateStatus);
-    const seedCampaignsMutation = useMutation(api.campaigns.seedDummy);
+    const createTaskMutation = useMutation(api.tasks.createTask);
+    const submitTaskMutation = useMutation(api.tasks.submitTask);
+    const generateTaskUploadUrl = useMutation(api.tasks.generateUploadUrl);
     const makeAdminMutation = useMutation(api.users.makeAdmin);
     const removeAdminMutation = useMutation(api.users.removeAdmin);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
@@ -724,10 +848,6 @@ export default function DashboardPage() {
                     navigate('/admin');
                     return;
                 }
-                if (tab === 'migrate') {
-                    navigate('/migrate');
-                    return;
-                }
                 setActiveTab(tab as typeof activeTab);
             }}
             qScore={currentUser?.q_score || 0}
@@ -834,7 +954,7 @@ export default function DashboardPage() {
                     </motion.div>
                 )}
 
-                {/* ... Other tabs (Marketplace, Wallet, Referrals, Campaigns, Profile, Support) ... */}
+                {/* ... Other tabs (Marketplace, Wallet, Referrals, Profile, Support) ... */}
                 {activeTab === 'marketplace' && (
                     <motion.div key="marketplace" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
                         <div>
@@ -964,6 +1084,224 @@ export default function DashboardPage() {
                                     />
                                 ))}
                         </div>
+                    </motion.div>
+                )}
+
+                {activeTab === 'tasks' && (
+                    <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                        <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
+                                <p className="text-gray-500 mt-1">Complete tasks to earn boots, or promote your own task from your wallet.</p>
+                            </div>
+                        </header>
+
+                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                            <TaskStatCard label="Available Tasks" value={taskStats?.availableTasks ?? 0} icon={<ListTodo size={18} />} color="bg-blue-500" />
+                            <TaskStatCard label="Boots Earned" value={taskStats?.bootsEarned ?? 0} icon={<Sparkles size={18} />} color="bg-indigo-500" />
+                            <TaskStatCard label="Active Promotions" value={taskStats?.activePromotions ?? 0} icon={<Target size={18} />} color="bg-emerald-500" />
+                            <TaskStatCard label="Wallet Balance" value={fmtCurrency(currentUser?.wallet_balance || 0)} icon={<Wallet size={18} />} color="bg-zinc-900" />
+                        </div>
+
+                        <div className="inline-flex bg-white p-1.5 rounded-2xl border border-black/5 shadow-sm">
+                            {[
+                                { id: 'earn', label: 'Earn Boots' },
+                                { id: 'create', label: 'Create Task' },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setTaskTab(tab.id as 'earn' | 'create')}
+                                    className={`px-5 py-3 rounded-xl text-sm font-black transition-all ${taskTab === tab.id ? 'bg-zinc-900 text-white shadow-lg shadow-black/10' : 'text-zinc-500 hover:text-black'}`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {taskTab === 'earn' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {availableTasks.map((task: any) => (
+                                    <TaskCard key={task._id} task={task} onStart={() => setSelectedTask(task)} />
+                                ))}
+                                {availableTasks.length === 0 && (
+                                    <div className="lg:col-span-2 bg-white border border-dashed border-black/10 rounded-[3rem] p-12 text-center text-gray-400">
+                                        <ListTodo size={36} className="mx-auto mb-4 opacity-30" />
+                                        <p className="font-black text-zinc-500">No tasks available yet.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {taskTab === 'create' && (
+                            <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-8">
+                                <form onSubmit={handleCreateTask} className="bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-5">
+                                    <div>
+                                        <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-2">Promote Task</div>
+                                        <h2 className="text-2xl font-black tracking-tight">Create Task</h2>
+                                    </div>
+
+                                    <TaskInput label="Task title" value={taskForm.title} onChange={(value) => setTaskForm({ ...taskForm, title: value })} placeholder="Follow JoinTheQ on Instagram" />
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <TaskSelect label="Task type" value={taskForm.type} onChange={(value) => setTaskForm({ ...taskForm, type: value })} options={TASK_TYPES} />
+                                        <TaskSelect label="Proof required" value={taskForm.proofType} onChange={(value) => setTaskForm({ ...taskForm, proofType: value })} options={PROOF_TYPES} />
+                                    </div>
+
+                                    <TaskTextarea label="Task description" value={taskForm.description} onChange={(value) => setTaskForm({ ...taskForm, description: value })} placeholder="Short public description users will see." />
+                                    <TaskTextarea label="Task instruction" value={taskForm.instructions} onChange={(value) => setTaskForm({ ...taskForm, instructions: value })} placeholder="Explain exactly what users should do and what proof to submit." />
+                                    <TaskInput label="External task link" value={taskForm.externalUrl} onChange={(value) => setTaskForm({ ...taskForm, externalUrl: value })} placeholder="https://..." />
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <TaskNumber label="Boots reward" value={taskForm.bootsReward} onChange={(value) => setTaskForm({ ...taskForm, bootsReward: value })} />
+                                        <TaskNumber label="Completions needed" value={taskForm.requiredCompletions} onChange={(value) => setTaskForm({ ...taskForm, requiredCompletions: value })} />
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">Deadline</label>
+                                            <input
+                                                type="date"
+                                                value={taskForm.deadline}
+                                                onChange={(event) => setTaskForm({ ...taskForm, deadline: event.target.value })}
+                                                className="w-full bg-zinc-50 border border-black/5 rounded-2xl px-4 py-4 font-bold outline-none focus:ring-4 focus:ring-black/5"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmittingTask}
+                                        className="w-full py-5 bg-zinc-900 text-white rounded-[2rem] font-black shadow-xl shadow-black/10 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
+                                    >
+                                        {isSubmittingTask ? "Creating..." : "Create Task"}
+                                    </button>
+                                </form>
+
+                                <div className="space-y-6">
+                                    <div className="bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
+                                        <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-3">Cost Summary</div>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between text-sm font-bold text-zinc-500">
+                                                <span>Reward per completion</span>
+                                                <span>{taskForm.bootsReward || 0} BOOTS</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm font-bold text-zinc-500">
+                                                <span>Completions</span>
+                                                <span>{taskForm.requiredCompletions || 0}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm font-bold text-zinc-500">
+                                                <span>Platform task rate</span>
+                                                <span>{taskRate}x</span>
+                                            </div>
+                                            <div className="pt-5 border-t border-black/5 flex items-center justify-between">
+                                                <span className="font-black text-zinc-900">Total Cost</span>
+                                                <span className="text-3xl font-black text-zinc-900">{fmtCurrency(taskTotalCost || 0)}</span>
+                                            </div>
+                                        </div>
+                                        {taskTotalCost > (currentUser?.wallet_balance || 0) && (
+                                            <div className="mt-5 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">
+                                                Insufficient wallet balance. Please fund your wallet to create this task.
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-white rounded-[2.5rem] p-8 border border-black/5">
+                                        <h3 className="font-black mb-4">Your Created Tasks</h3>
+                                        <div className="space-y-3">
+                                            {createdTasks.slice(0, 4).map((task: any) => (
+                                                <div key={task._id} className="flex items-center justify-between gap-3 p-4 bg-zinc-50 rounded-2xl">
+                                                    <div className="min-w-0">
+                                                        <div className="font-black text-sm truncate">{task.title}</div>
+                                                        <div className="text-[10px] font-bold text-zinc-400 uppercase">{task.completedCount}/{task.requiredCompletions} completed</div>
+                                                    </div>
+                                                    <StatusBadge status={task.status} />
+                                                </div>
+                                            ))}
+                                            {createdTasks.length === 0 && (
+                                                <div className="text-sm text-gray-400 italic">You have not created any tasks yet.</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <AnimatePresence>
+                            {selectedTask && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+                                    onClick={resetTaskProof}
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.96, y: 16 }}
+                                        animate={{ scale: 1, y: 0 }}
+                                        exit={{ scale: 0.96, y: 16 }}
+                                        onClick={(event) => event.stopPropagation()}
+                                        className="bg-white rounded-[2.5rem] p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+                                    >
+                                        <div className="flex items-start justify-between gap-4 mb-6">
+                                            <div>
+                                                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-2">{selectedTask.type}</div>
+                                                <h2 className="text-2xl font-black tracking-tight">{selectedTask.title}</h2>
+                                                <p className="text-sm font-bold text-emerald-600 mt-2">+{selectedTask.bootsReward} BOOTS after admin approval</p>
+                                            </div>
+                                            <button onClick={resetTaskProof} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center hover:bg-zinc-200">
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-5">
+                                            <div className="p-5 bg-zinc-50 rounded-2xl">
+                                                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">Instructions</div>
+                                                <p className="text-sm font-medium text-zinc-700 leading-relaxed whitespace-pre-line">{selectedTask.instructions}</p>
+                                            </div>
+
+                                            {selectedTask.externalUrl && (
+                                                <a
+                                                    href={selectedTask.externalUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all"
+                                                >
+                                                    <LinkIcon size={18} /> Open External Link
+                                                </a>
+                                            )}
+
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">Proof</label>
+                                                <textarea
+                                                    value={proofValue}
+                                                    onChange={(event) => setProofValue(event.target.value)}
+                                                    placeholder="Paste username, link, or short text proof here."
+                                                    className="w-full min-h-28 bg-zinc-50 border border-black/5 rounded-2xl px-4 py-4 font-bold outline-none focus:ring-4 focus:ring-black/5"
+                                                />
+                                            </div>
+
+                                            <label className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-[2rem] py-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                                                <Upload size={24} className="text-zinc-300" />
+                                                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest text-center px-4">
+                                                    {proofFile ? proofFile.name : "Upload screenshot proof"}
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(event) => setProofFile(event.target.files?.[0] || null)}
+                                                />
+                                            </label>
+
+                                            <button
+                                                onClick={handleSubmitTaskProof}
+                                                disabled={isSubmittingTask}
+                                                className="w-full py-5 bg-zinc-900 text-white rounded-[2rem] font-black shadow-xl shadow-black/10 disabled:opacity-50"
+                                            >
+                                                {isSubmittingTask ? "Submitting..." : "Submit for Review"}
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
                 )}
 
@@ -1250,7 +1588,6 @@ export default function DashboardPage() {
                                                 </h4>
                                                 <ul className="text-sm text-gray-600 space-y-2">
                                                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Inviting friends</li>
-                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Participating in campaigns</li>
                                                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Completing campus ambassador missions</li>
                                                 </ul>
                                             </div>
@@ -1261,7 +1598,6 @@ export default function DashboardPage() {
                                                 </h4>
                                                 <ul className="text-sm text-gray-600 space-y-2">
                                                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Subscription discounts</li>
-                                                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Special campaigns</li>
                                                     <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Exclusive giveaways</li>
                                                 </ul>
                                             </div>
@@ -1463,26 +1799,6 @@ export default function DashboardPage() {
                                 </div>
                             </section>
                         )}
-                    </motion.div>
-                )}
-
-                {activeTab === 'campaigns' && (
-                    <motion.div key="campaigns" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        <div className="bg-white border border-dashed border-black/20 rounded-[3rem] p-16 text-center max-w-2xl mx-auto w-full">
-                            <div className="w-20 h-20 bg-zinc-100 text-zinc-700 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                                <Rocket size={40} />
-                            </div>
-                            <h2 className="text-2xl font-bold mb-4">Campaigns Coming Soon</h2>
-                            <p className="text-gray-500 max-w-md mx-auto leading-relaxed">
-                                Campaigns are temporarily unavailable on this dashboard. We are preparing rewards and events for you.
-                            </p>
-                        </div>
-
-                        <CampusApplicationModal
-                            isOpen={campusModalOpen}
-                            onClose={() => setCampusModalOpen(false)}
-                            userId={currentUser._id}
-                        />
                     </motion.div>
                 )}
 
@@ -1750,32 +2066,6 @@ export default function DashboardPage() {
                                 {(currentUser?.wallet_balance || 0) < 5000 ? "Minimum withdrawal \u20A65,000" : "Withdraw Funds"}
                             </button>
                         </div>
-
-                        {/* 6. Campaign Participation */}
-                        <section>
-                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 px-2">
-                                <Award size={20} className="text-purple-600" /> Active Campaigns
-                            </h3>
-                            <div className="space-y-4">
-                                {campaigns.filter(c => c.status === 'active').slice(0, 2).map((c: any) => (
-                                    <div key={c._id} className="bg-white p-6 rounded-[2.5rem] shadow-sm flex items-center justify-between group hover:shadow-md transition-shadow">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center">
-                                                <Target size={24} />
-                                            </div>
-                                            <div>
-                                                <div className="font-bold">{c.name}</div>
-                                                <div className="text-xs text-emerald-500 font-bold">Active Participation</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-xs font-bold text-gray-400 uppercase">Rank</div>
-                                            <div className="font-black text-xl">#7</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
 
                         {/* 7. Referral Tracking */}
                         <section>
@@ -2504,84 +2794,132 @@ export default function DashboardPage() {
     );
 }
 
-function CampaignCard({ campaign, onParticipate, userId }: { campaign: any, onParticipate: () => void, userId: Id<"users"> | undefined }) {
-    const participant = useQuery(api.campaigns.getParticipant, userId ? { campaign_id: campaign._id, user_id: userId } : "skip");
-    const isParticipating = !!participant;
-    const progressPercent = (campaign.current_progress / campaign.target_goal) * 100;
-    const daysRemaining = Math.max(0, Math.ceil((campaign.end_date - Date.now()) / (1000 * 60 * 60 * 24)));
+function TaskStatCard({ label, value, icon, color }: { label: string; value: ReactNode; icon: ReactNode; color: string }) {
+    return (
+        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-5 rounded-3xl">
+            <div className="flex items-center justify-between mb-5">
+                <div className={`w-10 h-10 ${color} text-white rounded-2xl flex items-center justify-center`}>
+                    {icon}
+                </div>
+            </div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{label}</div>
+            <div className="text-2xl font-black tracking-tight">{value}</div>
+        </div>
+    );
+}
 
-    const getIcon = () => {
-        switch (campaign.type) {
-            case 'jar': return <Gift size={24} className="text-amber-500" />;
-            case 'raffle': return <Activity size={24} className="text-blue-500" />;
-            case 'referral_storm': return <Zap size={24} className="text-purple-500" />;
-            case 'streak': return <Calendar size={24} className="text-emerald-500" />;
-            default: return <Rocket size={24} />;
-        }
-    };
+function StatusBadge({ status }: { status: string }) {
+    const styles = status === "Active" || status === "Available"
+        ? "bg-emerald-100 text-emerald-700"
+        : status === "Completed"
+            ? "bg-blue-100 text-blue-700"
+            : status === "Rejected"
+                ? "bg-red-100 text-red-600"
+                : "bg-amber-100 text-amber-700";
 
     return (
-        <motion.div whileHover={{ y: -5 }} className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden  flex flex-col group">
-            <div className="p-6 sm:p-8 pb-4 sm:pb-4 flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-[#fdfdfd] rounded-[2rem] flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors duration-500">
-                        {getIcon()}
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-xl">{campaign.name}</h3>
-                        <div className="text-xs font-bold text-black/30 bg-gray-100 px-2 py-0.5 rounded-md inline-block mt-1 uppercase tracking-tight">
-                            {campaign.type?.replace('_', ' ') || 'event'}
-                        </div>
-                    </div>
+        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${styles}`}>
+            {status}
+        </span>
+    );
+}
+
+function TaskCard({ task, onStart }: { task: any; onStart: () => void }) {
+    const submissionStatus = task.userSubmission?.status;
+    const displayStatus = submissionStatus || "Available";
+    const isDisabled = !!submissionStatus;
+
+    return (
+        <div className="bg-white rounded-[2.5rem] p-6 border border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col gap-5">
+            <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">{task.type}</div>
+                    <h3 className="text-xl font-black tracking-tight">{task.title}</h3>
                 </div>
-                <div className="text-right">
-                    <div className="text-sm font-bold text-black/20">Reward</div>
-                    <div className="text-xl font-bold flex items-center gap-1">
-                        <Sparkles size={16} className="text-blue-500" /> {campaign.reward_amount}
-                    </div>
+                <StatusBadge status={displayStatus} />
+            </div>
+
+            <p className="text-sm font-medium text-zinc-500 leading-relaxed">{task.description}</p>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div className="bg-zinc-50 rounded-2xl p-4">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Reward</div>
+                    <div className="font-black text-emerald-600">+{task.bootsReward} Boots</div>
+                </div>
+                <div className="bg-zinc-50 rounded-2xl p-4">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Available Until</div>
+                    <div className="font-black text-zinc-700">{new Date(task.deadline).toLocaleDateString()}</div>
                 </div>
             </div>
 
-            <div className="p-6 sm:p-8 pt-0 sm:pt-0 flex-1">
-                <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-                    {campaign.description}
-                </p>
+            <button
+                onClick={onStart}
+                disabled={isDisabled}
+                className="mt-auto w-full py-4 bg-zinc-900 text-white rounded-[2rem] font-black hover:scale-[1.01] active:scale-95 transition-all disabled:bg-zinc-100 disabled:text-zinc-400 disabled:hover:scale-100"
+            >
+                {isDisabled ? displayStatus : "Start Task"}
+            </button>
+        </div>
+    );
+}
 
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Event Progress</span>
-                        <span className="text-xs font-bold">{campaign.current_progress} / {campaign.target_goal}</span>
-                    </div>
-                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progressPercent}%` }}
-                            className="h-full bg-black"
-                        />
-                    </div>
-                </div>
+function TaskInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+    return (
+        <div>
+            <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">{label}</label>
+            <input
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                placeholder={placeholder}
+                className="w-full bg-zinc-50 border border-black/5 rounded-2xl px-4 py-4 font-bold outline-none focus:ring-4 focus:ring-black/5"
+            />
+        </div>
+    );
+}
 
-                <div className="flex items-center justify-between gap-6">
-                    <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-black/20" />
-                        <span className="text-sm font-bold text-gray-400">{daysRemaining} days left</span>
-                    </div>
+function TaskTextarea({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+    return (
+        <div>
+            <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">{label}</label>
+            <textarea
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                placeholder={placeholder}
+                className="w-full min-h-28 bg-zinc-50 border border-black/5 rounded-2xl px-4 py-4 font-bold outline-none focus:ring-4 focus:ring-black/5"
+            />
+        </div>
+    );
+}
 
-                    <button
-                        onClick={onParticipate}
-                        disabled={campaign.status !== 'active'}
-                        className={`flex-1 py-4 rounded-[2rem] font-bold text-sm transition-all ${isParticipating
-                            ? 'bg-zinc-100 text-zinc-600'
-                            : 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] hover:shadow-xl active:scale-95'
-                            }`}
-                    >
-                        {isParticipating ? (
-                            <span className="flex items-center justify-center gap-2"><Activity size={16} /> Manage Task</span>
-                        ) : 'Participate'}
-                    </button>
-                </div>
-            </div>
-        </motion.div>
+function TaskSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+    return (
+        <div>
+            <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">{label}</label>
+            <select
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                className="w-full bg-zinc-50 border border-black/5 rounded-2xl px-4 py-4 font-bold outline-none focus:ring-4 focus:ring-black/5"
+            >
+                {options.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                ))}
+            </select>
+        </div>
+    );
+}
+
+function TaskNumber({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+    return (
+        <div>
+            <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">{label}</label>
+            <input
+                type="number"
+                min={1}
+                value={value}
+                onChange={(event) => onChange(Number(event.target.value))}
+                className="w-full bg-zinc-50 border border-black/5 rounded-2xl px-4 py-4 font-bold outline-none focus:ring-4 focus:ring-black/5"
+            />
+        </div>
     );
 }
 
