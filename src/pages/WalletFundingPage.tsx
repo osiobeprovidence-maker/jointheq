@@ -131,13 +131,13 @@ export default function WalletFundingPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
   };
 
-  const copyBankAccountNumber = () => {
-    navigator.clipboard.writeText(FUNDING_BANK_DETAILS.accountNumber);
+  const copyBankAccountNumber = async () => {
+    await navigator.clipboard.writeText(FUNDING_BANK_DETAILS.accountNumber);
     toast.success("Account number copied");
   };
 
@@ -622,47 +622,40 @@ function FieldLabel({ text }: { text: string }) {
 
 function BankTransferCard({ onCopy }: { onCopy: () => void }) {
   return (
-    <div className="bg-white border border-black/5 rounded-[2rem] p-5 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)] max-w-xl">
-      <div className="flex items-center justify-between gap-4 mb-5">
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-1">
+    <div className="w-full max-w-2xl rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08)] sm:p-6">
+      <div className="flex items-center gap-3 pb-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-white">
+          <WalletIcon size={19} />
+        </div>
+        <div className="min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400">
             Bank
           </div>
-          <div className="text-lg font-black text-zinc-900">
+          <div className="truncate text-lg font-black text-zinc-900 sm:text-xl">
             {FUNDING_BANK_DETAILS.bank}
           </div>
         </div>
-        <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-          <WalletIcon size={20} />
-        </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-50 border border-zinc-100 p-4">
-        <div className="min-w-0">
-          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-1">
-            Account Number
+      <div className="border-t border-zinc-100 pt-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="break-all text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">
+              {FUNDING_BANK_DETAILS.accountNumber}
+            </div>
+            <div className="mt-2 text-sm font-semibold text-zinc-400 sm:text-base">
+              {FUNDING_BANK_DETAILS.accountName}
+            </div>
           </div>
-          <div className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-950 break-all">
-            {FUNDING_BANK_DETAILS.accountNumber}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onCopy}
-          aria-label="Copy account number"
-          title="Copy account number"
-          className="w-11 h-11 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 hover:bg-indigo-600 active:scale-95 transition-all"
-        >
-          <Copy size={18} />
-        </button>
-      </div>
-
-      <div className="mt-4">
-        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-1">
-          Account Name
-        </div>
-        <div className="text-sm sm:text-base font-bold text-zinc-500">
-          {FUNDING_BANK_DETAILS.accountName}
+          <button
+            type="button"
+            onClick={onCopy}
+            aria-label="Copy account number"
+            title="Copy account number"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-700 transition-all hover:bg-zinc-900 hover:text-white active:scale-95 sm:h-14 sm:w-14"
+          >
+            <Copy size={22} />
+          </button>
         </div>
       </div>
     </div>
@@ -699,5 +692,4 @@ function InfoRow({
     </div>
   );
 }
-
 
