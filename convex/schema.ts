@@ -772,4 +772,19 @@ export default defineSchema({
         results: v.optional(v.any()),
     }).index("by_admin", ["admin_id"])
         .index("by_status", ["status"]),
+    // Promotional Notifications (Admin Dashboard)
+    promotional_notifications: defineTable({
+        title: v.string(),
+        message: v.string(),
+        target: v.string(), // "all", "active_subscribers", "inactive_users"
+        type: v.string(), // "promotion", "alert", "update"
+        scheduled_for: v.optional(v.number()),
+        sent_at: v.optional(v.number()),
+        status: v.string(), // "draft", "scheduled", "sent", "cancelled"
+        created_by: v.id("users"),
+        created_at: v.number(),
+        scheduled_id: v.optional(v.string()), // ID for the scheduled task in Convex
+    }).index("by_status", ["status"])
+      .index("by_scheduled_for", ["scheduled_for"]),
 });
+

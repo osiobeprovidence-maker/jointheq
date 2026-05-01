@@ -397,6 +397,9 @@ export default function DashboardPage() {
     const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
 
+    const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+
+
     const handleProfileImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -706,8 +709,17 @@ export default function DashboardPage() {
     useEffect(() => {
         if (typeof window !== 'undefined' && 'Notification' in window) {
             setNotifPermission(Notification.permission);
+
+            const queuedPromptUserId = currentUser ? auth.getQueuedNotificationPromptUserId() : null;
+            if (Notification.permission === 'default' && currentUser && queuedPromptUserId === String(currentUser._id)) {
+                const timer = setTimeout(() => {
+                    setShowNotifPrompt(true);
+                    auth.markNotificationPromptHandled(currentUser as any);
+                }, 3000);
+                return () => clearTimeout(timer);
+            }
         }
-    }, []);
+    }, [currentUser]);
 
     useEffect(() => {
         if (notifications.length > 0 && notifPermission === 'granted') {
@@ -2436,6 +2448,54 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </AnimatePresence>
+
+                {/* Notification Permission Prompt Modal */}
+                <AnimatePresence>
+                    {showNotifPrompt && (
+                        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl border border-black/5"
+                            >
+                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[1.5rem] flex items-center justify-center mb-6">
+                                    <Bell size={32} />
+                                </div>
+                                <h2 className="text-2xl font-black mb-2 tracking-tight">Stay in the Circle</h2>
+                                <p className="text-gray-500 text-sm mb-8 leading-relaxed font-medium">
+                                    Turn on notifications to get instant alerts for your active slots, new messages, and payout updates.
+                                </p>
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={async () => {
+                                            setShowNotifPrompt(false);
+                                            if (currentUser) {
+                                                auth.markNotificationPromptHandled(currentUser as any);
+                                            }
+                                            await requestNotificationPermission();
+                                        }}
+                                        className="w-full py-4.5 bg-zinc-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 active:scale-95"
+                                    >
+                                        Enable Notifications
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowNotifPrompt(false);
+                                            if (currentUser) {
+                                                auth.markNotificationPromptHandled(currentUser as any);
+                                            }
+                                        }}
+                                        className="w-full py-4.5 bg-gray-50 text-gray-400 font-bold rounded-2xl hover:bg-gray-100 transition-colors active:scale-95"
+                                    >
+                                        Maybe Later
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
                 {/* Leave Confirmation Modal */}
                 <AnimatePresence>
                     {cancellingSlot && (
@@ -2498,17 +2558,17 @@ export default function DashboardPage() {
                                     {notifPermission === 'granted' && !pushStatus?.enabled && (
                                         <button
                                             onClick={requestNotificationPermission}
-                                            className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors"
+                                            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
                                         >
-                                            Enable Background Alerts
+                                            Complete Setup
                                         </button>
                                     )}
                                     {notifications.some((n: any) => !n.is_read) && (
                                         <button
                                             onClick={() => markAllAsReadMutation({ user_id: currentUser!._id })}
-                                            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
+                                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-bold hover:bg-gray-200 transition-colors"
                                         >
-                                            Mark All as Seen
+                                            Mark all read
                                         </button>
                                     )}
                                 </div>

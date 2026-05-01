@@ -61,7 +61,10 @@ import {
     Sparkles,
     UserPlus,
     Trash2,
-    ListTodo
+    ListTodo,
+    Send,
+    History,
+    Target
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -196,7 +199,16 @@ export default function AdminPanel() {
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
     // Notifications state
-    const [notifForm, setNotifForm] = useState({ title: "", message: "", type: "system", userId: "" });
+    const [notifForm, setNotifForm] = useState({
+        title: "",
+        message: "",
+        type: "promotion",
+        userId: "",
+        target: "all" as "all" | "active_subscribers" | "inactive_users",
+        scheduledAt: ""
+    });
+    const [notifTab, setNotifTab] = useState<"send" | "history">("send");
+    const [isSendingNotif, setIsSendingNotif] = useState(false);
 
     // Selected User state
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -383,6 +395,12 @@ export default function AdminPanel() {
 
     // Settings Mutation
     const updateSettingMut = useMutation(api.admin.updatePlatformSetting);
+
+    // Promotional Notifications
+    const createPromoNotif = useMutation(api.promotions.create);
+    const cancelPromoNotif = useMutation(api.promotions.cancel);
+    const resendPromoNotif = useMutation(api.promotions.resend);
+    const promoHistory = useQuery(api.promotions.list, currentUser?._id ? { adminId: currentUser._id } : "skip") ?? [];
 
     const handleSaveCampaign = async () => {
 
@@ -672,17 +690,35 @@ export default function AdminPanel() {
 
     const handleSendNotification = async () => {
         if (!notifForm.title || !notifForm.message) return toast.error("Title and message are required");
+        setIsSendingNotif(true);
         try {
-            await adminSendNotification({
-                title: notifForm.title,
-                message: notifForm.message,
-                type: notifForm.type as any,
-                userId: notifForm.userId ? notifForm.userId as Id<"users"> : undefined,
-                executorId: currentUser!._id,
-            });
-            toast.success("Notification sent successfully!");
-            setNotifForm({ title: "", message: "", type: "system", userId: "" });
-        } catch (e: any) { toast.error(e.message); }
+            if (notifForm.userId) {
+                await adminSendNotification({
+                    title: notifForm.title,
+                    message: notifForm.message,
+                    type: notifForm.type as any,
+                    userId: notifForm.userId as Id<"users">,
+                    executorId: currentUser!._id,
+                });
+                toast.success("Individual notification sent!");
+            } else {
+                await createPromoNotif({
+                    title: notifForm.title,
+                    message: notifForm.message,
+                    target: notifForm.target,
+                    type: "promotion",
+                    scheduled_for: notifForm.scheduledAt ? new Date(notifForm.scheduledAt).getTime() : undefined,
+                    adminId: currentUser!._id,
+                });
+                toast.success(notifForm.scheduledAt ? "Notification scheduled!" : "Broadcast queued!");
+            }
+            setNotifForm({ title: "", message: "", type: "promotion", userId: "", target: "all", scheduledAt: "" });
+            setNotifTab("history");
+        } catch (e: any) {
+            toast.error(e.message);
+        } finally {
+            setIsSendingNotif(false);
+        }
     };
 
     const handleApproveLeave = async (id: Id<"subscription_slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
@@ -3238,65 +3274,166 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â NOTIFICATIONS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ••• NOTIFICATIONS ••• */}
                         {activeTab === "notifications" && (
                             <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Send Notifications" sub="Broadcast updates to all users or a specific individual" />
-                                <div className="bg-white rounded-[2.5rem] p-8 border border-black/5 space-y-6 shadow-sm">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Audience</label>
-                                            <select
-                                                value={notifForm.userId}
-                                                onChange={e => setNotifForm({ ...notifForm, userId: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
-                                            >
-                                                <option value="">All Users (Broadcast)</option>
-                                                {allUsers.map((u: any) => (
-                                                    <option key={u._id} value={u._id}>{u.full_name} ({u.email})</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notification Type</label>
-                                            <select
-                                                value={notifForm.type}
-                                                onChange={e => setNotifForm({ ...notifForm, type: e.target.value })}
-                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
-                                            >
-                                                <option value="system">System Update</option>
-                                                <option value="promotion">Promotion / Deal</option>
-                                                <option value="alert">Critical Security Alert</option>
-                                                <option value="subscription">Subscription Update</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Title</label>
-                                        <input
-                                            placeholder="e.g. Netflix Price Update"
-                                            value={notifForm.title}
-                                            onChange={e => setNotifForm({ ...notifForm, title: e.target.value })}
-                                            className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Message Body</label>
-                                        <textarea
-                                            placeholder="Details of the update..."
-                                            value={notifForm.message}
-                                            onChange={e => setNotifForm({ ...notifForm, message: e.target.value })}
-                                            rows={4}
-                                            className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none"
-                                        />
-                                    </div>
-                                    <button
-                                        onClick={handleSendNotification}
-                                        className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-black text-base hover:scale-[1.01] transition-transform shadow-xl shadow-black/10 flex items-center justify-center gap-3"
-                                    >
-                                        <Zap size={20} className="text-yellow-400" /> Send Notification
-                                    </button>
+                                <SectionHeader title="Campaign Notifications" sub="Compose broadcasts, schedule campaigns, and view delivery history" />
+
+                                {/* Sub-tabs */}
+                                <div className="flex gap-2">
+                                    {(["send", "history"] as const).map(tab => (
+                                        <button key={tab} onClick={() => setNotifTab(tab)}
+                                            className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                                                notifTab === tab ? "bg-zinc-900 text-white shadow-lg" : "bg-white text-gray-400 border border-black/5 hover:border-black/10"
+                                            }`}>
+                                            {tab === "send" ? <Send size={13} /> : <History size={13} />}
+                                            {tab === "send" ? "Compose" : `History${promoHistory.length > 0 ? ` (${promoHistory.length})` : ""}`}
+                                        </button>
+                                    ))}
                                 </div>
+
+                                {notifTab === "send" ? (
+                                    <div className="bg-white rounded-[2.5rem] p-8 border border-black/5 space-y-6 shadow-sm">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Target Segment */}
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5"><Target size={11} /> Target Segment</label>
+                                                <select
+                                                    value={notifForm.userId ? "individual" : notifForm.target}
+                                                    onChange={e => {
+                                                        const v = e.target.value;
+                                                        if (v === "individual") setNotifForm({ ...notifForm, target: "all", userId: (allUsers[0]?._id as string) || "" });
+                                                        else setNotifForm({ ...notifForm, target: v as any, userId: "" });
+                                                    }}
+                                                    className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none cursor-pointer"
+                                                >
+                                                    <option value="all">All Registered Users</option>
+                                                    <option value="active_subscribers">Active Subscribers</option>
+                                                    <option value="inactive_users">Inactive Users</option>
+                                                    <option value="individual">Specific User</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Individual user OR Schedule */}
+                                            {notifForm.userId ? (
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Select User</label>
+                                                    <select
+                                                        value={notifForm.userId}
+                                                        onChange={e => setNotifForm({ ...notifForm, userId: e.target.value })}
+                                                        className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none"
+                                                    >
+                                                        {allUsers.map((u: any) => (
+                                                            <option key={u._id} value={u._id}>{u.full_name} ({u.email})</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5"><Clock size={11} /> Schedule (optional)</label>
+                                                    <input
+                                                        type="datetime-local"
+                                                        value={notifForm.scheduledAt}
+                                                        onChange={e => setNotifForm({ ...notifForm, scheduledAt: e.target.value })}
+                                                        className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notification Title</label>
+                                            <input
+                                                placeholder="e.g. New Streaming Deals!"
+                                                value={notifForm.title}
+                                                onChange={e => setNotifForm({ ...notifForm, title: e.target.value })}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Message Content</label>
+                                            <textarea
+                                                placeholder="Write something engaging and concise..."
+                                                value={notifForm.message}
+                                                onChange={e => setNotifForm({ ...notifForm, message: e.target.value })}
+                                                rows={4}
+                                                className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none"
+                                            />
+                                        </div>
+
+                                        <button
+                                            onClick={handleSendNotification}
+                                            disabled={isSendingNotif}
+                                            className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-black text-base hover:scale-[1.01] transition-transform shadow-xl shadow-black/10 flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100"
+                                        >
+                                            {isSendingNotif
+                                                ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                : <><Zap size={20} className="text-yellow-400" /> {notifForm.scheduledAt ? "Schedule Campaign" : "Blast Notification"}</>
+                                            }
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {promoHistory.length === 0 ? (
+                                            <div className="bg-white rounded-[2.5rem] p-20 text-center text-gray-400 border border-dashed border-black/10">
+                                                <History size={40} className="mx-auto mb-4 opacity-20" />
+                                                <p className="font-bold uppercase text-[10px] tracking-widest">No campaigns sent yet</p>
+                                            </div>
+                                        ) : promoHistory.map((n: any) => (
+                                            <div key={n._id} className="bg-white rounded-[2rem] border border-black/5 p-6 flex flex-col md:flex-row gap-6 items-start md:items-center hover:shadow-lg transition-all">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                                                    n.status === "sent" ? "bg-emerald-50 text-emerald-600" :
+                                                    n.status === "scheduled" ? "bg-blue-50 text-blue-600" :
+                                                    "bg-gray-100 text-gray-400"
+                                                }`}>
+                                                    {n.status === "sent" ? <CheckCircle2 size={22} /> : n.status === "scheduled" ? <Clock size={22} /> : <X size={22} />}
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                        <span className="font-black text-sm">{n.title}</span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                                                            n.status === "sent" ? "bg-emerald-100 text-emerald-700" :
+                                                            n.status === "scheduled" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                                                        }`}>{n.status}</span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 line-clamp-2 mb-2">{n.message}</p>
+                                                    <div className="flex items-center gap-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest flex-wrap">
+                                                        <span className="flex items-center gap-1"><Target size={9} /> {(n.target || "all").replace(/_/g, " ")}</span>
+                                                        {n.scheduled_at && <span className="flex items-center gap-1"><Clock size={9} /> {new Date(n.scheduled_at).toLocaleString()}</span>}
+                                                        {n.sent_at && <span className="flex items-center gap-1"><Send size={9} /> Sent {new Date(n.sent_at).toLocaleString()}</span>}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2 pl-4 border-l border-black/5 self-end md:self-center">
+                                                    {n.status === "scheduled" && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!confirm("Cancel this scheduled notification?")) return;
+                                                                try { await cancelPromoNotif({ promotionId: n._id, adminId: currentUser!._id }); toast.success("Cancelled!"); }
+                                                                catch (e: any) { toast.error(e.message); }
+                                                            }}
+                                                            className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors" title="Cancel">
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    )}
+                                                    {n.status === "sent" && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!confirm("Re-send this notification to the same audience?")) return;
+                                                                try { await resendPromoNotif({ promotionId: n._id, adminId: currentUser!._id }); toast.success("Re-sent!"); }
+                                                                catch (e: any) { toast.error(e.message); }
+                                                            }}
+                                                            className="p-3 bg-zinc-900 text-white rounded-xl hover:scale-110 transition-transform" title="Re-send">
+                                                            <RefreshCw size={15} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 
