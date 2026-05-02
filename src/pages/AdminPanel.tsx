@@ -3131,7 +3131,7 @@ export default function AdminPanel() {
                                     <div className="flex-1 min-w-[200px] space-y-2">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Status Filter</label>
                                         <div className="flex gap-2">
-                                            {["All", "Awaiting Review", "Approved", "Rejected"].map(s => (
+                                            {["All", "Awaiting Review", "Approved", "Rejected", "Failed"].map(s => (
                                                 <button key={s} onClick={() => setPaymentFilterStatus(s)} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${paymentFilterStatus === s ? 'bg-zinc-900 text-white shadow-lg' : 'bg-zinc-100 text-gray-400 hover:bg-zinc-200'}`}>{s}</button>
                                             ))}
                                         </div>

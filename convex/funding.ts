@@ -3,29 +3,38 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { createNotification } from "./notificationHelpers";
 
+const FUNDING_FEE = 20;
+const MIN_FUNDING_AMOUNT = 1000;
+const REVIEW_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+
+const isOverdue = (request: { status: string; created_at: number }) =>
+  request.status === "Awaiting Review" && Date.now() - request.created_at >= REVIEW_TIMEOUT_MS;
+
+const withComputedStatus = <T extends { status: string; created_at: number }>(request: T) => ({
+  ...request,
+  status: isOverdue(request) ? "Failed" : request.status,
+});
+
 export const generateUniqueAmount = mutation({
   args: {
     base_amount: v.number(),
   },
   handler: async (ctx, args) => {
-    let attempts = 0;
-    while (attempts < 50) {
-      // Generate random extra between 10 and 20 (rotating, not constant)
-      const randomExtra = Math.floor(Math.random() * (20 - 10 + 1)) + 10;
-      const uniqueAmount = args.base_amount + randomExtra;
-
-      // Check if any "Awaiting Review" request already has this unique amount
-      const existing = await ctx.db
-        .query("manual_funding_requests")
-        .withIndex("by_unique_amount", (q) =>
-          q.eq("unique_amount", uniqueAmount).eq("status", "Awaiting Review")
-        )
-        .first();
-
-      if (!existing) return uniqueAmount;
-      attempts++;
+    if (args.base_amount < MIN_FUNDING_AMOUNT) {
+      throw new Error("Minimum funding amount is N1,000");
     }
-    throw new Error("Unable to generate a unique amount. Please try again later.");
+
+    const uniqueAmount = args.base_amount + FUNDING_FEE;
+    const existing = await ctx.db
+      .query("manual_funding_requests")
+      .withIndex("by_unique_amount", (q) =>
+        q.eq("unique_amount", uniqueAmount).eq("status", "Awaiting Review")
+      )
+      .first();
+
+    if (!existing || isOverdue(existing)) return uniqueAmount;
+
+    throw new Error("A payment with this amount is already awaiting review. Please try a different amount.");
   },
 });
 
@@ -44,6 +53,14 @@ export const submitManualFunding = mutation({
     reference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.base_amount < MIN_FUNDING_AMOUNT) {
+      throw new Error("Minimum funding amount is N1,000");
+    }
+
+    if (args.unique_amount !== args.base_amount + FUNDING_FEE) {
+      throw new Error("Funding charge must be N20");
+    }
+
     const requestId = await ctx.db.insert("manual_funding_requests", {
       user_id: args.user_id,
       base_amount: args.base_amount,
@@ -72,14 +89,12 @@ export const getManualRequests = query({
     status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const requests = await ctx.db.query("manual_funding_requests").order("desc").collect();
+    const computedRequests = requests.map(withComputedStatus);
     if (args.status && args.status !== "All") {
-      return await ctx.db
-        .query("manual_funding_requests")
-        .withIndex("by_status", (q) => q.eq("status", args.status!))
-        .order("desc")
-        .collect();
+      return computedRequests.filter((request) => request.status === args.status);
     }
-    return await ctx.db.query("manual_funding_requests").order("desc").collect();
+    return computedRequests;
   },
 });
 
@@ -88,11 +103,12 @@ export const getUserManualRequests = query({
     user_id: v.id("users"),
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const requests = await ctx.db
       .query("manual_funding_requests")
       .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
       .order("desc")
       .collect();
+    return requests.map(withComputedStatus);
   },
 });
 
@@ -106,6 +122,15 @@ export const approveFunding = mutation({
     const request = await ctx.db.get(args.request_id);
     if (!request) throw new Error("Request not found");
     if (request.status !== "Awaiting Review") throw new Error("Request already processed");
+    if (isOverdue(request)) {
+      await ctx.db.patch(args.request_id, {
+        status: "Failed",
+        processed_at: Date.now(),
+        processed_by: args.admin_id,
+        admin_note: "Payment review window expired after 24 hours.",
+      });
+      throw new Error("Payment review window expired after 24 hours.");
+    }
 
     const user = await ctx.db.get(request.user_id);
     if (!user) throw new Error("User not found");

@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
 
-const STATUSES = ["All", "Awaiting Review", "Approved", "Rejected"];
+const STATUSES = ["All", "Awaiting Review", "Approved", "Rejected", "Failed"];
 
 export default function AdminPaymentsPage() {
   const user = auth.getCurrentUser();
@@ -229,7 +229,7 @@ export default function AdminPaymentsPage() {
                         <p className="text-[9px] sm:text-[10px] uppercase font-black text-zinc-300 tracking-widest">Status</p>
                         <div className={`inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-tight ${
                           req.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' :
-                          req.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                          req.status === 'Rejected' || req.status === 'Failed' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
                         }`}>
                           {req.status === 'Awaiting Review' && <Clock size={10} />}
                           {req.status}

@@ -254,7 +254,7 @@ export default function DashboardPage() {
     const [showWalletFundingDetails, setShowWalletFundingDetails] = useState(false);
 
     const handleFundSubmit = () => {
-        setShowWalletFundingDetails(true);
+        navigate("/fund-wallet");
     };
 
     const copyWalletAccountNumber = async () => {
