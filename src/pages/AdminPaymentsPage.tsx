@@ -102,7 +102,7 @@ export default function AdminPaymentsPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 overflow-x-hidden">
         {/* Stats / Summary - Scrollable on mobile */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-10 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible">
           <div className="bg-white p-5 sm:p-8 rounded-[2rem] border border-black/5 shadow-sm min-w-[140px] sm:min-w-0">
@@ -195,36 +195,36 @@ export default function AdminPaymentsPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     key={req._id}
-                    className="bg-white border border-black/5 rounded-[2.5rem] p-4 sm:p-6 md:p-8 hover:shadow-xl hover:shadow-black/[0.02] transition-all flex flex-col gap-6 md:gap-8 lg:flex-row lg:gap-10 items-start lg:items-center shadow-sm shadow-black/[0.01] relative overflow-hidden"
+                    className="bg-white border border-black/5 rounded-[1.75rem] sm:rounded-[2.5rem] p-4 sm:p-6 md:p-8 hover:shadow-xl hover:shadow-black/[0.02] transition-all flex flex-col gap-5 md:gap-8 lg:flex-row lg:gap-10 items-start lg:items-center shadow-sm shadow-black/[0.01] relative overflow-hidden"
                   >
                     {req.status === 'Awaiting Review' && (
                        <div className="absolute top-0 left-0 w-2 h-full bg-amber-400"></div>
                     )}
 
-                    <div className="flex items-center gap-4 sm:gap-6 w-full lg:min-w-[350px]">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-6 w-full lg:min-w-[350px]">
                       <div className="space-y-1 text-center flex-shrink-0">
-                         <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-[1.5rem] bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg sm:text-xl">
+                         <div className="w-11 h-11 sm:w-16 sm:h-16 rounded-[1.25rem] sm:rounded-[1.5rem] bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg sm:text-xl">
                             ₦
                          </div>
                          <div className="text-[8px] font-black text-zinc-400 uppercase tracking-tighter hidden sm:block">Verified ID</div>
                       </div>
                       <div className="space-y-1.5 flex-1 min-w-0">
-                        <div className="flex items-baseline gap-1 sm:gap-2 flex-wrap">
-                           <h3 className="font-black text-lg sm:text-2xl tracking-tight text-indigo-600">₦{req.unique_amount.toLocaleString()}</h3>
+                        <div className="flex min-w-0 items-baseline gap-1 sm:gap-2 flex-wrap">
+                           <h3 className="break-all font-black text-base tracking-tight text-indigo-600 sm:text-2xl">₦{req.unique_amount.toLocaleString()}</h3>
                            <span className="text-[10px] sm:text-xs font-bold text-zinc-400"> (Credits ₦{req.base_amount.toLocaleString()})</span>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                          <span className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-zinc-600 uppercase tracking-widest">
+                          <span className="flex min-w-0 items-center gap-2 text-[10px] sm:text-xs font-bold text-zinc-600 uppercase tracking-widest break-all">
                             <User size={10} className="text-zinc-300" /> {req.sender_name}
                           </span>
-                          <span className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                          <span className="flex min-w-0 items-center gap-2 text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest break-all">
                             <Building2 size={10} className="text-zinc-200" /> {req.bank_name || "NOT SPECIFIED"}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-8 w-full lg:w-auto">
+                    <div className="flex-1 grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-8 w-full min-w-0 lg:w-auto">
                       <div className="space-y-1.5">
                         <p className="text-[9px] sm:text-[10px] uppercase font-black text-zinc-300 tracking-widest">Status</p>
                         <div className={`inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-tight ${
@@ -258,7 +258,7 @@ export default function AdminPaymentsPage() {
 
                     <div className="lg:w-80 space-y-3 sm:space-y-4 w-full h-full flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-black/5 pt-4 lg:pt-0 lg:pl-6 sm:pl-10">
                       {req.status === 'Awaiting Review' ? (
-                        <div className="flex gap-2 sm:gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
                           <button
                             disabled={!!processingId}
                             onClick={() => handleReject(req._id)}
