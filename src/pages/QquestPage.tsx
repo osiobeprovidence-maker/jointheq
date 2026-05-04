@@ -305,7 +305,7 @@ function QuestCard({ quest, onOpen }: { quest: Quest; onOpen: (quest: Quest) => 
           <p className={`mt-2 bg-gradient-to-r ${quest.accent} bg-clip-text text-xl font-black text-transparent`}>
             Earn ₦{reward.toLocaleString()}
           </p>
-          <p className="mt-1 text-xs font-black uppercase tracking-[.12em] text-zinc-400">{quest.questType || "Qquest"} · {quest.location || "Nigeria"}</p>
+          <p className="mt-1 text-xs font-black uppercase tracking-[.12em] text-zinc-400">{quest.questType || "Quest"} · {quest.location || "Nigeria"}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs font-bold text-zinc-500">
@@ -1636,7 +1636,7 @@ export default function QquestPage() {
             <div className="relative grid min-h-[360px] items-end p-6 sm:p-8 lg:grid-cols-[1.1fr_.9fr] lg:p-10">
               <div className="max-w-2xl pb-2">
                 <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-[.18em] text-white backdrop-blur-md">
-                  Admin Featured
+                  Featured
                 </span>
                 <h2 className="mt-5 max-w-xl text-4xl font-black leading-[1.02] tracking-tight text-white sm:text-6xl">
                   {adminFeaturedQuest.title}
