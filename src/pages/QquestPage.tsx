@@ -78,7 +78,7 @@ interface Quest {
   source?: "admin-featured" | "created" | "seed";
 }
 
-const walletBalance = 42850;
+const walletBalance = 0;
 const minimumWithdrawal = 1000;
 const withdrawalFee = 20;
 const minimumCampaignBudget = 7500;
@@ -1022,7 +1022,7 @@ function ConnectAccountModal({
   const [bankName, setBankName] = useState(banks[0]);
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [qic, setQic] = useState("QIC-42850");
+  const [qic, setQic] = useState("");
   const [status, setStatus] = useState<ConnectStatus>("idle");
 
   const verifyAccount = () => {
@@ -1202,7 +1202,7 @@ function DashboardHome({ onCreate }: { onCreate: () => void }) {
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard label="Wallet" value={`₦${walletBalance.toLocaleString()}`} detail="Available balance" />
-        <StatCard label="Quest earnings" value="₦7,450" detail="This month" />
+        <StatCard label="Quest earnings" value="₦0" detail="This month" />
         <StatCard label="Active slots" value="4" detail="2 renew this week" />
       </section>
 
