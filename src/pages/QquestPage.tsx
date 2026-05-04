@@ -1027,20 +1027,25 @@ function ConnectAccountModal({
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [status, setStatus] = useState<ConnectStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const verifyAccount = () => {
     if (accountNumber.replace(/\D/g, "").length < 10 || !accountName.trim()) {
+      setErrorMessage("Enter a 10-digit account number and account name.");
       setStatus("error");
       return;
     }
 
+    setErrorMessage("");
     setStatus("loading");
     window.setTimeout(() => {
       Promise.resolve(onConnected({ bankName, accountNumber, accountName, qic }))
         .then(() => {
           setStatus("success");
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error("Failed to save Quest withdrawal account", error);
+          setErrorMessage("Could not save the account right now. Please try again.");
           setStatus("error");
         });
     }, 850);
@@ -1080,7 +1085,7 @@ function ConnectAccountModal({
 
           {status === "loading" ? <div className="rounded-2xl bg-white/8 p-4 text-sm font-black text-white/70">Verifying your account...</div> : null}
           {status === "success" ? <div className="rounded-2xl bg-emerald-400/15 p-4 text-sm font-black text-emerald-200">Account Connected Successfully</div> : null}
-          {status === "error" ? <div className="rounded-2xl bg-red-400/15 p-4 text-sm font-black text-red-200">Invalid details. Check your account number and account name.</div> : null}
+          {status === "error" ? <div className="rounded-2xl bg-red-400/15 p-4 text-sm font-black text-red-200">{errorMessage}</div> : null}
 
           <button onClick={verifyAccount} disabled={status === "loading"} className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01] disabled:opacity-60">
             Verify & Connect
