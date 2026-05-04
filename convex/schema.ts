@@ -265,6 +265,9 @@ export default defineSchema({
     tasks: defineTable({
         creatorUserId: v.id("users"),
         title: v.string(),
+        platform: v.optional(v.string()),
+        targetLocation: v.optional(v.string()),
+        taskType: v.optional(v.string()),
         type: v.string(),
         description: v.string(),
         instructions: v.string(),
@@ -783,7 +786,7 @@ export default defineSchema({
         status: v.string(), // "draft", "scheduled", "sent", "cancelled"
         created_by: v.id("users"),
         created_at: v.number(),
-        scheduled_id: v.optional(v.string()), // ID for the scheduled task in Convex
+        scheduled_id: v.optional(v.id("_scheduled_functions")), // ID for the scheduled task in Convex
     }).index("by_status", ["status"])
       .index("by_scheduled_for", ["scheduled_for"]),
 });

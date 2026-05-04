@@ -7,6 +7,9 @@ const PLATFORM_TASK_RATE = 1;
 
 const taskFields = {
   title: v.string(),
+  platform: v.optional(v.string()),
+  targetLocation: v.optional(v.string()),
+  taskType: v.optional(v.string()),
   type: v.string(),
   description: v.string(),
   instructions: v.string(),
@@ -99,6 +102,22 @@ export const getMyCreatedTasks = query({
   },
 });
 
+export const getMySubmissions = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const submissions = await ctx.db
+      .query("task_submissions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+
+    return await Promise.all(submissions.map(async (submission) => ({
+      ...submission,
+      task: await ctx.db.get(submission.taskId),
+    })));
+  },
+});
+
 export const createTask = mutation({
   args: {
     creatorUserId: v.id("users"),
@@ -133,6 +152,9 @@ export const createTask = mutation({
     const taskId = await ctx.db.insert("tasks", {
       creatorUserId: args.creatorUserId,
       title: args.title,
+      platform: args.platform,
+      targetLocation: args.targetLocation,
+      taskType: args.taskType,
       type: args.type,
       description: args.description,
       instructions: args.instructions,
@@ -159,6 +181,37 @@ export const createTask = mutation({
   },
 });
 
+export const startTask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+    if (task.status !== "Active") throw new Error("This task is not available");
+    if (task.deadline < Date.now()) throw new Error("This task has expired");
+    if (task.completedCount >= task.requiredCompletions) throw new Error("This task is already complete");
+    if (task.creatorUserId === args.userId) throw new Error("You cannot complete your own promoted task");
+
+    const existing = await ctx.db
+      .query("task_submissions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("taskId"), args.taskId))
+      .first();
+
+    if (existing) return existing._id;
+
+    return await ctx.db.insert("task_submissions", {
+      taskId: args.taskId,
+      userId: args.userId,
+      proofType: task.proofType,
+      status: "Started",
+      submittedAt: Date.now(),
+    });
+  },
+});
+
 export const submitTask = mutation({
   args: {
     taskId: v.id("tasks"),
@@ -181,17 +234,25 @@ export const submitTask = mutation({
       .filter((q) => q.eq(q.field("taskId"), args.taskId))
       .first();
 
-    if (existing) throw new Error("You have already submitted this task");
+    if (existing && existing.status !== "Started") throw new Error("You have already submitted this task");
 
-    const submissionId = await ctx.db.insert("task_submissions", {
-      taskId: args.taskId,
-      userId: args.userId,
+    const submissionPatch = {
       proofType: args.proofType,
       proofValue: args.proofValue,
       screenshotUrl: args.screenshotUrl,
       status: "Pending Review",
       submittedAt: Date.now(),
+    };
+
+    const submissionId = existing?._id ?? await ctx.db.insert("task_submissions", {
+      taskId: args.taskId,
+      userId: args.userId,
+      ...submissionPatch,
     });
+
+    if (existing) {
+      await ctx.db.patch(existing._id, submissionPatch);
+    }
 
     await createNotification(ctx, {
       userId: args.userId,
@@ -207,14 +268,31 @@ export const submitTask = mutation({
 export const adminListTasks = query({
   args: { status: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    if (args.status && args.status !== "All") {
-      return await ctx.db
+    const tasks = args.status && args.status !== "All"
+      ? await ctx.db
         .query("tasks")
         .withIndex("by_status", (q) => q.eq("status", args.status!))
         .order("desc")
+        .collect()
+      : await ctx.db.query("tasks").order("desc").collect();
+
+    return await Promise.all(tasks.map(async (task) => {
+      const submissions = await ctx.db
+        .query("task_submissions")
+        .withIndex("by_task", (q) => q.eq("taskId", task._id))
         .collect();
-    }
-    return await ctx.db.query("tasks").order("desc").collect();
+
+      return {
+        ...task,
+        creator: await ctx.db.get(task.creatorUserId),
+        submissionStats: {
+          completed: submissions.filter((submission) => submission.status === "Completed").length,
+          pending: submissions.filter((submission) => submission.status === "Pending Review").length,
+          rejected: submissions.filter((submission) => submission.status === "Rejected").length,
+          started: submissions.filter((submission) => submission.status === "Started").length,
+        },
+      };
+    }));
   },
 });
 
@@ -287,6 +365,35 @@ export const rejectTask = mutation({
       userId: task.creatorUserId,
       title: "Task rejected",
       message: args.adminNote ? `Your task was rejected: ${args.adminNote}` : "Your task was rejected by admin review.",
+      type: "task",
+    });
+
+    return { success: true };
+  },
+});
+
+export const pauseTask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    adminId: v.id("users"),
+    adminNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminId);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+
+    await ctx.db.patch(args.taskId, {
+      status: "Paused",
+      reviewedAt: Date.now(),
+      reviewedBy: args.adminId,
+      adminNote: args.adminNote,
+    });
+
+    await createNotification(ctx, {
+      userId: task.creatorUserId,
+      title: "Task paused",
+      message: args.adminNote ? `Your task was paused: ${args.adminNote}` : "Your task was paused by admin review.",
       type: "task",
     });
 

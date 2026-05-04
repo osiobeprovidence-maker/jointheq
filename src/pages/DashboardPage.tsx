@@ -76,13 +76,13 @@ const MARKETPLACE_CATEGORIES = [
 ] as const;
 
 const TASK_TYPES = [
-    "Social Follow",
-    "YouTube Subscribe",
-    "Watch a Video",
-    "Join Telegram",
-    "Share a Post",
-    "Visit a Website",
-    "Platform Sign Up",
+    "Follow",
+    "Like",
+    "Comment",
+    "Repost",
+    "Join Group",
+    "Watch Video",
+    "Custom",
 ];
 
 const PROOF_TYPES = [
@@ -91,6 +91,9 @@ const PROOF_TYPES = [
     "Link submission",
     "Short text proof",
 ];
+
+const TASK_PLATFORMS = ["Instagram", "TikTok", "X", "Facebook", "YouTube", "WhatsApp", "Other"];
+const MY_TASK_FILTERS = ["Active", "Pending", "Approved", "Rejected"] as const;
 
 const WALLET_FUNDING_BANK_DETAILS = {
     bank: "Moniepoint",
@@ -183,6 +186,7 @@ export default function DashboardPage() {
     const availableTasks = useQuery(api.tasks.listAvailable, currentUser ? { userId: currentUser._id } : "skip") || [];
     const taskStats = useQuery(api.tasks.getStats, currentUser ? { userId: currentUser._id } : "skip");
     const createdTasks = useQuery(api.tasks.getMyCreatedTasks, currentUser ? { userId: currentUser._id } : "skip") || [];
+    const myTaskSubmissions = useQuery(api.tasks.getMySubmissions, currentUser ? { userId: currentUser._id } : "skip") || [];
     const taskRate = useQuery(api.tasks.getTaskRate, {}) || 1;
     const devices = useQuery(api.devices.listByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const chatUsers = useQuery(api.users.list) || [];
@@ -230,14 +234,17 @@ export default function DashboardPage() {
     const [isCreatingListing, setIsCreatingListing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
-    const [taskTab, setTaskTab] = useState<'earn' | 'create'>('earn');
+    const [taskTab, setTaskTab] = useState<'available' | 'my' | 'create'>('available');
+    const [myTaskFilter, setMyTaskFilter] = useState<typeof MY_TASK_FILTERS[number]>('Active');
     const [selectedTask, setSelectedTask] = useState<any | null>(null);
     const [proofValue, setProofValue] = useState('');
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [isSubmittingTask, setIsSubmittingTask] = useState(false);
     const [taskForm, setTaskForm] = useState({
         title: '',
-        type: 'Social Follow',
+        platform: 'Instagram',
+        targetLocation: 'Nigeria',
+        type: 'Follow',
         description: '',
         instructions: '',
         externalUrl: '',
@@ -270,10 +277,37 @@ export default function DashboardPage() {
         setSelectedTask(null);
     };
 
+    const handleStartSelectedTask = async () => {
+        if (!currentUser?._id || !selectedTask?._id) return;
+        try {
+            await startTaskMutation({
+                taskId: selectedTask._id,
+                userId: currentUser._id,
+            });
+            setSelectedTask({
+                ...selectedTask,
+                userSubmission: {
+                    ...(selectedTask.userSubmission || {}),
+                    status: "Started",
+                },
+            });
+            toast.success("Task started");
+            if (selectedTask.externalUrl) {
+                window.open(selectedTask.externalUrl, "_blank", "noopener,noreferrer");
+            }
+        } catch (error: any) {
+            toast.error(getUserFacingErrorMessage(error, "Failed to start task"));
+        }
+    };
+
     const handleSubmitTaskProof = async () => {
         if (!currentUser?._id || !selectedTask) return;
         if (!proofValue.trim() && !proofFile) {
             toast.error("Please add proof before submitting.");
+            return;
+        }
+        if (proofFile && !proofFile.type.startsWith("image/")) {
+            toast.error("Please upload an image screenshot as proof.");
             return;
         }
 
@@ -325,6 +359,9 @@ export default function DashboardPage() {
             await createTaskMutation({
                 creatorUserId: currentUser._id,
                 title: taskForm.title.trim(),
+                platform: taskForm.platform,
+                targetLocation: taskForm.targetLocation.trim() || undefined,
+                taskType: taskForm.type,
                 type: taskForm.type,
                 description: taskForm.description.trim(),
                 instructions: taskForm.instructions.trim(),
@@ -338,7 +375,9 @@ export default function DashboardPage() {
             toast.success("Task created and sent for admin approval");
             setTaskForm({
                 title: '',
-                type: 'Social Follow',
+                platform: 'Instagram',
+                targetLocation: 'Nigeria',
+                type: 'Follow',
                 description: '',
                 instructions: '',
                 externalUrl: '',
@@ -347,7 +386,7 @@ export default function DashboardPage() {
                 proofType: 'Screenshot upload',
                 deadline: '',
             });
-            setTaskTab('earn');
+            setTaskTab('my');
         } catch (error: any) {
             toast.error(getUserFacingErrorMessage(error, "Failed to create task"));
         } finally {
@@ -370,6 +409,7 @@ export default function DashboardPage() {
     const resetQScoresMutation = useMutation(api.users.resetQScores);
     const seedMarketplaceMutation = useMutation(api.subscriptions.seedMarketplace);
     const createTaskMutation = useMutation(api.tasks.createTask);
+    const startTaskMutation = useMutation(api.tasks.startTask);
     const submitTaskMutation = useMutation(api.tasks.submitTask);
     const generateTaskUploadUrl = useMutation(api.tasks.generateUploadUrl);
     const makeAdminMutation = useMutation(api.users.makeAdmin);
@@ -1111,72 +1151,105 @@ export default function DashboardPage() {
                 )}
 
                 {activeTab === 'tasks' && (
-                    <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-                                <p className="text-gray-500 mt-1">Complete tasks to earn boots, or promote your own task from your wallet.</p>
+                    <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mx-auto max-w-3xl space-y-5">
+                        <header className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Available Tasks</h1>
+                                <p className="mt-1 text-sm font-semibold text-gray-500">Complete tasks to earn Boots</p>
                             </div>
+                            <button
+                                onClick={() => setTaskTab('my')}
+                                className="shrink-0 rounded-2xl bg-white px-4 py-3 text-xs font-black text-zinc-900 shadow-[0_4px_18px_rgba(15,23,42,0.06)] transition-all active:scale-95"
+                            >
+                                My Tasks
+                            </button>
                         </header>
 
-                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                            <TaskStatCard label="Available Tasks" value={taskStats?.availableTasks ?? 0} icon={<ListTodo size={18} />} color="bg-blue-500" />
-                            <TaskStatCard label="Boots Earned" value={taskStats?.bootsEarned ?? 0} icon={<Sparkles size={18} />} color="bg-indigo-500" />
-                            <TaskStatCard label="Active Promotions" value={taskStats?.activePromotions ?? 0} icon={<Target size={18} />} color="bg-emerald-500" />
-                            <TaskStatCard label="Wallet Balance" value={fmtCurrency(currentUser?.wallet_balance || 0)} icon={<Wallet size={18} />} color="bg-zinc-900" />
-                        </div>
-
-                        <div className="inline-flex bg-white p-1.5 rounded-2xl border border-black/5 shadow-sm">
+                        <div className="flex gap-2 overflow-x-auto pb-1">
                             {[
-                                { id: 'earn', label: 'Earn Boots' },
+                                { id: 'available', label: 'Task' },
+                                { id: 'my', label: 'My Tasks' },
                                 { id: 'create', label: 'Create Task' },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setTaskTab(tab.id as 'earn' | 'create')}
-                                    className={`px-5 py-3 rounded-xl text-sm font-black transition-all ${taskTab === tab.id ? 'bg-zinc-900 text-white shadow-lg shadow-black/10' : 'text-zinc-500 hover:text-black'}`}
+                                    onClick={() => setTaskTab(tab.id as 'available' | 'my' | 'create')}
+                                    className={`shrink-0 rounded-2xl px-4 py-2.5 text-xs font-black transition-all ${taskTab === tab.id ? 'bg-zinc-900 text-white shadow-lg shadow-black/10' : 'bg-white text-zinc-500 shadow-sm'}`}
                                 >
                                     {tab.label}
                                 </button>
                             ))}
                         </div>
 
-                        {taskTab === 'earn' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {taskTab === 'available' && (
+                            <div className="space-y-3">
                                 {availableTasks.map((task: any) => (
-                                    <TaskCard key={task._id} task={task} onStart={() => setSelectedTask(task)} />
+                                    <TaskListCard key={task._id} task={task} onOpen={() => setSelectedTask(task)} />
                                 ))}
                                 {availableTasks.length === 0 && (
-                                    <div className="lg:col-span-2 bg-white border border-dashed border-black/10 rounded-[3rem] p-12 text-center text-gray-400">
+                                    <div className="rounded-[2rem] border border-dashed border-black/10 bg-white p-10 text-center text-gray-400">
                                         <ListTodo size={36} className="mx-auto mb-4 opacity-30" />
-                                        <p className="font-black text-zinc-500">No tasks available yet.</p>
+                                        <p className="font-black text-zinc-700">No tasks available</p>
+                                        <p className="mt-1 text-sm font-semibold">New earning tasks will appear here soon.</p>
                                     </div>
                                 )}
                             </div>
                         )}
 
+                        {taskTab === 'my' && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-4 gap-2 rounded-2xl bg-white p-1.5 shadow-sm">
+                                    {MY_TASK_FILTERS.map((filter) => (
+                                        <button
+                                            key={filter}
+                                            onClick={() => setMyTaskFilter(filter)}
+                                            className={`rounded-xl px-2 py-2.5 text-[10px] font-black transition-all sm:text-xs ${myTaskFilter === filter ? 'bg-zinc-900 text-white' : 'text-zinc-400'}`}
+                                        >
+                                            {filter}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="space-y-3">
+                                    {myTaskSubmissions
+                                        .filter((submission: any) => getMyTaskBucket(submission.status) === myTaskFilter)
+                                        .map((submission: any) => (
+                                            <MyTaskCard key={submission._id} submission={submission} />
+                                        ))}
+                                    {myTaskSubmissions.filter((submission: any) => getMyTaskBucket(submission.status) === myTaskFilter).length === 0 && (
+                                        <div className="rounded-[2rem] border border-dashed border-black/10 bg-white p-10 text-center text-gray-400">
+                                            <CheckCircle2 size={36} className="mx-auto mb-4 opacity-30" />
+                                            <p className="font-black text-zinc-700">No tasks yet</p>
+                                            <p className="mt-1 text-sm font-semibold">Tasks you start or submit will appear here.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {taskTab === 'create' && (
-                            <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-8">
-                                <form onSubmit={handleCreateTask} className="bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] space-y-5">
+                            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+                                <form onSubmit={handleCreateTask} className="space-y-4 rounded-[2rem] border border-black/5 bg-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] sm:p-8">
                                     <div>
-                                        <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-2">Promote Task</div>
                                         <h2 className="text-2xl font-black tracking-tight">Create Task</h2>
+                                        <p className="mt-1 text-sm font-semibold text-zinc-500">Promotional tasks are paid from wallet balance.</p>
                                     </div>
 
-                                    <TaskInput label="Task title" value={taskForm.title} onChange={(value) => setTaskForm({ ...taskForm, title: value })} placeholder="Follow JoinTheQ on Instagram" />
+                                    <TaskInput label="Task title" value={taskForm.title} onChange={(value) => setTaskForm({ ...taskForm, title: value })} placeholder="Instagram Followers | Nigeria" />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <TaskSelect label="Platform" value={taskForm.platform} onChange={(value) => setTaskForm({ ...taskForm, platform: value })} options={TASK_PLATFORMS} />
+                                        <TaskInput label="Country / target location" value={taskForm.targetLocation} onChange={(value) => setTaskForm({ ...taskForm, targetLocation: value })} placeholder="Nigeria" />
                                         <TaskSelect label="Task type" value={taskForm.type} onChange={(value) => setTaskForm({ ...taskForm, type: value })} options={TASK_TYPES} />
                                         <TaskSelect label="Proof required" value={taskForm.proofType} onChange={(value) => setTaskForm({ ...taskForm, proofType: value })} options={PROOF_TYPES} />
                                     </div>
 
+                                    <TaskInput label="Task link" value={taskForm.externalUrl} onChange={(value) => setTaskForm({ ...taskForm, externalUrl: value })} placeholder="https://..." />
                                     <TaskTextarea label="Task description" value={taskForm.description} onChange={(value) => setTaskForm({ ...taskForm, description: value })} placeholder="Short public description users will see." />
-                                    <TaskTextarea label="Task instruction" value={taskForm.instructions} onChange={(value) => setTaskForm({ ...taskForm, instructions: value })} placeholder="Explain exactly what users should do and what proof to submit." />
-                                    <TaskInput label="External task link" value={taskForm.externalUrl} onChange={(value) => setTaskForm({ ...taskForm, externalUrl: value })} placeholder="https://..." />
+                                    <TaskTextarea label="Task instructions" value={taskForm.instructions} onChange={(value) => setTaskForm({ ...taskForm, instructions: value })} placeholder={"1. Click the task link\n2. Complete the required action\n3. Take a screenshot as proof\n4. Upload your proof\n5. Wait for approval"} />
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <TaskNumber label="Boots reward" value={taskForm.bootsReward} onChange={(value) => setTaskForm({ ...taskForm, bootsReward: value })} />
-                                        <TaskNumber label="Completions needed" value={taskForm.requiredCompletions} onChange={(value) => setTaskForm({ ...taskForm, requiredCompletions: value })} />
+                                        <TaskNumber label="Reward per worker in Boots" value={taskForm.bootsReward} onChange={(value) => setTaskForm({ ...taskForm, bootsReward: value })} />
+                                        <TaskNumber label="Workers needed" value={taskForm.requiredCompletions} onChange={(value) => setTaskForm({ ...taskForm, requiredCompletions: value })} />
                                         <div>
                                             <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">Deadline</label>
                                             <input
@@ -1191,14 +1264,14 @@ export default function DashboardPage() {
                                     <button
                                         type="submit"
                                         disabled={isSubmittingTask}
-                                        className="w-full py-5 bg-zinc-900 text-white rounded-[2rem] font-black shadow-xl shadow-black/10 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
+                                        className="w-full rounded-[2rem] bg-zinc-900 py-5 font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
                                     >
                                         {isSubmittingTask ? "Creating..." : "Create Task"}
                                     </button>
                                 </form>
 
-                                <div className="space-y-6">
-                                    <div className="bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
+                                <div className="space-y-5">
+                                    <div className="rounded-[2rem] border border-black/5 bg-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] sm:p-8">
                                         <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-3">Cost Summary</div>
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between text-sm font-bold text-zinc-500">
@@ -1225,7 +1298,7 @@ export default function DashboardPage() {
                                         )}
                                     </div>
 
-                                    <div className="bg-white rounded-[2.5rem] p-8 border border-black/5">
+                                    <div className="rounded-[2rem] border border-black/5 bg-white p-5 sm:p-8">
                                         <h3 className="font-black mb-4">Your Created Tasks</h3>
                                         <div className="space-y-3">
                                             {createdTasks.slice(0, 4).map((task: any) => (
@@ -1252,7 +1325,7 @@ export default function DashboardPage() {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+                                    className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-end justify-center p-3 sm:items-center sm:p-4"
                                     onClick={resetTaskProof}
                                 >
                                     <motion.div
@@ -1260,13 +1333,16 @@ export default function DashboardPage() {
                                         animate={{ scale: 1, y: 0 }}
                                         exit={{ scale: 0.96, y: 16 }}
                                         onClick={(event) => event.stopPropagation()}
-                                        className="bg-white rounded-[2.5rem] p-6 sm:p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+                                        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-5 shadow-2xl sm:rounded-[2.5rem] sm:p-8"
                                     >
                                         <div className="flex items-start justify-between gap-4 mb-6">
-                                            <div>
-                                                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-2">{selectedTask.type}</div>
-                                                <h2 className="text-2xl font-black tracking-tight">{selectedTask.title}</h2>
-                                                <p className="text-sm font-bold text-emerald-600 mt-2">+{selectedTask.bootsReward} BOOTS after admin approval</p>
+                                            <div className="flex min-w-0 gap-3">
+                                                <TaskPlatformIcon platform={selectedTask.platform || selectedTask.type} />
+                                                <div className="min-w-0">
+                                                    <div className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-400 mb-1">{selectedTask.platform || selectedTask.type}</div>
+                                                    <h2 className="text-xl font-black tracking-tight sm:text-2xl">{selectedTask.title}</h2>
+                                                    <p className="mt-2 text-sm font-bold text-emerald-600">+{selectedTask.bootsReward} Boots</p>
+                                                </div>
                                             </div>
                                             <button onClick={resetTaskProof} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center hover:bg-zinc-200">
                                                 <X size={18} />
@@ -1274,21 +1350,36 @@ export default function DashboardPage() {
                                         </div>
 
                                         <div className="space-y-5">
+                                            <div className="grid grid-cols-2 gap-3 text-xs font-black">
+                                                <div className="rounded-2xl bg-zinc-50 p-4">
+                                                    <div className="text-zinc-400">Status</div>
+                                                    <div className="mt-1 text-zinc-900">{selectedTask.userSubmission?.status || "Not Started"}</div>
+                                                </div>
+                                                <div className="rounded-2xl bg-zinc-50 p-4">
+                                                    <div className="text-zinc-400">Proof required</div>
+                                                    <div className="mt-1 text-zinc-900">{selectedTask.proofType}</div>
+                                                </div>
+                                            </div>
+                                            <div className="p-5 bg-zinc-50 rounded-2xl">
+                                                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">Description</div>
+                                                <p className="text-sm font-medium text-zinc-700 leading-relaxed">{selectedTask.description}</p>
+                                            </div>
                                             <div className="p-5 bg-zinc-50 rounded-2xl">
                                                 <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">Instructions</div>
-                                                <p className="text-sm font-medium text-zinc-700 leading-relaxed whitespace-pre-line">{selectedTask.instructions}</p>
+                                                <ol className="list-decimal space-y-2 pl-5 text-sm font-medium text-zinc-700">
+                                                    {formatTaskSteps(selectedTask.instructions).map((step, index) => (
+                                                        <li key={index}>{step}</li>
+                                                    ))}
+                                                </ol>
                                             </div>
 
-                                            {selectedTask.externalUrl && (
-                                                <a
-                                                    href={selectedTask.externalUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all"
-                                                >
-                                                    <LinkIcon size={18} /> Open External Link
-                                                </a>
-                                            )}
+                                            <button
+                                                onClick={handleStartSelectedTask}
+                                                disabled={!!selectedTask.userSubmission && selectedTask.userSubmission.status !== "Started"}
+                                                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-4 font-black text-white transition-all hover:scale-[1.01] active:scale-95 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:hover:scale-100"
+                                            >
+                                                <LinkIcon size={18} /> Start Task
+                                            </button>
 
                                             <div>
                                                 <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">Proof</label>
@@ -1315,7 +1406,7 @@ export default function DashboardPage() {
 
                                             <button
                                                 onClick={handleSubmitTaskProof}
-                                                disabled={isSubmittingTask}
+                                                disabled={isSubmittingTask || (selectedTask.userSubmission && selectedTask.userSubmission.status !== "Started")}
                                                 className="w-full py-5 bg-zinc-900 text-white rounded-[2rem] font-black shadow-xl shadow-black/10 disabled:opacity-50"
                                             >
                                                 {isSubmittingTask ? "Submitting..." : "Submit for Review"}
@@ -2724,41 +2815,118 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
-function TaskCard({ task, onStart }: { task: any; onStart: () => void }) {
+function getMyTaskBucket(status?: string) {
+    if (status === "Pending Review") return "Pending";
+    if (status === "Completed" || status === "Approved") return "Approved";
+    if (status === "Rejected") return "Rejected";
+    return "Active";
+}
+
+function formatTaskSteps(instructions?: string) {
+    const lines = (instructions || "")
+        .split(/\n+/)
+        .map((line) => line.replace(/^\s*\d+[\).\s-]*/, "").trim())
+        .filter(Boolean);
+
+    return lines.length > 0
+        ? lines
+        : [
+            "Click the task link",
+            "Complete the required action",
+            "Take a screenshot as proof",
+            "Upload your proof",
+            "Wait for approval",
+        ];
+}
+
+function TaskPlatformIcon({ platform }: { platform?: string }) {
+    const label = (platform || "Task").trim();
+    const normalized = label.toLowerCase();
+    const iconColor = normalized.includes("instagram")
+        ? "text-pink-600"
+        : normalized.includes("tiktok")
+            ? "text-zinc-900"
+            : normalized === "x" || normalized.includes("repost")
+                ? "text-zinc-900"
+                : normalized.includes("facebook")
+                    ? "text-blue-600"
+                    : normalized.includes("youtube") || normalized.includes("video")
+                        ? "text-red-600"
+                        : normalized.includes("whatsapp") || normalized.includes("group")
+                            ? "text-emerald-600"
+                            : "text-zinc-700";
+
+    return (
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-100">
+            <span className={`text-sm font-black ${iconColor}`}>{label.slice(0, 2).toUpperCase()}</span>
+        </div>
+    );
+}
+
+function TaskListCard({ task, onOpen }: { task: any; onOpen: () => void }) {
     const submissionStatus = task.userSubmission?.status;
     const displayStatus = submissionStatus || "Available";
     const isDisabled = !!submissionStatus;
+    const postedAt = task.createdAt ? new Date(task.createdAt).toLocaleDateString() : new Date(task.deadline).toLocaleDateString();
 
     return (
-        <div className="bg-white rounded-[2.5rem] p-6 border border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col gap-5">
-            <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                    <div className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mb-2">{task.type}</div>
-                    <h3 className="text-xl font-black tracking-tight">{task.title}</h3>
-                </div>
-                <StatusBadge status={displayStatus} />
-            </div>
-
-            <p className="text-sm font-medium text-zinc-500 leading-relaxed">{task.description}</p>
-
-            <div className="grid grid-cols-2 gap-3">
-                <div className="bg-zinc-50 rounded-2xl p-4">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Reward</div>
-                    <div className="font-black text-emerald-600">+{task.bootsReward} Boots</div>
-                </div>
-                <div className="bg-zinc-50 rounded-2xl p-4">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Available Until</div>
-                    <div className="font-black text-zinc-700">{new Date(task.deadline).toLocaleDateString()}</div>
+        <button
+            type="button"
+            onClick={onOpen}
+            className="flex w-full items-center gap-3 rounded-[1.5rem] bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all active:scale-[0.99] sm:rounded-[2rem] sm:p-5"
+        >
+            <TaskPlatformIcon platform={task.platform || task.type} />
+            <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h3 className="truncate text-sm font-black text-zinc-950 sm:text-base">{task.title}</h3>
+                        <p className="mt-1 text-xs font-bold text-zinc-400">{postedAt}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                        <div className="text-sm font-black text-emerald-600">+{task.bootsReward} Boots</div>
+                        {isDisabled && <div className="mt-1 text-[9px] font-black uppercase text-zinc-400">{displayStatus}</div>}
+                    </div>
                 </div>
             </div>
+        </button>
+    );
+}
 
-            <button
-                onClick={onStart}
-                disabled={isDisabled}
-                className="mt-auto w-full py-4 bg-zinc-900 text-white rounded-[2rem] font-black hover:scale-[1.01] active:scale-95 transition-all disabled:bg-zinc-100 disabled:text-zinc-400 disabled:hover:scale-100"
-            >
-                {isDisabled ? displayStatus : "Start Task"}
-            </button>
+function MyTaskCard({ submission }: { submission: any }) {
+    const task = submission.task || {};
+    const storageId = submission.screenshotUrl;
+
+    return (
+        <div className="rounded-[1.5rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] sm:p-5">
+            <div className="flex items-start gap-3">
+                <TaskPlatformIcon platform={task.platform || task.type} />
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h3 className="truncate text-sm font-black text-zinc-950 sm:text-base">{task.title || "Deleted task"}</h3>
+                            <p className="mt-1 text-xs font-bold text-zinc-400">
+                                {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "Not submitted"}
+                            </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                            <div className="text-sm font-black text-emerald-600">+{task.bootsReward || 0} Boots</div>
+                            <StatusBadge status={submission.status} />
+                        </div>
+                    </div>
+                    {submission.proofValue && (
+                        <p className="mt-3 rounded-2xl bg-zinc-50 p-3 text-xs font-semibold text-zinc-500">{submission.proofValue}</p>
+                    )}
+                    {storageId && (
+                        <div className="mt-3 h-28 overflow-hidden rounded-2xl bg-zinc-100">
+                            <img
+                                src={`https://aromatic-ox-169.eu-west-1.convex.site/api/storage/${storageId}`}
+                                alt="Task proof preview"
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

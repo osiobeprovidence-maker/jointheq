@@ -355,6 +355,7 @@ export default function AdminPanel() {
     const processWithdrawalMut = useMutation(api.campaigns.processWithdrawal);
     const approveTaskMut = useMutation(api.tasks.approveTask);
     const rejectTaskMut = useMutation(api.tasks.rejectTask);
+    const pauseTaskMut = useMutation(api.tasks.pauseTask);
     const approveSubmissionMut = useMutation(api.tasks.approveSubmission);
     const rejectSubmissionMut = useMutation(api.tasks.rejectSubmission);
     // Workforce Queries
@@ -2154,7 +2155,7 @@ export default function AdminPanel() {
                                                 <p className="text-xs text-gray-400 mt-1">User-created tasks wait here before going live.</p>
                                             </div>
                                             <select value={taskReviewStatus} onChange={(e) => setTaskReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
-                                                {["Pending Admin Approval", "Active", "Paused", "Rejected", "Completed", "All"].map((status) => <option key={status} value={status}>{status}</option>)}
+                                                {["Pending Admin Approval", "Active", "Paused", "Rejected", "Completed", "Cancelled", "Draft", "All"].map((status) => <option key={status} value={status}>{status}</option>)}
                                             </select>
                                         </div>
                                         <div className="divide-y divide-black/5">
@@ -2163,13 +2164,18 @@ export default function AdminPanel() {
                                                     <div className="flex items-start justify-between gap-4">
                                                         <div>
                                                             <div className="font-black">{task.title}</div>
-                                                            <div className="text-xs text-gray-400 mt-1">{task.type} - {task.bootsReward} BOOTS - {task.completedCount}/{task.requiredCompletions}</div>
+                                                            <div className="text-xs text-gray-400 mt-1">{task.platform || task.type} - {task.bootsReward} BOOTS - {task.completedCount}/{task.requiredCompletions}</div>
+                                                            <div className="text-[10px] font-bold text-gray-300 mt-1">Creator: {task.creator?.full_name || task.creator?.email || "Unknown"}</div>
                                                         </div>
                                                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${task.status === "Active" ? "bg-emerald-100 text-emerald-700" : task.status === "Rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{task.status}</span>
                                                     </div>
                                                     <p className="text-sm text-gray-500 leading-relaxed">{task.description}</p>
                                                     <div className="grid grid-cols-2 gap-3 text-xs font-bold text-gray-500">
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Cost: {fmt(task.totalCost)}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Budget: {fmt(task.totalCost)}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Workers: {task.requiredCompletions}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Completed: {task.submissionStats?.completed || 0}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Pending: {task.submissionStats?.pending || 0}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Rejected: {task.submissionStats?.rejected || 0}</div>
                                                         <div className="bg-zinc-50 rounded-2xl p-3">Deadline: {new Date(task.deadline).toLocaleDateString()}</div>
                                                     </div>
                                                     {task.status === "Pending Admin Approval" && (
@@ -2177,6 +2183,9 @@ export default function AdminPanel() {
                                                             <button onClick={async () => { await approveTaskMut({ taskId: task._id, adminId: currentUser!._id }); toast.success("Task approved"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve</button>
                                                             <button onClick={async () => { await rejectTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.error("Task rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
                                                         </div>
+                                                    )}
+                                                    {task.status === "Active" && (
+                                                        <button onClick={async () => { await pauseTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.success("Task paused"); }} className="w-full py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100">Pause Suspicious Task</button>
                                                     )}
                                                 </div>
                                             ))}
@@ -2213,7 +2222,11 @@ export default function AdminPanel() {
                                                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${submission.status === "Completed" ? "bg-blue-100 text-blue-700" : submission.status === "Rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{submission.status}</span>
                                                     </div>
                                                     {submission.proofValue && <div className="bg-zinc-50 rounded-2xl p-4 text-sm text-gray-600 break-words">{submission.proofValue}</div>}
-                                                    {submission.screenshotUrl && <div className="text-xs font-bold text-blue-600">Screenshot uploaded: {submission.screenshotUrl}</div>}
+                                                    {submission.screenshotUrl && (
+                                                        <div className="overflow-hidden rounded-2xl bg-zinc-100">
+                                                            <img src={`https://aromatic-ox-169.eu-west-1.convex.site/api/storage/${submission.screenshotUrl}`} alt="Task proof" className="h-44 w-full object-cover" />
+                                                        </div>
+                                                    )}
                                                     {submission.status === "Pending Review" && (
                                                         <div className="flex gap-2">
                                                             <button onClick={async () => { await approveSubmissionMut({ submissionId: submission._id, adminId: currentUser!._id }); toast.success("Proof approved and BOOTS released"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve Proof</button>
