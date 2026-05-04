@@ -8,6 +8,7 @@ export default defineSchema({
         phone: v.optional(v.string()),
         full_name: v.string(),
         username: v.optional(v.string()),
+        qic: v.optional(v.string()),
         work_username: v.optional(v.string()),
         role: v.optional(v.string()), // "subscriber" | "owner" | "admin"
         wallet_balance: v.number(),
@@ -44,6 +45,12 @@ export default defineSchema({
             expiry: v.string(),
             auth_token: v.string(),
         })),
+        quest_withdrawal_account: v.optional(v.object({
+            bank_name: v.string(),
+            account_number: v.string(),
+            account_name: v.string(),
+            updated_at: v.number(),
+        })),
         score_history: v.optional(v.array(v.object({
             amount: v.number(),
             type: v.string(),
@@ -77,6 +84,7 @@ export default defineSchema({
         .index("by_referred_by", ["referred_by"])
         .index("by_phone", ["phone"])
         .index("by_token", ["verification_token"])
+        .index("by_qic", ["qic"])
         .index("by_reset_password_token", ["reset_password_token"])
         .index("by_is_admin", ["is_admin"])
         .index("by_work_username", ["work_username"])

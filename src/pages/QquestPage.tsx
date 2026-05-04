@@ -24,6 +24,9 @@ import {
 } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { auth } from "../lib/auth";
 
 type QuestTag = "Sponsored" | "Trending" | "New";
 type QuestStatus = "all" | "mine" | "completed";
@@ -78,7 +81,6 @@ interface Quest {
   source?: "admin-featured" | "created" | "seed";
 }
 
-const walletBalance = 0;
 const minimumWithdrawal = 1000;
 const withdrawalFee = 20;
 const minimumCampaignBudget = 7500;
@@ -1015,26 +1017,32 @@ function WalletCard({
 function ConnectAccountModal({
   onClose,
   onConnected,
+  qic,
 }: {
   onClose: () => void;
-  onConnected: (account: ConnectedAccount) => void;
+  onConnected: (account: ConnectedAccount) => void | Promise<void>;
+  qic: string;
 }) {
   const [bankName, setBankName] = useState(banks[0]);
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [qic, setQic] = useState("");
   const [status, setStatus] = useState<ConnectStatus>("idle");
 
   const verifyAccount = () => {
-    if (accountNumber.replace(/\D/g, "").length < 10 || !accountName.trim() || !qic.trim()) {
+    if (accountNumber.replace(/\D/g, "").length < 10 || !accountName.trim()) {
       setStatus("error");
       return;
     }
 
     setStatus("loading");
     window.setTimeout(() => {
-      setStatus("success");
-      window.setTimeout(() => onConnected({ bankName, accountNumber, accountName, qic }), 700);
+      Promise.resolve(onConnected({ bankName, accountNumber, accountName, qic }))
+        .then(() => {
+          setStatus("success");
+        })
+        .catch(() => {
+          setStatus("error");
+        });
     }, 850);
   };
 
@@ -1067,12 +1075,12 @@ function ConnectAccountModal({
           </label>
           <label className="space-y-2 block">
             <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">QIC</span>
-            <input value={qic} onChange={(event) => setQic(event.target.value)} className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black outline-none" />
+            <input value={qic || "Generated after save"} readOnly className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-white/65 outline-none" />
           </label>
 
           {status === "loading" ? <div className="rounded-2xl bg-white/8 p-4 text-sm font-black text-white/70">Verifying your account...</div> : null}
           {status === "success" ? <div className="rounded-2xl bg-emerald-400/15 p-4 text-sm font-black text-emerald-200">Account Connected Successfully</div> : null}
-          {status === "error" ? <div className="rounded-2xl bg-red-400/15 p-4 text-sm font-black text-red-200">Invalid details. Check your account number, account name, and QIC.</div> : null}
+          {status === "error" ? <div className="rounded-2xl bg-red-400/15 p-4 text-sm font-black text-red-200">Invalid details. Check your account number and account name.</div> : null}
 
           <button onClick={verifyAccount} disabled={status === "loading"} className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01] disabled:opacity-60">
             Verify & Connect
@@ -1201,7 +1209,7 @@ function DashboardHome({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Wallet" value={`₦${walletBalance.toLocaleString()}`} detail="Available balance" />
+        <StatCard label="Wallet" value="₦0" detail="Available balance" />
         <StatCard label="Quest earnings" value="₦0" detail="This month" />
         <StatCard label="Active slots" value="4" detail="2 renew this week" />
       </section>
@@ -1435,6 +1443,10 @@ function ProfilePage() {
 
 export default function QquestPage() {
   const navigate = useNavigate();
+  const storedUser = auth.getCurrentUser();
+  const liveUser = useQuery(api.users.getById, storedUser?._id ? { id: storedUser._id as any } : "skip");
+  const ensureQuestIdentity = useMutation(api.users.ensureQuestIdentity);
+  const saveQuestWithdrawalAccount = useMutation(api.users.saveQuestWithdrawalAccount);
   const [activePage, setActivePage] = useState<NavPage>("quest");
   const [activeTab, setActiveTab] = useState<QuestStatus>("all");
   const [sort, setSort] = useState("Suggested");
@@ -1448,8 +1460,24 @@ export default function QquestPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [startedQuestIds, setStartedQuestIds] = useState<number[]>([]);
-  const [connectedAccount, setConnectedAccount] = useState<ConnectedAccount | null>(null);
   const [createdQuests, setCreatedQuests] = useState<Quest[]>([]);
+  const questWalletBalance = liveUser?.wallet_balance || 0;
+  const questQic = liveUser?.qic || "";
+  const connectedAccount: ConnectedAccount | null = liveUser?.quest_withdrawal_account
+    ? {
+        bankName: liveUser.quest_withdrawal_account.bank_name,
+        accountNumber: liveUser.quest_withdrawal_account.account_number,
+        accountName: liveUser.quest_withdrawal_account.account_name,
+        qic: questQic,
+      }
+    : null;
+
+  useEffect(() => {
+    if (!storedUser?._id || liveUser === undefined || liveUser?.qic) return;
+    ensureQuestIdentity({ userId: storedUser._id as any }).catch((error) => {
+      console.error("Failed to generate Quest ID", error);
+    });
+  }, [ensureQuestIdentity, liveUser, storedUser?._id]);
 
   const allQuests = useMemo(() => [adminFeaturedQuest, ...createdQuests, ...quests], [createdQuests]);
   const visibleQuests = useMemo(() => {
@@ -1510,7 +1538,7 @@ export default function QquestPage() {
         return (
           <WalletPage
             account={connectedAccount}
-            balance={walletBalance}
+            balance={questWalletBalance}
             onConnect={() => setIsConnectAccountOpen(true)}
             onWithdraw={() => connectedAccount ? setIsWithdrawOpen(true) : setIsConnectAccountOpen(true)}
           />
@@ -1600,7 +1628,7 @@ export default function QquestPage() {
               </button>
               <WalletHeaderAction
                 account={connectedAccount}
-                balance={walletBalance}
+                balance={questWalletBalance}
                 onConnect={() => setIsConnectAccountOpen(true)}
                 onWithdraw={() => setIsWithdrawOpen(true)}
               />
@@ -1822,9 +1850,16 @@ export default function QquestPage() {
       {isCreateOpen && <CreateQuestModal onClose={() => setIsCreateOpen(false)} onLaunch={handleLaunchedQuest} />}
       {isConnectAccountOpen && (
         <ConnectAccountModal
+          qic={questQic}
           onClose={() => setIsConnectAccountOpen(false)}
-          onConnected={(account) => {
-            setConnectedAccount(account);
+          onConnected={async (account) => {
+            if (!storedUser?._id) return;
+            await saveQuestWithdrawalAccount({
+              userId: storedUser._id as any,
+              bankName: account.bankName,
+              accountNumber: account.accountNumber,
+              accountName: account.accountName,
+            });
             setIsConnectAccountOpen(false);
           }}
         />
@@ -1832,7 +1867,7 @@ export default function QquestPage() {
       {isWithdrawOpen && connectedAccount && (
         <WithdrawModal
           account={connectedAccount}
-          balance={walletBalance}
+          balance={questWalletBalance}
           onClose={() => setIsWithdrawOpen(false)}
         />
       )}

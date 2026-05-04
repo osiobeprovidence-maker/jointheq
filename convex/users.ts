@@ -5,6 +5,20 @@ import bcrypt from "bcryptjs";
 
 const MAX_SIGN_IN_HISTORY = 10;
 
+async function generateUniqueQic(ctx: any) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+        const qic = `QIC-${Math.floor(10000000 + Math.random() * 90000000)}`;
+        const existing = await ctx.db
+            .query("users")
+            .withIndex("by_qic", (q: any) => q.eq("qic", qic))
+            .unique();
+
+        if (!existing) return qic;
+    }
+
+    throw new Error("Unable to generate Quest ID. Please try again.");
+}
+
 function normalizeSignInProvider(provider: string | undefined) {
     const value = provider?.trim().toLowerCase();
     if (!value) return "password";
@@ -216,6 +230,7 @@ export const createUser = mutation({
             email: normalizedEmail,
             full_name: args.full_name,
             phone: normalizedPhone,
+            qic: await generateUniqueQic(ctx),
             verification_token: args.verification_token,
             verification_token_expires: args.verification_token_expires,
             referral_code: resolvedReferralCode,
@@ -953,6 +968,7 @@ export const socialLogin = mutation({
             email: normalizedEmail,
             full_name: args.full_name,
             profile_image_url: args.profile_image_url,
+            qic: await generateUniqueQic(ctx),
             referral_code: resolvedReferralCode,
             username: username,
             q_score: 0,
@@ -978,6 +994,61 @@ export const socialLogin = mutation({
         
         const newUser = await ctx.db.get(userId);
         return { success: true, user: newUser, isVerified: true };
+    },
+});
+
+export const ensureQuestIdentity = mutation({
+    args: {
+        userId: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.userId);
+        if (!user) throw new Error("User not found");
+
+        if (user.qic) return { qic: user.qic };
+
+        const qic = await generateUniqueQic(ctx);
+        await ctx.db.patch(args.userId, { qic });
+        return { qic };
+    },
+});
+
+export const saveQuestWithdrawalAccount = mutation({
+    args: {
+        userId: v.id("users"),
+        bankName: v.string(),
+        accountNumber: v.string(),
+        accountName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.userId);
+        if (!user) throw new Error("User not found");
+
+        const accountNumber = args.accountNumber.replace(/\D/g, "").slice(0, 10);
+        if (accountNumber.length !== 10) throw new Error("Enter a valid 10-digit account number.");
+
+        const bankName = args.bankName.trim();
+        const accountName = args.accountName.trim();
+        if (!bankName || !accountName) throw new Error("Bank and account name are required.");
+
+        const qic = user.qic || await generateUniqueQic(ctx);
+        const quest_withdrawal_account = {
+            bank_name: bankName,
+            account_number: accountNumber,
+            account_name: accountName,
+            updated_at: Date.now(),
+        };
+
+        await ctx.db.patch(args.userId, {
+            qic,
+            quest_withdrawal_account,
+        });
+
+        return {
+            qic,
+            account: quest_withdrawal_account,
+            wallet_balance: user.wallet_balance || 0,
+        };
     },
 });
 

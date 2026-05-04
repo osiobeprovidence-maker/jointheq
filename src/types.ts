@@ -24,6 +24,7 @@ export interface User {
   phone?: string;
   full_name: string;
   username?: string;
+  qic?: string;
   university?: string;
   profile_image_url?: string;
   q_score: number;
@@ -43,6 +44,12 @@ export interface User {
   last_sign_in_at?: number;
   last_sign_in_provider?: string;
   sign_in_history?: SignInHistoryEntry[];
+  quest_withdrawal_account?: {
+    bank_name: string;
+    account_number: string;
+    account_name: string;
+    updated_at: number;
+  };
 }
 
 export interface Device {

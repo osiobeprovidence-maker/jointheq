@@ -429,22 +429,23 @@ export const approveSubmission = mutation({
     });
 
     await ctx.db.patch(submission.userId, {
-      boots_balance: (user.boots_balance ?? user.boot_balance ?? 0) + task.bootsReward,
+      wallet_balance: (user.wallet_balance || 0) + task.bootsReward,
     });
 
-    await ctx.db.insert("boot_transactions", {
+    await ctx.db.insert("wallet_transactions", {
       user_id: submission.userId,
       amount: task.bootsReward,
       type: "task_reward",
+      source: "quest",
+      status: "completed",
       description: `Task reward: ${task.title}`,
-      task_id: submission.taskId,
       created_at: Date.now(),
     });
 
     await createNotification(ctx, {
       userId: submission.userId,
       title: "Task approved",
-      message: `${task.bootsReward} BOOTS have been added to your account.`,
+      message: `N${task.bootsReward.toLocaleString()} has been added to your wallet.`,
       type: "task",
     });
 
