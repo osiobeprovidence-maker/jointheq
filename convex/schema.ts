@@ -12,10 +12,10 @@ export default defineSchema({
         role: v.optional(v.string()), // "subscriber" | "owner" | "admin"
         wallet_balance: v.number(),
         boot_balance: v.optional(v.number()),
-        boots_balance: v.number(),
+        boots_balance: v.optional(v.number()),
         created_at: v.number(),
         q_score: v.number(),
-        q_rank: v.string(),
+        q_rank: v.optional(v.string()),
         referral_code: v.string(),
         referred_by: v.optional(v.id("users")),
         is_suspended: v.optional(v.boolean()),

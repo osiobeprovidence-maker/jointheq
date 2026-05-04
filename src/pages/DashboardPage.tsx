@@ -186,7 +186,7 @@ export default function DashboardPage() {
     const availableTasks = useQuery(api.tasks.listAvailable, currentUser ? { userId: currentUser._id } : "skip") || [];
     const taskStats = useQuery(api.tasks.getStats, currentUser ? { userId: currentUser._id } : "skip");
     const createdTasks = useQuery(api.tasks.getMyCreatedTasks, currentUser ? { userId: currentUser._id } : "skip") || [];
-    const myTaskSubmissions = useQuery(api.tasks.getMySubmissions, currentUser ? { userId: currentUser._id } : "skip") || [];
+    const myTaskSubmissions: any[] = [];
     const taskRate = useQuery(api.tasks.getTaskRate, {}) || 1;
     const devices = useQuery(api.devices.listByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const chatUsers = useQuery(api.users.list) || [];
