@@ -33,11 +33,16 @@ type QuestStatus = "all" | "mine" | "completed";
 type NavPage = "dashboard" | "marketplace" | "notifications" | "quest" | "wallet" | "referrals" | "history" | "support" | "profile";
 type ConnectedAccount = {
   bankName: string;
+  bankCode?: string;
   accountNumber: string;
   accountName: string;
   qic: string;
 };
 type ConnectStatus = "idle" | "loading" | "success" | "error";
+type PaystackBank = {
+  name: string;
+  code: string;
+};
 type WithdrawStep = "form" | "below-minimum" | "confirm" | "success";
 type CreateQquestStep = 1 | 2 | 3 | 4 | 5 | 6;
 type ProofRequirement = "Screenshot upload" | "Username input" | "None";
@@ -86,7 +91,14 @@ const withdrawalFee = 20;
 const minimumCampaignBudget = 7500;
 const qquestRewardPerUser = 150;
 const serviceFeeCap = 2500;
-const banks = ["Access Bank", "GTBank", "Zenith Bank", "UBA", "First Bank", "Opay", "Kuda Bank"];
+const defaultPaystackBanks: PaystackBank[] = [
+  { name: "Access Bank", code: "044" },
+  { name: "Guaranty Trust Bank", code: "058" },
+  { name: "Zenith Bank", code: "057" },
+  { name: "United Bank For Africa", code: "033" },
+  { name: "First Bank of Nigeria", code: "011" },
+  { name: "Kuda Bank", code: "50211" },
+];
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -1023,32 +1035,66 @@ function ConnectAccountModal({
   onConnected: (account: ConnectedAccount) => void | Promise<void>;
   qic: string;
 }) {
-  const [bankName, setBankName] = useState(banks[0]);
+  const [bankOptions, setBankOptions] = useState<PaystackBank[]>(defaultPaystackBanks);
+  const [bankCode, setBankCode] = useState(defaultPaystackBanks[0].code);
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [status, setStatus] = useState<ConnectStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const verifyAccount = () => {
-    if (accountNumber.replace(/\D/g, "").length < 10 || !accountName.trim()) {
-      setErrorMessage("Enter a 10-digit account number and account name.");
+  const selectedBank = bankOptions.find((bank) => bank.code === bankCode) || bankOptions[0];
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetch("/api/paystack/banks")
+      .then((response) => response.ok ? response.json() : Promise.reject(response))
+      .then((payload: { banks?: PaystackBank[] }) => {
+        if (!isActive || !payload.banks?.length) return;
+        setBankOptions(payload.banks);
+        setBankCode((currentCode) => payload.banks?.some((bank) => bank.code === currentCode) ? currentCode : payload.banks![0].code);
+      })
+      .catch((error) => {
+        console.warn("Using fallback bank list because Paystack banks could not be loaded", error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const verifyAccount = async () => {
+    const cleanAccountNumber = accountNumber.replace(/\D/g, "");
+    if (cleanAccountNumber.length !== 10 || !selectedBank?.code) {
+      setErrorMessage("Enter a 10-digit account number and select a bank.");
       setStatus("error");
       return;
     }
 
     setErrorMessage("");
     setStatus("loading");
-    window.setTimeout(() => {
-      Promise.resolve(onConnected({ bankName, accountNumber, accountName, qic }))
-        .then(() => {
-          setStatus("success");
-        })
-        .catch((error) => {
-          console.error("Failed to save Quest withdrawal account", error);
-          setErrorMessage("Could not save the account right now. Please try again.");
-          setStatus("error");
-        });
-    }, 850);
+    try {
+      const response = await fetch(`/api/paystack/resolve-bank?account_number=${encodeURIComponent(cleanAccountNumber)}&bank_code=${encodeURIComponent(selectedBank.code)}`);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.accountName) {
+        throw new Error(payload?.message || "Could not verify account details.");
+      }
+
+      const verifiedAccountName = String(payload.accountName);
+      setAccountName(verifiedAccountName);
+      await onConnected({
+        bankName: selectedBank.name,
+        bankCode: selectedBank.code,
+        accountNumber: cleanAccountNumber,
+        accountName: verifiedAccountName,
+        qic,
+      });
+      setStatus("success");
+    } catch (error) {
+      console.error("Failed to verify Quest withdrawal account", error);
+      setErrorMessage(error instanceof Error ? error.message : "Could not verify account details.");
+      setStatus("error");
+    }
   };
 
   return (
@@ -1066,29 +1112,37 @@ function ConnectAccountModal({
         <div className="space-y-4 p-5">
           <label className="space-y-2 block">
             <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Bank Name</span>
-            <select value={bankName} onChange={(event) => setBankName(event.target.value)} className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black outline-none">
-              {banks.map((bank) => <option key={bank}>{bank}</option>)}
+            <select value={bankCode} onChange={(event) => {
+              setBankCode(event.target.value);
+              setAccountName("");
+              setStatus("idle");
+            }} className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black outline-none">
+              {bankOptions.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}
             </select>
           </label>
           <label className="space-y-2 block">
             <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Account Number</span>
-            <input value={accountNumber} onChange={(event) => setAccountNumber(event.target.value.replace(/\D/g, "").slice(0, 10))} className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black outline-none" placeholder="0123456789" />
+            <input value={accountNumber} onChange={(event) => {
+              setAccountNumber(event.target.value.replace(/\D/g, "").slice(0, 10));
+              setAccountName("");
+              setStatus("idle");
+            }} className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black outline-none" placeholder="0123456789" />
           </label>
           <label className="space-y-2 block">
-            <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Account Name</span>
-            <input value={accountName} onChange={(event) => setAccountName(event.target.value)} className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black outline-none" placeholder="John Doe" />
+            <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Verified Account Name</span>
+            <input value={accountName || "Verify to fetch from Paystack"} readOnly className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-white/65 outline-none" />
           </label>
           <label className="space-y-2 block">
             <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">QIC</span>
             <input value={qic || "Generated after save"} readOnly className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-white/65 outline-none" />
           </label>
 
-          {status === "loading" ? <div className="rounded-2xl bg-white/8 p-4 text-sm font-black text-white/70">Verifying your account...</div> : null}
+          {status === "loading" ? <div className="rounded-2xl bg-white/8 p-4 text-sm font-black text-white/70">Verifying with Paystack...</div> : null}
           {status === "success" ? <div className="rounded-2xl bg-emerald-400/15 p-4 text-sm font-black text-emerald-200">Account Connected Successfully</div> : null}
           {status === "error" ? <div className="rounded-2xl bg-red-400/15 p-4 text-sm font-black text-red-200">{errorMessage}</div> : null}
 
           <button onClick={verifyAccount} disabled={status === "loading"} className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01] disabled:opacity-60">
-            Verify & Connect
+            Verify with Paystack
           </button>
         </div>
       </div>
@@ -1471,6 +1525,7 @@ export default function QquestPage() {
   const connectedAccount: ConnectedAccount | null = liveUser?.quest_withdrawal_account
     ? {
         bankName: liveUser.quest_withdrawal_account.bank_name,
+        bankCode: liveUser.quest_withdrawal_account.bank_code,
         accountNumber: liveUser.quest_withdrawal_account.account_number,
         accountName: liveUser.quest_withdrawal_account.account_name,
         qic: questQic,
@@ -1862,6 +1917,7 @@ export default function QquestPage() {
             await saveQuestWithdrawalAccount({
               userId: storedUser._id as any,
               bankName: account.bankName,
+              bankCode: account.bankCode,
               accountNumber: account.accountNumber,
               accountName: account.accountName,
             });

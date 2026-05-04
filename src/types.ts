@@ -46,6 +46,7 @@ export interface User {
   sign_in_history?: SignInHistoryEntry[];
   quest_withdrawal_account?: {
     bank_name: string;
+    bank_code?: string;
     account_number: string;
     account_name: string;
     updated_at: number;

@@ -11,6 +11,40 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const MAX_PORT_ATTEMPTS = 10;
+const PAYSTACK_BASE_URL = "https://api.paystack.co";
+
+function getPaystackSecretKey() {
+  return process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || "";
+}
+
+function sendPaystackConfigError(res: express.Response) {
+  res.status(500).json({ message: "Paystack secret key is not configured." });
+}
+
+async function fetchPaystack(pathname: string, res: express.Response) {
+  const secretKey = getPaystackSecretKey();
+  if (!secretKey) {
+    sendPaystackConfigError(res);
+    return null;
+  }
+
+  const response = await fetch(`${PAYSTACK_BASE_URL}${pathname}`, {
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.status) {
+    res.status(response.status || 400).json({
+      message: payload?.message || "Paystack request failed.",
+    });
+    return null;
+  }
+
+  return payload;
+}
 
 function listenWithFallback(server: ReturnType<typeof createServer>, preferredPort: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -45,6 +79,47 @@ async function startServer() {
   const preferredPort = Number(process.env.PORT) || 3000;
 
   app.use(express.json({ limit: '10mb' }));
+
+  app.get("/api/paystack/banks", async (_req, res) => {
+    try {
+      const payload = await fetchPaystack("/bank?country=nigeria&perPage=100", res);
+      if (!payload) return;
+
+      res.json({
+        banks: (payload.data || []).map((bank: any) => ({
+          name: bank.name,
+          code: bank.code,
+        })),
+      });
+    } catch (error) {
+      console.error("Failed to fetch Paystack banks", error);
+      res.status(500).json({ message: "Could not load banks." });
+    }
+  });
+
+  app.get("/api/paystack/resolve-bank", async (req, res) => {
+    try {
+      const accountNumber = String(req.query.account_number || "").replace(/\D/g, "");
+      const bankCode = String(req.query.bank_code || "").trim();
+
+      if (accountNumber.length !== 10 || !bankCode) {
+        res.status(400).json({ message: "Enter a 10-digit account number and select a bank." });
+        return;
+      }
+
+      const payload = await fetchPaystack(`/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`, res);
+      if (!payload) return;
+
+      res.json({
+        accountNumber: payload.data.account_number,
+        accountName: payload.data.account_name,
+        bankId: payload.data.bank_id,
+      });
+    } catch (error) {
+      console.error("Failed to resolve Paystack account", error);
+      res.status(500).json({ message: "Could not verify account details." });
+    }
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

@@ -1017,6 +1017,7 @@ export const saveQuestWithdrawalAccount = mutation({
     args: {
         userId: v.id("users"),
         bankName: v.string(),
+        bankCode: v.optional(v.string()),
         accountNumber: v.string(),
         accountName: v.string(),
     },
@@ -1028,12 +1029,14 @@ export const saveQuestWithdrawalAccount = mutation({
         if (accountNumber.length !== 10) throw new Error("Enter a valid 10-digit account number.");
 
         const bankName = args.bankName.trim();
+        const bankCode = args.bankCode?.trim();
         const accountName = args.accountName.trim();
         if (!bankName || !accountName) throw new Error("Bank and account name are required.");
 
         const qic = user.qic || await generateUniqueQic(ctx);
         const quest_withdrawal_account = {
             bank_name: bankName,
+            ...(bankCode ? { bank_code: bankCode } : {}),
             account_number: accountNumber,
             account_name: accountName,
             updated_at: Date.now(),

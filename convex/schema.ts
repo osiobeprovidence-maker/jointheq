@@ -47,6 +47,7 @@ export default defineSchema({
         })),
         quest_withdrawal_account: v.optional(v.object({
             bank_name: v.string(),
+            bank_code: v.optional(v.string()),
             account_number: v.string(),
             account_name: v.string(),
             updated_at: v.number(),
