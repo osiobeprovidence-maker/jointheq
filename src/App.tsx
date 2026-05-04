@@ -58,7 +58,7 @@ export default function App() {
           <Route path="/r/:refCode" element={<ReferralRedirect />} />
           <Route path="/guest-onboarding" element={<GuestOnboardingPage />} />
           <Route path="/console" element={<ConsoleLogin />} />
-          <Route path="/qquest" element={<QquestPage />} />
+          <Route path="/qquest" element={<Navigate to="/quest" replace />} />
 
           {/* Protected Routes */}
           <Route
@@ -66,6 +66,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/quest"
+            element={
+              <ProtectedRoute>
+                <QquestPage />
               </ProtectedRoute>
             }
           />

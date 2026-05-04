@@ -6,7 +6,7 @@ import { useMutation, useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { auth } from "../lib/auth";
 import { Logo } from '../components/ui/Logo';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, type AuthProvider } from 'firebase/auth';
 import { auth as firebaseAuth, googleProvider, appleProvider } from '../lib/firebase';
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState<'hero' | 'about' | 'login' | 'signup' | 'forgot' | 'reset'>('hero');
@@ -234,12 +234,17 @@ export default function LandingPage() {
     }
   };
 
-  const handleSocialLogin = async (provider: any, providerName: string) => {
+  const handleSocialLogin = async (provider: AuthProvider, providerName: string) => {
     setIsLoading(true);
     setError('');
     setSuccess('');
 
     try {
+      if (!firebaseAuth) {
+        setError('Social login is not configured for this environment. Please use email login.');
+        return;
+      }
+
       const result = await signInWithPopup(firebaseAuth, provider);
       const userObj = result.user;
 

@@ -56,7 +56,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
-        { id: 'tasks', label: 'Task', icon: <ListTodo size={20} /> },
+        { id: 'tasks', label: 'Quest', icon: <ListTodo size={20} /> },
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
         { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
         { id: 'history', label: 'History', icon: <Clock size={20} /> },
@@ -65,6 +65,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     ];
 
     const adminNavItem = { id: 'admin', label: 'Admin', icon: <Lock size={20} /> };
+
+    const handleNavItemClick = (itemId: string) => {
+        if (itemId === 'tasks') {
+            navigate('/quest');
+            return;
+        }
+
+        setActiveTab(itemId);
+    };
 
     return (
         <div className="min-h-screen bg-[#f4f5f8] text-[#1A1A1A] font-sans">
@@ -84,7 +93,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                     {navItems.map((item) => (
                         <button
                             key={item.id}
-                            onClick={() => setActiveTab(item.id)}
+                            onClick={() => handleNavItemClick(item.id)}
                             className={`flex items-center justify-between w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all group ${activeTab === item.id
                                 ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
                                 : 'text-gray-500 hover:bg-black/5 hover:text-black'
@@ -277,7 +286,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                         {navItems.map((item) => (
                             <button
                                 key={item.id}
-                                onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
+                                onClick={() => { handleNavItemClick(item.id); setIsMobileMenuOpen(false); }}
                                 className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === item.id
                                     ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
                                     : 'text-gray-500 hover:bg-black/5 hover:text-black'

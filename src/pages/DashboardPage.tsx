@@ -174,8 +174,21 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        if (params.get("tab") === "notifications") {
-            setActiveTab("notifications");
+        const requestedTab = params.get("tab");
+        const allowedTabs = new Set([
+            "dashboard",
+            "marketplace",
+            "tasks",
+            "wallet",
+            "referrals",
+            "history",
+            "profile",
+            "support",
+            "notifications",
+        ]);
+
+        if (requestedTab && allowedTabs.has(requestedTab)) {
+            setActiveTab(requestedTab as typeof activeTab);
         }
     }, []);
 
@@ -291,12 +304,12 @@ export default function DashboardPage() {
                     status: "Started",
                 },
             });
-            toast.success("Task started");
+            toast.success("Quest started");
             if (selectedTask.externalUrl) {
                 window.open(selectedTask.externalUrl, "_blank", "noopener,noreferrer");
             }
         } catch (error: any) {
-            toast.error(getUserFacingErrorMessage(error, "Failed to start task"));
+            toast.error(getUserFacingErrorMessage(error, "Failed to start quest"));
         }
     };
 
@@ -333,10 +346,10 @@ export default function DashboardPage() {
                 screenshotUrl,
             });
 
-            toast.success("Task submitted for review");
+            toast.success("Quest submitted for review");
             resetTaskProof();
         } catch (error: any) {
-            toast.error(getUserFacingErrorMessage(error, "Failed to submit task"));
+            toast.error(getUserFacingErrorMessage(error, "Failed to submit quest"));
         } finally {
             setIsSubmittingTask(false);
         }
@@ -350,7 +363,7 @@ export default function DashboardPage() {
             return;
         }
         if (taskTotalCost > (currentUser.wallet_balance || 0)) {
-            toast.error("Insufficient wallet balance. Please fund your wallet to create this task.");
+            toast.error("Insufficient wallet balance. Please fund your wallet to create this quest.");
             return;
         }
 
@@ -372,7 +385,7 @@ export default function DashboardPage() {
                 deadline: new Date(taskForm.deadline).getTime(),
             });
 
-            toast.success("Task created and sent for admin approval");
+            toast.success("Quest created and sent for admin approval");
             setTaskForm({
                 title: '',
                 platform: 'Instagram',
@@ -388,7 +401,7 @@ export default function DashboardPage() {
             });
             setTaskTab('my');
         } catch (error: any) {
-            toast.error(getUserFacingErrorMessage(error, "Failed to create task"));
+            toast.error(getUserFacingErrorMessage(error, "Failed to create quest"));
         } finally {
             setIsSubmittingTask(false);
         }
@@ -1154,22 +1167,22 @@ export default function DashboardPage() {
                     <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mx-auto max-w-3xl space-y-5">
                         <header className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Available Tasks</h1>
-                                <p className="mt-1 text-sm font-semibold text-gray-500">Complete tasks to earn Boots</p>
+                                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Available Quests</h1>
+                                <p className="mt-1 text-sm font-semibold text-gray-500">Complete quests to earn Boots</p>
                             </div>
                             <button
                                 onClick={() => setTaskTab('my')}
                                 className="shrink-0 rounded-2xl bg-white px-4 py-3 text-xs font-black text-zinc-900 shadow-[0_4px_18px_rgba(15,23,42,0.06)] transition-all active:scale-95"
                             >
-                                My Tasks
+                                My Quests
                             </button>
                         </header>
 
                         <div className="flex gap-2 overflow-x-auto pb-1">
                             {[
-                                { id: 'available', label: 'Task' },
-                                { id: 'my', label: 'My Tasks' },
-                                { id: 'create', label: 'Create Task' },
+                                { id: 'available', label: 'Quest' },
+                                { id: 'my', label: 'My Quests' },
+                                { id: 'create', label: 'Create Quest' },
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
@@ -1189,8 +1202,8 @@ export default function DashboardPage() {
                                 {availableTasks.length === 0 && (
                                     <div className="rounded-[2rem] border border-dashed border-black/10 bg-white p-10 text-center text-gray-400">
                                         <ListTodo size={36} className="mx-auto mb-4 opacity-30" />
-                                        <p className="font-black text-zinc-700">No tasks available</p>
-                                        <p className="mt-1 text-sm font-semibold">New earning tasks will appear here soon.</p>
+                                        <p className="font-black text-zinc-700">No quests available</p>
+                                        <p className="mt-1 text-sm font-semibold">New earning quests will appear here soon.</p>
                                     </div>
                                 )}
                             </div>
@@ -1218,8 +1231,8 @@ export default function DashboardPage() {
                                     {myTaskSubmissions.filter((submission: any) => getMyTaskBucket(submission.status) === myTaskFilter).length === 0 && (
                                         <div className="rounded-[2rem] border border-dashed border-black/10 bg-white p-10 text-center text-gray-400">
                                             <CheckCircle2 size={36} className="mx-auto mb-4 opacity-30" />
-                                            <p className="font-black text-zinc-700">No tasks yet</p>
-                                            <p className="mt-1 text-sm font-semibold">Tasks you start or submit will appear here.</p>
+                                            <p className="font-black text-zinc-700">No quests yet</p>
+                                            <p className="mt-1 text-sm font-semibold">Quests you start or submit will appear here.</p>
                                         </div>
                                     )}
                                 </div>
@@ -1230,22 +1243,22 @@ export default function DashboardPage() {
                             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                                 <form onSubmit={handleCreateTask} className="space-y-4 rounded-[2rem] border border-black/5 bg-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] sm:p-8">
                                     <div>
-                                        <h2 className="text-2xl font-black tracking-tight">Create Task</h2>
-                                        <p className="mt-1 text-sm font-semibold text-zinc-500">Promotional tasks are paid from wallet balance.</p>
+                                        <h2 className="text-2xl font-black tracking-tight">Create Quest</h2>
+                                        <p className="mt-1 text-sm font-semibold text-zinc-500">Promotional quests are paid from wallet balance.</p>
                                     </div>
 
-                                    <TaskInput label="Task title" value={taskForm.title} onChange={(value) => setTaskForm({ ...taskForm, title: value })} placeholder="Instagram Followers | Nigeria" />
+                                    <TaskInput label="Quest title" value={taskForm.title} onChange={(value) => setTaskForm({ ...taskForm, title: value })} placeholder="Instagram Followers | Nigeria" />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <TaskSelect label="Platform" value={taskForm.platform} onChange={(value) => setTaskForm({ ...taskForm, platform: value })} options={TASK_PLATFORMS} />
                                         <TaskInput label="Country / target location" value={taskForm.targetLocation} onChange={(value) => setTaskForm({ ...taskForm, targetLocation: value })} placeholder="Nigeria" />
-                                        <TaskSelect label="Task type" value={taskForm.type} onChange={(value) => setTaskForm({ ...taskForm, type: value })} options={TASK_TYPES} />
+                                        <TaskSelect label="Quest type" value={taskForm.type} onChange={(value) => setTaskForm({ ...taskForm, type: value })} options={TASK_TYPES} />
                                         <TaskSelect label="Proof required" value={taskForm.proofType} onChange={(value) => setTaskForm({ ...taskForm, proofType: value })} options={PROOF_TYPES} />
                                     </div>
 
-                                    <TaskInput label="Task link" value={taskForm.externalUrl} onChange={(value) => setTaskForm({ ...taskForm, externalUrl: value })} placeholder="https://..." />
-                                    <TaskTextarea label="Task description" value={taskForm.description} onChange={(value) => setTaskForm({ ...taskForm, description: value })} placeholder="Short public description users will see." />
-                                    <TaskTextarea label="Task instructions" value={taskForm.instructions} onChange={(value) => setTaskForm({ ...taskForm, instructions: value })} placeholder={"1. Click the task link\n2. Complete the required action\n3. Take a screenshot as proof\n4. Upload your proof\n5. Wait for approval"} />
+                                    <TaskInput label="Quest link" value={taskForm.externalUrl} onChange={(value) => setTaskForm({ ...taskForm, externalUrl: value })} placeholder="https://..." />
+                                    <TaskTextarea label="Quest description" value={taskForm.description} onChange={(value) => setTaskForm({ ...taskForm, description: value })} placeholder="Short public description users will see." />
+                                    <TaskTextarea label="Quest instructions" value={taskForm.instructions} onChange={(value) => setTaskForm({ ...taskForm, instructions: value })} placeholder={"1. Click the quest link\n2. Complete the required action\n3. Take a screenshot as proof\n4. Upload your proof\n5. Wait for approval"} />
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <TaskNumber label="Reward per worker in Boots" value={taskForm.bootsReward} onChange={(value) => setTaskForm({ ...taskForm, bootsReward: value })} />
@@ -1266,7 +1279,7 @@ export default function DashboardPage() {
                                         disabled={isSubmittingTask}
                                         className="w-full rounded-[2rem] bg-zinc-900 py-5 font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
                                     >
-                                        {isSubmittingTask ? "Creating..." : "Create Task"}
+                                        {isSubmittingTask ? "Creating..." : "Create Quest"}
                                     </button>
                                 </form>
 
@@ -1283,7 +1296,7 @@ export default function DashboardPage() {
                                                 <span>{taskForm.requiredCompletions || 0}</span>
                                             </div>
                                             <div className="flex items-center justify-between text-sm font-bold text-zinc-500">
-                                                <span>Platform task rate</span>
+                                                <span>Platform quest rate</span>
                                                 <span>{taskRate}x</span>
                                             </div>
                                             <div className="pt-5 border-t border-black/5 flex items-center justify-between">
@@ -1293,13 +1306,13 @@ export default function DashboardPage() {
                                         </div>
                                         {taskTotalCost > (currentUser?.wallet_balance || 0) && (
                                             <div className="mt-5 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">
-                                                Insufficient wallet balance. Please fund your wallet to create this task.
+                                                Insufficient wallet balance. Please fund your wallet to create this quest.
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="rounded-[2rem] border border-black/5 bg-white p-5 sm:p-8">
-                                        <h3 className="font-black mb-4">Your Created Tasks</h3>
+                                        <h3 className="font-black mb-4">Your Created Quests</h3>
                                         <div className="space-y-3">
                                             {createdTasks.slice(0, 4).map((task: any) => (
                                                 <div key={task._id} className="flex items-center justify-between gap-3 p-4 bg-zinc-50 rounded-2xl">
@@ -1311,7 +1324,7 @@ export default function DashboardPage() {
                                                 </div>
                                             ))}
                                             {createdTasks.length === 0 && (
-                                                <div className="text-sm text-gray-400 italic">You have not created any tasks yet.</div>
+                                                <div className="text-sm text-gray-400 italic">You have not created any quests yet.</div>
                                             )}
                                         </div>
                                     </div>
@@ -1378,7 +1391,7 @@ export default function DashboardPage() {
                                                 disabled={!!selectedTask.userSubmission && selectedTask.userSubmission.status !== "Started"}
                                                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-4 font-black text-white transition-all hover:scale-[1.01] active:scale-95 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:hover:scale-100"
                                             >
-                                                <LinkIcon size={18} /> Start Task
+                                                <LinkIcon size={18} /> Start Quest
                                             </button>
 
                                             <div>
@@ -2831,7 +2844,7 @@ function formatTaskSteps(instructions?: string) {
     return lines.length > 0
         ? lines
         : [
-            "Click the task link",
+            "Click the quest link",
             "Complete the required action",
             "Take a screenshot as proof",
             "Upload your proof",
@@ -2840,7 +2853,7 @@ function formatTaskSteps(instructions?: string) {
 }
 
 function TaskPlatformIcon({ platform }: { platform?: string }) {
-    const label = (platform || "Task").trim();
+    const label = (platform || "Quest").trim();
     const normalized = label.toLowerCase();
     const iconColor = normalized.includes("instagram")
         ? "text-pink-600"
@@ -2903,7 +2916,7 @@ function MyTaskCard({ submission }: { submission: any }) {
                 <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <h3 className="truncate text-sm font-black text-zinc-950 sm:text-base">{task.title || "Deleted task"}</h3>
+                            <h3 className="truncate text-sm font-black text-zinc-950 sm:text-base">{task.title || "Deleted quest"}</h3>
                             <p className="mt-1 text-xs font-bold text-zinc-400">
                                 {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "Not submitted"}
                             </p>
@@ -2920,7 +2933,7 @@ function MyTaskCard({ submission }: { submission: any }) {
                         <div className="mt-3 h-28 overflow-hidden rounded-2xl bg-zinc-100">
                             <img
                                 src={`https://aromatic-ox-169.eu-west-1.convex.site/api/storage/${storageId}`}
-                                alt="Task proof preview"
+                                alt="Quest proof preview"
                                 className="h-full w-full object-cover"
                             />
                         </div>

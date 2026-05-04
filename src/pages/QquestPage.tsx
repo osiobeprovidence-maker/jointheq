@@ -23,6 +23,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
+import { useNavigate } from "react-router-dom";
 
 type QuestTag = "Sponsored" | "Trending" | "New";
 type QuestStatus = "all" | "mine" | "completed";
@@ -219,14 +220,14 @@ const quests: Quest[] = [
   },
 ];
 
-const sortOptions = ["Suggested", "Highest Paying", "Quick Tasks", "Trending"];
+const sortOptions = ["Suggested", "Highest Paying", "Quick Quests", "Trending"];
 const questTypeOptions = [
   { title: "Follow", description: "Instagram, TikTok, X, and creator pages.", time: "20 sec", emoji: "👥" },
   { title: "Like / Comment", description: "Boost engagement on posts and launches.", time: "30 sec", emoji: "👍" },
   { title: "Watch Video", description: "Drive attention to trailers and explainers.", time: "2 min", emoji: "▶️" },
   { title: "App Download", description: "Get installs and verified onboarding.", time: "5 min", emoji: "📲" },
   { title: "Product Review", description: "Collect feedback and public reviews.", time: "4 min", emoji: "🏆" },
-  { title: "Custom Task", description: "Define your own action and proof rules.", time: "Custom", emoji: "⚡" },
+  { title: "Custom Quest", description: "Define your own action and proof rules.", time: "Custom", emoji: "⚡" },
 ];
 
 const adminFeaturedQuest: Quest = {
@@ -548,7 +549,7 @@ function QuestDetailsForm({ form, onChange }: { form: CreateQquestState; onChang
         <DarkField label="Quest Title" value={form.title} onChange={(title) => onChange({ title })} placeholder="Follow @joinqueue on Instagram" />
         <DarkField label="Qquest Link" value={form.link} onChange={(link) => onChange({ link })} placeholder="https://instagram.com/joinqueue" />
         <label className="space-y-2 sm:col-span-2">
-          <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Task Instructions</span>
+          <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Quest Instructions</span>
           <textarea value={form.instructions} onChange={(event) => onChange({ instructions: event.target.value })} className="min-h-28 w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25" placeholder="Tell users exactly what to do." />
         </label>
         <label className="space-y-2">
@@ -1433,6 +1434,7 @@ function ProfilePage() {
 }
 
 export default function QquestPage() {
+  const navigate = useNavigate();
   const [activePage, setActivePage] = useState<NavPage>("quest");
   const [activeTab, setActiveTab] = useState<QuestStatus>("all");
   const [sort, setSort] = useState("Suggested");
@@ -1458,7 +1460,7 @@ export default function QquestPage() {
       .filter((quest) => quest.title.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
     if (sort === "Highest Paying") return [...filtered].sort((a, b) => rewardValue(b) - rewardValue(a));
-    if (sort === "Quick Tasks") return [...filtered].sort((a, b) => Number.parseInt(a.time) - Number.parseInt(b.time));
+    if (sort === "Quick Quests") return [...filtered].sort((a, b) => Number.parseInt(a.time) - Number.parseInt(b.time));
     if (sort === "Trending") return filtered.filter((quest) => quest.tag === "Trending").concat(filtered.filter((quest) => quest.tag !== "Trending"));
     return filtered;
   }, [activeTab, allQuests, searchQuery, selectedTag, sort, startedQuestIds]);
@@ -1486,6 +1488,15 @@ export default function QquestPage() {
   const handleLaunchedQuest = (quest: Quest) => {
     setCreatedQuests((current) => [quest, ...current]);
     setActiveTab("mine");
+  };
+  const openMainAppPage = (page: NavPage) => {
+    if (page === "quest") {
+      setActivePage("quest");
+      return;
+    }
+
+    const dashboardTab = page === "dashboard" ? "" : `?tab=${page}`;
+    navigate(`/dashboard${dashboardTab}`);
   };
   const renderUtilityPage = () => {
     switch (activePage) {
@@ -1546,7 +1557,7 @@ export default function QquestPage() {
             return (
               <button
                 key={item.label}
-                onClick={() => setActivePage(item.id)}
+                onClick={() => openMainAppPage(item.id)}
                 className={`flex w-full items-center gap-3 rounded-full px-4 py-3 text-sm font-black transition duration-300 ${
                   active ? "bg-zinc-950 text-white shadow-[0_10px_24px_rgba(0,0,0,.16)]" : "text-zinc-500 hover:bg-black/5 hover:text-zinc-950"
                 }`}
@@ -1611,7 +1622,7 @@ export default function QquestPage() {
                   <button
                     key={item.label}
                     onClick={() => {
-                      setActivePage(item.id);
+                      openMainAppPage(item.id);
                       setIsMobileMenuOpen(false);
                     }}
                     className={`flex items-center gap-3 rounded-full px-4 py-3 text-sm font-black transition ${
