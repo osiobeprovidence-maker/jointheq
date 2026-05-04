@@ -135,10 +135,47 @@ export const approveFunding = mutation({
     const user = await ctx.db.get(request.user_id);
     if (!user) throw new Error("User not found");
 
-    // Credit user wallet with BASE AMOUNT (not unique amount)
-    await ctx.db.patch(request.user_id, {
-      wallet_balance: (user.wallet_balance || 0) + request.base_amount,
-    });
+    if (request.purpose === "quest_payment") {
+      if ((user.wallet_balance || 0) < request.base_amount) {
+        throw new Error("User wallet balance is no longer sufficient for this Quest payment.");
+      }
+
+      await ctx.db.patch(request.user_id, {
+        wallet_balance: (user.wallet_balance || 0) - request.base_amount,
+      });
+
+      await ctx.db.insert("wallet_transactions", {
+        user_id: request.user_id,
+        amount: request.base_amount,
+        type: "task_promotion_payment",
+        source: "wallet",
+        status: "completed",
+        description: request.reference || `Quest promotion payment (${request.unique_amount})`,
+        created_at: Date.now(),
+      });
+
+      if (request.task_id) {
+        await ctx.db.patch(request.task_id, {
+          paymentSource: "wallet",
+          status: "Pending Admin Approval",
+        });
+      }
+    } else {
+      // Credit user wallet with BASE AMOUNT (not unique amount)
+      await ctx.db.patch(request.user_id, {
+        wallet_balance: (user.wallet_balance || 0) + request.base_amount,
+      });
+
+      await ctx.db.insert("wallet_transactions", {
+        user_id: request.user_id,
+        amount: request.base_amount,
+        type: "funding",
+        source: "bank_transfer",
+        status: "completed",
+        description: `Manual Wallet Funding (Ref: ${request.unique_amount})`,
+        created_at: Date.now(),
+      });
+    }
 
     // Update request status
     await ctx.db.patch(args.request_id, {
@@ -148,21 +185,12 @@ export const approveFunding = mutation({
       admin_note: args.admin_note,
     });
 
-    // Add to transactions
-    await ctx.db.insert("wallet_transactions", {
-      user_id: request.user_id,
-      amount: request.base_amount,
-      type: "funding",
-      source: "bank_transfer",
-      status: "completed",
-      description: `Manual Wallet Funding (Ref: ${request.unique_amount})`,
-      created_at: Date.now(),
-    });
-
     await createNotification(ctx, {
       userId: request.user_id,
-      title: "Wallet funded",
-      message: `Your payment was approved and N${request.base_amount.toLocaleString()} has been added to your wallet.`,
+      title: request.purpose === "quest_payment" ? "Quest payment approved" : "Wallet funded",
+      message: request.purpose === "quest_payment"
+        ? `Your Quest payment of N${request.base_amount.toLocaleString()} was approved and is now pending Quest approval.`
+        : `Your payment was approved and N${request.base_amount.toLocaleString()} has been added to your wallet.`,
       type: "payment",
     });
 
@@ -188,12 +216,23 @@ export const rejectFunding = mutation({
       admin_note: args.admin_note,
     });
 
+    if (request.purpose === "quest_payment" && request.task_id) {
+      await ctx.db.patch(request.task_id, {
+        status: "Rejected",
+        adminNote: args.admin_note || "Quest payment was rejected.",
+        reviewedAt: Date.now(),
+        reviewedBy: args.admin_id,
+      });
+    }
+
     await createNotification(ctx, {
       userId: request.user_id,
-      title: "Payment review failed",
-      message: args.admin_note
-        ? `Your wallet funding request was rejected: ${args.admin_note}`
-        : "Your wallet funding request was rejected. Please check the transfer details and try again.",
+      title: request.purpose === "quest_payment" ? "Quest payment rejected" : "Payment review failed",
+      message: request.purpose === "quest_payment"
+        ? (args.admin_note ? `Your Quest payment was rejected: ${args.admin_note}` : "Your Quest payment was rejected.")
+        : args.admin_note
+          ? `Your wallet funding request was rejected: ${args.admin_note}`
+          : "Your wallet funding request was rejected. Please check the transfer details and try again.",
       type: "alert",
     });
 

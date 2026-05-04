@@ -41,7 +41,11 @@ export default function AdminPaymentsPage() {
   const rejectMutation = useMutation(api.funding.rejectFunding);
 
   const handleApprove = async (id: any) => {
-    if (!confirm("Are you sure you want to approve this payment? This will credit the user's wallet with the base amount.")) return;
+    const request = requests?.find((item: any) => item._id === id);
+    const confirmation = request?.purpose === "quest_payment"
+      ? "Approve this Quest payment? This will debit the user's wallet and send the Quest to admin approval."
+      : "Are you sure you want to approve this payment? This will credit the user's wallet with the base amount.";
+    if (!confirm(confirmation)) return;
     try {
       setProcessingId(id);
       await approveMutation({ 
@@ -49,7 +53,7 @@ export default function AdminPaymentsPage() {
         admin_id: user!._id as any,
         admin_note: adminNote || undefined
       });
-      toast.success("Payment approved and wallet credited!");
+      toast.success(request?.purpose === "quest_payment" ? "Quest payment approved!" : "Payment approved and wallet credited!");
       setAdminNote("");
     } catch (e: any) {
       toast.error(e.message || "Failed to approve payment");
@@ -124,7 +128,7 @@ export default function AdminPaymentsPage() {
               <Wallet size={18} />
             </div>
             <div className="text-xl sm:text-3xl font-black">
-              <span className="text-sm sm:text-xl text-zinc-300 font-bold mr-1">₦</span>
+              <span className="text-sm sm:text-xl text-zinc-300 font-bold mr-1">?</span>
               {requests?.reduce((acc, r) => acc + (r.status === 'Approved' ? r.base_amount : 0), 0).toLocaleString()}
             </div>
             <div className="text-[9px] sm:text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Total Credited</div>
@@ -134,7 +138,7 @@ export default function AdminPaymentsPage() {
               <AlertCircle size={18} />
             </div>
             <div className="text-xl sm:text-3xl font-black">
-              <span className="text-sm sm:text-xl text-zinc-300 font-bold mr-1">₦</span>
+              <span className="text-sm sm:text-xl text-zinc-300 font-bold mr-1">?</span>
               {requests?.reduce((acc, r) => acc + (r.status === 'Approved' ? (r.unique_amount - r.base_amount) : 0), 0).toLocaleString()}
             </div>
             <div className="text-[9px] sm:text-xs font-bold text-zinc-400 uppercase tracking-widest mt-1">Verification Revenue</div>
@@ -204,14 +208,14 @@ export default function AdminPaymentsPage() {
                     <div className="flex min-w-0 items-center gap-3 sm:gap-6 w-full lg:min-w-[350px]">
                       <div className="space-y-1 text-center flex-shrink-0">
                          <div className="w-11 h-11 sm:w-16 sm:h-16 rounded-[1.25rem] sm:rounded-[1.5rem] bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg sm:text-xl">
-                            ₦
+                            ?
                          </div>
                          <div className="text-[8px] font-black text-zinc-400 uppercase tracking-tighter hidden sm:block">Verified ID</div>
                       </div>
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex min-w-0 items-baseline gap-1 sm:gap-2 flex-wrap">
-                           <h3 className="break-all font-black text-base tracking-tight text-indigo-600 sm:text-2xl">₦{req.unique_amount.toLocaleString()}</h3>
-                           <span className="text-[10px] sm:text-xs font-bold text-zinc-400"> (Credits ₦{req.base_amount.toLocaleString()})</span>
+                           <h3 className="break-all font-black text-base tracking-tight text-indigo-600 sm:text-2xl">?{req.unique_amount.toLocaleString()}</h3>
+                           <span className="text-[10px] sm:text-xs font-bold text-zinc-400"> (Credits ?{req.base_amount.toLocaleString()})</span>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <span className="flex min-w-0 items-center gap-2 text-[10px] sm:text-xs font-bold text-zinc-600 uppercase tracking-widest break-all">

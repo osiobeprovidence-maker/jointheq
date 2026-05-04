@@ -577,14 +577,18 @@ export default function AdminPanel() {
     };
 
     const handleApprovePayment = async (id: any) => {
-        if (!confirm("Are you sure you want to approve this payment? This will credit the user's wallet with the base amount.")) return;
+        const request = paymentRequests.find((item: any) => item._id === id);
+        const confirmation = request?.purpose === "quest_payment"
+            ? "Approve this Quest payment? This will debit the user's wallet and send the Quest to admin approval."
+            : "Are you sure you want to approve this payment? This will credit the user's wallet with the base amount.";
+        if (!confirm(confirmation)) return;
         try {
             await approvePaymentMut({
                 request_id: id,
                 admin_id: currentUser!._id as any,
                 admin_note: paymentAdminNote || undefined
             });
-            toast.success("Payment approved and wallet credited!");
+            toast.success(request?.purpose === "quest_payment" ? "Quest payment approved!" : "Payment approved and wallet credited!");
             setPaymentAdminNote("");
         } catch (e: any) { toast.error(e.message || "Failed to approve payment"); }
     };
@@ -3136,7 +3140,7 @@ export default function AdminPanel() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <StatCard label="Review Needed" value={pendingPaymentsCount} icon={<Clock size={18} />} color="bg-amber-500" />
                                     <StatCard label="Total Approved" value={paymentRequests.filter(r => r.status === 'Approved').length} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" trend="up" sub="Processed transfer" />
-                                    <StatCard label="Total Credited" value={fmtCurrency(paymentRequests.reduce((acc, r) => acc + (r.status === 'Approved' ? r.base_amount : 0), 0))} icon={<Wallet size={18} />} color="bg-blue-500" />
+                                    <StatCard label="Total Processed" value={fmtCurrency(paymentRequests.reduce((acc, r) => acc + (r.status === 'Approved' ? r.base_amount : 0), 0))} icon={<Wallet size={18} />} color="bg-blue-500" />
                                     <StatCard label="Verification Rev" value={fmtCurrency(paymentRequests.reduce((acc, r) => acc + (r.status === 'Approved' ? (r.unique_amount - r.base_amount) : 0), 0))} icon={<DollarSign size={18} />} color="bg-indigo-500" />
                                 </div>
 
@@ -3170,8 +3174,15 @@ export default function AdminPanel() {
                                                     <div>
                                                         <div className="flex items-baseline gap-2">
                                                             <span className="font-black text-xl text-indigo-600">{"\u20A6"}{req.unique_amount.toLocaleString()}</span>
-                                                            <span className="text-[10px] font-bold text-gray-400">Crediting {"\u20A6"}{req.base_amount.toLocaleString()}</span>
+                                                            <span className="text-[10px] font-bold text-gray-400">
+                                                                {req.purpose === "quest_payment" ? "Debiting " : "Crediting "}{"\u20A6"}{req.base_amount.toLocaleString()}
+                                                            </span>
                                                         </div>
+                                                        {req.purpose === "quest_payment" && (
+                                                            <div className="mt-1 inline-flex rounded-full bg-orange-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-orange-600">
+                                                                Quest Payment
+                                                            </div>
+                                                        )}
                                                         <div className="text-xs font-bold text-gray-600 flex items-center gap-1.5 mt-0.5"><Users size={12} className="text-gray-300" /> {req.sender_name}</div>
                                                     </div>
                                                 </div>

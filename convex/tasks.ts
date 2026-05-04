@@ -135,20 +135,6 @@ export const createTask = mutation({
       throw new Error("Insufficient wallet balance. Please fund your wallet to create this task.");
     }
 
-    await ctx.db.patch(args.creatorUserId, {
-      wallet_balance: (user.wallet_balance || 0) - totalCost,
-    });
-
-    await ctx.db.insert("wallet_transactions", {
-      user_id: args.creatorUserId,
-      amount: totalCost,
-      type: "task_promotion_payment",
-      source: "wallet",
-      status: "completed",
-      description: `Task promotion payment: ${args.title}`,
-      created_at: Date.now(),
-    });
-
     const taskId = await ctx.db.insert("tasks", {
       creatorUserId: args.creatorUserId,
       title: args.title,
@@ -165,15 +151,28 @@ export const createTask = mutation({
       proofType: args.proofType,
       deadline: args.deadline,
       totalCost,
-      paymentSource: "wallet",
-      status: "Pending Admin Approval",
+      paymentSource: "wallet_review",
+      status: "Pending Payment Review",
       createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("manual_funding_requests", {
+      user_id: args.creatorUserId,
+      base_amount: totalCost,
+      unique_amount: totalCost,
+      sender_name: user.full_name || user.username || user.email || "Quest creator",
+      bank_name: "Wallet",
+      reference: `Quest payment: ${args.title}`,
+      purpose: "quest_payment",
+      task_id: taskId,
+      status: "Awaiting Review",
+      created_at: Date.now(),
     });
 
     await createNotification(ctx, {
       userId: args.creatorUserId,
-      title: "Task submitted",
-      message: "Your task is pending admin approval.",
+      title: "Quest payment submitted",
+      message: "Your quest payment is pending admin payment review.",
       type: "task",
     });
 

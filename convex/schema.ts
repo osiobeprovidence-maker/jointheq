@@ -244,6 +244,8 @@ export default defineSchema({
         bank_name: v.optional(v.string()),
         screenshot_id: v.optional(v.string()),
         reference: v.optional(v.string()),
+        purpose: v.optional(v.string()),
+        task_id: v.optional(v.id("tasks")),
         status: v.string(),
         created_at: v.number(),
         processed_at: v.optional(v.number()),
