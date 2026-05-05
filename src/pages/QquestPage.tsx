@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { auth } from "../lib/auth";
 
@@ -37,6 +37,7 @@ type ConnectedAccount = {
   qic: string;
 };
 type ConnectStatus = "idle" | "loading" | "success" | "error";
+type BankLoadStatus = "loading" | "ready" | "error";
 type PaystackBank = {
   name: string;
   code: string;
@@ -183,7 +184,7 @@ function campaignToQuest(form: CreateQquestState, estimatedUsers: number, servic
   const tag: QuestTag = "New";
   return {
     id: Date.now(),
-    title: form.title || `${form.questType} Qquest`,
+    title: form.title || `${form.questType} Quest`,
     reward: `Earn ₦${qquestRewardPerUser.toLocaleString()}`,
     time: questTypeOptions.find((option) => option.title === form.questType)?.time || "Custom",
     users: "0 joined",
@@ -417,10 +418,10 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
         <div className="border-b border-white/10 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black tracking-tight">{isLaunched ? "Qquest Queued" : "Create Qquest"}</h2>
+              <h2 className="text-2xl font-black tracking-tight">{isLaunched ? "Quest Queued" : "Create Quest"}</h2>
               <p className="mt-1 text-sm font-bold text-white/45">Prepare campaigns now. Engagement opens May 10.</p>
             </div>
-            <button onClick={onClose} className="rounded-xl bg-white/10 p-2 text-white/60 transition hover:bg-white/15 hover:text-white" aria-label="Close create qquest">
+            <button onClick={onClose} className="rounded-xl bg-white/10 p-2 text-white/60 transition hover:bg-white/15 hover:text-white" aria-label="Close create quest">
               <X size={20} />
             </button>
           </div>
@@ -451,10 +452,10 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
                 <div className="space-y-5">
                   <ReviewSummary form={form} estimatedUsers={estimatedUsers} platformFee={platformFee} totalCost={totalCost} onEdit={(targetStep) => setStep(targetStep)} compact />
                   <div className="rounded-2xl border border-[#F26522]/30 bg-[#F26522]/10 p-5">
-                    <h3 className="text-xl font-black text-orange-100">Fund your Qquest to go live</h3>
-                    <p className="mt-2 text-sm font-bold leading-6 text-orange-100/65">Your campaign is ready. Payment reserves rewards for workers before the Qquest becomes active.</p>
+                    <h3 className="text-xl font-black text-orange-100">Fund your Quest to go live</h3>
+                    <p className="mt-2 text-sm font-bold leading-6 text-orange-100/65">Your campaign is ready. Payment reserves rewards for workers before the Quest becomes active.</p>
                     <button onClick={() => setIsPaymentOpen(true)} className="mt-5 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 shadow-[0_0_32px_rgba(16,185,129,.18)] transition hover:scale-[1.01]">
-                      Promote Qquest
+                      Promote Quest
                     </button>
                   </div>
                 </div>
@@ -589,7 +590,7 @@ function QuestDetailsForm({ form, onChange }: { form: CreateQquestState; onChang
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <DarkField label="Quest Title" value={form.title} onChange={(title) => onChange({ title })} placeholder="Describe the action users should complete" />
-        <DarkField label="Qquest Link" value={form.link} onChange={(link) => onChange({ link })} placeholder="https://instagram.com/joinqueue" />
+        <DarkField label="Quest Link" value={form.link} onChange={(link) => onChange({ link })} placeholder="https://instagram.com/joinqueue" />
         <label className="space-y-2 sm:col-span-2">
           <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Quest Instructions</span>
           <textarea value={form.instructions} onChange={(event) => onChange({ instructions: event.target.value })} className="min-h-28 w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25" placeholder="Tell users exactly what to do." />
@@ -681,12 +682,44 @@ function ReviewSummary({
 function PaymentModal({ totalCost, onClose, onPaid }: { totalCost: number; onClose: () => void; onPaid: () => void }) {
   const [method, setMethod] = useState<"wallet" | "gateway">("wallet");
 
+  const handlePay = () => {
+    if (method === "wallet") {
+      onPaid();
+      return;
+    }
+
+    const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+    if (!paystackKey) {
+      alert("Paystack is not configured. Please contact support.");
+      return;
+    }
+
+    const handler = (window as any).PaystackPop?.setup({
+      key: paystackKey,
+      email: "funding@jointheq.sbs",
+      amount: totalCost * 100,
+      currency: "NGN",
+      callback: function(response: any) {
+        onPaid();
+      },
+      onClose: function() {
+        console.log("Paystack payment cancelled.");
+      }
+    });
+
+    if (handler) {
+      handler.openIframe();
+    } else {
+      alert("Payment module is loading. Please try again in a few seconds.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl bg-[#0f0f14] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,.55)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-black">Fund your Qquest to go live</h3>
+            <h3 className="text-2xl font-black">Fund your Quest to go live</h3>
             <p className="mt-2 text-sm font-bold text-white/45">Reserve ₦{totalCost.toLocaleString()} for campaign delivery.</p>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white/10 p-2 text-white/65"><X size={18} /></button>
@@ -701,7 +734,7 @@ function PaymentModal({ totalCost, onClose, onPaid }: { totalCost: number; onClo
             </button>
           ))}
         </div>
-        <button onClick={onPaid} className="mt-5 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01]">
+        <button onClick={handlePay} className="mt-5 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01]">
           Pay and Launch
         </button>
       </div>
@@ -717,7 +750,7 @@ function PostLaunchState({ quest, estimatedUsers, onClose }: { quest: Quest | nu
           <CheckCircle2 size={30} />
         </div>
         <h3 className="mt-4 text-2xl font-black">{quest?.title || "Quest"} is queued</h3>
-        <p className="mt-2 text-sm font-bold text-orange-100/65">Your Qquest is prepared and visible, but users cannot engage until May 10.</p>
+        <p className="mt-2 text-sm font-bold text-orange-100/65">Your Quest is prepared and visible, but users cannot engage until May 10.</p>
       </div>
       <div className="rounded-2xl bg-white/7 p-5">
         <div className="flex items-center justify-between text-sm font-black">
@@ -849,7 +882,7 @@ function QuestDetailModal({
           <div className="grid grid-cols-2 gap-3 rounded-2xl bg-zinc-50 p-3 text-xs font-black text-zinc-500">
             <div>
               <p className="uppercase tracking-[.14em] text-zinc-400">Type</p>
-              <p className="mt-1 text-zinc-950">{quest.questType || "Qquest"}</p>
+              <p className="mt-1 text-zinc-950">{quest.questType || "Quest"}</p>
             </div>
             <div>
               <p className="uppercase tracking-[.14em] text-zinc-400">Proof</p>
@@ -919,7 +952,7 @@ function QuestDetailModal({
                   <h3 className="mt-4 text-lg font-black">Proof submitted</h3>
                   <p className="mt-2 text-sm font-bold text-white/50">Your reward will be reviewed and released after approval.</p>
                   <button onClick={onBack} className="mt-5 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950">
-                    Back to Qquests
+                    Back to Quests
                   </button>
                 </div>
               ) : (
@@ -1084,31 +1117,49 @@ function ConnectAccountModal({
 }) {
   const [bankOptions, setBankOptions] = useState<PaystackBank[]>(defaultPaystackBanks);
   const [bankCode, setBankCode] = useState(defaultPaystackBanks[0].code);
+  const [bankSearch, setBankSearch] = useState("");
+  const [bankLoadStatus, setBankLoadStatus] = useState<BankLoadStatus>("loading");
+  const [bankLoadMessage, setBankLoadMessage] = useState("Loading Paystack banks...");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [status, setStatus] = useState<ConnectStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
   const selectedBank = bankOptions.find((bank) => bank.code === bankCode) || bankOptions[0];
+  const fetchBanks = useAction(api.paystack.getBanks);
+  const resolveBankAction = useAction(api.paystack.resolveBank);
+
+  const filteredBankOptions = useMemo(() => {
+    const search = bankSearch.trim().toLowerCase();
+    if (!search) return bankOptions.slice(0, 30);
+
+    return bankOptions
+      .filter((bank) => `${bank.name} ${bank.code}`.toLowerCase().includes(search))
+      .slice(0, 30);
+  }, [bankOptions, bankSearch]);
 
   useEffect(() => {
     let isActive = true;
 
-    fetch("/api/paystack/banks")
-      .then((response) => response.ok ? response.json() : Promise.reject(response))
-      .then((payload: { banks?: PaystackBank[] }) => {
-        if (!isActive || !payload.banks?.length) return;
-        setBankOptions(payload.banks);
-        setBankCode((currentCode) => payload.banks?.some((bank) => bank.code === currentCode) ? currentCode : payload.banks![0].code);
+    fetchBanks()
+      .then((banks) => {
+        if (!isActive || !banks?.length) return;
+        setBankOptions(banks);
+        setBankCode((currentCode) => banks.some((bank) => bank.code === currentCode) ? currentCode : banks[0].code);
+        setBankLoadStatus("ready");
+        setBankLoadMessage(`${banks.length.toLocaleString()} Paystack banks loaded.`);
       })
       .catch((error) => {
         console.warn("Using fallback bank list because Paystack banks could not be loaded", error);
+        if (!isActive) return;
+        setBankLoadStatus("error");
+        setBankLoadMessage(error instanceof Error ? error.message : "Could not load Paystack banks.");
       });
 
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [fetchBanks]);
 
   const verifyAccount = async () => {
     const cleanAccountNumber = accountNumber.replace(/\D/g, "");
@@ -1121,10 +1172,12 @@ function ConnectAccountModal({
     setErrorMessage("");
     setStatus("loading");
     try {
-      const response = await fetch(`/api/paystack/resolve-bank?account_number=${encodeURIComponent(cleanAccountNumber)}&bank_code=${encodeURIComponent(selectedBank.code)}`);
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.accountName) {
-        throw new Error(payload?.message || "Could not verify account details.");
+      const payload = await resolveBankAction({
+        accountNumber: cleanAccountNumber,
+        bankCode: selectedBank.code,
+      });
+      if (!payload?.accountName) {
+        throw new Error("Could not verify account details.");
       }
 
       const verifiedAccountName = String(payload.accountName);
@@ -1157,16 +1210,44 @@ function ConnectAccountModal({
           </button>
         </div>
         <div className="space-y-4 p-5">
-          <label className="space-y-2 block">
+          <div className="space-y-2">
             <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Bank Name</span>
-            <select value={bankCode} onChange={(event) => {
-              setBankCode(event.target.value);
-              setAccountName("");
-              setStatus("idle");
-            }} className="w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black outline-none">
-              {bankOptions.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}
-            </select>
-          </label>
+            <div className="relative">
+              <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/35" />
+              <input
+                value={bankSearch}
+                onChange={(event) => setBankSearch(event.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-white/8 py-3 pl-11 pr-4 text-sm font-black outline-none transition focus:border-white/25"
+                placeholder="Search bank name"
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04] p-2">
+              {filteredBankOptions.length > 0 ? filteredBankOptions.map((bank) => {
+                const isSelected = bank.code === bankCode;
+                return (
+                  <button
+                    key={bank.code}
+                    type="button"
+                    onClick={() => {
+                      setBankCode(bank.code);
+                      setBankSearch(bank.name);
+                      setAccountName("");
+                      setStatus("idle");
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-black transition ${isSelected ? "bg-white text-zinc-950" : "text-white/75 hover:bg-white/10 hover:text-white"}`}
+                  >
+                    <span>{bank.name}</span>
+                    <span className={`ml-3 text-[11px] ${isSelected ? "text-zinc-500" : "text-white/35"}`}>{bank.code}</span>
+                  </button>
+                );
+              }) : (
+                <div className="px-3 py-4 text-sm font-black text-white/45">No bank matches your search.</div>
+              )}
+            </div>
+            <div className={`rounded-2xl px-4 py-3 text-xs font-black ${bankLoadStatus === "ready" ? "bg-emerald-400/10 text-emerald-200" : bankLoadStatus === "loading" ? "bg-white/8 text-white/55" : "bg-amber-400/10 text-amber-200"}`}>
+              {bankLoadStatus === "error" ? `${bankLoadMessage} Using fallback banks until Paystack is configured.` : bankLoadMessage}
+            </div>
+          </div>
           <label className="space-y-2 block">
             <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Account Number</span>
             <input value={accountNumber} onChange={(event) => {
@@ -1257,7 +1338,7 @@ function WithdrawModal({
                 <p className="mt-2 text-sm font-bold text-amber-100/70">You’re ₦{amountAway.toLocaleString()} away.</p>
               </div>
               <button onClick={() => setStep("form")} className="w-full rounded-2xl bg-white/10 px-5 py-4 text-sm font-black text-white">Edit Amount</button>
-              <button onClick={onClose} className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950">Find More Qquests</button>
+              <button onClick={onClose} className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950">Find More Quests</button>
             </div>
           ) : null}
 
@@ -1450,7 +1531,7 @@ function WalletPage({
               <p className="mt-2 text-2xl font-black">₦{withdrawalFee}</p>
             </div>
           </div>
-          <p className="mt-5 text-sm font-bold leading-6 text-white/45">Connect your Nigerian bank account once, then withdraw completed Qquest earnings directly to that account.</p>
+          <p className="mt-5 text-sm font-bold leading-6 text-white/45">Connect your Nigerian bank account once, then withdraw completed Quest earnings directly to that account.</p>
         </section>
         <div className="lg:col-span-2">
           <TransactionList />
@@ -1828,7 +1909,7 @@ export default function QquestPage() {
                   onChange={(event) => setSearchQuery(event.target.value)}
                   autoFocus
                   className="h-11 w-full rounded-full bg-white px-4 text-sm font-black text-zinc-900 shadow-sm outline-none ring-2 ring-zinc-950/8 placeholder:text-zinc-400 sm:w-56"
-                  placeholder="Search Qquests"
+                  placeholder="Search Quests"
                 />
               ) : null}
               <label className="relative">

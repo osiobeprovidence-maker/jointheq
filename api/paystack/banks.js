@@ -3,7 +3,13 @@ const BANK_PAGE_SIZE = 100;
 const MAX_BANK_PAGES = 20;
 
 function getSecretKey() {
-  return process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || "";
+  return (
+    process.env.PAYSTACK_SECRET_KEY ||
+    process.env.PAYSTACK_SECRET ||
+    process.env.PAYSTACK_SECURITY_KEY ||
+    process.env.PAYSTACK_SECRET_LIVE ||
+    ""
+  );
 }
 
 async function fetchPaystackBanks(secretKey) {

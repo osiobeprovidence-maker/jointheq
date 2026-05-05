@@ -1,7 +1,13 @@
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 
 function getSecretKey() {
-  return process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || "";
+  return (
+    process.env.PAYSTACK_SECRET_KEY ||
+    process.env.PAYSTACK_SECRET ||
+    process.env.PAYSTACK_SECURITY_KEY ||
+    process.env.PAYSTACK_SECRET_LIVE ||
+    ""
+  );
 }
 
 export default async function handler(req, res) {

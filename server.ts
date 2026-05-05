@@ -7,6 +7,8 @@ import dotenv from "dotenv";
 import { createServer } from "http";
 
 dotenv.config();
+dotenv.config({ path: ".env.local", override: true });
+dotenv.config({ path: ".env.production", override: false });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +18,13 @@ const BANK_PAGE_SIZE = 100;
 const MAX_BANK_PAGES = 20;
 
 function getPaystackSecretKey() {
-  return process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || "";
+  return (
+    process.env.PAYSTACK_SECRET_KEY ||
+    process.env.PAYSTACK_SECRET ||
+    process.env.PAYSTACK_SECURITY_KEY ||
+    process.env.PAYSTACK_SECRET_LIVE ||
+    ""
+  );
 }
 
 function sendPaystackConfigError(res: express.Response) {
