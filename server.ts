@@ -12,6 +12,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const MAX_PORT_ATTEMPTS = 10;
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
+const BANK_PAGE_SIZE = 100;
+const MAX_BANK_PAGES = 20;
 
 function getPaystackSecretKey() {
   return process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || "";
@@ -44,6 +46,38 @@ async function fetchPaystack(pathname: string, res: express.Response) {
   }
 
   return payload;
+}
+
+async function fetchPaystackBanks(res: express.Response) {
+  const banks = [];
+
+  for (let page = 1; page <= MAX_BANK_PAGES; page += 1) {
+    const params = new URLSearchParams({
+      country: "nigeria",
+      perPage: String(BANK_PAGE_SIZE),
+      page: String(page),
+    });
+
+    const payload = await fetchPaystack(`/bank?${params.toString()}`, res);
+    if (!payload) return null;
+
+    banks.push(...(payload.data || []));
+
+    const pageCount = Number(payload.meta?.pageCount || page);
+    const hasMore = page < pageCount && (payload.data || []).length > 0;
+    if (!hasMore) break;
+  }
+
+  const uniqueBanks = new Map<string, { name: string; code: string }>();
+  for (const bank of banks) {
+    if (!bank?.name || !bank?.code) continue;
+    uniqueBanks.set(bank.code, {
+      name: bank.name,
+      code: bank.code,
+    });
+  }
+
+  return [...uniqueBanks.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function listenWithFallback(server: ReturnType<typeof createServer>, preferredPort: number): Promise<number> {
@@ -82,15 +116,11 @@ async function startServer() {
 
   app.get("/api/paystack/banks", async (_req, res) => {
     try {
-      const payload = await fetchPaystack("/bank?country=nigeria&perPage=100", res);
-      if (!payload) return;
+      const banks = await fetchPaystackBanks(res);
+      if (!banks) return;
 
-      res.json({
-        banks: (payload.data || []).map((bank: any) => ({
-          name: bank.name,
-          code: bank.code,
-        })),
-      });
+      res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
+      res.json({ banks });
     } catch (error) {
       console.error("Failed to fetch Paystack banks", error);
       res.status(500).json({ message: "Could not load banks." });

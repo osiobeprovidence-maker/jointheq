@@ -1522,6 +1522,7 @@ export default function QquestPage() {
   const [createdQuests, setCreatedQuests] = useState<Quest[]>([]);
   const questWalletBalance = liveUser?.wallet_balance || 0;
   const questQic = liveUser?.qic || "";
+  const sidebarUsername = liveUser?.username || storedUser?.username || "member";
   const connectedAccount: ConnectedAccount | null = liveUser?.quest_withdrawal_account
     ? {
         bankName: liveUser.quest_withdrawal_account.bank_name,
@@ -1628,13 +1629,13 @@ export default function QquestPage() {
   return (
     <div className="min-h-screen bg-[#f4f5f8] text-zinc-950">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col bg-white p-6 shadow-[4px_0_24px_rgba(0,0,0,0.03)] xl:flex">
-        <div className="mb-10 flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-emerald-300 to-cyan-300 text-lg font-black text-zinc-950 shadow-[0_10px_24px_rgba(16,185,129,.2)]">
-            Q
-          </div>
-          <div>
-            <p className="text-xl font-black tracking-tight">jointheq</p>
-            <p className="text-xs font-black uppercase tracking-[.18em] text-zinc-400">member</p>
+        <div className="mb-2 flex items-center gap-3">
+          <Logo className="h-10 w-10" />
+          <span className="text-xl font-bold tracking-tight">jointheq</span>
+        </div>
+        <div className="mb-10 px-1">
+          <div className="inline-block rounded-md bg-black/5 px-2 py-0.5 text-xs font-bold uppercase tracking-tight text-black/30">
+            @{sidebarUsername}
           </div>
         </div>
 
