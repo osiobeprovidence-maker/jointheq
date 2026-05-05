@@ -481,3 +481,32 @@ export const rejectSubmission = mutation({
     return { success: true };
   },
 });
+
+export const removeTask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    adminId: v.id("users"),
+    adminNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminId);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+
+    await ctx.db.patch(args.taskId, {
+      status: "Removed",
+      reviewedAt: Date.now(),
+      reviewedBy: args.adminId,
+      adminNote: args.adminNote,
+    });
+
+    await createNotification(ctx, {
+      userId: task.creatorUserId,
+      title: "Quest Removed",
+      message: args.adminNote ? `Your Quest was removed: ${args.adminNote}` : "Your Quest was removed for violation of community rules.",
+      type: "alert",
+    });
+
+    return { success: true };
+  },
+});

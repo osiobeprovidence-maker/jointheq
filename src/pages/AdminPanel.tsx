@@ -368,6 +368,7 @@ export default function AdminPanel() {
     const approveTaskMut = useMutation(api.tasks.approveTask);
     const rejectTaskMut = useMutation(api.tasks.rejectTask);
     const pauseTaskMut = useMutation(api.tasks.pauseTask);
+    const removeTaskMut = useMutation(api.tasks.removeTask);
     const approveSubmissionMut = useMutation(api.tasks.approveSubmission);
     const rejectSubmissionMut = useMutation(api.tasks.rejectSubmission);
     // Workforce Queries
@@ -2283,6 +2284,9 @@ export default function AdminPanel() {
                                                     )}
                                                     {task.status === "Active" && (
                                                         <button onClick={async () => { await pauseTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.success("Task paused"); }} className="w-full py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100">Pause Suspicious Task</button>
+                                                    )}
+                                                    {task.status !== "Removed" && (
+                                                        <button onClick={async () => { if(window.confirm("Remove this quest post for violation of community rules?")) { await removeTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || "Removed for violation of community rules" }); setTaskAdminNote(""); toast.success("Quest removed"); } }} className="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 size={14} /> Remove Quest</button>
                                                     )}
                                                 </div>
                                             ))}
