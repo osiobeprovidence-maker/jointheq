@@ -37,6 +37,34 @@ const normalizeMarketplaceCategory = (category?: string, fallback?: string) => {
     return "Streaming";
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const dateToMs = (date?: string) => {
+    if (!date) return null;
+    const ms = Date.parse(date);
+    return Number.isFinite(ms) ? ms : null;
+};
+
+const nextPaymentDayMs = (paymentDay: number, now: number) => {
+    const today = new Date(now);
+    const normalizedDay = Math.min(Math.max(Math.trunc(paymentDay || 1), 1), 31);
+    const candidate = new Date(today.getFullYear(), today.getMonth(), normalizedDay);
+
+    if (candidate.getMonth() !== today.getMonth()) {
+        candidate.setDate(0);
+    }
+
+    if (candidate.getTime() < now) {
+        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, normalizedDay);
+        if (nextMonth.getMonth() !== ((today.getMonth() + 1) % 12)) {
+            nextMonth.setDate(0);
+        }
+        return nextMonth.getTime();
+    }
+
+    return candidate.getTime();
+};
+
 /**
  * Returns EACH listing as a separate item (no aggregation across listings).
  * Uses the new marketplace table for consolidated data.
@@ -186,6 +214,105 @@ export const getSlotsByUserId = query({
         }));
 
         return result;
+    },
+});
+
+export const getAdminDuePayments = query({
+    args: {
+        windowDays: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        const windowDays = Math.max(1, Math.min(args.windowDays ?? 14, 60));
+        const windowEnd = now + windowDays * DAY_MS;
+
+        const slots = await ctx.db
+            .query("subscription_slots")
+            .withIndex("by_status", q => q.eq("status", "filled"))
+            .collect();
+
+        const dueSlots = [];
+
+        for (const slot of slots) {
+            const dueAt = dateToMs(slot.renewal_date);
+            if (!dueAt || dueAt > windowEnd) continue;
+
+            const [user, slotType, subscription, group] = await Promise.all([
+                slot.user_id ? ctx.db.get(slot.user_id) : Promise.resolve(null),
+                slot.slot_type_id ? ctx.db.get(slot.slot_type_id) : Promise.resolve(null),
+                slot.subscription_id ? ctx.db.get(slot.subscription_id) : Promise.resolve(null),
+                slot.group_id ? ctx.db.get(slot.group_id) : Promise.resolve(null),
+            ]);
+
+            if (!user) continue;
+
+            let catalog = null;
+            if (subscription?.platform_catalog_id) {
+                catalog = await ctx.db.get(subscription.platform_catalog_id);
+            } else if (group?.subscription_catalog_id) {
+                catalog = await ctx.db.get(group.subscription_catalog_id);
+            }
+
+            const daysUntilDue = Math.ceil((dueAt - now) / DAY_MS);
+            dueSlots.push({
+                _id: slot._id,
+                source: "slot",
+                user_id: user._id,
+                user_name: user.full_name,
+                user_email: user.email,
+                wallet_balance: user.wallet_balance,
+                platform: subscription?.platform ?? catalog?.name ?? "Subscription",
+                slot_name: slotType?.name ?? slot.profile_name ?? "Slot",
+                account_email: subscription?.login_email ?? group?.account_email,
+                amount_due: slotType?.price ?? subscription?.slot_price ?? 0,
+                renewal_date: slot.renewal_date,
+                due_at: dueAt,
+                days_until_due: daysUntilDue,
+                payment_state: dueAt < now ? "overdue" : daysUntilDue <= 3 ? "due_soon" : "upcoming",
+                auto_renew: slot.auto_renew ?? false,
+                status: slot.status,
+            });
+        }
+
+        const migrated = await ctx.db.query("migrated_subscriptions").collect();
+
+        for (const migration of migrated) {
+            if (migration.status === "failed" || migration.status === "closed") continue;
+
+            const lastPaymentMs = dateToMs(migration.last_payment_date);
+            const dueAt = migration.payment_day
+                ? nextPaymentDayMs(migration.payment_day, now)
+                : lastPaymentMs
+                    ? lastPaymentMs + 30 * DAY_MS
+                    : null;
+
+            if (!dueAt || dueAt > windowEnd) continue;
+
+            const user = await ctx.db.get(migration.user_id);
+            if (!user) continue;
+
+            const daysUntilDue = Math.ceil((dueAt - now) / DAY_MS);
+            dueSlots.push({
+                _id: migration._id,
+                source: "migration",
+                user_id: user._id,
+                user_name: user.full_name,
+                user_email: user.email,
+                wallet_balance: user.wallet_balance,
+                platform: migration.platform,
+                slot_name: migration.profile_name,
+                account_email: migration.email,
+                amount_due: 0,
+                renewal_date: new Date(dueAt).toISOString(),
+                due_at: dueAt,
+                days_until_due: daysUntilDue,
+                payment_state: dueAt < now ? "overdue" : daysUntilDue <= 3 ? "due_soon" : "upcoming",
+                auto_renew: migration.auto_renew ?? false,
+                status: migration.status,
+            });
+        }
+
+        return dueSlots.sort((a, b) => a.due_at - b.due_at);
     },
 });
 

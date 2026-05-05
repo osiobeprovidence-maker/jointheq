@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
     LayoutDashboard,
@@ -259,6 +259,7 @@ export default function AdminPanel() {
     const campaigns = useQuery(api.campaigns.getAllAnalytics) || [];
     const adminsList = useQuery(api.users.getAdmins) || [];
     const allSubscriptions = useQuery(api.subscriptions.getAdminMarketplace) || [];
+    const duePayments = useQuery(api.subscriptions.getAdminDuePayments, { windowDays: 14 }) || [];
     const campaignAnalytics = useQuery(
         api.campaigns.getAnalytics,
         selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
@@ -312,6 +313,17 @@ export default function AdminPanel() {
 
     // Derived Live User (to ensure modal shows fresh data after mutations)
     const liveUser = selectedUser ? allUsers.find((u: any) => u._id === selectedUser._id) || selectedUser : null;
+    const duePaymentSummary = useMemo(() => {
+        const overdue = duePayments.filter((payment: any) => payment.payment_state === "overdue");
+        const dueSoon = duePayments.filter((payment: any) => payment.payment_state === "due_soon");
+        const upcoming = duePayments.filter((payment: any) => payment.payment_state === "upcoming");
+        return {
+            overdueCount: overdue.length,
+            dueSoonCount: dueSoon.length,
+            upcomingCount: upcoming.length,
+            amountDue: duePayments.reduce((sum: number, payment: any) => sum + (payment.amount_due || 0), 0),
+        };
+    }, [duePayments]);
 
     // Management State (Unified Admin Hub)
     const [selectedSlotForAssignment, setSelectedSlotForAssignment] = useState<Id<"slot_types"> | null>(null);
@@ -1873,6 +1885,87 @@ export default function AdminPanel() {
                                     <StatCard label="Revenue Today" value={stats ? fmt(stats.revenueToday) : "-"} icon={<DollarSign size={18} />} color="bg-blue-500" />
                                     <StatCard label="This Month" value={stats ? fmt(stats.revenueThisMonth) : "-"} icon={<BarChart3 size={18} />} color="bg-indigo-500" />
                                     <StatCard label="Refunds" value={stats ? fmt(stats.totalRefunds) : "-"} icon={<RefreshCw size={18} />} color="bg-orange-500" />
+                                </div>
+
+                                <SectionHeader title="Subscription Payments Due" sub="Overdue and upcoming renewals in the next 14 days" />
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard label="Overdue" value={duePaymentSummary.overdueCount} icon={<AlertTriangle size={18} />} color="bg-red-500" />
+                                    <StatCard label="Due Soon" value={duePaymentSummary.dueSoonCount} icon={<Clock size={18} />} color="bg-amber-500" />
+                                    <StatCard label="Upcoming" value={duePaymentSummary.upcomingCount} icon={<Calendar size={18} />} color="bg-sky-500" />
+                                    <StatCard label="Amount Due" value={fmt(duePaymentSummary.amountDue)} icon={<Wallet size={18} />} color="bg-emerald-500" />
+                                </div>
+                                <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
+                                    <div className="hidden lg:grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b">
+                                        <div className="col-span-3">Subscriber</div>
+                                        <div className="col-span-3">Subscription</div>
+                                        <div className="col-span-2">Due Date</div>
+                                        <div className="col-span-2">Wallet</div>
+                                        <div className="col-span-1">Renew</div>
+                                        <div className="col-span-1 text-right">Amount</div>
+                                    </div>
+                                    {duePayments.length === 0 ? (
+                                        <div className="py-12 text-center text-gray-400">
+                                            <CheckCircle2 size={34} className="mx-auto mb-3 opacity-20" />
+                                            <div className="text-sm font-bold">No subscriptions due in the next 14 days</div>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-black/[0.03]">
+                                            {duePayments.map((payment: any) => {
+                                                const matchedUser = allUsers.find((u: any) => u._id === payment.user_id);
+                                                const isOverdue = payment.payment_state === "overdue";
+                                                const isDueSoon = payment.payment_state === "due_soon";
+                                                return (
+                                                    <div key={`${payment.source}-${payment._id}`} className="grid grid-cols-1 gap-3 p-4 lg:grid-cols-12 lg:items-center hover:bg-black/[0.01]">
+                                                        <div className="lg:col-span-3 min-w-0">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (matchedUser) {
+                                                                        setSelectedUser(matchedUser);
+                                                                        setUserDetailTab("financials");
+                                                                    }
+                                                                }}
+                                                                className="text-left min-w-0"
+                                                            >
+                                                                <div className="font-black text-sm truncate text-zinc-900">{payment.user_name}</div>
+                                                                <div className="text-[10px] text-gray-400 font-bold truncate">{payment.user_email}</div>
+                                                            </button>
+                                                        </div>
+                                                        <div className="lg:col-span-3 min-w-0">
+                                                            <div className="font-bold text-sm truncate">{payment.platform}</div>
+                                                            <div className="text-[10px] text-gray-400 font-bold truncate">{payment.slot_name}</div>
+                                                        </div>
+                                                        <div className="lg:col-span-2">
+                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                                                                isOverdue ? "bg-red-50 text-red-600" : isDueSoon ? "bg-amber-50 text-amber-600" : "bg-sky-50 text-sky-600"
+                                                            }`}>
+                                                                <Calendar size={11} />
+                                                                {isOverdue
+                                                                    ? `${Math.abs(payment.days_until_due)}d overdue`
+                                                                    : payment.days_until_due === 0
+                                                                        ? "Due today"
+                                                                        : `${payment.days_until_due}d left`}
+                                                            </span>
+                                                            <div className="text-[10px] text-gray-400 font-bold mt-1">{new Date(payment.due_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                        <div className="lg:col-span-2">
+                                                            <div className={`text-sm font-black ${(payment.wallet_balance || 0) >= (payment.amount_due || 0) ? "text-emerald-600" : "text-red-500"}`}>
+                                                                {fmt(payment.wallet_balance || 0)}
+                                                            </div>
+                                                            <div className="text-[10px] text-gray-400 font-bold">Wallet balance</div>
+                                                        </div>
+                                                        <div className="lg:col-span-1">
+                                                            <span className={`inline-flex px-2 py-1 rounded-full text-[9px] font-black uppercase ${payment.auto_renew ? "bg-emerald-50 text-emerald-600" : "bg-zinc-100 text-gray-500"}`}>
+                                                                {payment.auto_renew ? "Auto" : "Manual"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="lg:col-span-1 lg:text-right">
+                                                            <div className="font-black text-sm">{payment.amount_due ? fmt(payment.amount_due) : "Unset"}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <SectionHeader title="All Transactions" sub="Last 50 transactions on the platform" />
