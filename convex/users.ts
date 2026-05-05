@@ -293,7 +293,12 @@ export const verifyUser = mutation({
         if (user.verification_token_expires) {
             const expiry = new Date(user.verification_token_expires);
             if (expiry < new Date()) {
-                return { success: false, error: "token_expired", message: "This verification link has expired. Please sign up again or request a new verification email." };
+                return {
+                    success: false,
+                    error: "token_expired",
+                    message: "This verification link has expired. Request a new verification email to continue.",
+                    email: user.email,
+                };
             }
         }
 
@@ -306,6 +311,46 @@ export const verifyUser = mutation({
         });
 
         return { success: true, userId: user._id, alreadyVerified: false };
+    },
+});
+
+export const requestVerificationEmail = mutation({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+        const normalizedEmail = args.email.trim().toLowerCase();
+
+        if (!normalizedEmail) {
+            return { success: false, error: "Email address is required." };
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+            .unique();
+
+        if (!user) {
+            return { success: true };
+        }
+
+        if (user.is_verified) {
+            return { success: true, alreadyVerified: true };
+        }
+
+        const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+        await ctx.db.patch(user._id, {
+            verification_token: token,
+            verification_token_expires: expires,
+            verification_deadline: Date.now() + 3 * 24 * 60 * 60 * 1000,
+        });
+
+        return {
+            success: true,
+            email: user.email,
+            name: user.full_name,
+            token,
+        };
     },
 });
 

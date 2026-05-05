@@ -16,6 +16,7 @@ export default function LandingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
 
   const createUser = useMutation(api.users.createUser);
   const sendEmail = useAction(api.actions.sendVerificationEmail);
@@ -23,6 +24,7 @@ export default function LandingPage() {
   const verifyUser = useMutation(api.users.verifyUser);
   const login = useMutation(api.users.login);
   const socialLogin = useMutation(api.users.socialLogin);
+  const requestVerificationEmail = useMutation(api.users.requestVerificationEmail);
   const requestPasswordReset = useMutation(api.users.requestPasswordReset);
   const resetPassword = useMutation(api.users.resetPassword);
   const [formData, setFormData] = useState({
@@ -69,6 +71,11 @@ export default function LandingPage() {
             } else {
               // Graceful error — invalid_token | token_expired | missing_token
               setError(result.message ?? 'Verification failed. Please try again.');
+              const verificationResult = result as any;
+              if (verificationResult.error === 'token_expired' && verificationResult.email) {
+                setPendingVerificationEmail(verificationResult.email);
+                setFormData((current) => ({ ...current, email: verificationResult.email }));
+              }
             }
             setActiveSection('login');
           })
@@ -139,6 +146,7 @@ export default function LandingPage() {
     setIsLoading(true);
     setError('');
     setSuccess('');
+    setPendingVerificationEmail('');
 
     try {
       const result = await login({
@@ -158,9 +166,51 @@ export default function LandingPage() {
         navigate("/dashboard");
       } else {
         setError(result.error || 'Login failed');
+        if (result.requiresVerification) {
+          setPendingVerificationEmail(formData.email);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Login error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const email = (pendingVerificationEmail || formData.email).trim();
+
+    if (!email) {
+      setError('Enter your email address so we can resend your verification link.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await requestVerificationEmail({ email });
+
+      if (response.alreadyVerified) {
+        setSuccess('Your account is already verified. Please log in.');
+        setPendingVerificationEmail('');
+        return;
+      }
+
+      if (response?.token && response?.email && response?.name) {
+        await sendEmail({
+          email: response.email,
+          name: response.name,
+          token: response.token,
+          baseUrl: window.location.origin,
+        });
+      }
+
+      setSuccess('Verification email sent. Please check your inbox.');
+      setPendingVerificationEmail(email);
+    } catch (err: any) {
+      setError(err.message || 'Could not resend verification email. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -171,6 +221,7 @@ export default function LandingPage() {
     setIsLoading(true);
     setError('');
     setSuccess('');
+    setPendingVerificationEmail('');
 
     try {
       const response = await requestPasswordReset({ email: forgotEmail });
@@ -724,6 +775,57 @@ export default function LandingPage() {
                     Referral detected: <span className="font-black">{referredByCode}</span>
                   </div>
                 )}
+                {pendingVerificationEmail && (
+                  <div className="mb-4 p-4 bg-orange-50 text-orange-700 rounded-xl text-sm font-bold border border-orange-100">
+                    <div>Your account still needs email verification.</div>
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={isLoading}
+                      className="mt-3 w-full py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors disabled:opacity-50"
+                    >
+                      {isLoading ? 'Sending...' : 'Resend verification email'}
+                    </button>
+                  </div>
+                )}
+
+                <div className="mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handleSocialLogin(googleProvider, 'google')}
+                      disabled={isLoading}
+                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
+                    >
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"/>
+                        <path fill="#34A853" d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 01-6.723-4.806L1.248 17.4C3.208 21.348 7.28 24 12 24c3.059 0 5.842-1.154 7.961-3.139l-3.921-2.848z"/>
+                        <path fill="#4A90E2" d="M23.655 12.273c0-.853-.075-1.705-.214-2.531H12v4.811h6.634c-.287 1.493-1.189 2.766-2.595 3.559l3.922 2.848c2.295-2.118 3.694-5.257 3.694-8.687z"/>
+                        <path fill="#FBBC05" d="M5.277 14.268A7.12 7.12 0 014.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 000 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"/>
+                      </svg>
+                      Google
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSocialLogin(appleProvider, 'apple')}
+                      disabled={isLoading}
+                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
+                    >
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.05 2.95.72 3.86 1.84-3.21 1.94-2.61 6.32.72 7.82-1.04 2.45-2.14 4.31-3.23 3.35zm-2.05-15.6c.03-2.66-2.18-4.66-4.63-4.68-.13 2.77 2.44 4.79 4.63 4.68z"/>
+                      </svg>
+                      Apple
+                    </button>
+                  </div>
+                  <div className="relative mt-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-black/10"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-black/50">Or log in with email</span>
+                    </div>
+                  </div>
+                </div>
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
@@ -782,44 +884,6 @@ export default function LandingPage() {
                     {isLoading ? 'Verifying...' : 'Log In'}
                   </button>
                 </form>
-
-                <div className="mt-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-black/10"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-black/50">Or continue with</span>
-                    </div>
-                  </div>
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin(googleProvider, 'google')}
-                      disabled={isLoading}
-                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
-                    >
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                        <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"/>
-                        <path fill="#34A853" d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 01-6.723-4.806L1.248 17.4C3.208 21.348 7.28 24 12 24c3.059 0 5.842-1.154 7.961-3.139l-3.921-2.848z"/>
-                        <path fill="#4A90E2" d="M23.655 12.273c0-.853-.075-1.705-.214-2.531H12v4.811h6.634c-.287 1.493-1.189 2.766-2.595 3.559l3.922 2.848c2.295-2.118 3.694-5.257 3.694-8.687z"/>
-                        <path fill="#FBBC05" d="M5.277 14.268A7.12 7.12 0 014.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 000 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"/>
-                      </svg>
-                      Google
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin(appleProvider, 'apple')}
-                      disabled={isLoading}
-                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
-                    >
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.05 2.95.72 3.86 1.84-3.21 1.94-2.61 6.32.72 7.82-1.04 2.45-2.14 4.31-3.23 3.35zm-2.05-15.6c.03-2.66-2.18-4.66-4.63-4.68-.13 2.77 2.44 4.79 4.63 4.68z"/>
-                      </svg>
-                      Apple
-                    </button>
-                  </div>
-                </div>
 
                 <div className="mt-8 text-center text-sm text-black/60">
                   Don't have an account?{' '}
@@ -1007,6 +1071,44 @@ export default function LandingPage() {
                   </div>
                 )}
 
+                <div className="mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handleSocialLogin(googleProvider, 'google')}
+                      disabled={isLoading}
+                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
+                    >
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"/>
+                        <path fill="#34A853" d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 01-6.723-4.806L1.248 17.4C3.208 21.348 7.28 24 12 24c3.059 0 5.842-1.154 7.961-3.139l-3.921-2.848z"/>
+                        <path fill="#4A90E2" d="M23.655 12.273c0-.853-.075-1.705-.214-2.531H12v4.811h6.634c-.287 1.493-1.189 2.766-2.595 3.559l3.922 2.848c2.295-2.118 3.694-5.257 3.694-8.687z"/>
+                        <path fill="#FBBC05" d="M5.277 14.268A7.12 7.12 0 014.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 000 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"/>
+                      </svg>
+                      Google
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSocialLogin(appleProvider, 'apple')}
+                      disabled={isLoading}
+                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
+                    >
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.05 2.95.72 3.86 1.84-3.21 1.94-2.61 6.32.72 7.82-1.04 2.45-2.14 4.31-3.23 3.35zm-2.05-15.6c.03-2.66-2.18-4.66-4.63-4.68-.13 2.77 2.44 4.79 4.63 4.68z"/>
+                      </svg>
+                      Apple
+                    </button>
+                  </div>
+                  <div className="relative mt-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-black/10"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-black/50">Or create account with email</span>
+                    </div>
+                  </div>
+                </div>
+
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold mb-2">Full Name</label>
@@ -1084,44 +1186,6 @@ export default function LandingPage() {
                     {isLoading ? 'Creating Circle...' : success ? 'Check Email' : 'Create Account'}
                   </button>
                 </form>
-
-                <div className="mt-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-black/10"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-black/50">Or continue with</span>
-                    </div>
-                  </div>
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin(googleProvider, 'google')}
-                      disabled={isLoading}
-                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
-                    >
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                        <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"/>
-                        <path fill="#34A853" d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 01-6.723-4.806L1.248 17.4C3.208 21.348 7.28 24 12 24c3.059 0 5.842-1.154 7.961-3.139l-3.921-2.848z"/>
-                        <path fill="#4A90E2" d="M23.655 12.273c0-.853-.075-1.705-.214-2.531H12v4.811h6.634c-.287 1.493-1.189 2.766-2.595 3.559l3.922 2.848c2.295-2.118 3.694-5.257 3.694-8.687z"/>
-                        <path fill="#FBBC05" d="M5.277 14.268A7.12 7.12 0 014.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 000 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"/>
-                      </svg>
-                      Google
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSocialLogin(appleProvider, 'apple')}
-                      disabled={isLoading}
-                      className="flex items-center justify-center py-3 bg-[#F5F5F4] rounded-xl hover:bg-black/5 transition-colors font-semibold"
-                    >
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.05 2.95.72 3.86 1.84-3.21 1.94-2.61 6.32.72 7.82-1.04 2.45-2.14 4.31-3.23 3.35zm-2.05-15.6c.03-2.66-2.18-4.66-4.63-4.68-.13 2.77 2.44 4.79 4.63 4.68z"/>
-                      </svg>
-                      Apple
-                    </button>
-                  </div>
-                </div>
 
                 <div className="mt-8 text-center text-sm text-black/60">
                   Already have an account?{' '}
