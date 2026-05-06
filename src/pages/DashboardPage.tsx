@@ -39,15 +39,56 @@ import {
     TrendingUp as ChartIcon,
     DollarSign,
     Users as TeamIcon,
+import React, { useState, useEffect, ChangeEvent, FormEvent, Key, ReactNode } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+    Zap,
+    TrendingUp,
+    ShieldCheck,
+    ChevronRight,
+    ShoppingBag,
+    Plus,
+    Wallet,
+    Sparkles,
+    Trophy,
+    Check,
+    Users,
+    Activity,
+    AlertCircle,
+    Settings,
+    Shield,
+    User as UserIcon,
+    LogOut,
+    X,
+    Mail,
+    Phone,
+    Clock,
+    Smartphone,
+    Laptop,
+    Monitor,
+    Trash2,
+    MessageCircle,
+    ImageIcon,
+    Send,
+    ChevronLeft,
+    MoreVertical,
+    Info,
+    CheckCircle2,
+    Copy,
+    ExternalLink as LinkIcon,
+    TrendingUp as ChartIcon,
+    DollarSign,
+    Users as TeamIcon,
     Target,
     Edit,
     BadgeDollarSign,
     Bell,
     Repeat,
     ListTodo,
-    Upload
+    Upload,
+    CreditCard
 } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -272,9 +313,55 @@ export default function DashboardPage() {
 
     // Wallet State
     const [showWalletFundingDetails, setShowWalletFundingDetails] = useState(false);
+    const [paystackFundAmount, setPaystackFundAmount] = useState<string>("5000");
+    const verifyWalletFundingAction = useAction(api.paystack.verifyWalletFunding);
+
+    const handlePaystackFund = () => {
+        const amount = Number(paystackFundAmount);
+        if (!amount || amount < 100) {
+            toast.error("Minimum amount is \u20A6100");
+            return;
+        }
+
+        const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+        if (!paystackKey) {
+            toast.error("Paystack is not configured.");
+            return;
+        }
+
+        const handler = (window as any).PaystackPop?.setup({
+            key: paystackKey,
+            email: currentUser?.email || "funding@jointheq.sbs",
+            amount: amount * 100,
+            currency: "NGN",
+            callback: async function(response: any) {
+                try {
+                    toast.loading("Verifying transaction...");
+                    const res = await verifyWalletFundingAction({
+                        reference: response.reference,
+                        userId: currentUser!._id
+                    });
+                    toast.dismiss();
+                    if (res.success) {
+                        toast.success(`\u20A6${res.amount.toLocaleString()} added to your wallet! ${res.cardSaved ? "Card linked successfully." : ""}`);
+                    }
+                } catch (err: any) {
+                    toast.dismiss();
+                    toast.error(err.message || "Failed to verify transaction");
+                }
+            },
+            onClose: function() {
+                toast.error("Payment cancelled");
+            }
+        });
+
+        if (handler) {
+            handler.openIframe();
+        }
+    };
 
     const handleFundSubmit = () => {
-        navigate("/fund-wallet");
+        setShowWalletFundingDetails(true);
     };
 
     const copyWalletAccountNumber = async () => {
@@ -1439,33 +1526,77 @@ export default function DashboardPage() {
                             <p className="text-gray-500 mt-1">Manage your JoinTheQ wallet balance and funding history.</p>
                         </header>
 
+                        {/* Balance + Funding Options */}
                         <div className="rounded-[2rem] border border-black/5 bg-white p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] sm:p-8">
-                            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
                                         Current Balance
                                     </div>
-                                <motion.div
-                                    key={currentUser?.wallet_balance}
+                                    <motion.div
+                                        key={currentUser?.wallet_balance}
                                         animate={{ scale: [1, 1.03, 1] }}
-                                    transition={{ duration: 0.3 }}
+                                        transition={{ duration: 0.3 }}
                                         className="mt-3 text-5xl font-black tracking-tight text-zinc-950"
-                                >
-                                    {fmtCurrency(currentUser?.wallet_balance || 0)}
-                                </motion.div>
+                                    >
+                                        {fmtCurrency(currentUser?.wallet_balance || 0)}
+                                    </motion.div>
                                     <p className="mt-3 max-w-md text-sm font-medium text-zinc-500">
-                                        Fund your wallet by transferring to the official JoinTheQ account.
+                                        Fund your wallet or link a card for seamless payments.
                                     </p>
                                 </div>
-                                <button
-                                    onClick={handleFundSubmit}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-[1.5rem] bg-zinc-950 px-6 py-4 text-sm font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.01] hover:bg-black active:scale-95 sm:w-auto"
-                                >
-                                    <Plus size={18} />
-                                    Fund Wallet
-                                </button>
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={handleFundSubmit}
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-[1.5rem] bg-white border border-black/10 px-6 py-4 text-sm font-black text-zinc-900 shadow-sm transition-all hover:bg-zinc-50 active:scale-95 sm:w-auto"
+                                    >
+                                        <Plus size={18} />
+                                        Bank Transfer
+                                    </button>
+                                    <div className="flex items-center gap-2 bg-zinc-50 border border-black/5 rounded-[1.5rem] p-1 shadow-inner">
+                                        <span className="pl-4 font-bold text-zinc-400">{"\u20A6"}</span>
+                                        <input
+                                            type="number"
+                                            value={paystackFundAmount}
+                                            onChange={(e) => setPaystackFundAmount(e.target.value)}
+                                            className="w-24 bg-transparent font-black outline-none text-zinc-900"
+                                            placeholder="5000"
+                                        />
+                                        <button
+                                            onClick={handlePaystackFund}
+                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-950 px-5 py-3 text-sm font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.02] hover:bg-black active:scale-95"
+                                        >
+                                            <CreditCard size={16} />
+                                            Fund via Card
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Linked Card */}
+                        {currentUser?.direct_debit_card && (
+                            <div className="rounded-[2rem] border border-blue-100 bg-blue-50/50 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-blue-600">
+                                        <CreditCard size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-zinc-900 capitalize flex items-center gap-2">
+                                            {currentUser.direct_debit_card.brand} ending in {currentUser.direct_debit_card.last4}
+                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] uppercase tracking-wider font-bold">Linked</span>
+                                        </h3>
+                                        <p className="text-sm font-semibold text-zinc-500 mt-0.5">Expires {currentUser.direct_debit_card.expiry}</p>
+                                    </div>
+                                </div>
+                                <div className="text-sm font-bold text-blue-600 px-4 py-2 bg-white rounded-xl shadow-sm border border-blue-100 cursor-default">
+                                    Active for Auto-Renewals
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Bank transfer details panel */}
+
 
                         <AnimatePresence>
                             {showWalletFundingDetails && (

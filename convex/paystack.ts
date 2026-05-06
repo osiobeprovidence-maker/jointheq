@@ -1,5 +1,6 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 const BANK_PAGE_SIZE = 100;
@@ -106,5 +107,56 @@ export const resolveBank = action({
       accountName: payload.data.account_name,
       bankId: payload.data.bank_id,
     };
+  },
+});
+
+export const verifyWalletFunding = action({
+  args: {
+    reference: v.string(),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const secretKey = getPaystackSecretKey();
+    if (!secretKey) throw new Error("Paystack secret key is not configured.");
+
+    const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/verify/${encodeURIComponent(args.reference)}`, {
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || !payload?.status) {
+      throw new Error(payload?.message || "Could not verify transaction.");
+    }
+
+    const data = payload.data;
+    if (data.status !== "success") {
+      throw new Error(`Transaction is not successful. Status: ${data.status}`);
+    }
+
+    // Amount is in kobo, convert to NGN
+    const amountNGN = data.amount / 100;
+
+    let cardDetails;
+    if (data.authorization && data.authorization.reusable) {
+      cardDetails = {
+        last4: data.authorization.last4,
+        brand: data.authorization.brand,
+        expiry: `${data.authorization.exp_month}/${data.authorization.exp_year}`,
+        auth_token: data.authorization.authorization_code,
+      };
+    }
+
+    await ctx.runMutation(internal.users.creditWalletAndSaveCard, {
+      userId: args.userId,
+      amount: amountNGN,
+      reference: args.reference,
+      cardDetails,
+    });
+
+    return { success: true, amount: amountNGN, cardSaved: !!cardDetails };
   },
 });

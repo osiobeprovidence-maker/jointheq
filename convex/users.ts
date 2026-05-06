@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { awardReputation } from "./reputation";
 import bcrypt from "bcryptjs";
 
@@ -1097,6 +1097,52 @@ export const saveQuestWithdrawalAccount = mutation({
             account: quest_withdrawal_account,
             wallet_balance: user.wallet_balance || 0,
         };
+    },
+});
+
+export const creditWalletAndSaveCard = internalMutation({
+    args: {
+        userId: v.id("users"),
+        amount: v.number(),
+        reference: v.string(),
+        cardDetails: v.optional(v.object({
+            last4: v.string(),
+            brand: v.string(),
+            expiry: v.string(),
+            auth_token: v.string(),
+        })),
+    },
+    handler: async (ctx, args) => {
+        // Prevent double credit
+        const existingTx = await ctx.db
+            .query("wallet_transactions")
+            .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+            .filter((q) => q.eq(q.field("description"), `Paystack: ${args.reference}`))
+            .first();
+
+        if (existingTx) {
+            return { success: true, message: "Already credited" };
+        }
+
+        const user = await ctx.db.get(args.userId);
+        if (!user) throw new Error("User not found");
+
+        await ctx.db.patch(args.userId, {
+            wallet_balance: (user.wallet_balance || 0) + args.amount,
+            ...(args.cardDetails && { direct_debit_card: args.cardDetails }),
+        });
+
+        await ctx.db.insert("wallet_transactions", {
+            user_id: args.userId,
+            amount: args.amount,
+            type: "funding",
+            source: "paystack",
+            status: "completed",
+            description: `Paystack: ${args.reference}`,
+            created_at: Date.now(),
+        });
+
+        return { success: true };
     },
 });
 
