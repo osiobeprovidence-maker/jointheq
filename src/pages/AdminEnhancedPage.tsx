@@ -308,7 +308,7 @@ export default function AdminEnhancedPage() {
                                                     <div>
                                                         <div className="font-bold text-sm sm:text-base">{st.name}</div>
                                                         <div className="text-xs text-gray-500">
-                                                            {group.subscription_name} · ₦{st.price.toLocaleString()}
+                                                            {group.subscription_name} · {(group.account_email || 'admin').split('@')[0]} · ₦{st.price.toLocaleString()}
                                                         </div>
                                                     </div>
                                                     <div className="text-sm font-bold text-gray-500">
@@ -488,7 +488,12 @@ export default function AdminEnhancedPage() {
                                     <div className="p-4 bg-gray-50 rounded-2xl">
                                         <div className="text-xs font-bold text-gray-500 uppercase mb-1">Selected Slot Type</div>
                                         <div className="font-bold">
-                                            {slotTypes.flatMap(g => g.slot_types).find(st => st._id === selectedSlotType)?.name || "Select a slot type"}
+                                            {(() => {
+                                                const group = slotTypes.find((g: any) => (g.slot_types || []).some((s: any) => s._id === selectedSlotType));
+                                                const st = group ? (group.slot_types || []).find((s: any) => s._id === selectedSlotType) : null;
+                                                if (!st) return "Select a slot type";
+                                                return `${st.name} · ${(group.account_email || 'admin').split('@')[0]} `;
+                                            })()}
                                         </div>
                                     </div>
 

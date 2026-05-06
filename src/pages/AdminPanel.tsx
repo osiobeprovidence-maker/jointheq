@@ -4664,7 +4664,9 @@ export default function AdminPanel() {
                                                                 {allSubscriptions.map((sub: any) => (
                                                                     <optgroup key={sub._id} label={`${sub.subscription_name} (${sub.account_email || 'admin'})`}>
                                                                         {(sub.slot_types || []).map((st: any) => (
-                                                                            <option key={st._id} value={st._id}>{st.name} - {fmt(st.price)}</option>
+                                                                            <option key={st._id} value={st._id}>
+                                                                                {st.name} ({(sub.account_email || 'admin').split('@')[0]}) - {fmt(st.price)}
+                                                                            </option>
                                                                         ))}
                                                                     </optgroup>
                                                                 ))}

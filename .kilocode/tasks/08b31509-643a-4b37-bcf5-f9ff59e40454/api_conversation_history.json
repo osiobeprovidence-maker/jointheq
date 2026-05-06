@@ -1,0 +1,1 @@
+[{"role":"user","content":[{"type":"text","text":"push ur build"}],"ts":1778110853568},{"role":"assistant","content":[{"type":"text","text":"@read: package.json\n@bash: git status"}],"ts":1778110882948}]
