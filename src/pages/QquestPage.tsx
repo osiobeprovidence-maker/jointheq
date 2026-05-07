@@ -694,24 +694,27 @@ function PaymentModal({ totalCost, onClose, onPaid }: { totalCost: number; onClo
       return;
     }
 
-    const handler = (window as any).PaystackPop?.setup({
+    const paystack = (window as any).PaystackPop ? new (window as any).PaystackPop() : null;
+    if (!paystack?.newTransaction) {
+      alert("Payment module is loading. Please try again in a few seconds.");
+      return;
+    }
+
+    paystack.newTransaction({
       key: paystackKey,
       email: "funding@jointheq.sbs",
       amount: totalCost * 100,
       currency: "NGN",
-      callback: function(response: any) {
+      onSuccess: function(response: any) {
         onPaid();
       },
-      onClose: function() {
+      onCancel: function() {
         console.log("Paystack payment cancelled.");
-      }
+      },
+      onError: function(error: any) {
+        alert(error?.message || "Could not open Paystack checkout");
+      },
     });
-
-    if (handler) {
-      handler.openIframe();
-    } else {
-      alert("Payment module is loading. Please try again in a few seconds.");
-    }
   };
 
   return (

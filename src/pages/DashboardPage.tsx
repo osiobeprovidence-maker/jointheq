@@ -15,6 +15,7 @@ import {
     Users,
     Activity,
     AlertCircle,
+    Loader2,
     Settings,
     Shield,
     User as UserIcon,
@@ -101,6 +102,18 @@ const WALLET_FUNDING_BANK_DETAILS = {
     accountNumber: "9049861561",
     accountName: "Cratebux and Logistic",
 };
+const CARD_LINK_AMOUNT = 100;
+const WALLET_FUNDING_MIN_AMOUNT = 1000;
+const WALLET_FUNDING_CHARGE = 20;
+
+function getPaystackPublicKey() {
+    return (
+        import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
+        import.meta.env.VITE_PAYSTACK_KEY ||
+        import.meta.env.VITE_PAYSTACK_PUBLIC ||
+        ""
+    );
+}
 
 function formatSignInProvider(provider?: string) {
     switch ((provider || "").toLowerCase()) {
@@ -273,55 +286,132 @@ export default function DashboardPage() {
 
     // Wallet State
     const [showWalletFundingDetails, setShowWalletFundingDetails] = useState(false);
-    const [paystackFundAmount, setPaystackFundAmount] = useState<string>("5000");
+    const [paystackFundAmount, setPaystackFundAmount] = useState<string>("1000");
+    const [isSubmittingManualFunding, setIsSubmittingManualFunding] = useState(false);
     const verifyWalletFundingAction = useAction(api.paystack.verifyWalletFunding);
+    const submitManualFunding = useMutation(api.funding.submitManualFunding);
+    const walletFundingAmount = Number(paystackFundAmount || 0);
+    const isValidWalletFundingAmount = Number.isFinite(walletFundingAmount) && walletFundingAmount >= WALLET_FUNDING_MIN_AMOUNT;
+    const walletFundingTotal = isValidWalletFundingAmount ? walletFundingAmount + WALLET_FUNDING_CHARGE : WALLET_FUNDING_CHARGE;
 
-    const handlePaystackFund = () => {
-        const amount = Number(paystackFundAmount);
-        if (!amount || amount < 100) {
-            toast.error("Minimum amount is \u20A6100");
+    const startPaystackWalletPayment = ({
+        amount,
+        walletCreditAmount = amount,
+        label,
+    }: {
+        amount: number;
+        walletCreditAmount?: number;
+        label: "fund" | "link";
+    }) => {
+        if (!amount || amount < WALLET_FUNDING_MIN_AMOUNT) {
+            toast.error("Minimum funding is \u20A61,000");
             return;
         }
 
-        const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+        if (!currentUser) {
+            toast.error("Please sign in before funding your wallet.");
+            return;
+        }
+
+        const paystackKey = getPaystackPublicKey();
         if (!paystackKey) {
-            toast.error("Paystack is not configured.");
+            toast.error("Paystack public key is not configured. Add VITE_PAYSTACK_PUBLIC_KEY and restart the server.");
             return;
         }
 
-        const handler = (window as any).PaystackPop?.setup({
+        const paystack = (window as any).PaystackPop ? new (window as any).PaystackPop() : null;
+        if (!paystack?.newTransaction) {
+            toast.error("Payment module is loading. Please try again in a few seconds.");
+            return;
+        }
+
+        paystack.newTransaction({
             key: paystackKey,
-            email: currentUser?.email || "funding@jointheq.sbs",
+            email: currentUser.email || "funding@jointheq.sbs",
             amount: amount * 100,
             currency: "NGN",
-            callback: async function(response: any) {
+            metadata: {
+                custom_fields: [
+                    {
+                        display_name: label === "link" ? "Card Link" : "Wallet Credit",
+                        variable_name: label === "link" ? "card_link" : "wallet_credit",
+                        value: String(walletCreditAmount),
+                    },
+                ],
+            },
+            onSuccess: async function(response: any) {
                 try {
                     toast.loading("Verifying transaction...");
                     const res = await verifyWalletFundingAction({
                         reference: response.reference,
-                        userId: currentUser!._id
+                        userId: currentUser._id,
+                        walletCreditAmount,
                     });
                     toast.dismiss();
                     if (res.success) {
-                        toast.success(`\u20A6${res.amount.toLocaleString()} added to your wallet! ${res.cardSaved ? "Card linked successfully." : ""}`);
+                        toast.success(
+                            label === "link"
+                                ? `Card linked successfully. \u20A6${res.amount.toLocaleString()} was added to your wallet.`
+                                : `\u20A6${res.amount.toLocaleString()} added to your wallet! ${res.cardSaved ? "Card linked successfully." : ""}`,
+                        );
                     }
                 } catch (err: any) {
                     toast.dismiss();
                     toast.error(err.message || "Failed to verify transaction");
                 }
             },
-            onClose: function() {
+            onCancel: function() {
                 toast.error("Payment cancelled");
-            }
+            },
+            onError: function(error: any) {
+                toast.error(error?.message || "Could not open Paystack checkout");
+            },
         });
+    };
 
-        if (handler) {
-            handler.openIframe();
-        }
+    const handlePaystackFund = () => {
+        startPaystackWalletPayment({
+            amount: walletFundingTotal,
+            walletCreditAmount: walletFundingAmount,
+            label: "fund",
+        });
+    };
+
+    const handleLinkCard = () => {
+        startPaystackWalletPayment({
+            amount: CARD_LINK_AMOUNT,
+            walletCreditAmount: CARD_LINK_AMOUNT,
+            label: "link",
+        });
     };
 
     const handleFundSubmit = () => {
+        if (!isValidWalletFundingAmount) {
+            toast.error("Minimum funding is \u20A61,000");
+            return;
+        }
         setShowWalletFundingDetails(true);
+    };
+
+    const handleManualFundingDone = async () => {
+        if (!currentUser || !isValidWalletFundingAmount || isSubmittingManualFunding) return;
+
+        setIsSubmittingManualFunding(true);
+        try {
+            await submitManualFunding({
+                user_id: currentUser._id,
+                base_amount: walletFundingAmount,
+                unique_amount: walletFundingTotal,
+                sender_name: currentUser.full_name || currentUser.email,
+                bank_name: undefined,
+            });
+            setShowWalletFundingDetails(false);
+            toast.success("Transfer submitted for review");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to submit transfer for review");
+        } finally {
+            setIsSubmittingManualFunding(false);
+        }
     };
 
     const copyWalletAccountNumber = async () => {
@@ -1505,31 +1595,49 @@ export default function DashboardPage() {
                                         Fund your wallet or link a card for seamless payments.
                                     </p>
                                 </div>
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        onClick={handleFundSubmit}
-                                        className="inline-flex w-full items-center justify-center gap-2 rounded-[1.5rem] bg-white border border-black/10 px-6 py-4 text-sm font-black text-zinc-900 shadow-sm transition-all hover:bg-zinc-50 active:scale-95 sm:w-auto"
-                                    >
-                                        <Plus size={18} />
-                                        Bank Transfer
-                                    </button>
-                                    <div className="flex items-center gap-2 bg-zinc-50 border border-black/5 rounded-[1.5rem] p-1 shadow-inner">
+                                <div className="flex w-full max-w-sm flex-col gap-3 sm:w-auto">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">
+                                        Amount to fund
+                                    </label>
+                                    <div className="flex items-center gap-2 rounded-[1.5rem] border border-black/5 bg-zinc-50 p-1 shadow-inner">
                                         <span className="pl-4 font-bold text-zinc-400">{"\u20A6"}</span>
                                         <input
                                             type="number"
+                                            min={WALLET_FUNDING_MIN_AMOUNT}
                                             value={paystackFundAmount}
                                             onChange={(e) => setPaystackFundAmount(e.target.value)}
-                                            className="w-24 bg-transparent font-black outline-none text-zinc-900"
-                                            placeholder="5000"
+                                            className="min-w-0 flex-1 bg-transparent font-black text-zinc-900 outline-none"
+                                            placeholder="1000"
                                         />
+                                    </div>
+                                    <div className="rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold leading-relaxed text-red-700">
+                                        Pay {isValidWalletFundingAmount ? fmtCurrency(walletFundingTotal) : "--"} total. Your wallet gets {isValidWalletFundingAmount ? fmtCurrency(walletFundingAmount) : "--"}.
+                                    </div>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        <button
+                                            onClick={handleFundSubmit}
+                                            disabled={!isValidWalletFundingAmount}
+                                            className="inline-flex w-full items-center justify-center gap-2 rounded-[1.5rem] border border-black/10 bg-white px-4 py-4 text-sm font-black text-zinc-900 shadow-sm transition-all hover:bg-zinc-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            <Plus size={18} />
+                                            Manual Transfer
+                                        </button>
                                         <button
                                             onClick={handlePaystackFund}
-                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-950 px-5 py-3 text-sm font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.02] hover:bg-black active:scale-95"
+                                            disabled={!isValidWalletFundingAmount}
+                                            className="inline-flex w-full items-center justify-center gap-2 rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-sm font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.02] hover:bg-black active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                                         >
                                             <CreditCard size={16} />
-                                            Fund via Card
+                                            Paystack
                                         </button>
                                     </div>
+                                    <button
+                                        onClick={handleLinkCard}
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-[1.5rem] border border-blue-100 bg-blue-50 px-6 py-4 text-sm font-black text-blue-700 shadow-sm transition-all hover:bg-blue-100 active:scale-95 sm:w-auto"
+                                    >
+                                        <CreditCard size={18} />
+                                        Link Card
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1571,7 +1679,7 @@ export default function DashboardPage() {
                                         <div>
                                             <h2 className="text-2xl font-black tracking-tight">Fund Wallet</h2>
                                             <p className="mt-1 text-sm font-medium text-zinc-500">
-                                                Copy the account number and make your transfer.
+                                                Transfer exactly {fmtCurrency(walletFundingTotal)}. Your wallet will receive {fmtCurrency(walletFundingAmount)} after review.
                                             </p>
                                         </div>
                                         <button
@@ -1611,9 +1719,20 @@ export default function DashboardPage() {
                                             </button>
                                         </div>
                                     </div>
-                                    <p className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                                        After payment, your wallet will be credited once your transfer is confirmed.
-                                            </p>
+                                    <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                                        <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                                            Add the {fmtCurrency(WALLET_FUNDING_CHARGE)} transfer charge. After submission, admin will confirm your payment.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleManualFundingDone}
+                                            disabled={isSubmittingManualFunding}
+                                            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-4 text-sm font-black text-white shadow-lg shadow-red-600/20 transition-all hover:bg-red-700 active:scale-95 disabled:opacity-60 sm:w-auto"
+                                        >
+                                            {isSubmittingManualFunding ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
+                                            I have made this transfer
+                                        </button>
+                                    </div>
                                 </motion.section>
                             )}
                         </AnimatePresence>

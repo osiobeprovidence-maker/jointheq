@@ -114,6 +114,7 @@ export const verifyWalletFunding = action({
   args: {
     reference: v.string(),
     userId: v.id("users"),
+    walletCreditAmount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const secretKey = getPaystackSecretKey();
@@ -137,8 +138,17 @@ export const verifyWalletFunding = action({
       throw new Error(`Transaction is not successful. Status: ${data.status}`);
     }
 
-    // Amount is in kobo, convert to NGN
+    // Amount is in kobo, convert to NGN.
     const amountNGN = data.amount / 100;
+    const walletCreditAmount = args.walletCreditAmount ?? amountNGN;
+
+    if (!Number.isFinite(walletCreditAmount) || walletCreditAmount <= 0) {
+      throw new Error("Invalid wallet funding amount.");
+    }
+
+    if (walletCreditAmount > amountNGN) {
+      throw new Error("Paid amount is lower than the wallet credit amount.");
+    }
 
     let cardDetails;
     if (data.authorization && data.authorization.reusable) {
@@ -152,11 +162,11 @@ export const verifyWalletFunding = action({
 
     await ctx.runMutation(internal.users.creditWalletAndSaveCard, {
       userId: args.userId,
-      amount: amountNGN,
+      amount: walletCreditAmount,
       reference: args.reference,
       cardDetails,
     });
 
-    return { success: true, amount: amountNGN, cardSaved: !!cardDetails };
+    return { success: true, amount: walletCreditAmount, paidAmount: amountNGN, cardSaved: !!cardDetails };
   },
 });

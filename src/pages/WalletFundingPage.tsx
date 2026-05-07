@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  CreditCard,
   Loader2,
   Plus,
   Wallet as WalletIcon,
@@ -58,6 +59,7 @@ export default function WalletFundingPage() {
       currentUser ? { user_id: currentUser._id } : "skip",
     ) || [];
   const submitManualFunding = useMutation(api.funding.submitManualFunding);
+  const verifyWalletFundingAction = useAction(api.paystack.verifyWalletFunding);
   const [selectedPlan, setSelectedPlan] = useState<null | {
     subscriptionName: string;
     slotName: string;
@@ -66,6 +68,7 @@ export default function WalletFundingPage() {
   const [amountInput, setAmountInput] = useState("");
   const [fundingStage, setFundingStage] = useState<"form" | "loading" | "transfer">("form");
   const [isSubmittingFunding, setIsSubmittingFunding] = useState(false);
+  const [isCardFunding, setIsCardFunding] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   const fundingAmount = Number(amountInput || 0);
@@ -141,6 +144,71 @@ export default function WalletFundingPage() {
     }
   };
 
+  const handlePaystackFunding = () => {
+    if (!currentUser || isCardFunding) return;
+
+    if (!isValidFundingAmount) {
+      toast.error("Minimum funding amount is N1,000");
+      return;
+    }
+
+    const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+    if (!paystackKey) {
+      toast.error("Paystack is not configured.");
+      return;
+    }
+
+    const paystack = (window as any).PaystackPop ? new (window as any).PaystackPop() : null;
+    if (!paystack?.newTransaction) {
+      toast.error("Paystack could not start. Please refresh and try again.");
+      return;
+    }
+
+    paystack.newTransaction({
+      key: paystackKey,
+      email: currentUser.email || "funding@jointheq.sbs",
+      amount: amountToPay * 100,
+      currency: "NGN",
+      metadata: {
+        custom_fields: [
+          {
+            display_name: "Wallet Credit",
+            variable_name: "wallet_credit",
+            value: String(fundingAmount),
+          },
+        ],
+      },
+      onSuccess: async (response: any) => {
+        setIsCardFunding(true);
+        const toastId = toast.loading("Verifying card payment...");
+        try {
+          const res = await verifyWalletFundingAction({
+            reference: response.reference,
+            userId: currentUser._id,
+            walletCreditAmount: fundingAmount,
+          });
+          toast.dismiss(toastId);
+          toast.success(
+            `${fmtCurrency(res.amount)} added to your wallet. ${
+              res.cardSaved ? "Card linked successfully." : ""
+            }`,
+          );
+        } catch (error: any) {
+          toast.dismiss(toastId);
+          toast.error(error.message || "Failed to verify card payment");
+        } finally {
+          setIsCardFunding(false);
+        }
+      },
+      onCancel: () => {
+        if (!isCardFunding) toast.error("Payment cancelled");
+      },
+      onError: (error: any) => {
+        toast.error(error?.message || "Could not open Paystack checkout");
+      },
+    });
+  };
+
   const handleLayoutTabChange = (tab: string) => {
     if (tab === "wallet") {
       navigate("/dashboard");
@@ -171,7 +239,7 @@ export default function WalletFundingPage() {
             <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Fund Wallet</h1>
               <p className="mt-1 text-sm text-gray-500 sm:text-base">
-                Transfer to this account to fund your JoinTheQ wallet.
+                Pay securely with card using Paystack, or use bank transfer if you prefer.
               </p>
             </div>
           </div>
@@ -207,10 +275,12 @@ export default function WalletFundingPage() {
               amountToPay={amountToPay}
               fundingAmount={fundingAmount}
               fundingStage={fundingStage}
+              isCardFunding={isCardFunding}
               isSubmittingFunding={isSubmittingFunding}
               isValidFundingAmount={isValidFundingAmount}
               onAmountChange={setAmountInput}
               onCopy={copyBankAccountNumber}
+              onPaystackFunding={handlePaystackFunding}
               onPaymentDone={handlePaymentDone}
               onStartFunding={handleStartFunding}
             />
@@ -242,10 +312,12 @@ function BankTransferCard({
   amountToPay,
   fundingAmount,
   fundingStage,
+  isCardFunding,
   isSubmittingFunding,
   isValidFundingAmount,
   onAmountChange,
   onCopy,
+  onPaystackFunding,
   onPaymentDone,
   onStartFunding,
 }: {
@@ -253,10 +325,12 @@ function BankTransferCard({
   amountToPay: number;
   fundingAmount: number;
   fundingStage: "form" | "loading" | "transfer";
+  isCardFunding: boolean;
   isSubmittingFunding: boolean;
   isValidFundingAmount: boolean;
   onAmountChange: (value: string) => void;
   onCopy: () => void;
+  onPaystackFunding: () => void;
   onPaymentDone: () => void;
   onStartFunding: () => void;
 }) {
@@ -265,7 +339,7 @@ function BankTransferCard({
       <div className="mb-6">
         <h2 className="text-xl font-black tracking-tight sm:text-2xl">Fund Wallet</h2>
         <p className="mt-1 text-sm font-medium text-zinc-500">
-          Enter the wallet amount. A fixed {fmtCurrency(FUNDING_CHARGE)} charge is added to every funding.
+          Enter the wallet amount. A fixed {fmtCurrency(FUNDING_CHARGE)} charge is added before checkout.
         </p>
       </div>
 
@@ -375,12 +449,21 @@ function BankTransferCard({
               </p>
               <button
                 type="button"
-                onClick={onStartFunding}
-                disabled={!isValidFundingAmount}
+                onClick={onPaystackFunding}
+                disabled={!isValidFundingAmount || isCardFunding}
                 className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-4 text-sm font-black text-white transition-all hover:bg-black active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
               >
+                {isCardFunding ? <Loader2 className="animate-spin" size={18} /> : <CreditCard size={18} />}
+                Pay with Card
+              </button>
+              <button
+                type="button"
+                onClick={onStartFunding}
+                disabled={!isValidFundingAmount || isCardFunding}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-4 text-sm font-black text-zinc-950 transition-all hover:bg-zinc-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 <Plus size={18} />
-                Start Funding
+                Use Bank Transfer
               </button>
             </div>
 
@@ -390,11 +473,11 @@ function BankTransferCard({
                 <SummaryRow label="Wallet credit" value={isValidFundingAmount ? fmtCurrency(fundingAmount) : "--"} />
                 <SummaryRow label="Funding charge" value={fmtCurrency(FUNDING_CHARGE)} />
                 <div className="border-t border-black/10 pt-3">
-                  <SummaryRow label="Transfer amount" value={isValidFundingAmount ? fmtCurrency(amountToPay) : "--"} strong />
+                  <SummaryRow label="Amount to pay" value={isValidFundingAmount ? fmtCurrency(amountToPay) : "--"} strong />
                 </div>
               </div>
               <p className="mt-5 text-sm font-semibold leading-relaxed text-zinc-500">
-                Account details show after you start funding.
+                Card payments are credited after Paystack confirms the transaction.
               </p>
             </div>
           </motion.div>

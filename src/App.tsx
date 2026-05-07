@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/auth/AuthGuards";
+import InstallBanner from "./components/InstallBanner";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -186,6 +187,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <InstallBanner />
     </ErrorBoundary>
   );
 }
