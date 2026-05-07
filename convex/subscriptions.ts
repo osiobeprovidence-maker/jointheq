@@ -891,6 +891,8 @@ export const adminUpdateSlotType = mutation({
 });
 
 /** Delete an entire group/marketplace listing (and its slots) */
+const DELETE_SLOTS_BATCH_SIZE = 500;
+
 export const adminDeleteGroup = mutation({
     args: {
         group_id: v.id("marketplace"),
@@ -898,23 +900,48 @@ export const adminDeleteGroup = mutation({
     handler: async (ctx, args) => {
         // Delete from marketplace table (new consolidated source)
         const listing = await ctx.db.get(args.group_id);
-        if (!listing) throw new Error("Marketplace listing not found");
+        if (!listing) return { success: true, done: true, deletedSlots: 0, deletedGroups: 0 };
 
-        // Find and delete associated groups and slots
+        // Find only groups attached to this exact marketplace listing. The catalog
+        // index avoids scanning all groups, and the extra fields prevent deleting
+        // sibling listings on the same subscription catalog.
         const groups = await ctx.db.query("groups")
-            .filter(q => q.eq(q.field("subscription_catalog_id"), listing.subscription_catalog_id))
-            .collect();
+            .withIndex("by_listing_key", q => q
+                .eq("subscription_catalog_id", listing.subscription_catalog_id)
+                .eq("account_email", listing.account_email)
+                .eq("billing_cycle_start", listing.billing_cycle_start)
+                .eq("plan_owner", listing.plan_owner)
+            )
+            .take(10);
+
+        let deletedSlots = 0;
+        let deletedGroups = 0;
 
         for (const group of groups) {
             const slots = await ctx.db.query("subscription_slots")
                 .withIndex("by_group", q => q.eq("group_id", group._id))
-                .collect();
-            await Promise.all(slots.map(s => ctx.db.delete(s._id)));
+                .take(DELETE_SLOTS_BATCH_SIZE);
+
+            for (const slot of slots) {
+                await ctx.db.delete(slot._id);
+                deletedSlots += 1;
+            }
+
+            if (slots.length === DELETE_SLOTS_BATCH_SIZE) {
+                return { success: true, done: false, deletedSlots, deletedGroups };
+            }
+
             await ctx.db.delete(group._id);
+            deletedGroups += 1;
+        }
+
+        if (groups.length === 10) {
+            return { success: true, done: false, deletedSlots, deletedGroups };
         }
 
         // Delete the marketplace record
         await ctx.db.delete(args.group_id);
+        return { success: true, done: true, deletedSlots, deletedGroups };
     }
 });
 

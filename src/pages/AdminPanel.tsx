@@ -1855,7 +1855,11 @@ export default function AdminPanel() {
                                                                             onClick={async () => {
                                                                                 if (!confirm(`Delete the entire "${group.subscription_name}" listing and all its slots?`)) return;
                                                                                 try {
-                                                                                    await adminDeleteGroupMut({ group_id: group._id });
+                                                                                    let done = false;
+                                                                                    while (!done) {
+                                                                                        const result = await adminDeleteGroupMut({ group_id: group._id });
+                                                                                        done = result?.done ?? true;
+                                                                                    }
                                                                                     toast("Listing deleted", { icon: "ðŸ—‘ï¸" });
                                                                                     setExpandedGroup(null);
                                                                                 } catch (e: any) { toast.error(e.message); }

@@ -234,6 +234,7 @@ export default defineSchema({
         plan_owner: v.optional(v.string()),
         request_id: v.optional(v.string()),
     }).index("by_catalog", ["subscription_catalog_id"])
+        .index("by_listing_key", ["subscription_catalog_id", "account_email", "billing_cycle_start", "plan_owner"])
         .index("by_request_id", ["request_id"]),
 
     messages: defineTable({
