@@ -195,6 +195,7 @@ export default function AdminPanel() {
         slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
     });
     const [editingSlot, setEditingSlot] = useState<any>(null);  // { slot_type_id, name, price, capacity, access_type }
+    const [editingListing, setEditingListing] = useState<any>(null);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
@@ -349,6 +350,7 @@ export default function AdminPanel() {
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
     const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
+    const adminUpdateFullListingMut = useMutation(api.subscriptions.adminUpdateFullListing);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
 
     // God Mode Mutations (Enhanced Admin)
@@ -676,31 +678,59 @@ export default function AdminPanel() {
         setIsCreatingListing(true);
         try {
             const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
-            // Generate a short unique request id to send to the backend for idempotency
-            (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-            await adminCreateListingMutation({
-                platform_name: listingData.platform_name,
-                account_email: listingData.account_email,
-                plan_owner: normalizedPlanOwner,
-                admin_renewal_date: listingData.admin_renewal_date,
-                category: listingData.category,
-                login_password: listingData.account_password,
-                base_cost: Number(listingData.base_cost),
-                instructions_text: listingData.instructions_text,
-                instructions_image_url: listingData.instructions_image_url,
-                slot_types: listingData.slots,
-                // frontend should generate a unique request id per user action
-                request_id: (window as any).__listingRequestId || undefined,
-            });
-            toast.success("Listing published to marketplace!");
+            
+            if (editingListing) {
+                // Update mode
+                await adminUpdateFullListingMut({
+                    marketplace_id: editingListing._id,
+                    platform_name: listingData.platform_name,
+                    account_email: listingData.account_email,
+                    login_password: listingData.account_password || undefined,
+                    plan_owner: normalizedPlanOwner,
+                    admin_renewal_date: listingData.admin_renewal_date,
+                    category: listingData.category,
+                    base_cost: Number(listingData.base_cost),
+                    instructions_text: listingData.instructions_text,
+                    slot_types: listingData.slots.map((s: any) => ({
+                        id: s._id || undefined,
+                        name: s.name,
+                        price: s.price,
+                        capacity: s.capacity,
+                        access_type: s.access_type,
+                        downloads_enabled: s.downloads_enabled ?? true,
+                    })),
+                });
+                toast.success("Listing updated successfully!");
+            } else {
+                // Create mode
+                // Generate a short unique request id to send to the backend for idempotency
+                (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+                await adminCreateListingMutation({
+                    platform_name: listingData.platform_name,
+                    account_email: listingData.account_email,
+                    plan_owner: normalizedPlanOwner,
+                    admin_renewal_date: listingData.admin_renewal_date,
+                    category: listingData.category,
+                    login_password: listingData.account_password,
+                    base_cost: Number(listingData.base_cost),
+                    instructions_text: listingData.instructions_text,
+                    instructions_image_url: listingData.instructions_image_url,
+                    slot_types: listingData.slots,
+                    // frontend should generate a unique request id per user action
+                    request_id: (window as any).__listingRequestId || undefined,
+                });
+                toast.success("Listing published to marketplace!");
+            }
+            
             setShowListingModal(false);
+            setEditingListing(null);
             setListingData({
                 platform_name: "", account_email: "", account_password: "", plan_owner: "",
                 admin_renewal_date: "", category: "Streaming", base_cost: 0, instructions_text: "", instructions_image_url: "",
                 slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
             });
         } catch (error: any) {
-            toast.error(error.message || "Failed to create listing");
+            toast.error(error.message || "Failed to save listing");
         } finally {
             setIsCreatingListing(false);
         }
@@ -1849,8 +1879,29 @@ export default function AdminPanel() {
                                                                         </div>
                                                                     )}
 
-                                                                    {/* Delete listing */}
-                                                                    <div className="pt-2 border-t border-black/5">
+                                                                    {/* Edit & Delete listing */}
+                                                                    <div className="pt-2 border-t border-black/5 flex items-center justify-between">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditingListing(group);
+                                                                                setListingData({
+                                                                                    platform_name: group.subscription_name,
+                                                                                    account_email: group.account_email,
+                                                                                    account_password: "", // We don't show the password for security, but allow changing it
+                                                                                    plan_owner: group.plan_owner || "admin",
+                                                                                    admin_renewal_date: group.billing_cycle_start,
+                                                                                    category: group.category || "Streaming",
+                                                                                    base_cost: group.base_cost || 0,
+                                                                                    instructions_text: group.instructions_text || "",
+                                                                                    instructions_image_url: group.instructions_image_url || "",
+                                                                                    slots: group.slot_types || []
+                                                                                });
+                                                                                setShowListingModal(true);
+                                                                            }}
+                                                                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-2xl text-xs font-black hover:scale-105 transition-transform"
+                                                                        >
+                                                                            <Edit size={13} /> Edit Full Listing
+                                                                        </button>
                                                                         <button
                                                                             onClick={async () => {
                                                                                 if (!confirm(`Delete the entire "${group.subscription_name}" listing and all its slots?`)) return;
@@ -3819,10 +3870,10 @@ export default function AdminPanel() {
                             <div className="sticky top-0 z-10 bg-white px-10 pt-10 pb-6 border-b border-gray-100">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold tracking-tight text-gray-900">Create New Listing</h2>
-                                        <p className="text-sm text-gray-500 mt-1">Add a premium subscription account to the catalog</p>
+                                        <h2 className="text-2xl font-bold tracking-tight text-gray-900">{editingListing ? 'Edit Listing' : 'Create New Listing'}</h2>
+                                        <p className="text-sm text-gray-500 mt-1">{editingListing ? 'Update account details and slot varieties' : 'Add a premium subscription account to the catalog'}</p>
                                     </div>
-                                    <button onClick={() => setShowListingModal(false)} className="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all">
+                                    <button onClick={() => { setShowListingModal(false); setEditingListing(null); }} className="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all">
                                         <X size={20} />
                                     </button>
                                 </div>
@@ -4044,7 +4095,7 @@ export default function AdminPanel() {
                                     disabled={isCreatingListing || !listingData.platform_name || !listingData.account_email || !listingData.plan_owner || !listingData.admin_renewal_date}
                                     className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-black/10"
                                 >
-                                    {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Confirm & Publish to Marketplace'}
+                                    {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : (editingListing ? 'Save Changes & Update Marketplace' : 'Confirm & Publish to Marketplace')}
                                 </button>
                             </div>
                         </motion.div>

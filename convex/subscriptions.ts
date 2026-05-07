@@ -1180,3 +1180,157 @@ export const migrateCredentialsToSubscriptions = mutation({
         };
     },
 });
+
+export const adminUpdateFullListing = mutation({
+    args: {
+        marketplace_id: v.id("marketplace"),
+        platform_name: v.string(),
+        account_email: v.string(),
+        login_password: v.optional(v.string()),
+        plan_owner: v.string(),
+        admin_renewal_date: v.string(),
+        category: v.optional(v.string()),
+        base_cost: v.optional(v.number()),
+        instructions_text: v.optional(v.string()),
+        instructions_image_url: v.optional(v.string()),
+        slot_types: v.array(v.object({
+            id: v.optional(v.id("slot_types")),
+            name: v.string(),
+            price: v.number(),
+            capacity: v.number(),
+            access_type: v.string(),
+            downloads_enabled: v.boolean(),
+        })),
+    },
+    handler: async (ctx, args) => {
+        const listing = await ctx.db.get(args.marketplace_id);
+        if (!listing) throw new Error("Marketplace listing not found");
+
+        const normalizedCategory = args.category || "Streaming";
+        const normalizedPlanOwner = args.plan_owner.trim().replace(/^@+/, "") || "admin";
+
+        // 1. Update Catalog
+        const catalog = await ctx.db.get(listing.subscription_catalog_id);
+        if (catalog) {
+            await ctx.db.patch(catalog._id, {
+                name: args.platform_name,
+                category: normalizedCategory,
+                base_cost: args.base_cost ?? catalog.base_cost,
+            });
+        }
+
+        // 2. Update Group
+        const groups = await ctx.db.query("groups")
+            .withIndex("by_listing_key", q => q
+                .eq("subscription_catalog_id", listing.subscription_catalog_id)
+                .eq("account_email", listing.account_email)
+                .eq("billing_cycle_start", listing.billing_cycle_start)
+                .eq("plan_owner", listing.plan_owner)
+            )
+            .collect();
+
+        for (const group of groups) {
+            await ctx.db.patch(group._id, {
+                account_email: args.account_email,
+                plan_owner: normalizedPlanOwner,
+                billing_cycle_start: args.admin_renewal_date,
+            });
+
+            // 3. Update Subscription record if linked
+            const subscription = await ctx.db.query("subscriptions")
+                .filter(q => q.eq(q.field("group_id"), group._id))
+                .first();
+
+            if (subscription) {
+                await ctx.db.patch(subscription._id, {
+                    platform: args.platform_name,
+                    login_email: args.account_email,
+                    login_password: args.login_password ?? subscription.login_password,
+                    base_cost: args.base_cost ?? subscription.base_cost,
+                    category: normalizedCategory,
+                    instructions_text: args.instructions_text ?? subscription.instructions_text,
+                    instructions_image_url: args.instructions_image_url ?? subscription.instructions_image_url,
+                    renewal_date: args.admin_renewal_date,
+                    total_slots: args.slot_types.reduce((a, b) => a + b.capacity, 0),
+                    slot_price: args.slot_types[0]?.price ?? 0,
+                });
+            }
+
+            // 4. Handle Slot Types
+            for (const st of args.slot_types) {
+                if (st.id) {
+                    // Update existing
+                    const existingST = await ctx.db.get(st.id);
+                    if (existingST) {
+                        const oldCapacity = existingST.capacity || 0;
+                        await ctx.db.patch(st.id, {
+                            name: st.name,
+                            price: st.price,
+                            capacity: st.capacity,
+                            access_type: st.access_type,
+                            downloads_enabled: st.downloads_enabled,
+                        });
+
+                        // Adjust slots if capacity increased
+                        if (st.capacity > oldCapacity && subscription) {
+                            for (let i = oldCapacity + 1; i <= st.capacity; i++) {
+                                await ctx.db.insert("subscription_slots", {
+                                    subscription_id: subscription._id,
+                                    group_id: group._id,
+                                    slot_type_id: st.id,
+                                    slot_number: i,
+                                    status: "open",
+                                    renewal_date: "",
+                                    created_at: Date.now(),
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    // Create new slot type
+                    const newSlotTypeId = await ctx.db.insert("slot_types", {
+                        subscription_id: listing.subscription_catalog_id,
+                        name: st.name,
+                        price: st.price,
+                        capacity: st.capacity,
+                        access_type: st.access_type,
+                        device_limit: 1,
+                        downloads_enabled: st.downloads_enabled,
+                        min_q_score: 0,
+                        features: ["Premium Access"]
+                    });
+
+                    if (subscription) {
+                        for (let i = 1; i <= st.capacity; i++) {
+                            await ctx.db.insert("subscription_slots", {
+                                subscription_id: subscription._id,
+                                group_id: group._id,
+                                slot_type_id: newSlotTypeId,
+                                slot_number: i,
+                                status: "open",
+                                renewal_date: "",
+                                created_at: Date.now(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Update Marketplace Record
+        await ctx.db.patch(args.marketplace_id, {
+            platform_name: args.platform_name,
+            account_email: args.account_email,
+            plan_owner: normalizedPlanOwner,
+            billing_cycle_start: args.admin_renewal_date,
+            category: normalizedCategory,
+            slot_price: args.slot_types[0]?.price ?? 0,
+            total_slots: args.slot_types.reduce((a, b) => a + b.capacity, 0),
+            filled_slots: listing.filled_slots, // Preserve filled slots count
+            available_slots: args.slot_types.reduce((a, b) => a + b.capacity, 0) - listing.filled_slots,
+            updated_at: Date.now(),
+        });
+
+        return { success: true };
+    }
+});
