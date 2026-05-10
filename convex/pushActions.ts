@@ -43,7 +43,7 @@ export const sendNotificationPush = internalAction({
             badge: "/favicon.ico",
             tag: String(delivery.notification._id),
             data: {
-                url: "/dashboard?tab=notifications",
+                url: delivery.notification.cta_url || "/dashboard?tab=notifications",
                 notificationId: String(delivery.notification._id),
                 type: delivery.notification.type,
             },

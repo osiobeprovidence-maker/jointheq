@@ -28,6 +28,14 @@ export function getUserFacingErrorMessage(
     return "Insufficient wallet balance. Fund your wallet to continue.";
   }
 
+  if (/quest not available now|this task is not available|this quest is not available|already complete/i.test(cleaned)) {
+    return "Quest not available now. Turn on notifications for new Quests and come back later.";
+  }
+
+  if (/this quest has expired|this task has expired/i.test(cleaned)) {
+    return "This Quest has expired. Turn on notifications for new Quests and come back later.";
+  }
+
   if (/insufficient balance to renew/i.test(cleaned)) {
     return "Insufficient wallet balance. Fund your wallet to renew this subscription.";
   }

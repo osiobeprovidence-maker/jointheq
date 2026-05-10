@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { createNotification } from "./notificationHelpers";
+import { createNotification, createNotificationsForUsers } from "./notificationHelpers";
 
 const PLATFORM_TASK_RATE = 1;
 
@@ -26,6 +26,23 @@ async function requireAdmin(ctx: any, adminId: Id<"users">) {
   return admin;
 }
 
+async function getReservedCompletionCount(ctx: any, taskId: Id<"tasks">) {
+  const submissions = await ctx.db
+    .query("task_submissions")
+    .withIndex("by_task", (q: any) => q.eq("taskId", taskId))
+    .collect();
+
+  return submissions.filter((submission: any) => submission.status !== "Rejected").length;
+}
+
+function assertTaskAvailable(task: any, reservedCount: number) {
+  if (task.status !== "Active") throw new Error("Quest not available now. Turn on notifications for new Quests and come back later.");
+  if (task.deadline < Date.now()) throw new Error("This Quest has expired.");
+  if (reservedCount >= task.requiredCompletions) {
+    throw new Error("Quest not available now. Turn on notifications for new Quests and come back later.");
+  }
+}
+
 export const getTaskRate = query({
   args: {},
   handler: async () => PLATFORM_TASK_RATE,
@@ -44,8 +61,14 @@ export const listAvailable = query({
       .withIndex("by_status", (q) => q.eq("status", "Active"))
       .collect();
 
-    const visibleTasks = activeTasks
-      .filter((task) => task.deadline >= now && task.completedCount < task.requiredCompletions)
+    const tasksWithReservationCounts = await Promise.all(activeTasks.map(async (task) => ({
+      task,
+      reservedCount: await getReservedCompletionCount(ctx, task._id),
+    })));
+
+    const visibleTasks = tasksWithReservationCounts
+      .filter(({ task, reservedCount }) => task.deadline >= now && reservedCount < task.requiredCompletions)
+      .map(({ task, reservedCount }) => ({ ...task, reservedCount }))
       .sort((a, b) => a.deadline - b.deadline);
 
     if (!args.userId) return visibleTasks.map((task) => ({ ...task, userSubmission: null }));
@@ -84,7 +107,10 @@ export const getStats = query({
     const bootsEarned = completedTasks.reduce((total, task) => total + (task?.bootsReward ?? 0), 0);
 
     return {
-      availableTasks: activeTasks.filter((task) => task.deadline >= Date.now() && task.completedCount < task.requiredCompletions).length,
+      availableTasks: (await Promise.all(activeTasks.map(async (task) => ({
+        task,
+        reservedCount: await getReservedCompletionCount(ctx, task._id),
+      })))).filter(({ task, reservedCount }) => task.deadline >= Date.now() && reservedCount < task.requiredCompletions).length,
       bootsEarned,
       activePromotions: createdTasks.filter((task) => task.status === "Active" || task.status === "Pending Admin Approval").length,
     };
@@ -135,6 +161,20 @@ export const createTask = mutation({
       throw new Error("Insufficient wallet balance. Please fund your wallet to create this task.");
     }
 
+    await ctx.db.patch(args.creatorUserId, {
+      wallet_balance: (user.wallet_balance || 0) - totalCost,
+    });
+
+    await ctx.db.insert("wallet_transactions", {
+      user_id: args.creatorUserId,
+      amount: totalCost,
+      type: "task_promotion_payment",
+      source: "wallet",
+      status: "completed",
+      description: `Quest promotion payment: ${args.title}`,
+      created_at: Date.now(),
+    });
+
     const taskId = await ctx.db.insert("tasks", {
       creatorUserId: args.creatorUserId,
       title: args.title,
@@ -151,28 +191,15 @@ export const createTask = mutation({
       proofType: args.proofType,
       deadline: args.deadline,
       totalCost,
-      paymentSource: "wallet_review",
-      status: "Pending Payment Review",
+      paymentSource: "wallet",
+      status: "Pending Admin Approval",
       createdAt: Date.now(),
-    });
-
-    await ctx.db.insert("manual_funding_requests", {
-      user_id: args.creatorUserId,
-      base_amount: totalCost,
-      unique_amount: totalCost,
-      sender_name: user.full_name || user.username || user.email || "Quest creator",
-      bank_name: "Wallet",
-      reference: `Quest payment: ${args.title}`,
-      purpose: "quest_payment",
-      task_id: taskId,
-      status: "Awaiting Review",
-      created_at: Date.now(),
     });
 
     await createNotification(ctx, {
       userId: args.creatorUserId,
-      title: "Quest payment submitted",
-      message: "Your quest payment is pending admin payment review.",
+      title: "Quest payment received",
+      message: `N${totalCost.toLocaleString()} was reserved from your wallet. Your Quest is pending admin approval.`,
       type: "task",
     });
 
@@ -188,9 +215,6 @@ export const startTask = mutation({
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.taskId);
     if (!task) throw new Error("Task not found");
-    if (task.status !== "Active") throw new Error("This task is not available");
-    if (task.deadline < Date.now()) throw new Error("This task has expired");
-    if (task.completedCount >= task.requiredCompletions) throw new Error("This task is already complete");
     if (task.creatorUserId === args.userId) throw new Error("You cannot complete your own promoted task");
 
     const existing = await ctx.db
@@ -200,6 +224,9 @@ export const startTask = mutation({
       .first();
 
     if (existing) return existing._id;
+
+    const reservedCount = await getReservedCompletionCount(ctx, args.taskId);
+    assertTaskAvailable(task, reservedCount);
 
     return await ctx.db.insert("task_submissions", {
       taskId: args.taskId,
@@ -222,9 +249,6 @@ export const submitTask = mutation({
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.taskId);
     if (!task) throw new Error("Task not found");
-    if (task.status !== "Active") throw new Error("This task is not available");
-    if (task.deadline < Date.now()) throw new Error("This task has expired");
-    if (task.completedCount >= task.requiredCompletions) throw new Error("This task is already complete");
     if (task.creatorUserId === args.userId) throw new Error("You cannot complete your own promoted task");
 
     const existing = await ctx.db
@@ -234,6 +258,15 @@ export const submitTask = mutation({
       .first();
 
     if (existing && existing.status !== "Started") throw new Error("You have already submitted this task");
+
+    if (!existing) {
+      const reservedCount = await getReservedCompletionCount(ctx, args.taskId);
+      assertTaskAvailable(task, reservedCount);
+    } else if (task.status !== "Active") {
+      throw new Error("Quest not available now. Turn on notifications for new Quests and come back later.");
+    } else if (task.deadline < Date.now()) {
+      throw new Error("This Quest has expired.");
+    }
 
     const submissionPatch = {
       proofType: args.proofType,
@@ -338,6 +371,19 @@ export const approveTask = mutation({
       type: "task",
     });
 
+    const users = await ctx.db.query("users").collect();
+    await createNotificationsForUsers(
+      ctx,
+      users.filter((user: any) => user._id !== task.creatorUserId),
+      {
+        title: "New Quest available",
+        message: `${task.title} is now available on Q. Open Quests to start before it fills up.`,
+        type: "task",
+        ctaText: "View Quest",
+        ctaUrl: "/dashboard?tab=tasks",
+      },
+    );
+
     return { success: true };
   },
 });
@@ -353,8 +399,28 @@ export const rejectTask = mutation({
     const task = await ctx.db.get(args.taskId);
     if (!task) throw new Error("Task not found");
 
+    if (task.status === "Rejected") throw new Error("Task is already rejected");
+
+    const creator = await ctx.db.get(task.creatorUserId);
+    if (creator && task.paymentSource === "wallet" && task.totalCost > 0) {
+      await ctx.db.patch(task.creatorUserId, {
+        wallet_balance: (creator.wallet_balance || 0) + task.totalCost,
+      });
+
+      await ctx.db.insert("wallet_transactions", {
+        user_id: task.creatorUserId,
+        amount: task.totalCost,
+        type: "task_promotion_refund",
+        source: "wallet",
+        status: "completed",
+        description: `Quest payment refund: ${task.title}`,
+        created_at: Date.now(),
+      });
+    }
+
     await ctx.db.patch(args.taskId, {
       status: "Rejected",
+      paymentSource: task.paymentSource === "wallet" ? "wallet_refunded" : task.paymentSource,
       reviewedAt: Date.now(),
       reviewedBy: args.adminId,
       adminNote: args.adminNote,
@@ -363,7 +429,7 @@ export const rejectTask = mutation({
     await createNotification(ctx, {
       userId: task.creatorUserId,
       title: "Task rejected",
-      message: args.adminNote ? `Your task was rejected: ${args.adminNote}` : "Your task was rejected by admin review.",
+      message: args.adminNote ? `Your task was rejected: ${args.adminNote}` : "Your task was rejected by admin review. Any reserved wallet payment has been refunded.",
       type: "task",
     });
 

@@ -45,13 +45,15 @@ export const getPlatformStats = query({
         startOfMonth.setHours(0, 0, 0, 0);
         const monthMs = startOfMonth.getTime();
 
-        const [users, marketplaceListings, transactions, bootTransactions, campaigns, campaignParticipants] = await Promise.all([
+        const [users, marketplaceListings, transactions, bootTransactions, campaigns, campaignParticipants, tasks, taskSubmissions] = await Promise.all([
             ctx.db.query("users").collect(),
             ctx.db.query("marketplace").collect(),
             ctx.db.query("wallet_transactions").collect(),
             ctx.db.query("boot_transactions").collect(),
             ctx.db.query("campaigns").collect(),
             ctx.db.query("campaign_participants").collect(),
+            ctx.db.query("tasks").collect(),
+            ctx.db.query("task_submissions").collect(),
         ]);
 
         const totalUsers = users.length;
@@ -131,9 +133,9 @@ export const getPlatformStats = query({
             // Campaigns
             activeCampaigns,
             totalCampaignParticipants,
-            // Migrations
-            totalMigrations: 0,
-            pendingMigrations: 0,
+            // Quests (Tasks)
+            totalQuests: tasks.length,
+            questParticipants: new Set(taskSubmissions.map(s => s.userId)).size,
         };
     }
 });
@@ -654,5 +656,36 @@ export const getUserAdminLogs = query({
                 admin_name: admin?.full_name || "Unknown Admin",
             };
         }));
+    }
+});
+
+export const adminSyncAllMarketplace = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const marketplace = await ctx.db.query('marketplace').collect();
+        for (const m of marketplace) {
+            const group = await ctx.db.query('groups')
+                .withIndex('by_catalog', q => q.eq('subscription_catalog_id', m.subscription_catalog_id))
+                .filter(q => q.eq(q.field('account_email'), m.account_email))
+                .first();
+            
+            if (group) {
+                const allSlots = await ctx.db.query('subscription_slots')
+                    .withIndex('by_group', q => q.eq('group_id', group._id))
+                    .collect();
+
+                const total = allSlots.length;
+                const available = allSlots.filter(s => s.status === 'open').length;
+                const filled = total - available;
+
+                await ctx.db.patch(m._id, {
+                    total_slots: total,
+                    filled_slots: filled,
+                    available_slots: available,
+                    updated_at: Date.now(),
+                });
+            }
+        }
+        return { success: true, count: marketplace.length };
     }
 });

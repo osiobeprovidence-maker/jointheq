@@ -17,6 +17,8 @@ type NotificationInput = {
     title: string;
     message: string;
     type: NotificationType | string;
+    ctaText?: string;
+    ctaUrl?: string;
 };
 
 export const createNotification = async (ctx: any, input: NotificationInput) => {
@@ -25,6 +27,8 @@ export const createNotification = async (ctx: any, input: NotificationInput) => 
         title: input.title,
         message: input.message,
         type: input.type,
+        cta_text: input.ctaText,
+        cta_url: input.ctaUrl,
         is_read: false,
         created_at: Date.now(),
     });

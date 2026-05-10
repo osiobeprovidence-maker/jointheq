@@ -19,7 +19,11 @@ import {
   Wallet,
   X,
   Zap,
+  ShieldCheck,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
+import { TermsAcceptanceModal } from "../components/TermsAcceptanceModal";
 import { Logo } from "../components/ui/Logo";
 import { useNavigate } from "react-router-dom";
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -322,13 +326,14 @@ function QuestLaunchHero({
       <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/82 to-zinc-950/20" />
       <div className="relative grid min-h-[360px] gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_.9fr] lg:p-10">
         <div className="flex max-w-2xl flex-col justify-end pb-2">
-          <h2 className="max-w-2xl text-4xl font-black leading-[1.02] tracking-tight text-white sm:text-6xl">
-            {isLive ? "Quest is live" : "Quest opens on May 10"}
+          <h2 className="max-w-2xl text-4xl font-black leading-[1.1] tracking-tight text-white sm:text-6xl">
+            Quest is live
           </h2>
-          <p className="mt-4 max-w-xl text-base font-bold leading-7 text-white/72 sm:text-lg">
-            {isLive
-              ? "Fresh earning quests will appear here as soon as they are approved."
-              : "We are clearing demo content from the live platform. New quests can be prepared now, but earning and proof submission unlock on launch day."}
+          <p className="mt-4 max-w-xl text-lg font-black leading-tight text-white sm:text-2xl">
+            Turn attention into earnings.
+          </p>
+          <p className="mt-3 max-w-xl text-sm font-bold leading-relaxed text-white/75 sm:text-base">
+            Do quests, grow brands, stream music, test products, and earn directly from your phone.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <button onClick={onCreate} className="rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-zinc-950 shadow-[0_18px_50px_rgba(255,255,255,.13)] transition hover:-translate-y-0.5">
@@ -400,8 +405,13 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
     proofRequirement: "Screenshot upload",
     location: "Nigeria",
     audienceType: "General",
-    coverImageName: "",
+    coverImageUrl: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
+
+  const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
 
   const normalizedBudget = Math.max(minimumCampaignBudget, form.budget);
   const estimatedUsers = Math.max(50, Math.floor(normalizedBudget / qquestRewardPerUser));
@@ -479,8 +489,10 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
       {isPaymentOpen && (
         <PaymentModal
           totalCost={totalCost}
+          form={form}
+          imageFile={imageFile}
           onClose={() => setIsPaymentOpen(false)}
-          onPaid={() => {
+          onPaid={(questId, status) => {
             const quest = campaignToQuest(form, estimatedUsers, platformFee);
             setLaunchedQuest(quest);
             onLaunch(quest);
@@ -601,7 +613,39 @@ function QuestDetailsForm({ form, onChange }: { form: CreateQquestState; onChang
             {["Screenshot upload", "Username input", "None"].map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
-        <DarkField label="Cover Image" value={form.coverImageName} onChange={(coverImageName) => onChange({ coverImageName })} placeholder="Optional image name" />
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-[.16em] text-white/35">Cover Image</span>
+          <div className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10">
+            {imagePreview ? (
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                <button 
+                  onClick={() => { setImageFile(null); setImagePreview(""); }}
+                  className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white hover:bg-black/80"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-4 space-y-2 text-white/40">
+                <Plus size={24} />
+                <span className="text-xs font-black uppercase tracking-widest">Upload Image</span>
+                <input 
+                  type="file" 
+                  accept=".jpg,.jpeg,.png,.webp" 
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setImageFile(file);
+                      setImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </label>
       </div>
     </div>
   );
@@ -679,42 +723,140 @@ function ReviewSummary({
   );
 }
 
-function PaymentModal({ totalCost, onClose, onPaid }: { totalCost: number; onClose: () => void; onPaid: () => void }) {
+async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+  return await new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ratio = Math.min(1, maxWidth / img.width);
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Canvas not supported'));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error('Compression failed'));
+        resolve(blob);
+        URL.revokeObjectURL(url);
+      }, 'image/webp', quality);
+    };
+    img.onerror = (e) => reject(e);
+    img.src = url;
+  });
+}
+
+function PaymentModal({ 
+  totalCost, 
+  form,
+  imageFile,
+  onClose, 
+  onPaid 
+}: { 
+  totalCost: number; 
+  form: CreateQquestState;
+  imageFile: File | null;
+  onClose: () => void; 
+  onPaid: (questId: Id<"quests">, status: string) => void 
+}) {
   const [method, setMethod] = useState<"wallet" | "gateway">("wallet");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const user = auth.getCurrentUser();
+  const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
+  const createQuestMutation = useMutation(api.quests.createQuest);
+  const verifyQuestPaymentAction = useAction(api.quests.verifyQuestPayment);
 
-  const handlePay = () => {
-    if (method === "wallet") {
-      onPaid();
-      return;
+  const handlePay = async () => {
+    if (!user?._id) return;
+    setIsProcessing(true);
+
+    try {
+      let coverImageUrl = "";
+      if (imageFile) {
+        // Compress image client-side to reduce upload size
+        const compressedBlob = await compressImage(imageFile);
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": 'image/webp' },
+          body: compressedBlob,
+        });
+        if (!result.ok) throw new Error("Image upload failed");
+        const { storageId } = await result.json();
+        coverImageUrl = storageId;
+      }
+
+      if (method === "wallet") {
+        const response = await createQuestMutation({
+          creatorId: user._id as any,
+          title: form.title,
+          description: form.instructions,
+          questLink: form.link,
+          instructions: form.instructions,
+          proofRequirement: form.proofRequirement,
+          coverImageUrl,
+          category: form.questType,
+          rewardPerUser: qquestRewardPerUser,
+          totalBudget: form.budget,
+          paymentMethod: "q_wallet",
+        });
+
+        onPaid(response.questId as any, response.status);
+        return;
+      }
+
+      // Paystack flow
+      const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+      if (!paystackKey) {
+        throw new Error("Paystack is not configured. Please contact support.");
+      }
+
+      const paystack = (window as any).PaystackPop ? new (window as any).PaystackPop() : null;
+      if (!paystack?.newTransaction) {
+        throw new Error("Payment module is loading. Please try again in a few seconds.");
+      }
+
+      const response = await createQuestMutation({
+        creatorId: user._id as any,
+        title: form.title,
+        description: form.instructions,
+        questLink: form.link,
+        instructions: form.instructions,
+        proofRequirement: form.proofRequirement,
+        coverImageUrl,
+        category: form.questType,
+        rewardPerUser: qquestRewardPerUser,
+        totalBudget: form.budget,
+        paymentMethod: "paystack",
+      });
+      paystack.newTransaction({
+        key: paystackKey,
+        email: user.email,
+        amount: totalCost * 100,
+        currency: "NGN",
+        reference: `quest_${response.questId}_${Date.now()}`,
+        onSuccess: async function(paystackResponse: any) {
+          try {
+            // Verify server-side before marking quest live
+            await verifyQuestPaymentAction({ reference: paystackResponse.reference, questId: response.questId as any });
+            onPaid(response.questId as any, "live");
+          } catch (err: any) {
+            alert(err?.message || 'Payment verification failed');
+          }
+        },
+        onCancel: function() {
+          setIsProcessing(false);
+        },
+        onError: function(error: any) {
+          setIsProcessing(false);
+          alert(error?.message || "Payment failed");
+        },
+      });
+
+    } catch (error: any) {
+      setIsProcessing(false);
+      alert(error.message || "An error occurred during payment");
     }
-
-    const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-    if (!paystackKey) {
-      alert("Paystack is not configured. Please contact support.");
-      return;
-    }
-
-    const paystack = (window as any).PaystackPop ? new (window as any).PaystackPop() : null;
-    if (!paystack?.newTransaction) {
-      alert("Payment module is loading. Please try again in a few seconds.");
-      return;
-    }
-
-    paystack.newTransaction({
-      key: paystackKey,
-      email: "funding@jointheq.sbs",
-      amount: totalCost * 100,
-      currency: "NGN",
-      onSuccess: function(response: any) {
-        onPaid();
-      },
-      onCancel: function() {
-        console.log("Paystack payment cancelled.");
-      },
-      onError: function(error: any) {
-        alert(error?.message || "Could not open Paystack checkout");
-      },
-    });
   };
 
   return (
@@ -722,23 +864,32 @@ function PaymentModal({ totalCost, onClose, onPaid }: { totalCost: number; onClo
       <div className="w-full max-w-md rounded-2xl bg-[#0f0f14] p-5 text-white shadow-[0_28px_90px_rgba(0,0,0,.55)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-black">Fund your Quest to go live</h3>
+            <h3 className="text-2xl font-black">Fund your Quest</h3>
             <p className="mt-2 text-sm font-bold text-white/45">Reserve ₦{totalCost.toLocaleString()} for campaign delivery.</p>
           </div>
           <button onClick={onClose} className="rounded-xl bg-white/10 p-2 text-white/65"><X size={18} /></button>
         </div>
         <div className="mt-5 grid gap-3">
           {[
-            ["wallet", "Pay from wallet"],
-            ["gateway", "Pay via bank/payment gateway"],
+            ["wallet", "Pay from Q Wallet"],
+            ["gateway", "Pay via Paystack"],
           ].map(([id, label]) => (
-            <button key={id} onClick={() => setMethod(id as "wallet" | "gateway")} className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition ${method === id ? "border-[#F26522] bg-[#F26522]/10 text-orange-100" : "border-white/10 bg-white/7 text-white/60"}`}>
+            <button 
+              key={id} 
+              disabled={isProcessing}
+              onClick={() => setMethod(id as "wallet" | "gateway")} 
+              className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition ${method === id ? "border-[#F26522] bg-[#F26522]/10 text-orange-100" : "border-white/10 bg-white/7 text-white/60"}`}
+            >
               {label}
             </button>
           ))}
         </div>
-        <button onClick={handlePay} className="mt-5 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01]">
-          Pay and Launch
+        <button 
+          onClick={handlePay} 
+          disabled={isProcessing}
+          className="mt-5 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01] disabled:opacity-50"
+        >
+          {isProcessing ? "Processing..." : "Pay and Launch"}
         </button>
       </div>
     </div>
@@ -853,11 +1004,33 @@ function QuestDetailModal({
 }) {
   const [isProofOpen, setIsProofOpen] = useState(false);
   const [proofValue, setProofValue] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(!!(quest as any).isCompleted);
+  
+  const user = auth.getCurrentUser();
+  const submitCompletionMutation = useMutation(api.quests.submitCompletion);
+
   const startQuest = () => {
     if (isLaunchLocked) return;
     onStart();
     setIsProofOpen(true);
+  };
+
+  const handleSubmitProof = async () => {
+    if (!user?._id || !proofValue.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await submitCompletionMutation({
+        questId: (quest as any)._id,
+        userId: user._id as any,
+        proofText: proofValue,
+      });
+      setIsSubmitted(true);
+    } catch (error: any) {
+      alert(error.message || "Failed to submit proof");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -913,7 +1086,7 @@ function QuestDetailModal({
             </div>
             <div>
               <p className="uppercase tracking-[.14em] text-zinc-400">Status</p>
-              <p className="mt-1 text-zinc-950">{isLaunchLocked ? `Queued until ${questLaunchDateLabel}` : isStarted ? "Active" : quest.source === "admin-featured" ? "Featured" : "Available"}</p>
+              <p className="mt-1 text-zinc-950">{(quest as any).isCompleted ? "Completed" : isLaunchLocked ? `Queued until ${questLaunchDateLabel}` : isStarted ? "Active" : quest.source === "admin-featured" ? "Featured" : "Available"}</p>
             </div>
           </div>
           {quest.instructions ? (
@@ -945,11 +1118,11 @@ function QuestDetailModal({
                 Opens {questLaunchDateLabel}
               </button>
             </div>
-          ) : isProofOpen ? (
+          ) : isProofOpen || isSubmitted ? (
             <div className="space-y-4 rounded-[1.5rem] bg-zinc-950 p-4 text-white">
               {isSubmitted ? (
-                <div className="text-center">
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-300 text-zinc-950 animate-pulse">
+                <div className="text-center py-4">
+                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-300 text-zinc-950">
                     <CheckCircle2 size={26} />
                   </div>
                   <h3 className="mt-4 text-lg font-black">Proof submitted</h3>
@@ -971,11 +1144,11 @@ function QuestDetailModal({
                     placeholder="@username or proof note"
                   />
                   <button
-                    onClick={() => setIsSubmitted(true)}
-                    disabled={!proofValue.trim()}
+                    onClick={handleSubmitProof}
+                    disabled={!proofValue.trim() || isSubmitting}
                     className="w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-zinc-950 transition hover:scale-[1.01] disabled:opacity-40"
                   >
-                    Submit Proof
+                    {isSubmitting ? "Submitting..." : "Submit Proof"}
                   </button>
                 </>
               )}
@@ -1064,21 +1237,30 @@ function WalletHeaderAction({
 function WalletCard({
   account,
   balance,
+  qWalletBalance,
   onConnect,
   onWithdraw,
 }: {
   account: ConnectedAccount | null;
   balance: number;
+  qWalletBalance: number;
   onConnect: () => void;
   onWithdraw: () => void;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl bg-[#0f0f14] p-5 text-white shadow-[0_24px_70px_rgba(15,15,20,.28)]">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[.18em] text-white/40">Wallet</p>
-          <h2 className="mt-4 text-4xl font-black tracking-tight">₦{balance.toLocaleString()}</h2>
-          <p className="mt-2 text-sm font-bold text-emerald-300 animate-pulse">+₦100 earned</p>
+        <div className="flex flex-1 flex-col gap-6 sm:flex-row">
+          <div className="flex-1 rounded-2xl bg-white/5 p-4 border border-white/5">
+            <p className="text-xs font-black uppercase tracking-[.18em] text-white/40">Q Wallet (Funding)</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight">₦{qWalletBalance.toLocaleString()}</h2>
+            <p className="mt-2 text-xs font-bold text-white/30">Use for Quests & Subscriptions</p>
+          </div>
+          <div className="flex-1 rounded-2xl bg-[#F26522]/5 p-4 border border-[#F26522]/10">
+            <p className="text-xs font-black uppercase tracking-[.18em] text-[#F26522]/60">Quest Wallet (Earnings)</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-[#F26522]">₦{balance.toLocaleString()}</h2>
+            <p className="mt-2 text-xs font-bold text-[#F26522]/40">Withdrawable Earnings</p>
+          </div>
         </div>
         {account ? (
           <div className="rounded-2xl bg-white/8 p-4 text-sm font-bold text-white/70">
@@ -1510,18 +1692,20 @@ function NotificationsPage() {
 function WalletPage({
   account,
   balance,
+  qWalletBalance,
   onConnect,
   onWithdraw,
 }: {
   account: ConnectedAccount | null;
   balance: number;
+  qWalletBalance: number;
   onConnect: () => void;
   onWithdraw: () => void;
 }) {
   return (
     <div className="rounded-[2rem] bg-[#09090d] p-4 shadow-[0_24px_80px_rgba(15,15,20,.22)] sm:p-5">
       <div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
-        <WalletCard account={account} balance={balance} onConnect={onConnect} onWithdraw={onWithdraw} />
+        <WalletCard account={account} balance={balance} qWalletBalance={qWalletBalance} onConnect={onConnect} onWithdraw={onWithdraw} />
         <section className="rounded-2xl border border-white/8 bg-[#0f0f14] p-5 text-white">
           <h2 className="text-xl font-black tracking-tight">Withdrawal Rules</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1639,6 +1823,32 @@ export default function QquestPage() {
   const saveQuestWithdrawalAccount = useMutation(api.users.saveQuestWithdrawalAccount);
   const [activePage, setActivePage] = useState<NavPage>("quest");
   const [activeTab, setActiveTab] = useState<QuestStatus>("all");
+  const [showTerms, setShowTerms] = useState(false);
+  const user = liveUser || storedUser;
+
+  const acceptTermsMutation = useMutation(api.users.acceptTerms);
+  const userWallet = useQuery(api.users.getWallet, user?._id ? { userId: user._id } : "skip");
+
+  useEffect(() => {
+    // Show terms modal after a short delay if user hasn't accepted yet
+    if (user && !user.accepted_terms) {
+      const timer = setTimeout(() => setShowTerms(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  const handleAcceptTerms = async () => {
+    if (!user?._id) return;
+    try {
+      await acceptTermsMutation({ userId: user._id as any, version: "2.0.1" });
+      // Update local cached user
+      const updated = { ...(user as any), accepted_terms: true, accepted_terms_version: "2.0.1", accepted_at: Date.now() };
+      try { auth.login(updated); } catch (e) { /* ignore */ }
+      setShowTerms(false);
+    } catch (error) {
+      console.error("Failed to accept terms:", error);
+    }
+  };
   const [sort, setSort] = useState("Suggested");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -1680,19 +1890,51 @@ export default function QquestPage() {
     return () => window.clearInterval(intervalId);
   }, [isQuestLive]);
 
-  const allQuests = useMemo(() => [...createdQuests, ...quests], [createdQuests]);
+  const questsFromDb = useQuery(api.quests.listQuests, { userId: user?._id as any });
+  
+  const allQuests = useMemo(() => {
+    const dbQuestsMapped = (questsFromDb || []).map(q => ({
+      id: q._id,
+      _id: q._id,
+      title: q.title,
+      reward: `Earn ₦${q.rewardPerUser.toLocaleString()}`,
+      time: "2 min", // Fallback or dynamic
+      users: `${q.usedSlots} joined`,
+      urgency: `${(q.totalSlots - q.usedSlots)} spots left`,
+      tag: q.isFeatured ? "Trending" : "New",
+      status: ["all", q.creatorId === user?._id ? "mine" : ""].filter(Boolean),
+      image: q.coverImageUrl ? `url(${q.coverImageUrl})` : "linear-gradient(135deg, rgba(31,241,176,.7), rgba(41,64,255,.44))",
+      progress: (q.usedSlots / q.totalSlots) * 100,
+      accent: "from-[#F26522] to-orange-400",
+      questType: q.category,
+      budget: q.totalBudget,
+      rewardPerUser: q.rewardPerUser,
+      estimatedUsers: q.totalSlots,
+      location: q.location || "Nigeria",
+      audienceType: q.audienceType || "General",
+      proofRequirement: q.proofRequirement,
+      instructions: q.instructions,
+      link: q.questLink,
+      isCompleted: q.isCompleted,
+      userCompletion: q.userCompletion,
+    }));
+    return [...dbQuestsMapped, ...createdQuests];
+  }, [questsFromDb, createdQuests, user?._id]);
+
   const visibleQuests = useMemo(() => {
-    const rewardValue = (quest: Quest) => Number(quest.reward.replace(/\D/g, "")) || 0;
+    const rewardValue = (quest: any) => quest.rewardPerUser || 0;
     const filtered = allQuests
-      .filter((quest) => activeTab === "mine" ? quest.status.includes("mine") || startedQuestIds.includes(quest.id) : quest.status.includes(activeTab))
+      .filter((quest) => {
+        if (activeTab === "mine") return quest.status.includes("mine");
+        if (activeTab === "completed") return quest.isCompleted;
+        return true;
+      })
       .filter((quest) => selectedTag === "All" || quest.tag === selectedTag)
       .filter((quest) => quest.title.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
     if (sort === "Highest Paying") return [...filtered].sort((a, b) => rewardValue(b) - rewardValue(a));
-    if (sort === "Quick Quests") return [...filtered].sort((a, b) => Number.parseInt(a.time) - Number.parseInt(b.time));
-    if (sort === "Trending") return filtered.filter((quest) => quest.tag === "Trending").concat(filtered.filter((quest) => quest.tag !== "Trending"));
     return filtered;
-  }, [activeTab, allQuests, searchQuery, selectedTag, sort, startedQuestIds]);
+  }, [activeTab, allQuests, searchQuery, selectedTag, sort]);
   const activeTitle = pageTitles[activePage];
   const openQuestDetail = (quest: Quest) => {
     setSelectedQuest(quest);
@@ -1743,7 +1985,8 @@ export default function QquestPage() {
         return (
           <WalletPage
             account={connectedAccount}
-            balance={questWalletBalance}
+            balance={userWallet?.quest_wallet_balance || 0}
+            qWalletBalance={userWallet?.q_wallet_balance || 0}
             onConnect={() => setIsConnectAccountOpen(true)}
             onWithdraw={() => connectedAccount ? setIsWithdrawOpen(true) : setIsConnectAccountOpen(true)}
           />
@@ -1816,6 +2059,9 @@ export default function QquestPage() {
       </aside>
 
       <main className="xl:pl-72">
+        {showTerms ? (
+          <TermsAcceptanceModal onAccept={handleAcceptTerms} onClose={() => setShowTerms(false)} />
+        ) : null}
         <header className="sticky top-0 z-20 border-b border-black/5 bg-white/85 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">

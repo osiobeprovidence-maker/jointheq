@@ -298,10 +298,12 @@ export default function DashboardPage() {
         amount,
         walletCreditAmount = amount,
         label,
+        onVerified,
     }: {
         amount: number;
         walletCreditAmount?: number;
-        label: "fund" | "link";
+        label: "fund" | "link" | "quest";
+        onVerified?: () => Promise<void>;
     }) => {
         if (!amount || amount < WALLET_FUNDING_MIN_AMOUNT) {
             toast.error("Minimum funding is \u20A61,000");
@@ -349,9 +351,14 @@ export default function DashboardPage() {
                     });
                     toast.dismiss();
                     if (res.success) {
+                        if (onVerified) {
+                            await onVerified();
+                        }
                         toast.success(
                             label === "link"
                                 ? `Card linked successfully. \u20A6${res.amount.toLocaleString()} was added to your wallet.`
+                                : label === "quest"
+                                    ? `Payment successful. Your Quest has been created and sent for approval.`
                                 : `\u20A6${res.amount.toLocaleString()} added to your wallet! ${res.cardSaved ? "Card linked successfully." : ""}`,
                         );
                     }
@@ -420,6 +427,43 @@ export default function DashboardPage() {
     };
 
     const taskTotalCost = Number(taskForm.bootsReward || 0) * Number(taskForm.requiredCompletions || 0) * taskRate;
+
+    const resetTaskForm = () => {
+        setTaskForm({
+            title: '',
+            platform: 'Instagram',
+            targetLocation: 'Nigeria',
+            type: 'Follow',
+            description: '',
+            instructions: '',
+            externalUrl: '',
+            bootsReward: 10,
+            requiredCompletions: 10,
+            proofType: 'Screenshot upload',
+            deadline: '',
+        });
+    };
+
+    const createQuestFromCurrentForm = async () => {
+        await createTaskMutation({
+            creatorUserId: currentUser!._id,
+            title: taskForm.title.trim(),
+            platform: taskForm.platform,
+            targetLocation: taskForm.targetLocation.trim() || undefined,
+            taskType: taskForm.type,
+            type: taskForm.type,
+            description: taskForm.description.trim(),
+            instructions: taskForm.instructions.trim(),
+            externalUrl: taskForm.externalUrl.trim() || undefined,
+            bootsReward: Number(taskForm.bootsReward),
+            requiredCompletions: Number(taskForm.requiredCompletions),
+            proofType: taskForm.proofType,
+            deadline: new Date(taskForm.deadline).getTime(),
+        });
+
+        resetTaskForm();
+        setTaskTab('my');
+    };
 
     const resetTaskProof = () => {
         setProofValue('');
@@ -500,43 +544,21 @@ export default function DashboardPage() {
             return;
         }
         if (taskTotalCost > (currentUser.wallet_balance || 0)) {
-            toast.error("Insufficient wallet balance. Please fund your wallet to create this quest.");
+            const amountToPay = Math.max(taskTotalCost - (currentUser.wallet_balance || 0), WALLET_FUNDING_MIN_AMOUNT);
+            startPaystackWalletPayment({
+                amount: amountToPay,
+                walletCreditAmount: amountToPay,
+                label: "quest",
+                onVerified: createQuestFromCurrentForm,
+            });
             return;
         }
 
         setIsSubmittingTask(true);
         try {
-            await createTaskMutation({
-                creatorUserId: currentUser._id,
-                title: taskForm.title.trim(),
-                platform: taskForm.platform,
-                targetLocation: taskForm.targetLocation.trim() || undefined,
-                taskType: taskForm.type,
-                type: taskForm.type,
-                description: taskForm.description.trim(),
-                instructions: taskForm.instructions.trim(),
-                externalUrl: taskForm.externalUrl.trim() || undefined,
-                bootsReward: Number(taskForm.bootsReward),
-                requiredCompletions: Number(taskForm.requiredCompletions),
-                proofType: taskForm.proofType,
-                deadline: new Date(taskForm.deadline).getTime(),
-            });
+            await createQuestFromCurrentForm();
 
             toast.success("Quest created and sent for admin approval");
-            setTaskForm({
-                title: '',
-                platform: 'Instagram',
-                targetLocation: 'Nigeria',
-                type: 'Follow',
-                description: '',
-                instructions: '',
-                externalUrl: '',
-                bootsReward: 10,
-                requiredCompletions: 10,
-                proofType: 'Screenshot upload',
-                deadline: '',
-            });
-            setTaskTab('my');
         } catch (error: any) {
             toast.error(getUserFacingErrorMessage(error, "Failed to create quest"));
         } finally {
@@ -1340,7 +1362,16 @@ export default function DashboardPage() {
                                     <div className="rounded-[2rem] border border-dashed border-black/10 bg-white p-10 text-center text-gray-400">
                                         <ListTodo size={36} className="mx-auto mb-4 opacity-30" />
                                         <p className="font-black text-zinc-700">No quests available</p>
-                                        <p className="mt-1 text-sm font-semibold">New earning quests will appear here soon.</p>
+                                        <p className="mt-1 text-sm font-semibold">Quest not available now. Turn on notifications for new Quests and come back later.</p>
+                                        {notifPermission !== 'granted' && (
+                                            <button
+                                                type="button"
+                                                onClick={requestNotificationPermission}
+                                                className="mt-5 rounded-2xl bg-zinc-950 px-5 py-3 text-xs font-black text-white transition-all hover:bg-black active:scale-95"
+                                            >
+                                                Turn On Quest Notifications
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1416,7 +1447,11 @@ export default function DashboardPage() {
                                         disabled={isSubmittingTask}
                                         className="w-full rounded-[2rem] bg-zinc-900 py-5 font-black text-white shadow-xl shadow-black/10 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
                                     >
-                                        {isSubmittingTask ? "Creating..." : "Create Quest"}
+                                        {isSubmittingTask
+                                            ? "Creating..."
+                                            : taskTotalCost > (currentUser?.wallet_balance || 0)
+                                                ? "Pay with Paystack & Create Quest"
+                                                : "Create Quest"}
                                     </button>
                                 </form>
 
@@ -1443,7 +1478,7 @@ export default function DashboardPage() {
                                         </div>
                                         {taskTotalCost > (currentUser?.wallet_balance || 0) && (
                                             <div className="mt-5 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold">
-                                                Insufficient wallet balance. Please fund your wallet to create this quest.
+                                                Insufficient wallet balance. Paystack will fund your wallet first, then create this Quest automatically after successful payment.
                                             </div>
                                         )}
                                     </div>
@@ -2936,6 +2971,17 @@ export default function DashboardPage() {
                                                         </div>
                                                     </div>
                                                     <p className="text-sm text-gray-600 leading-relaxed">{notif.message}</p>
+                                                    {notif.cta_text && notif.cta_url && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                window.location.href = notif.cta_url;
+                                                            }}
+                                                            className="mt-4 inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-4 py-2 text-xs font-black text-white transition-all hover:bg-zinc-800 active:scale-95"
+                                                        >
+                                                            {notif.cta_text}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

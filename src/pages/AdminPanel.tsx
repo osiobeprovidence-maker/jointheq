@@ -76,7 +76,7 @@ import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "tasks" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests";
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "campaigns" | "quests" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const fmt = fmtCurrency;
@@ -216,7 +216,7 @@ export default function AdminPanel() {
     const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "management" | "logs">("overview");
 
     // Workforce admin state
-    const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
+    const [adminSubTab, setAdminSubTab] = useState<"team" | "quests" | "daily" | "performance" | "audit">("team");
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [inviteForm, setInviteForm] = useState({ email: "", role: "support", work_username: "" });
@@ -243,8 +243,8 @@ export default function AdminPanel() {
     const [reviewPricePerSlot, setReviewPricePerSlot] = useState<number>(0);
     const [reviewOwnerPayout, setReviewOwnerPayout] = useState<number>(0);
     const [reviewAdminNote, setReviewAdminNote] = useState("");
-    const [taskReviewStatus, setTaskReviewStatus] = useState("Pending Admin Approval");
-    const [submissionReviewStatus, setSubmissionReviewStatus] = useState("Pending Review");
+    const [taskReviewStatus, setTaskReviewStatus] = useState("pending_admin_approval");
+    const [submissionReviewStatus, setSubmissionReviewStatus] = useState("pending");
     const [taskAdminNote, setTaskAdminNote] = useState("");
 
     // Queries
@@ -266,8 +266,8 @@ export default function AdminPanel() {
         selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
     );
     const withdrawals = useQuery(api.campaigns.getWithdrawals, {}) || [];
-    const adminReviewTasks = useQuery(api.tasks.adminListTasks, { status: taskReviewStatus }) || [];
-    const adminTaskSubmissions = useQuery(api.tasks.adminListSubmissions, { status: submissionReviewStatus }) || [];
+    const adminReviewQuests = useQuery(api.quests.adminListQuests, { status: taskReviewStatus }) || [];
+    const adminQuestCompletions = useQuery(api.quests.adminListCompletions, { status: submissionReviewStatus }) || [];
     // Security / Fraud
     const fraudFlags = useQuery(api.fraud.getFraudFlags, {}) || [];
     const fraudSummary = useQuery(api.fraud.getFraudSummary);
@@ -302,6 +302,7 @@ export default function AdminPanel() {
     // Pending Counts for Badges
     const pendingPaymentsCount = useQuery(api.funding.getManualRequests, { status: "Awaiting Review" })?.length || 0;
     const pendingListingsCount = useQuery(api.listings.getAdminListings, { status: "Pending Review" })?.length || 0;
+    const pendingQuestApprovalsCount = adminReviewQuests.filter((q: any) => q.status === "pending_admin_approval").length;
 
     // Leave Requests Query
     const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
@@ -367,12 +368,12 @@ export default function AdminPanel() {
     const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
     const editCampaignMut = useMutation(api.campaigns.editCampaign);
     const processWithdrawalMut = useMutation(api.campaigns.processWithdrawal);
-    const approveTaskMut = useMutation(api.tasks.approveTask);
-    const rejectTaskMut = useMutation(api.tasks.rejectTask);
-    const pauseTaskMut = useMutation(api.tasks.pauseTask);
-    const removeTaskMut = useMutation(api.tasks.removeTask);
-    const approveSubmissionMut = useMutation(api.tasks.approveSubmission);
-    const rejectSubmissionMut = useMutation(api.tasks.rejectSubmission);
+    const approveQuestMut = useMutation(api.quests.adminReviewQuest);
+    const approveQuestCompletionMut = useMutation(api.quests.adminReviewCompletion);
+    
+    
+    
+    
     // Workforce Queries
     const workforceAdmins = useQuery(api.adminWorkforce.getAdminTeam) || [];
     const invitations = useQuery(api.adminWorkforce.getInvitations) || [];
@@ -801,7 +802,7 @@ export default function AdminPanel() {
         { id: "marketplace", label: "Marketplace", icon: <ShoppingBag size={18} />, sub: "Subscription Inventory" },
         { id: "payments", label: "Payments", icon: <CreditCard size={18} />, sub: "Transaction History" },
         { id: "campaigns", label: "Campaigns", icon: <Megaphone size={18} />, sub: "Growth & Commissions" },
-        { id: "tasks", label: "Tasks", icon: <ListTodo size={18} />, sub: "Task Reviews & BOOTS" },
+        { id: "quests", label: "Quest Approval", icon: <ListTodo size={18} />, sub: "Approve Quests & Proofs" },
         { id: "security", label: "Security", icon: <ShieldCheck size={18} />, sub: "Fraud & Anti-Spam" },
         { id: "support", label: "Support", icon: <HeadphonesIcon size={18} />, sub: "Customer Experience" },
         { id: "admins", label: "Admins", icon: <Shield size={18} />, sub: "Workforce & Tasks" },
@@ -862,6 +863,11 @@ export default function AdminPanel() {
                             {item.id === "review_payments" && pendingPaymentsCount > 0 && (
                                 <span className="ml-auto bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                                     {pendingPaymentsCount}
+                                </span>
+                            )}
+                            {item.id === "quests" && pendingQuestApprovalsCount > 0 && (
+                                <span className="ml-auto bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                    {pendingQuestApprovalsCount}
                                 </span>
                             )}
                             {item.id === "user_listings" && pendingListingsCount > 0 && (
@@ -1048,6 +1054,11 @@ export default function AdminPanel() {
                                         {item.id === "security" && (fraudFlags.filter((f: any) => f.status === "open").length) > 0 && (
                                             <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                                                 {fraudFlags.filter((f: any) => f.status === "open").length}
+                                            </span>
+                                        )}
+                                        {item.id === "quests" && pendingQuestApprovalsCount > 0 && (
+                                            <span className="ml-auto bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                                {pendingQuestApprovalsCount}
                                             </span>
                                         )}
                                     </button>
@@ -1292,7 +1303,7 @@ export default function AdminPanel() {
                                                 <div className="text-4xl font-black mb-1">{stats ? fmt(stats.totalRevenue) : "-"}</div>
                                                 <div className="flex gap-3 mt-3 text-[10px] font-bold flex-wrap">
                                                     <span className="bg-white/20 px-2 py-1 rounded-full">Today: {stats ? fmt(stats.revenueToday) : "-"}</span>
-                                                    <span className="bg-white/20 px-2 py-1 rounded-full">Month: {stats ? fmt(stats.revenueThisMonth) : 'Ã¢â‚¬â€'}</span>
+                                                    <span className="bg-white/20 px-2 py-1 rounded-full">Month: {stats ? fmt(stats.revenueThisMonth) : '— '}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1301,29 +1312,27 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ BOOTS & CAMPAIGNS Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ── QUESTS & EARNINGS ── */}
                                 <div>
-                                    <SectionHeader title="BOOTS & Growth" sub="Token economy and campaigns" />
+                                    <SectionHeader title="Quest Performance" sub="User quests and participation" />
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                        <StatCard label="BOOTS in Circulation" value={(stats?.totalBoots ?? 0).toLocaleString()} icon={<Zap size={18} />} color="bg-yellow-500" />
-                                        <StatCard label="Issued Today" value={(stats?.bootsIssuedToday ?? 0).toLocaleString()} icon={<TrendingUp size={18} />} color="bg-amber-400" trend="up" />
+                                        <StatCard label="Quest Created" value={stats?.totalQuests ?? 0} icon={<Flag size={18} />} color="bg-indigo-500" />
+                                        <StatCard label="Quest Participation" value={(stats?.questParticipants ?? 0).toLocaleString()} icon={<Users size={18} />} color="bg-emerald-500" />
                                         <StatCard label="Active Campaigns" value={stats?.activeCampaigns ?? 0} icon={<Megaphone size={18} />} color="bg-purple-500" />
                                         <StatCard label="Total Participants" value={(stats?.totalCampaignParticipants ?? 0).toLocaleString()} icon={<Users size={18} />} color="bg-pink-500" />
                                     </div>
                                 </div>
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ MIGRATIONS Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* —— BOOTS & Growth —— */}
                                 <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <SectionHeader title="Offline Migrations" sub="Legacy account transition metrics" />
-                                        <button onClick={() => navigate("/admin/migrations")} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-xl transition-all">View All</button>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        <StatCard label="Total Migrations" value={stats?.totalMigrations ?? 0} icon={<RefreshCw size={18} />} color="bg-indigo-500" />
-                                        <StatCard label="Pending Review" value={stats?.pendingMigrations ?? 0} icon={<Clock size={18} />} color="bg-amber-500" sub="Needs verification" />
-                                        <StatCard label="Migration Completion" value={`${stats?.totalMigrations ? Math.round(((stats.totalMigrations - stats.pendingMigrations) / stats.totalMigrations) * 100) : 0}%`} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" />
+                                    <SectionHeader title="BOOTS & Growth" sub="Token economy and circulation" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <StatCard label="BOOTS in Circulation" value={(stats?.totalBoots ?? 0).toLocaleString()} icon={<Zap size={18} />} color="bg-yellow-500" />
+                                        <StatCard label="Issued Today" value={(stats?.bootsIssuedToday ?? 0).toLocaleString()} icon={<TrendingUp size={18} />} color="bg-amber-400" trend="up" />
                                     </div>
                                 </div>
+
+                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ MIGRATIONS Ã¢â€â‚¬Ã¢â€â‚¬ */}
 
                                 {/* Ã¢â€â‚¬Ã¢â€â‚¬ TWO-COLUMN: Platform Breakdown + Transactions/Snapshots Ã¢â€â‚¬Ã¢â€â‚¬ */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1713,7 +1722,10 @@ export default function AdminPanel() {
                                     <div className="space-y-4">
                                         {(allSubscriptions as any[]).map((group: any) => {
                                             const isExpanded = expandedGroup === group._id;
-                                            const filledSlots = group.members?.length ?? 0;
+                                            const members = Array.isArray(group.members) ? group.members : [];
+                                            const memberPreview = members.slice(0, 50);
+                                            const hiddenMemberCount = Math.max(0, members.length - memberPreview.length);
+                                            const filledSlots = members.length;
                                             const displayOwner = (group.plan_owner || "Unknown").trim().replace(/^@+/, "") || "Unknown";
                                             return (
                                                 <div key={group._id} className="bg-white rounded-3xl border border-black/5 overflow-hidden hover:shadow-lg transition-all">
@@ -1859,11 +1871,18 @@ export default function AdminPanel() {
                                                                     </div>
 
                                                                     {/* Members inside this group */}
-                                                                    {(group.members ?? []).length > 0 && (
+                                                                    {members.length > 0 && (
                                                                         <div>
-                                                                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Current Members</p>
+                                                                            <div className="flex items-center justify-between gap-3 mb-3">
+                                                                                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Current Members</p>
+                                                                                {hiddenMemberCount > 0 && (
+                                                                                    <span className="text-[10px] font-black text-zinc-500 bg-white px-3 py-1 rounded-full">
+                                                                                        Showing 50 of {members.length.toLocaleString()}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
                                                                             <div className="space-y-1.5">
-                                                                                {(group.members as any[]).map((m: any, i: number) => (
+                                                                                {memberPreview.map((m: any, i: number) => (
                                                                                     <div key={i} className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5">
                                                                                         <div className="flex items-center gap-2">
                                                                                             <div className="w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center text-[10px] font-black">{m.user_name?.[0]}</div>
@@ -2296,59 +2315,64 @@ export default function AdminPanel() {
                         )}
 
                         {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â SUPPORT Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
-                        {activeTab === "tasks" && (
-                            <motion.div key="tasks" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Tasks Review" sub="Approve promoted tasks and release BOOTS after proof review" />
+                        {activeTab === "quests" && (
+                            <motion.div key="quests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
+                                <SectionHeader title="Quest Moderation" sub="Review and approve user-created quests and proof submissions" />
 
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                     <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
                                         <div className="p-6 border-b border-black/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                             <div>
-                                                <h3 className="font-black">Submitted Tasks</h3>
-                                                <p className="text-xs text-gray-400 mt-1">User-created tasks wait here before going live.</p>
+                                                <h3 className="font-black">Quest Listings</h3>
+                                                <p className="text-xs text-gray-400 mt-1">Review user-created quests before they go live.</p>
                                             </div>
                                             <select value={taskReviewStatus} onChange={(e) => setTaskReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
-                                                {["Pending Admin Approval", "Active", "Paused", "Rejected", "Completed", "Cancelled", "Draft", "All"].map((status) => <option key={status} value={status}>{status}</option>)}
+                                                <option value="pending_admin_approval">Pending Approval</option><option value="live">Live</option><option value="pending_payment">Pending Payment</option><option value="paused">Paused</option><option value="rejected">Rejected</option><option value="completed">Completed</option>
                                             </select>
                                         </div>
                                         <div className="divide-y divide-black/5">
-                                            {(adminReviewTasks as any[]).map((task: any) => (
-                                                <div key={task._id} className="p-5 space-y-4">
+                                            {(adminReviewQuests as any[]).map((quest: any) => (
+                                                <div key={quest._id} className="p-5 space-y-4">
                                                     <div className="flex items-start justify-between gap-4">
-                                                        <div>
-                                                            <div className="font-black">{task.title}</div>
-                                                            <div className="text-xs text-gray-400 mt-1">{task.platform || task.type} - {task.bootsReward} BOOTS - {task.completedCount}/{task.requiredCompletions}</div>
-                                                            <div className="text-[10px] font-bold text-gray-300 mt-1">Creator: {task.creator?.full_name || task.creator?.email || "Unknown"}</div>
+                                                        <div className="flex gap-4">
+                                                            {quest.cover_image_url && (
+                                                                <img src={quest.cover_image_url} className="w-16 h-16 rounded-xl object-cover border border-black/5" alt="" />
+                                                            )}
+                                                            <div>
+                                                                <div className="font-black">{quest.title}</div>
+                                                                <div className="text-xs text-gray-400 mt-1">{quest.platform} - {fmt(quest.reward_per_completion)} reward - {quest.current_completions}/{quest.max_completions} spots</div>
+                                                                <div className="text-[10px] font-bold text-gray-300 mt-1">Creator ID: {quest.creator_id}</div>
+                                                            </div>
                                                         </div>
-                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${task.status === "Active" ? "bg-emerald-100 text-emerald-700" : task.status === "Rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{task.status}</span>
+                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${quest.status === "live" ? "bg-emerald-100 text-emerald-700" : quest.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{quest.status.replace('_', ' ')}</span>
                                                     </div>
-                                                    <p className="text-sm text-gray-500 leading-relaxed">{task.description}</p>
+                                                    <p className="text-sm text-gray-500 leading-relaxed">{quest.description}</p>
                                                     <div className="grid grid-cols-2 gap-3 text-xs font-bold text-gray-500">
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Budget: {fmt(task.totalCost)}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Workers: {task.requiredCompletions}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Completed: {task.submissionStats?.completed || 0}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Pending: {task.submissionStats?.pending || 0}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Rejected: {task.submissionStats?.rejected || 0}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Deadline: {new Date(task.deadline).toLocaleDateString()}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Budget: {fmt(quest.total_cost)}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Max Spots: {quest.max_completions}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Completed: {quest.current_completions}</div>
+                                                        <div className="bg-zinc-50 rounded-2xl p-3">Reward/User: {fmt(quest.reward_per_completion)}</div>
+                                                        
+                                                        
                                                     </div>
-                                                    {task.status === "Pending Admin Approval" && (
+                                                    {quest.status === "pending_admin_approval" && (
                                                         <div className="flex gap-2">
-                                                            <button onClick={async () => { await approveTaskMut({ taskId: task._id, adminId: currentUser!._id }); toast.success("Task approved"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve</button>
-                                                            <button onClick={async () => { await rejectTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.error("Task rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
+                                                            <button onClick={async () => { await approveQuestMut({ quest_id: quest._id, action: "approve" }); toast.success("Quest approved and is now live!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve</button>
+                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestMut({ quest_id: quest._id, action: "reject", admin_note: note }); toast.error("Quest rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
                                                         </div>
                                                     )}
-                                                    {task.status === "Active" && (
-                                                        <button onClick={async () => { await pauseTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.success("Task paused"); }} className="w-full py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100">Pause Suspicious Task</button>
+                                                    {quest.status === "live" && (
+                                                        <button onClick={async () => { await approveQuestMut({ quest_id: quest._id, action: "pause" }); toast.success("Quest paused"); }} className="w-full py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100">Pause Suspicious Task</button>
                                                     )}
-                                                    {task.status !== "Removed" && (
-                                                        <button onClick={async () => { if(window.confirm("Remove this quest post for violation of community rules?")) { await removeTaskMut({ taskId: task._id, adminId: currentUser!._id, adminNote: taskAdminNote || "Removed for violation of community rules" }); setTaskAdminNote(""); toast.success("Quest removed"); } }} className="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 size={14} /> Remove Quest</button>
+                                                    {quest.status !== "rejected" && (
+                                                        <button onClick={async () => { if(window.confirm("Remove this quest post?")) { await approveQuestMut({ quest_id: quest._id, action: "reject", admin_note: "Removed for violation of community rules" }); toast.success("Quest removed"); } }} className="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 size={14} /> Remove Quest</button>
                                                     )}
                                                 </div>
                                             ))}
-                                            {adminReviewTasks.length === 0 && (
+                                            {adminReviewQuests.length === 0 && (
                                                 <div className="p-12 text-center text-gray-400">
                                                     <ListTodo size={34} className="mx-auto mb-3 opacity-20" />
-                                                    <p className="font-bold">No tasks in this status.</p>
+                                                    <p className="font-bold">No quests in this status.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -2358,43 +2382,43 @@ export default function AdminPanel() {
                                         <div className="p-6 border-b border-black/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                             <div>
                                                 <h3 className="font-black">Proof Review</h3>
-                                                <p className="text-xs text-gray-400 mt-1">Approve proof to release BOOTS rewards.</p>
+                                                <p className="text-xs text-gray-400 mt-1">Approve proof to release rewards from the creator's Q Wallet.</p>
                                             </div>
                                             <select value={submissionReviewStatus} onChange={(e) => setSubmissionReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
-                                                {["Pending Review", "Completed", "Rejected", "All"].map((status) => <option key={status} value={status}>{status}</option>)}
+                                                <option value="pending">Pending Review</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
                                             </select>
                                         </div>
                                         <div className="p-5 border-b border-black/5">
                                             <input value={taskAdminNote} onChange={(e) => setTaskAdminNote(e.target.value)} placeholder="Optional rejection reason" className="w-full bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
                                         </div>
                                         <div className="divide-y divide-black/5">
-                                            {(adminTaskSubmissions as any[]).map((submission: any) => (
+                                            {(adminQuestCompletions as any[]).map((submission: any) => (
                                                 <div key={submission._id} className="p-5 space-y-4">
                                                     <div className="flex items-start justify-between gap-4">
                                                         <div>
-                                                            <div className="font-black">{submission.task?.title || "Deleted task"}</div>
-                                                            <div className="text-xs text-gray-400 mt-1">{submission.user?.full_name || "Unknown user"} - {submission.proofType}</div>
+                                                            <div className="font-black">Quest: {submission.quest_title || "Unknown Quest"}</div>
+                                                            <div className="text-xs text-gray-400 mt-1">User ID: {submission.user_id}</div>
                                                         </div>
-                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${submission.status === "Completed" ? "bg-blue-100 text-blue-700" : submission.status === "Rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{submission.status}</span>
+                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${submission.status === "approved" ? "bg-emerald-100 text-emerald-700" : submission.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{submission.status}</span>
                                                     </div>
-                                                    {submission.proofValue && <div className="bg-zinc-50 rounded-2xl p-4 text-sm text-gray-600 break-words">{submission.proofValue}</div>}
-                                                    {submission.screenshotUrl && (
+                                                    {submission.proof_text && <div className="bg-zinc-50 rounded-2xl p-4 text-sm text-gray-600 break-words border border-black/5">{submission.proof_text}</div>}
+                                                    {submission.proof_url && (
                                                         <div className="overflow-hidden rounded-2xl bg-zinc-100">
-                                                            <img src={`https://aromatic-ox-169.eu-west-1.convex.site/api/storage/${submission.screenshotUrl}`} alt="Task proof" className="h-44 w-full object-cover" />
+                                                            <img src={submission.proof_url} alt="Proof" className="w-full max-h-64 object-contain" />
                                                         </div>
                                                     )}
-                                                    {submission.status === "Pending Review" && (
+                                                    {submission.status === "pending" && (
                                                         <div className="flex gap-2">
-                                                            <button onClick={async () => { await approveSubmissionMut({ submissionId: submission._id, adminId: currentUser!._id }); toast.success("Proof approved and BOOTS released"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve Proof</button>
-                                                            <button onClick={async () => { await rejectSubmissionMut({ submissionId: submission._id, adminId: currentUser!._id, adminNote: taskAdminNote || undefined }); setTaskAdminNote(""); toast.error("Proof rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject Proof</button>
+                                                            <button onClick={async () => { await approveQuestCompletionMut({ completion_id: submission._id, action: "approve" }); toast.success("Proof approved and rewards released!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve Proof</button>
+                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestCompletionMut({ completion_id: submission._id, action: "reject", admin_note: note }); toast.error("Proof rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject Proof</button>
                                                         </div>
                                                     )}
                                                 </div>
                                             ))}
-                                            {adminTaskSubmissions.length === 0 && (
+                                            {adminQuestCompletions.length === 0 && (
                                                 <div className="p-12 text-center text-gray-400">
                                                     <CheckCircle2 size={34} className="mx-auto mb-3 opacity-20" />
-                                                    <p className="font-bold">No proof submissions in this status.</p>
+                                                    <p className="font-bold">No submissions in this status.</p>
                                                 </div>
                                             )}
                                         </div>

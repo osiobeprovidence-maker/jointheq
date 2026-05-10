@@ -101,7 +101,7 @@ export default function InstallBanner() {
             className="fixed inset-x-3 bottom-3 z-[120] mx-auto max-w-md rounded-[1.5rem] border border-red-100 bg-white p-3 shadow-[0_18px_50px_rgba(185,28,28,0.22)] sm:hidden"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-white">
                 <Download size={22} />
               </div>
               <div className="min-w-0 flex-1">
@@ -123,7 +123,7 @@ export default function InstallBanner() {
               <button
                 type="button"
                 onClick={install}
-                className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-red-600/20 transition-all active:scale-95"
+                className="rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white shadow-lg shadow-black/20 transition-all active:scale-95"
               >
                 Install
               </button>
@@ -184,7 +184,7 @@ export default function InstallBanner() {
               <button
                 type="button"
                 onClick={dismiss}
-                className="mt-5 w-full rounded-2xl bg-red-600 px-4 py-4 text-sm font-black text-white"
+                className="mt-5 w-full rounded-2xl bg-zinc-950 px-4 py-4 text-sm font-black text-white"
               >
                 Got it
               </button>

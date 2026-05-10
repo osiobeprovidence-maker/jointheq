@@ -418,7 +418,7 @@ export const joinSlot = mutation({
             .filter((q) => q.eq(q.field("status"), "active"))
             .collect();
 
-        let targetSlot = null;
+        let targetSlot: Doc<"subscription_slots"> | null = null;
         for (const g of groups) {
             const openSlot = await ctx.db
                 .query("subscription_slots")
@@ -477,6 +477,25 @@ export const joinSlot = mutation({
             renewal_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             auto_renew: args.auto_renew || false,
         });
+
+        // Update marketplace denormalization
+        const group = targetSlot.group_id ? await ctx.db.get(targetSlot.group_id) : null;
+        if (group?.account_email) {
+            const marketplace = await ctx.db.query("marketplace")
+                .withIndex("by_account_email", q => q.eq("account_email", group.account_email))
+                .filter(q => q.eq(q.field("subscription_catalog_id"), group.subscription_catalog_id))
+                .first();
+            
+            if (marketplace) {
+                const filled = (marketplace.filled_slots || 0) + 1;
+                const total = marketplace.total_slots || 0;
+                await ctx.db.patch(marketplace._id, {
+                    filled_slots: filled,
+                    available_slots: Math.max(0, total - filled),
+                    updated_at: Date.now()
+                });
+            }
+        }
 
         // Award Reward for self (Join/Pay)
         await awardReputation(ctx, user._id, {

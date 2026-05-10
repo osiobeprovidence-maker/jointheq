@@ -79,6 +79,9 @@ export default defineSchema({
         fraud_review_reason: v.optional(v.string()),
         is_admin_suspended: v.optional(v.boolean()),
         admin_suspended_at: v.optional(v.number()),
+        accepted_terms: v.optional(v.boolean()),
+        accepted_terms_version: v.optional(v.string()),
+        accepted_at: v.optional(v.number()),
     }).index("by_email", ["email"])
         .index("by_username", ["username"])
         .index("by_referral_code", ["referral_code"])
@@ -141,7 +144,9 @@ export default defineSchema({
     // PILLAR 4: Wallets
     wallets: defineTable({
         user_id: v.id("users"),
-        balance: v.number(),
+        q_wallet_balance: v.number(),
+        quest_wallet_balance: v.number(),
+        created_at: v.number(),
         updated_at: v.number(),
     }).index("by_user", ["user_id"]),
 
@@ -150,14 +155,17 @@ export default defineSchema({
         user_id: v.id("users"),
         amount: v.number(),
         type: v.string(),
-        source: v.string(),
+        wallet_type: v.string(),
+        reference: v.string(),
         status: v.string(),
         description: v.optional(v.string()),
+        related_quest_id: v.optional(v.id("quests")),
         fee: v.optional(v.number()),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_type", ["type"])
-        .index("by_status", ["status"]),
+        .index("by_status", ["status"])
+        .index("by_reference", ["reference"]),
 
     // PILLAR 6: Subscription Payments
     subscription_payments: defineTable({
@@ -299,6 +307,45 @@ export default defineSchema({
     }).index("by_status", ["status"])
         .index("by_creator", ["creatorUserId"])
         .index("by_deadline", ["deadline"]),
+
+    quests: defineTable({
+        creatorId: v.id("users"),
+        title: v.string(),
+        description: v.string(),
+        questLink: v.string(),
+        instructions: v.string(),
+        proofRequirement: v.string(),
+        coverImageUrl: v.optional(v.string()),
+        category: v.optional(v.string()),
+        rewardPerUser: v.number(),
+        totalBudget: v.number(),
+        totalSlots: v.number(),
+        usedSlots: v.number(),
+        paymentStatus: v.string(), // "pending", "paid", "failed"
+        paymentMethod: v.optional(v.string()), // "q_wallet", "paystack"
+        paymentReference: v.optional(v.string()),
+        status: v.string(), // "draft", "pending_payment", "live", "pending_review", "paused", "rejected", "completed"
+        isFeatured: v.optional(v.boolean()),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_status", ["status"])
+        .index("by_creator", ["creatorId"])
+        .index("by_payment_reference", ["paymentReference"]),
+
+    quest_completions: defineTable({
+        questId: v.id("quests"),
+        userId: v.id("users"),
+        proofUrl: v.optional(v.string()),
+        proofText: v.optional(v.string()),
+        status: v.string(), // "pending_review", "approved", "rejected", "paid"
+        payoutReference: v.optional(v.string()),
+        creditedAt: v.optional(v.number()),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_quest", ["questId"])
+        .index("by_user", ["userId"])
+        .index("by_status", ["status"])
+        .index("by_quest_user", ["questId", "userId"]),
 
     task_submissions: defineTable({
         taskId: v.id("tasks"),
@@ -679,10 +726,41 @@ export default defineSchema({
         title: v.string(),
         message: v.string(),
         type: v.string(),
+        cta_text: v.optional(v.string()),
+        cta_url: v.optional(v.string()),
         is_read: v.boolean(),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_read", ["user_id", "is_read"]),
+
+    subscription_notification_templates: defineTable({
+        key: v.string(),
+        title: v.string(),
+        message: v.string(),
+        cta_text: v.optional(v.string()),
+        cta_url: v.optional(v.string()),
+        channels: v.array(v.string()),
+        updated_at: v.number(),
+        updated_by: v.optional(v.id("users")),
+    }).index("by_key", ["key"]),
+
+    subscription_notification_logs: defineTable({
+        slot_id: v.id("subscription_slots"),
+        user_id: v.id("users"),
+        event_key: v.string(),
+        cycle_due_date: v.string(),
+        send_date: v.string(),
+        notification_id: v.optional(v.id("notifications")),
+        title: v.string(),
+        message: v.string(),
+        cta_text: v.optional(v.string()),
+        cta_url: v.optional(v.string()),
+        channels: v.any(),
+        status: v.string(),
+        created_at: v.number(),
+    }).index("by_slot_event_cycle", ["slot_id", "event_key", "cycle_due_date"])
+        .index("by_slot_event_send_date", ["slot_id", "event_key", "send_date"])
+        .index("by_created_at", ["created_at"]),
 
     // ─── ENHANCED ADMIN SYSTEM ────────────────────────────────────────────────
 

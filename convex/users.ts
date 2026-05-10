@@ -77,6 +77,31 @@ export const list = query({
     },
 });
 
+export const getWallet = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("wallets")
+            .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+            .unique();
+    },
+});
+
+export const acceptTerms = mutation({
+    args: {
+        userId: v.id("users"),
+        version: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.userId, {
+            accepted_terms: true,
+            accepted_terms_version: args.version,
+            accepted_at: Date.now(),
+        });
+        return { success: true };
+    },
+});
+
 export const getInvitedUsers = query({
     args: { userId: v.id("users") },
     handler: async (ctx, args) => {
@@ -251,6 +276,16 @@ export const createUser = mutation({
             created_at: Date.now(),
             sign_in_history: [],
         });
+
+        // Initialize wallet
+        await ctx.db.insert("wallets", {
+            user_id: userId,
+            q_wallet_balance: 0,
+            quest_wallet_balance: 0,
+            created_at: Date.now(),
+            updated_at: Date.now(),
+        });
+
         return userId;
     },
 });
@@ -1037,6 +1072,15 @@ export const socialLogin = mutation({
             ],
         });
         
+        // Initialize wallet
+        await ctx.db.insert("wallets", {
+            user_id: userId,
+            q_wallet_balance: 0,
+            quest_wallet_balance: 0,
+            created_at: Date.now(),
+            updated_at: Date.now(),
+        });
+
         const newUser = await ctx.db.get(userId);
         return { success: true, user: newUser, isVerified: true };
     },
@@ -1127,18 +1171,41 @@ export const creditWalletAndSaveCard = internalMutation({
         const user = await ctx.db.get(args.userId);
         if (!user) throw new Error("User not found");
 
+        // Update user balance for backward compatibility
         await ctx.db.patch(args.userId, {
             wallet_balance: (user.wallet_balance || 0) + args.amount,
             ...(args.cardDetails && { direct_debit_card: args.cardDetails }),
         });
 
+        // Update Q Wallet balance
+        let wallet = await ctx.db
+            .query("wallets")
+            .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+            .unique();
+
+        if (!wallet) {
+            await ctx.db.insert("wallets", {
+                user_id: args.userId,
+                q_wallet_balance: args.amount,
+                quest_wallet_balance: 0,
+                created_at: Date.now(),
+                updated_at: Date.now(),
+            });
+        } else {
+            await ctx.db.patch(wallet._id, {
+                q_wallet_balance: wallet.q_wallet_balance + args.amount,
+                updated_at: Date.now(),
+            });
+        }
+
         await ctx.db.insert("wallet_transactions", {
             user_id: args.userId,
+            wallet_type: "q_wallet",
             amount: args.amount,
-            type: "funding",
-            source: "paystack",
+            type: "credit",
+            reference: `paystack_${args.reference}`,
             status: "completed",
-            description: `Paystack: ${args.reference}`,
+            description: `Paystack Funding: ${args.reference}`,
             created_at: Date.now(),
         });
 
