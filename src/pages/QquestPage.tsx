@@ -769,6 +769,7 @@ function PaymentModal({
   const handlePay = async () => {
     if (!user?._id) return;
     setIsProcessing(true);
+    const requestId = `quest_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
 
     try {
       let coverImageUrl = "";
@@ -799,6 +800,7 @@ function PaymentModal({
           rewardPerUser: qquestRewardPerUser,
           totalBudget: form.budget,
           paymentMethod: "q_wallet",
+          requestId,
         });
 
         onPaid(response.questId as any, response.status);
@@ -828,6 +830,7 @@ function PaymentModal({
         rewardPerUser: qquestRewardPerUser,
         totalBudget: form.budget,
         paymentMethod: "paystack",
+        requestId,
       });
       paystack.newTransaction({
         key: paystackKey,

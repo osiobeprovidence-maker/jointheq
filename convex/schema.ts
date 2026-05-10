@@ -316,6 +316,7 @@ export default defineSchema({
         instructions: v.string(),
         proofRequirement: v.string(),
         coverImageUrl: v.optional(v.string()),
+        request_id: v.optional(v.string()),
         category: v.optional(v.string()),
         rewardPerUser: v.number(),
         totalBudget: v.number(),
@@ -330,7 +331,8 @@ export default defineSchema({
         updatedAt: v.number(),
     }).index("by_status", ["status"])
         .index("by_creator", ["creatorId"])
-        .index("by_payment_reference", ["paymentReference"]),
+        .index("by_payment_reference", ["paymentReference"])
+        .index("by_request_id", ["request_id"]),
 
     quest_completions: defineTable({
         questId: v.id("quests"),

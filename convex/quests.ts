@@ -18,10 +18,23 @@ export const createQuest = mutation({
         rewardPerUser: v.number(),
         totalBudget: v.number(),
         paymentMethod: v.string(), // "q_wallet" | "paystack"
+        requestId: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const user = await ctx.db.get(args.creatorId);
         if (!user) throw new Error("User not found");
+
+        // Idempotency: if requestId provided, return existing quest to prevent duplicates
+        if (args.requestId) {
+            const existing = await ctx.db
+                .query("quests")
+                .withIndex("by_request_id", (q) => q.eq("request_id", args.requestId))
+                .unique();
+
+            if (existing) {
+                return { success: true, questId: existing._id, status: existing.status };
+            }
+        }
 
         const totalSlots = Math.floor(args.totalBudget / args.rewardPerUser);
         if (totalSlots <= 0) throw new Error("Budget is too low for the reward amount");
@@ -34,6 +47,7 @@ export const createQuest = mutation({
             instructions: args.instructions,
             proofRequirement: args.proofRequirement,
             coverImageUrl: args.coverImageUrl,
+            request_id: args.requestId,
             category: args.category,
             rewardPerUser: args.rewardPerUser,
             totalBudget: args.totalBudget,
