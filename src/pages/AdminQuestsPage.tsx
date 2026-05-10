@@ -10,6 +10,48 @@ export default function AdminQuestsPage() {
   const quests = useQuery(api.quests.adminListAllQuests, { adminId: user?._id } as any) || [];
   const review = useMutation(api.quests.adminReviewQuest);
   const [processing, setProcessing] = useState<string | null>(null);
+  
+  const exportCSV = () => {
+    if (!quests || quests.length === 0) {
+      toast("No quests to export");
+      return;
+    }
+
+    const headers = [
+      'questId', 'title', 'creatorName', 'creatorEmail', 'creatorPhone', 'proofRequirement', 'paymentStatus', 'paymentMethod', 'paymentReference', 'rewardPerUser', 'totalBudget', 'status', 'createdAt', 'coverImageUrl'
+    ];
+
+    const rows = quests.map((q: any) => {
+      const created = q.createdAt || q.created_at || q.createdAt === 0 ? new Date(q.createdAt || q.created_at).toISOString() : '';
+      return [
+        q._id || '',
+        q.title || '',
+        q.creator?.full_name || q.creator?.email || '',
+        q.creator?.email || '',
+        q.creator?.phone || '',
+        q.proofRequirement || '',
+        q.paymentStatus || '',
+        q.paymentMethod || '',
+        q.paymentReference || '',
+        q.rewardPerUser ?? '',
+        q.totalBudget ?? '',
+        q.status || '',
+        created,
+        q.coverImageUrl || ''
+      ];
+    });
+
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `quests_export_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const handleAction = async (questId: any, action: string) => {
     if (!user?._id) return;
@@ -27,7 +69,12 @@ export default function AdminQuestsPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F5F8] p-6">
-      <h1 className="text-2xl font-black mb-4">Admin — Quests</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-black">Admin — Quests</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={() => exportCSV()} className="rounded-2xl bg-zinc-950 text-white px-3 py-2 font-bold">Export CSV</button>
+        </div>
+      </div>
       <div className="grid gap-4">
         {quests.length === 0 ? <div className="text-sm text-zinc-500">No quests</div> : quests.map((q: any) => (
           <div key={q._id} className="bg-white rounded-2xl p-4 flex items-start gap-4 border border-black/5">
