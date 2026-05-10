@@ -27,6 +27,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from "motion/react";
 import { auth } from "../lib/auth";
 import { Logo } from "../components/ui/Logo";
+import NetworkStatusBanner from "../components/NetworkStatusBanner";
 
 interface MainLayoutProps {
     children: ReactNode;
@@ -326,6 +327,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
             </AnimatePresence>
 
             <main className="lg:ml-64 pt-20 sm:pt-24 lg:pt-32 min-h-screen overflow-x-hidden transition-all duration-300">
+                <NetworkStatusBanner />
                 <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto animate-in fade-in duration-700">
                     {children}
                 </div>

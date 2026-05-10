@@ -191,6 +191,43 @@ export const adminListAllQuests = query({
     }
 });
 
+// Backwards-compatible public query used by older admin UI
+export const adminListQuests = query({
+    args: { status: v.optional(v.string()) },
+    handler: async (ctx, args) => {
+        let quests;
+        if (args.status) {
+            quests = await ctx.db.query("quests").withIndex("by_status", (q) => q.eq("status", args.status)).collect();
+        } else {
+            quests = await ctx.db.query("quests").order("desc").collect();
+        }
+
+        return await Promise.all(quests.map(async quest => ({
+            ...quest,
+            creator: await ctx.db.get(quest.creatorId)
+        })));
+    }
+});
+
+// Public query to list quest completions for admin review
+export const adminListCompletions = query({
+    args: { status: v.optional(v.string()) },
+    handler: async (ctx, args) => {
+        let completions;
+        if (args.status) {
+            completions = await ctx.db.query("quest_completions").withIndex("by_status", (q) => q.eq("status", args.status)).collect();
+        } else {
+            completions = await ctx.db.query("quest_completions").order("desc").collect();
+        }
+
+        return await Promise.all(completions.map(async c => ({
+            ...c,
+            quest: await ctx.db.get(c.questId),
+            user: await ctx.db.get(c.userId)
+        })));
+    }
+});
+
 export const adminReviewQuest = mutation({
     args: {
         adminId: v.id("users"),

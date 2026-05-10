@@ -78,9 +78,9 @@ export default function AdminQuestsPage() {
       <div className="grid gap-4">
         {quests.length === 0 ? <div className="text-sm text-zinc-500">No quests</div> : quests.map((q: any) => (
           <div key={q._id} className="bg-white rounded-2xl p-4 flex items-start gap-4 border border-black/5">
-            <div className="w-40 h-24 bg-zinc-100 rounded-lg overflow-hidden flex-shrink-0">
+              <div className="w-40 h-24 bg-zinc-100 rounded-lg overflow-hidden flex-shrink-0">
               {q.coverImageUrl ? (
-                <img src={q.coverImageUrl} alt="cover" className="w-full h-full object-cover" />
+                <img loading="lazy" src={q.coverImageUrl} alt="cover" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-zinc-300">No Image</div>
               )}
