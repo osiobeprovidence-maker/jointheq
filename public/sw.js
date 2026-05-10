@@ -1,8 +1,7 @@
 /*
   Workbox-enabled service worker.
-  This file is the SW source used by Workbox's `injectManifest`.
-  During the build step `workbox-build` will replace `self.__WB_MANIFEST` with
-  an array of assets to precache.
+  This file is the SW source used by Workbox's injectManifest.
+  During the build step workbox-build will inject the precache manifest.
 */
 
 /* eslint-disable no-undef */

@@ -35,6 +35,7 @@ import type * as paystack from "../paystack.js";
 import type * as promotions from "../promotions.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
+import type * as quests from "../quests.js";
 import type * as reputation from "../reputation.js";
 import type * as slotTypeSanitizer from "../slotTypeSanitizer.js";
 import type * as slots_engine from "../slots_engine.js";
@@ -81,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   promotions: typeof promotions;
   push: typeof push;
   pushActions: typeof pushActions;
+  quests: typeof quests;
   reputation: typeof reputation;
   slotTypeSanitizer: typeof slotTypeSanitizer;
   slots_engine: typeof slots_engine;

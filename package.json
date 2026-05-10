@@ -10,7 +10,7 @@
     "clean": "rimraf dist",
     "lint": "tsc --noEmit",
     "push:keys": "web-push generate-vapid-keys",
-    "workbox:inject": "node workbox-inject.js"
+    "workbox:inject": "node workbox-inject.cjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
