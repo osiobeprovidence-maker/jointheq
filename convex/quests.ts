@@ -221,14 +221,9 @@ export const adminListAllQuests = query({
 
 // Backwards-compatible public query used by older admin UI
 export const adminListQuests = query({
-    args: { status: v.optional(v.string()) },
-    handler: async (ctx, args) => {
-        let quests;
-        if (args.status) {
-            quests = await ctx.db.query("quests").withIndex("by_status", (q) => q.eq("status", args.status)).collect();
-        } else {
-            quests = await ctx.db.query("quests").order("desc").collect();
-        }
+    args: {},
+    handler: async (ctx) => {
+        const quests = await ctx.db.query("quests").order("desc").collect();
 
         return await Promise.all(quests.map(async quest => {
             const coverImageUrl = await resolveStorageUrl(ctx, quest.coverImageUrl);

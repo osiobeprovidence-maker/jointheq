@@ -266,7 +266,8 @@ export default function AdminPanel() {
         selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
     );
     const withdrawals = useQuery(api.campaigns.getWithdrawals, {}) || [];
-    const adminReviewQuests = useQuery(api.quests.adminListQuests, { status: taskReviewStatus }) || [];
+    const allAdminReviewQuests = useQuery(api.quests.adminListQuests) || [];
+    const adminReviewQuests = (allAdminReviewQuests as any[]).filter((quest: any) => quest.status === taskReviewStatus);
     const adminQuestCompletions = useQuery(api.quests.adminListCompletions, { status: submissionReviewStatus }) || [];
     // Security / Fraud
     const fraudFlags = useQuery(api.fraud.getFraudFlags, {}) || [];
