@@ -208,7 +208,8 @@ export default function AdminPanel() {
         target: "all" as "all" | "active_subscribers" | "inactive_users",
         scheduledAt: ""
     });
-    const [notifTab, setNotifTab] = useState<"send" | "history">("send");
+    const [notifTab, setNotifTab] = useState<"send" | "reminders" | "history">("send");
+    const [reminderDrafts, setReminderDrafts] = useState<Record<string, any>>({});
     const [isSendingNotif, setIsSendingNotif] = useState(false);
 
     // Selected User state
@@ -419,6 +420,27 @@ export default function AdminPanel() {
     const cancelPromoNotif = useMutation(api.promotions.cancel);
     const resendPromoNotif = useMutation(api.promotions.resend);
     const promoHistory = useQuery(api.promotions.list, currentUser?._id ? { adminId: currentUser._id } : "skip") ?? [];
+    const reminderTemplates = useQuery(api.subscriptionReminders.listTemplates, currentUser?._id ? { adminId: currentUser._id } : "skip") ?? [];
+    const updateReminderTemplate = useMutation(api.subscriptionReminders.updateTemplate);
+
+    useEffect(() => {
+        if (!reminderTemplates.length) return;
+        setReminderDrafts((current) => {
+            const next = { ...current };
+            for (const template of reminderTemplates as any[]) {
+                if (!next[template.key]) {
+                    next[template.key] = {
+                        title: template.title || "",
+                        message: template.message || "",
+                        cta_text: template.cta_text || "",
+                        cta_url: template.cta_url || "",
+                        channels: template.channels || ["in_app", "push", "email", "whatsapp"],
+                    };
+                }
+            }
+            return next;
+        });
+    }, [reminderTemplates.length]);
 
     const handleSaveCampaign = async () => {
 
@@ -3482,13 +3504,13 @@ export default function AdminPanel() {
 
                                 {/* Sub-tabs */}
                                 <div className="flex gap-2">
-                                    {(["send", "history"] as const).map(tab => (
+                                    {(["send", "reminders", "history"] as const).map(tab => (
                                         <button key={tab} onClick={() => setNotifTab(tab)}
                                             className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
                                                 notifTab === tab ? "bg-zinc-900 text-white shadow-lg" : "bg-white text-gray-400 border border-black/5 hover:border-black/10"
                                             }`}>
-                                            {tab === "send" ? <Send size={13} /> : <History size={13} />}
-                                            {tab === "send" ? "Compose" : `History${promoHistory.length > 0 ? ` (${promoHistory.length})` : ""}`}
+                                            {tab === "send" ? <Send size={13} /> : tab === "reminders" ? <Clock size={13} /> : <History size={13} />}
+                                            {tab === "send" ? "Compose" : tab === "reminders" ? "Renewal Reminders" : `History${promoHistory.length > 0 ? ` (${promoHistory.length})` : ""}`}
                                         </button>
                                     ))}
                                 </div>
@@ -3573,6 +3595,111 @@ export default function AdminPanel() {
                                                 : <><Zap size={20} className="text-yellow-400" /> {notifForm.scheduledAt ? "Schedule Campaign" : "Blast Notification"}</>
                                             }
                                         </button>
+                                    </div>
+                                ) : notifTab === "reminders" ? (
+                                    <div className="space-y-4">
+                                        {reminderTemplates.length === 0 ? (
+                                            <div className="bg-white rounded-[2.5rem] p-20 text-center text-gray-400 border border-dashed border-black/10">
+                                                <Clock size={40} className="mx-auto mb-4 opacity-20" />
+                                                <p className="font-bold uppercase text-[10px] tracking-widest">Reminder templates will appear after the scheduler initializes.</p>
+                                            </div>
+                                        ) : (reminderTemplates as any[]).map((template: any) => {
+                                            const draft = reminderDrafts[template.key] || {
+                                                title: template.title || "",
+                                                message: template.message || "",
+                                                cta_text: template.cta_text || "",
+                                                cta_url: template.cta_url || "",
+                                                channels: template.channels || [],
+                                            };
+
+                                            const updateDraft = (patch: any) => {
+                                                setReminderDrafts((current) => ({
+                                                    ...current,
+                                                    [template.key]: { ...draft, ...patch },
+                                                }));
+                                            };
+
+                                            return (
+                                                <div key={template.key} className="bg-white rounded-[2rem] border border-black/5 p-6 space-y-4 shadow-sm">
+                                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div>
+                                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">{template.key.replace(/_/g, " ")}</div>
+                                                            <h3 className="mt-1 text-lg font-black text-zinc-950">{draft.title}</h3>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(["in_app", "push", "email", "whatsapp"] as const).map((channel) => {
+                                                                const enabled = draft.channels.includes(channel);
+                                                                return (
+                                                                    <button
+                                                                        key={channel}
+                                                                        type="button"
+                                                                        onClick={() => updateDraft({
+                                                                            channels: enabled
+                                                                                ? draft.channels.filter((item: string) => item !== channel)
+                                                                                : [...draft.channels, channel],
+                                                                        })}
+                                                                        className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+                                                                            enabled ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-400"
+                                                                        }`}
+                                                                    >
+                                                                        {channel.replace("_", " ")}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                    <input
+                                                        value={draft.title}
+                                                        onChange={(e) => updateDraft({ title: e.target.value })}
+                                                        className="w-full rounded-2xl bg-[#f8f9fa] p-4 text-sm font-bold outline-none focus:ring-2 ring-black/10"
+                                                        placeholder="Reminder title"
+                                                    />
+                                                    <textarea
+                                                        value={draft.message}
+                                                        onChange={(e) => updateDraft({ message: e.target.value })}
+                                                        rows={4}
+                                                        className="w-full resize-none rounded-2xl bg-[#f8f9fa] p-4 text-sm font-bold outline-none focus:ring-2 ring-black/10"
+                                                        placeholder="Reminder message. Use {{name}} for personalization."
+                                                    />
+                                                    <div className="grid gap-3 md:grid-cols-2">
+                                                        <input
+                                                            value={draft.cta_text}
+                                                            onChange={(e) => updateDraft({ cta_text: e.target.value })}
+                                                            className="w-full rounded-2xl bg-[#f8f9fa] p-4 text-sm font-bold outline-none focus:ring-2 ring-black/10"
+                                                            placeholder="CTA text"
+                                                        />
+                                                        <input
+                                                            value={draft.cta_url}
+                                                            onChange={(e) => updateDraft({ cta_url: e.target.value })}
+                                                            className="w-full rounded-2xl bg-[#f8f9fa] p-4 text-sm font-bold outline-none focus:ring-2 ring-black/10"
+                                                            placeholder="CTA link"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={async () => {
+                                                            try {
+                                                                await updateReminderTemplate({
+                                                                    adminId: currentUser!._id,
+                                                                    key: template.key,
+                                                                    title: draft.title,
+                                                                    message: draft.message,
+                                                                    cta_text: draft.cta_text || undefined,
+                                                                    cta_url: draft.cta_url || undefined,
+                                                                    channels: draft.channels,
+                                                                });
+                                                                toast.success("Reminder template saved");
+                                                            } catch (e: any) {
+                                                                toast.error(e.message || "Failed to save reminder");
+                                                            }
+                                                        }}
+                                                        className="w-full rounded-2xl bg-zinc-900 py-4 text-sm font-black text-white shadow-xl shadow-black/10 transition-transform hover:scale-[1.01]"
+                                                    >
+                                                        Save Reminder Template
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="space-y-4">

@@ -19,6 +19,7 @@ type NotificationInput = {
     type: NotificationType | string;
     ctaText?: string;
     ctaUrl?: string;
+    skipPush?: boolean;
 };
 
 export const createNotification = async (ctx: any, input: NotificationInput) => {
@@ -33,9 +34,11 @@ export const createNotification = async (ctx: any, input: NotificationInput) => 
         created_at: Date.now(),
     });
 
-    await ctx.scheduler.runAfter(0, internal.pushActions.sendNotificationPush, {
-        notificationId,
-    });
+    if (!input.skipPush) {
+        await ctx.scheduler.runAfter(0, internal.pushActions.sendNotificationPush, {
+            notificationId,
+        });
+    }
 
     return notificationId;
 };

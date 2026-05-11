@@ -98,7 +98,7 @@ export default function InstallBanner() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 120, opacity: 0 }}
             transition={{ type: "spring", stiffness: 360, damping: 32 }}
-            className="fixed inset-x-3 bottom-3 z-[120] mx-auto max-w-md rounded-[1.5rem] border border-red-100 bg-white p-3 shadow-[0_18px_50px_rgba(185,28,28,0.22)] sm:hidden"
+            className="fixed inset-x-3 bottom-3 z-[120] mx-auto max-w-md rounded-[1.5rem] border border-black/10 bg-white p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] sm:hidden"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-white">
@@ -125,12 +125,12 @@ export default function InstallBanner() {
                 onClick={install}
                 className="rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white shadow-lg shadow-black/20 transition-all active:scale-95"
               >
-                Install
+                Download Q App
               </button>
               <button
                 type="button"
                 onClick={dismiss}
-                className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-black text-red-700 transition-all active:scale-95"
+                className="rounded-2xl border border-black/10 bg-zinc-50 px-4 py-3 text-sm font-black text-zinc-700 transition-all active:scale-95"
               >
                 Dismiss
               </button>
@@ -172,11 +172,11 @@ export default function InstallBanner() {
                 </button>
               </div>
               <div className="mt-5 space-y-3">
-                <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-4 text-sm font-black text-red-700">
+                <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4 text-sm font-black text-zinc-800">
                   <Share size={18} />
                   Tap the Share button in Safari.
                 </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-4 text-sm font-black text-red-700">
+                <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-4 text-sm font-black text-zinc-800">
                   <Plus size={18} />
                   Choose Add to Home Screen.
                 </div>

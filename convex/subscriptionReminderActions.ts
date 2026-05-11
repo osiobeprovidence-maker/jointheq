@@ -72,6 +72,30 @@ export const sendReminderEmail = internalAction({
     },
 });
 
+export const sendReminderPush = internalAction({
+    args: {
+        logId: v.id("subscription_notification_logs"),
+        notificationId: v.id("notifications"),
+    },
+    handler: async (ctx, args) => {
+        const result = await ctx.runAction(internal.pushActions.sendNotificationPush, {
+            notificationId: args.notificationId,
+        });
+
+        const sent = Number(result?.sent ?? 0);
+        const reason = result?.reason || (sent === 0 ? "no_active_subscription" : undefined);
+
+        await ctx.runMutation(internal.subscriptionReminders.markChannelDelivery, {
+            logId: args.logId,
+            channel: "push",
+            status: result?.success && sent > 0 ? "sent" : "skipped",
+            reason,
+        });
+
+        return result;
+    },
+});
+
 export const sendReminderWhatsApp = internalAction({
     args: {
         logId: v.id("subscription_notification_logs"),

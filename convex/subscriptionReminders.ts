@@ -152,6 +152,7 @@ const sendReminder = async (
         type: "subscription",
         ctaText: template.cta_text,
         ctaUrl: template.cta_url,
+        skipPush: true,
     });
 
     channels.in_app = "sent";
@@ -171,6 +172,13 @@ const sendReminder = async (
         status: "queued",
         created_at: Date.now(),
     });
+
+    if (template.channels.includes("push")) {
+        await ctx.scheduler.runAfter(0, internal.subscriptionReminderActions.sendReminderPush, {
+            logId,
+            notificationId,
+        });
+    }
 
     if (template.channels.includes("email")) {
         await ctx.scheduler.runAfter(0, internal.subscriptionReminderActions.sendReminderEmail, {
