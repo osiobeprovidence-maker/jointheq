@@ -155,12 +155,14 @@ export default defineSchema({
         user_id: v.id("users"),
         amount: v.number(),
         type: v.string(),
-        wallet_type: v.string(),
-        reference: v.string(),
+        source: v.optional(v.string()),
+        wallet_type: v.optional(v.string()),
+        reference: v.optional(v.string()),
         status: v.string(),
         description: v.optional(v.string()),
         related_quest_id: v.optional(v.id("quests")),
         fee: v.optional(v.number()),
+        wallet_balance: v.optional(v.number()),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_type", ["type"])
@@ -318,6 +320,8 @@ export default defineSchema({
         coverImageUrl: v.optional(v.string()),
         request_id: v.optional(v.string()),
         category: v.optional(v.string()),
+        location: v.optional(v.string()),
+        audienceType: v.optional(v.string()),
         rewardPerUser: v.number(),
         totalBudget: v.number(),
         totalSlots: v.number(),
@@ -327,6 +331,7 @@ export default defineSchema({
         paymentReference: v.optional(v.string()),
         status: v.string(), // "draft", "pending_payment", "live", "pending_review", "paused", "rejected", "completed"
         isFeatured: v.optional(v.boolean()),
+        adminNote: v.optional(v.string()),
         createdAt: v.number(),
         updatedAt: v.number(),
     }).index("by_status", ["status"])
@@ -342,6 +347,7 @@ export default defineSchema({
         status: v.string(), // "pending_review", "approved", "rejected", "paid"
         payoutReference: v.optional(v.string()),
         creditedAt: v.optional(v.number()),
+        adminNote: v.optional(v.string()),
         createdAt: v.number(),
         updatedAt: v.number(),
     }).index("by_quest", ["questId"])

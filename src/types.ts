@@ -51,6 +51,9 @@ export interface User {
     account_name: string;
     updated_at: number;
   };
+  accepted_terms?: boolean;
+  accepted_terms_version?: string;
+  accepted_at?: number;
 }
 
 export interface Device {

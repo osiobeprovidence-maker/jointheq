@@ -5,6 +5,11 @@ import { api, internal } from "./_generated/api";
 
 // --- Quests Logic ---
 
+async function resolveStorageUrl(ctx: any, value: string | undefined) {
+    if (!value || value.startsWith("http") || value.startsWith("/")) return value;
+    return await ctx.storage.getUrl(value as Id<"_storage">) ?? undefined;
+}
+
 export const createQuest = mutation({
     args: {
         creatorId: v.id("users"),
@@ -15,6 +20,8 @@ export const createQuest = mutation({
         proofRequirement: v.string(),
         coverImageUrl: v.optional(v.string()),
         category: v.optional(v.string()),
+        location: v.optional(v.string()),
+        audienceType: v.optional(v.string()),
         rewardPerUser: v.number(),
         totalBudget: v.number(),
         paymentMethod: v.string(), // "q_wallet" | "paystack"
@@ -49,6 +56,8 @@ export const createQuest = mutation({
             coverImageUrl: args.coverImageUrl,
             request_id: args.requestId,
             category: args.category,
+            location: args.location,
+            audienceType: args.audienceType,
             rewardPerUser: args.rewardPerUser,
             totalBudget: args.totalBudget,
             totalSlots: totalSlots,
@@ -112,8 +121,16 @@ export const listQuests = query({
             .withIndex("by_status", (q) => q.eq("status", "live"))
             .collect();
 
+        const questsWithCoverUrls = await Promise.all(quests.map(async (quest) => {
+            const resolvedUrl = await resolveStorageUrl(ctx, quest.coverImageUrl);
+            return {
+                ...quest,
+                coverImageUrl: resolvedUrl,
+            };
+        }));
+
         // If userId is provided, we could filter out already completed quests or mark them
-        if (!args.userId) return quests;
+        if (!args.userId) return questsWithCoverUrls;
 
         const completions = await ctx.db
             .query("quest_completions")
@@ -122,7 +139,7 @@ export const listQuests = query({
 
         const completedQuestIds = new Set(completions.map(c => c.questId));
 
-        return quests.map(quest => ({
+        return questsWithCoverUrls.map(quest => ({
             ...quest,
             isCompleted: completedQuestIds.has(quest._id),
             userCompletion: completions.find(c => c.questId === quest._id)
@@ -184,10 +201,21 @@ export const adminListAllQuests = query({
         if (!admin?.is_admin) throw new Error("Unauthorized");
 
         const quests = await ctx.db.query("quests").order("desc").collect();
-        return await Promise.all(quests.map(async quest => ({
-            ...quest,
-            creator: await ctx.db.get(quest.creatorId)
-        })));
+        return await Promise.all(quests.map(async quest => {
+            const coverImageUrl = await resolveStorageUrl(ctx, quest.coverImageUrl);
+            return {
+                ...quest,
+                coverImageUrl,
+                cover_image_url: coverImageUrl,
+                creator_id: quest.creatorId,
+                creator: await ctx.db.get(quest.creatorId),
+                platform: quest.category,
+                reward_per_completion: quest.rewardPerUser,
+                total_cost: quest.totalBudget,
+                current_completions: quest.usedSlots,
+                max_completions: quest.totalSlots,
+            };
+        }));
     }
 });
 
@@ -202,10 +230,21 @@ export const adminListQuests = query({
             quests = await ctx.db.query("quests").order("desc").collect();
         }
 
-        return await Promise.all(quests.map(async quest => ({
-            ...quest,
-            creator: await ctx.db.get(quest.creatorId)
-        })));
+        return await Promise.all(quests.map(async quest => {
+            const coverImageUrl = await resolveStorageUrl(ctx, quest.coverImageUrl);
+            return {
+                ...quest,
+                coverImageUrl,
+                cover_image_url: coverImageUrl,
+                creator_id: quest.creatorId,
+                creator: await ctx.db.get(quest.creatorId),
+                platform: quest.category,
+                reward_per_completion: quest.rewardPerUser,
+                total_cost: quest.totalBudget,
+                current_completions: quest.usedSlots,
+                max_completions: quest.totalSlots,
+            };
+        }));
     }
 });
 
@@ -214,17 +253,25 @@ export const adminListCompletions = query({
     args: { status: v.optional(v.string()) },
     handler: async (ctx, args) => {
         let completions;
-        if (args.status) {
-            completions = await ctx.db.query("quest_completions").withIndex("by_status", (q) => q.eq("status", args.status)).collect();
+        const requestedStatus = args.status === "pending" ? "pending_review" : args.status;
+        if (requestedStatus) {
+            completions = await ctx.db.query("quest_completions").withIndex("by_status", (q) => q.eq("status", requestedStatus)).collect();
         } else {
             completions = await ctx.db.query("quest_completions").order("desc").collect();
         }
 
-        return await Promise.all(completions.map(async c => ({
-            ...c,
-            quest: await ctx.db.get(c.questId),
-            user: await ctx.db.get(c.userId)
-        })));
+        return await Promise.all(completions.map(async c => {
+            const quest = await ctx.db.get(c.questId) as any;
+            return {
+                ...c,
+                quest,
+                user: await ctx.db.get(c.userId),
+                quest_title: quest?.title,
+                user_id: c.userId,
+                proof_text: c.proofText,
+                proof_url: await resolveStorageUrl(ctx, c.proofUrl),
+            };
+        }));
     }
 });
 
@@ -233,6 +280,7 @@ export const adminReviewQuest = mutation({
         adminId: v.id("users"),
         questId: v.id("quests"),
         action: v.string(), // "approve", "reject", "pause", "resume", "delete", "feature"
+        adminNote: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const admin = await ctx.db.get(args.adminId);
@@ -242,6 +290,9 @@ export const adminReviewQuest = mutation({
         if (!quest) throw new Error("Quest not found");
 
         const updates: any = { updatedAt: Date.now() };
+        if (args.adminNote !== undefined) {
+            updates.adminNote = args.adminNote;
+        }
 
         switch (args.action) {
             case "approve":
@@ -278,6 +329,7 @@ export const adminReviewCompletion = mutation({
         adminId: v.id("users"),
         completionId: v.id("quest_completions"),
         action: v.string(), // "approve", "reject"
+        adminNote: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const admin = await ctx.db.get(args.adminId);
@@ -350,6 +402,7 @@ export const adminReviewCompletion = mutation({
         } else {
             await ctx.db.patch(completion._id, {
                 status: "rejected",
+                adminNote: args.adminNote,
                 updatedAt: Date.now(),
             });
         }

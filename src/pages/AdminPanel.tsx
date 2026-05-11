@@ -216,7 +216,7 @@ export default function AdminPanel() {
     const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "management" | "logs">("overview");
 
     // Workforce admin state
-    const [adminSubTab, setAdminSubTab] = useState<"team" | "quests" | "daily" | "performance" | "audit">("team");
+    const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [inviteForm, setInviteForm] = useState({ email: "", role: "support", work_username: "" });
@@ -244,7 +244,7 @@ export default function AdminPanel() {
     const [reviewOwnerPayout, setReviewOwnerPayout] = useState<number>(0);
     const [reviewAdminNote, setReviewAdminNote] = useState("");
     const [taskReviewStatus, setTaskReviewStatus] = useState("pending_admin_approval");
-    const [submissionReviewStatus, setSubmissionReviewStatus] = useState("pending");
+    const [submissionReviewStatus, setSubmissionReviewStatus] = useState("pending_review");
     const [taskAdminNote, setTaskAdminNote] = useState("");
 
     // Queries
@@ -2357,15 +2357,15 @@ export default function AdminPanel() {
                                                     </div>
                                                     {quest.status === "pending_admin_approval" && (
                                                         <div className="flex gap-2">
-                                                            <button onClick={async () => { await approveQuestMut({ quest_id: quest._id, action: "approve" }); toast.success("Quest approved and is now live!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve</button>
-                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestMut({ quest_id: quest._id, action: "reject", admin_note: note }); toast.error("Quest rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
+                                                            <button onClick={async () => { await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "approve" }); toast.success("Quest approved and is now live!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve</button>
+                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "reject", adminNote: note }); toast.error("Quest rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
                                                         </div>
                                                     )}
                                                     {quest.status === "live" && (
-                                                        <button onClick={async () => { await approveQuestMut({ quest_id: quest._id, action: "pause" }); toast.success("Quest paused"); }} className="w-full py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100">Pause Suspicious Task</button>
+                                                        <button onClick={async () => { await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "pause" }); toast.success("Quest paused"); }} className="w-full py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100">Pause Suspicious Task</button>
                                                     )}
                                                     {quest.status !== "rejected" && (
-                                                        <button onClick={async () => { if(window.confirm("Remove this quest post?")) { await approveQuestMut({ quest_id: quest._id, action: "reject", admin_note: "Removed for violation of community rules" }); toast.success("Quest removed"); } }} className="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 size={14} /> Remove Quest</button>
+                                                        <button onClick={async () => { if(window.confirm("Remove this quest post?")) { await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "reject", adminNote: "Removed for violation of community rules" }); toast.success("Quest removed"); } }} className="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 size={14} /> Remove Quest</button>
                                                     )}
                                                 </div>
                                             ))}
@@ -2385,7 +2385,7 @@ export default function AdminPanel() {
                                                 <p className="text-xs text-gray-400 mt-1">Approve proof to release rewards from the creator's Q Wallet.</p>
                                             </div>
                                             <select value={submissionReviewStatus} onChange={(e) => setSubmissionReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
-                                                <option value="pending">Pending Review</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
+                                                <option value="pending_review">Pending Review</option><option value="paid">Paid</option><option value="rejected">Rejected</option>
                                             </select>
                                         </div>
                                         <div className="p-5 border-b border-black/5">
@@ -2407,10 +2407,10 @@ export default function AdminPanel() {
                                                             <img src={submission.proof_url} alt="Proof" className="w-full max-h-64 object-contain" />
                                                         </div>
                                                     )}
-                                                    {submission.status === "pending" && (
+                                                    {submission.status === "pending_review" && (
                                                         <div className="flex gap-2">
-                                                            <button onClick={async () => { await approveQuestCompletionMut({ completion_id: submission._id, action: "approve" }); toast.success("Proof approved and rewards released!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve Proof</button>
-                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestCompletionMut({ completion_id: submission._id, action: "reject", admin_note: note }); toast.error("Proof rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject Proof</button>
+                                                            <button onClick={async () => { await approveQuestCompletionMut({ adminId: currentUser!._id as any, completionId: submission._id, action: "approve" }); toast.success("Proof approved and rewards released!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve Proof</button>
+                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestCompletionMut({ adminId: currentUser!._id as any, completionId: submission._id, action: "reject", adminNote: note }); toast.error("Proof rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject Proof</button>
                                                         </div>
                                                     )}
                                                 </div>

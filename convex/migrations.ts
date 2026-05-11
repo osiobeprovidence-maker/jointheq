@@ -21,7 +21,9 @@ export const setupPillarData = mutation({
             if (!wallet) {
                 await ctx.db.insert("wallets", {
                     user_id: user._id,
-                    balance: user.wallet_balance || 0,
+                    q_wallet_balance: user.wallet_balance || 0,
+                    quest_wallet_balance: 0,
+                    created_at: Date.now(),
                     updated_at: Date.now(),
                 });
                 walletCount++;

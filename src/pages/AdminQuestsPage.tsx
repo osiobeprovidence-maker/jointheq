@@ -56,9 +56,11 @@ export default function AdminQuestsPage() {
   const handleAction = async (questId: any, action: string) => {
     if (!user?._id) return;
     if (!confirm(`Confirm ${action} for this quest?`)) return;
+    const adminNote = action === "reject" ? prompt("Rejection reason?") : undefined;
+    if (adminNote === null) return;
     try {
       setProcessing(String(questId));
-      await review({ adminId: user._id as any, questId, action });
+      await review({ adminId: user._id as any, questId, action, adminNote });
       toast.success("Updated");
     } catch (e: any) {
       toast.error(e.message || "Failed");

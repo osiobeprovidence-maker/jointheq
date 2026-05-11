@@ -28,6 +28,7 @@ import { Logo } from "../components/ui/Logo";
 import { useNavigate } from "react-router-dom";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 
 type QuestTag = "Sponsored" | "Trending" | "New";
@@ -62,10 +63,12 @@ type CreateQquestState = {
   location: string;
   audienceType: AudienceType;
   coverImageName: string;
+  coverImageUrl?: string;
 };
 
 interface Quest {
-  id: number;
+  id: string;
+  _id?: Id<"quests">;
   title: string;
   reward: string;
   time: string;
@@ -87,6 +90,8 @@ interface Quest {
   instructions?: string;
   link?: string;
   source?: "admin-featured" | "created" | "seed";
+  isCompleted?: boolean;
+  userCompletion?: unknown;
 }
 
 const minimumWithdrawal = 1000;
@@ -187,7 +192,7 @@ const questTypeOptions = [
 function campaignToQuest(form: CreateQquestState, estimatedUsers: number, serviceFee: number): Quest {
   const tag: QuestTag = "New";
   return {
-    id: Date.now(),
+    id: String(Date.now()),
     title: form.title || `${form.questType} Quest`,
     reward: `Earn ₦${qquestRewardPerUser.toLocaleString()}`,
     time: questTypeOptions.find((option) => option.title === form.questType)?.time || "Custom",
@@ -405,6 +410,7 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
     proofRequirement: "Screenshot upload",
     location: "Nigeria",
     audienceType: "General",
+    coverImageName: "",
     coverImageUrl: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -455,7 +461,15 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
             <div className="transition-all duration-300">
               {step === 1 && <QuestTypeSelector value={form.questType} onChange={(questType) => updateForm({ questType })} />}
               {step === 2 && <BudgetCalculator form={form} estimatedUsers={estimatedUsers} onChange={updateForm} />}
-              {step === 3 && <QuestDetailsForm form={form} onChange={updateForm} />}
+              {step === 3 && (
+                <QuestDetailsForm
+                  form={form}
+                  onChange={updateForm}
+                  imagePreview={imagePreview}
+                  setImageFile={setImageFile}
+                  setImagePreview={setImagePreview}
+                />
+              )}
               {step === 4 && <TargetingForm form={form} onChange={updateForm} />}
               {step === 5 && <ReviewSummary form={form} estimatedUsers={estimatedUsers} platformFee={platformFee} totalCost={totalCost} onEdit={(targetStep) => setStep(targetStep)} />}
               {step === 6 && (
@@ -593,7 +607,19 @@ function BudgetCalculator({
   );
 }
 
-function QuestDetailsForm({ form, onChange }: { form: CreateQquestState; onChange: (patch: Partial<CreateQquestState>) => void }) {
+function QuestDetailsForm({
+  form,
+  onChange,
+  imagePreview,
+  setImageFile,
+  setImagePreview,
+}: {
+  form: CreateQquestState;
+  onChange: (patch: Partial<CreateQquestState>) => void;
+  imagePreview: string;
+  setImageFile: (file: File | null) => void;
+  setImagePreview: (value: string) => void;
+}) {
   return (
     <div className="space-y-5">
       <div>
@@ -797,6 +823,8 @@ function PaymentModal({
           proofRequirement: form.proofRequirement,
           coverImageUrl,
           category: form.questType,
+          location: form.location,
+          audienceType: form.audienceType,
           rewardPerUser: qquestRewardPerUser,
           totalBudget: form.budget,
           paymentMethod: "q_wallet",
@@ -827,6 +855,8 @@ function PaymentModal({
         proofRequirement: form.proofRequirement,
         coverImageUrl,
         category: form.questType,
+        location: form.location,
+        audienceType: form.audienceType,
         rewardPerUser: qquestRewardPerUser,
         totalBudget: form.budget,
         paymentMethod: "paystack",
@@ -1830,7 +1860,7 @@ export default function QquestPage() {
   const user = liveUser || storedUser;
 
   const acceptTermsMutation = useMutation(api.users.acceptTerms);
-  const userWallet = useQuery(api.users.getWallet, user?._id ? { userId: user._id } : "skip");
+  const userWallet = useQuery(api.users.getWallet, user?._id ? { userId: user._id as Id<"users"> } : "skip");
 
   useEffect(() => {
     // Show terms modal after a short delay if user hasn't accepted yet
@@ -1863,9 +1893,9 @@ export default function QquestPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
-  const [startedQuestIds, setStartedQuestIds] = useState<number[]>([]);
+  const [startedQuestIds, setStartedQuestIds] = useState<string[]>([]);
   const [createdQuests, setCreatedQuests] = useState<Quest[]>([]);
-  const questWalletBalance = liveUser?.wallet_balance || 0;
+  const questWalletBalance = userWallet?.quest_wallet_balance ?? liveUser?.wallet_balance ?? 0;
   const questQic = liveUser?.qic || "";
   const sidebarUsername = liveUser?.username || storedUser?.username || "member";
   const launchCountdown = useMemo(() => getQuestLaunchCountdown(now), [now]);
@@ -1893,11 +1923,13 @@ export default function QquestPage() {
     return () => window.clearInterval(intervalId);
   }, [isQuestLive]);
 
-  const questsFromDb = useQuery(api.quests.listQuests, { userId: user?._id as any });
+  const questsFromDb = useQuery(api.quests.listQuests, user?._id ? { userId: user._id as Id<"users"> } : "skip");
   
   const allQuests = useMemo(() => {
-    const dbQuestsMapped = (questsFromDb || []).map(q => ({
-      id: q._id,
+    const dbQuestsMapped: Quest[] = (questsFromDb || []).map((rawQuest) => {
+      const q = rawQuest as typeof rawQuest & { isCompleted?: boolean; userCompletion?: unknown };
+      return {
+      id: String(q._id),
       _id: q._id,
       title: q.title,
       reward: `Earn ₦${q.rewardPerUser.toLocaleString()}`,
@@ -1905,7 +1937,7 @@ export default function QquestPage() {
       users: `${q.usedSlots} joined`,
       urgency: `${(q.totalSlots - q.usedSlots)} spots left`,
       tag: q.isFeatured ? "Trending" : "New",
-      status: ["all", q.creatorId === user?._id ? "mine" : ""].filter(Boolean),
+      status: ["all", q.creatorId === user?._id ? "mine" : undefined].filter(Boolean) as QuestStatus[],
       image: q.coverImageUrl ? `url(${q.coverImageUrl})` : "linear-gradient(135deg, rgba(31,241,176,.7), rgba(41,64,255,.44))",
       progress: (q.usedSlots / q.totalSlots) * 100,
       accent: "from-[#F26522] to-orange-400",
@@ -1914,13 +1946,14 @@ export default function QquestPage() {
       rewardPerUser: q.rewardPerUser,
       estimatedUsers: q.totalSlots,
       location: q.location || "Nigeria",
-      audienceType: q.audienceType || "General",
-      proofRequirement: q.proofRequirement,
+      audienceType: (q.audienceType || "General") as AudienceType,
+      proofRequirement: q.proofRequirement as ProofRequirement,
       instructions: q.instructions,
       link: q.questLink,
       isCompleted: q.isCompleted,
       userCompletion: q.userCompletion,
-    }));
+      };
+    });
     return [...dbQuestsMapped, ...createdQuests];
   }, [questsFromDb, createdQuests, user?._id]);
 
