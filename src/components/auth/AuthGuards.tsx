@@ -16,6 +16,12 @@ export const ProtectedRoute: React.FC<AuthGuardProps> = ({ children, requireAdmi
         return <Navigate to="/" state={{ from: location }} replace />;
     }
 
+    if (auth.hasExpiredVerification(user)) {
+        auth.clearSession();
+        const email = encodeURIComponent(user.email || "");
+        return <Navigate to={`/?verification=expired&email=${email}`} replace />;
+    }
+
     if (requireAdmin && !auth.isAdmin()) {
         return <Navigate to="/dashboard" replace />;
     }

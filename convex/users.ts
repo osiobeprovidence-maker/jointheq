@@ -565,8 +565,10 @@ export const login = mutation({
             if (now > user.verification_deadline) {
                 return {
                     success: false,
-                    error: "Verification expired. Please check your email and verify your account to continue.",
-                    requiresVerification: true
+                    error: "Verification expired. Send a fresh verification email to continue.",
+                    requiresVerification: true,
+                    verificationExpired: true,
+                    email: user.email,
                 };
             }
         }

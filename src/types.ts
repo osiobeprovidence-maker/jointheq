@@ -44,6 +44,7 @@ export interface User {
   last_sign_in_at?: number;
   last_sign_in_provider?: string;
   sign_in_history?: SignInHistoryEntry[];
+  verification_deadline?: number;
   quest_withdrawal_account?: {
     bank_name: string;
     bank_code?: string;

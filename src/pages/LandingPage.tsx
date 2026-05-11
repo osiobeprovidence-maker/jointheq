@@ -50,10 +50,21 @@ export default function LandingPage() {
     const token = params.get('token');
     const reset = params.get('reset')?.trim();
     const ref = params.get('ref')?.trim();
+    const verification = params.get('verification')?.trim();
+    const expiredEmail = params.get('email')?.trim();
+    const cachedUser = auth.getCurrentUser();
 
     if (reset) {
       setResetToken(reset);
       setActiveSection('reset');
+    } else if ((verification === 'expired' && expiredEmail) || auth.hasExpiredVerification(cachedUser)) {
+      const email = expiredEmail || cachedUser?.email || '';
+      auth.clearSession();
+      setPendingVerificationEmail(email);
+      setFormData((current) => ({ ...current, email }));
+      setError('Your verification window expired. Send a fresh verification email to continue.');
+      setActiveSection('login');
+      window.history.replaceState({}, document.title, window.location.pathname);
     } else if (params.get('verified') === 'true' || token) {
       // Clear the URL first so back-button / re-renders don't re-trigger
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -167,7 +178,9 @@ export default function LandingPage() {
       } else {
         setError(result.error || 'Login failed');
         if (result.requiresVerification) {
-          setPendingVerificationEmail(formData.email);
+          const email = result.email || formData.email;
+          setPendingVerificationEmail(email);
+          setFormData((current) => ({ ...current, email }));
         }
       }
     } catch (err: any) {

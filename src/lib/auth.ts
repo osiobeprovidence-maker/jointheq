@@ -45,6 +45,24 @@ export const auth = {
         window.location.href = "/";
     },
 
+    clearSession: () => {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('verification_days_remaining');
+        localStorage.removeItem('verification_deadline');
+        sessionStorage.removeItem(NOTIFICATION_PROMPT_DUE_KEY);
+        sessionStorage.removeItem(NOTIFICATION_PROMPT_ASKED_KEY);
+        sessionStorage.removeItem('notified_prompt_shown');
+    },
+
+    hasExpiredVerification: (user: User | null): boolean => {
+        return !!(
+            user &&
+            !user.is_verified &&
+            user.verification_deadline &&
+            user.verification_deadline < Date.now()
+        );
+    },
+
     getQueuedNotificationPromptUserId: (): string | null => {
         return sessionStorage.getItem(NOTIFICATION_PROMPT_DUE_KEY);
     },
