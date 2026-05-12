@@ -1212,6 +1212,53 @@ export const adminUpdateSubscriptionRenewalDate = mutation({
     },
 });
 
+export const adminUpdateSlotRenewalDate = mutation({
+    args: {
+        adminId: v.id("users"),
+        slotId: v.id("subscription_slots"),
+        renewalDate: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const slot = await ctx.db.get(args.slotId);
+        if (!slot) throw new Error("Subscription slot not found");
+
+        const normalizedDate = args.renewalDate.trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate) || !Number.isFinite(Date.parse(`${normalizedDate}T00:00:00`))) {
+            throw new Error("Use a valid renewal date");
+        }
+
+        const user = slot.user_id ? await ctx.db.get(slot.user_id) : null;
+        const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
+        const oldDate = slot.renewal_date;
+
+        await ctx.db.patch(args.slotId, {
+            renewal_date: normalizedDate,
+        });
+
+        await ctx.db.insert("admin_logs", {
+            admin_id: args.adminId,
+            admin_role: admin.admin_role || "admin",
+            action_type: "user_subscription_renewal_date_update",
+            target_type: "subscription_slot",
+            target_id: args.slotId,
+            target_name: user?.full_name || user?.email || slotType?.name || "Subscription slot",
+            details: `Changed user renewal date from ${oldDate || "not set"} to ${normalizedDate}`,
+            metadata: {
+                oldDate,
+                renewalDate: normalizedDate,
+                userId: slot.user_id,
+                slotTypeId: slot.slot_type_id,
+            },
+            created_at: Date.now(),
+        });
+
+        return { success: true, renewalDate: normalizedDate };
+    },
+});
+
 
 export const seedMarketplace = mutation({
     handler: async (ctx) => {

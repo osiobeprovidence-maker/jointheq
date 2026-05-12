@@ -246,7 +246,7 @@ export default function SubscriptionManagerPage() {
   const users = useQuery(api.admin.getAllUsers) || [];
   const activityLogs = useQuery(api.adminEnhanced.getAdminLogs, { limit: 12 }) || [];
   const removeUser = useMutation(api.adminEnhanced.adminRemoveUserFromSlot);
-  const updateRenewalDate = useMutation(api.subscriptions.adminUpdateSubscriptionRenewalDate);
+  const updateSlotRenewalDate = useMutation(api.subscriptions.adminUpdateSlotRenewalDate);
   const [activeTab, setActiveTab] = useState("admin");
   const [search, setSearch] = useState("");
   const [serviceFilter, setServiceFilter] = useState("All");
@@ -270,8 +270,6 @@ export default function SubscriptionManagerPage() {
     return matchesSearch && matchesService && matchesStatus;
   });
   const selectedSubscription = filteredSubscriptions.find((item) => item._id === selectedId) || filteredSubscriptions[0];
-  const selectedDateDraft = selectedSubscription ? dateDrafts[selectedSubscription._id] ?? toDateInputValue(selectedSubscription.renewal_date) : "";
-  const selectedSavedDate = selectedSubscription ? toDateInputValue(selectedSubscription.renewal_date) : "";
 
   const totals = useMemo(() => {
     const totalSlots = subscriptions.reduce((sum, item) => sum + item.total_slots, 0);
@@ -299,23 +297,24 @@ export default function SubscriptionManagerPage() {
     }
   };
 
-  const handleRenewalDateSave = async () => {
-    if (!currentUser?._id || !selectedSubscription || !selectedDateDraft) return;
+  const handleSlotRenewalDateSave = async (slot: SlotRecord) => {
+    const draft = dateDrafts[slot.slot_id] ?? toDateInputValue(slot.renewal_date);
+    if (!currentUser?._id || !draft) return;
     try {
-      setSavingDateFor(selectedSubscription._id);
-      await updateRenewalDate({
+      setSavingDateFor(slot.slot_id);
+      await updateSlotRenewalDate({
         adminId: currentUser._id as Id<"users">,
-        listingId: selectedSubscription._id,
-        renewalDate: selectedDateDraft,
+        slotId: slot.slot_id,
+        renewalDate: draft,
       });
       setDateDrafts((current) => {
         const next = { ...current };
-        delete next[selectedSubscription._id];
+        delete next[slot.slot_id];
         return next;
       });
-      toast.success("Renewal date updated");
+      toast.success("User renewal date updated");
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update renewal date");
+      toast.error(error?.message || "Failed to update user renewal date");
     } finally {
       setSavingDateFor(null);
     }
@@ -434,27 +433,6 @@ export default function SubscriptionManagerPage() {
                   <StatTile label="Available slots" value={selectedSubscription.available_slots} icon={<CheckCircle2 size={16} />} />
                 </div>
 
-                <div className="mt-5 rounded-lg border border-zinc-200 bg-white p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <label className="flex-1">
-                      <span className="text-xs font-black uppercase text-zinc-400">Renewal date</span>
-                      <input
-                        type="date"
-                        value={selectedDateDraft}
-                        onChange={(event) => setDateDrafts((current) => ({ ...current, [selectedSubscription._id]: event.target.value }))}
-                        className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm font-black text-zinc-900 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
-                      />
-                    </label>
-                    <button
-                      onClick={handleRenewalDateSave}
-                      disabled={!selectedDateDraft || selectedDateDraft === selectedSavedDate || savingDateFor === selectedSubscription._id}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 py-3 text-sm font-black text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Save size={16} /> {savingDateFor === selectedSubscription._id ? "Saving" : "Save date"}
-                    </button>
-                  </div>
-                </div>
-
                 <div className="mt-5 rounded-lg bg-zinc-50 p-4">
                   <p className="text-xs font-black uppercase text-zinc-400">Owner email</p>
                   <p className="mt-1 break-all text-sm font-black text-zinc-900">{selectedSubscription.owner_email}</p>
@@ -468,6 +446,8 @@ export default function SubscriptionManagerPage() {
                   <div className="space-y-3">
                     {selectedSubscription.slots.map((slot) => {
                       const isEmpty = !slot.user_id;
+                      const slotDateDraft = dateDrafts[slot.slot_id] ?? toDateInputValue(slot.renewal_date || selectedSubscription.renewal_date);
+                      const slotSavedDate = toDateInputValue(slot.renewal_date || selectedSubscription.renewal_date);
                       return (
                         <div key={slot.slot_id} className={`rounded-lg border p-4 ${isEmpty ? "border-dashed border-emerald-200 bg-emerald-50/40" : "border-zinc-200 bg-white"}`}>
                           <div className="flex items-start justify-between gap-3">
@@ -488,6 +468,28 @@ export default function SubscriptionManagerPage() {
                               <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black">
                                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">{slot.payment_status}</span>
                                 <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600">{slot.user_status}</span>
+                              </div>
+                            </div>
+                          )}
+                          {!isEmpty && (
+                            <div className="mt-4 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                <label className="flex-1">
+                                  <span className="text-[10px] font-black uppercase text-zinc-400">User renewal date</span>
+                                  <input
+                                    type="date"
+                                    value={slotDateDraft}
+                                    onChange={(event) => setDateDrafts((current) => ({ ...current, [slot.slot_id]: event.target.value }))}
+                                    className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm font-black text-zinc-900 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+                                  />
+                                </label>
+                                <button
+                                  onClick={() => handleSlotRenewalDateSave(slot)}
+                                  disabled={!slotDateDraft || slotDateDraft === slotSavedDate || savingDateFor === slot.slot_id}
+                                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 py-2.5 text-xs font-black text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Save size={14} /> {savingDateFor === slot.slot_id ? "Saving" : "Save date"}
+                                </button>
                               </div>
                             </div>
                           )}
