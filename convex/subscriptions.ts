@@ -1036,6 +1036,182 @@ export const getAdminMarketplace = query({
     }
 });
 
+/** Subscription Manager: full operational view for admins */
+export const getSubscriptionManagerData = query({
+    handler: async (ctx) => {
+        const listings = await ctx.db.query("marketplace").collect();
+
+        return await Promise.all(listings.map(async (listing) => {
+            const catalog = await ctx.db.get(listing.subscription_catalog_id);
+            const owner = listing.owner_user_id ? await ctx.db.get(listing.owner_user_id) : null;
+            const admin = listing.admin_creator_id ? await ctx.db.get(listing.admin_creator_id) : null;
+
+            const groups = await ctx.db.query("groups")
+                .withIndex("by_catalog", q => q.eq("subscription_catalog_id", listing.subscription_catalog_id))
+                .filter(q => q.and(
+                    q.eq(q.field("account_email"), listing.account_email),
+                    q.eq(q.field("billing_cycle_start"), listing.billing_cycle_start),
+                    q.eq(q.field("plan_owner"), listing.plan_owner)
+                ))
+                .collect();
+
+            const slots = [];
+            for (const group of groups) {
+                const groupSlots = await ctx.db.query("subscription_slots")
+                    .withIndex("by_group", q => q.eq("group_id", group._id))
+                    .collect();
+
+                for (const slot of groupSlots) {
+                    const [slotType, user] = await Promise.all([
+                        slot.slot_type_id ? ctx.db.get(slot.slot_type_id) : Promise.resolve(null),
+                        slot.user_id ? ctx.db.get(slot.user_id) : Promise.resolve(null),
+                    ]);
+
+                    slots.push({
+                        slot_id: slot._id,
+                        slot_number: slot.slot_number || slots.length + 1,
+                        slot_type_id: slot.slot_type_id,
+                        slot_name: slotType?.name || "Standard",
+                        slot_price: slotType?.price || listing.slot_price || 0,
+                        user_id: slot.user_id,
+                        user_name: user?.full_name,
+                        user_email: user?.email,
+                        user_status: user?.is_suspended ? "Suspended" : slot.user_id ? "Active" : "Available",
+                        payment_status: slot.status === "filled" ? "Paid" : slot.status === "closing" ? "Closing" : "Open",
+                        status: slot.status,
+                        renewal_date: slot.renewal_date || listing.billing_cycle_start,
+                        auto_renew: slot.auto_renew ?? false,
+                        group_id: slot.group_id,
+                    });
+                }
+            }
+
+            const totalSlots = slots.length || listing.total_slots || 0;
+            const usedSlots = slots.filter(slot => slot.status === "filled").length;
+            const availableSlots = Math.max(0, totalSlots - usedSlots);
+            const slotTypes = [...new Set(slots.map(slot => slot.slot_name).filter(Boolean))];
+            const prices = slots.map(slot => slot.slot_price).filter(price => price > 0);
+            const pricePerUser = prices[0] || listing.slot_price || 0;
+
+            return {
+                _id: listing._id,
+                service_name: catalog?.name || listing.platform_name || "Unknown",
+                plan_type: slotTypes.join(", ") || "Standard",
+                monthly_price: catalog?.base_cost || 0,
+                price_per_user: pricePerUser,
+                owner_email: owner?.email || listing.account_email,
+                owner_name: owner?.full_name || admin?.full_name || listing.plan_owner || "Admin",
+                total_slots: totalSlots,
+                used_slots: usedSlots,
+                available_slots: availableSlots,
+                renewal_date: listing.billing_cycle_start,
+                status: listing.status,
+                category: listing.category || catalog?.category || "Other",
+                account_email: listing.account_email,
+                slots: slots.sort((a, b) => a.slot_number - b.slot_number),
+            };
+        }));
+    }
+});
+
+export const adminUpdateSubscriptionRenewalDate = mutation({
+    args: {
+        adminId: v.id("users"),
+        listingId: v.id("marketplace"),
+        renewalDate: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const listing = await ctx.db.get(args.listingId);
+        if (!listing) throw new Error("Subscription listing not found");
+
+        const normalizedDate = args.renewalDate.trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate) || !Number.isFinite(Date.parse(`${normalizedDate}T00:00:00`))) {
+            throw new Error("Use a valid renewal date");
+        }
+
+        const oldDate = listing.billing_cycle_start;
+        const now = Date.now();
+        const groups = await ctx.db.query("groups")
+            .withIndex("by_listing_key", q => q
+                .eq("subscription_catalog_id", listing.subscription_catalog_id)
+                .eq("account_email", listing.account_email)
+                .eq("billing_cycle_start", oldDate)
+                .eq("plan_owner", listing.plan_owner)
+            )
+            .collect();
+
+        await ctx.db.patch(args.listingId, {
+            billing_cycle_start: normalizedDate,
+            updated_at: now,
+        });
+
+        const subscriptionIds = new Set<Id<"subscriptions">>();
+        let updatedSlots = 0;
+
+        for (const group of groups) {
+            await ctx.db.patch(group._id, { billing_cycle_start: normalizedDate });
+            if (group.subscription_id) subscriptionIds.add(group.subscription_id);
+
+            const slots = await ctx.db.query("subscription_slots")
+                .withIndex("by_group", q => q.eq("group_id", group._id))
+                .collect();
+
+            for (const slot of slots) {
+                if (slot.subscription_id) subscriptionIds.add(slot.subscription_id);
+                await ctx.db.patch(slot._id, { renewal_date: normalizedDate });
+                updatedSlots += 1;
+            }
+        }
+
+        const matchingSubscriptions = await ctx.db.query("subscriptions").collect();
+        for (const subscription of matchingSubscriptions) {
+            if (
+                subscription.login_email === listing.account_email &&
+                subscription.platform_catalog_id === listing.subscription_catalog_id &&
+                (subscription.renewal_date === oldDate || subscription.renewal_date === listing.billing_cycle_start)
+            ) {
+                subscriptionIds.add(subscription._id);
+            }
+        }
+
+        for (const subscriptionId of subscriptionIds) {
+            await ctx.db.patch(subscriptionId, {
+                renewal_date: normalizedDate,
+                updated_at: now,
+            });
+        }
+
+        await ctx.db.insert("admin_logs", {
+            admin_id: args.adminId,
+            admin_role: admin.admin_role || "admin",
+            action_type: "subscription_renewal_date_update",
+            target_type: "marketplace",
+            target_id: args.listingId,
+            target_name: listing.platform_name,
+            details: `Changed renewal date from ${oldDate} to ${normalizedDate}`,
+            metadata: {
+                oldDate,
+                renewalDate: normalizedDate,
+                updatedGroups: groups.length,
+                updatedSlots,
+                updatedSubscriptions: subscriptionIds.size,
+            },
+            created_at: now,
+        });
+
+        return {
+            success: true,
+            renewalDate: normalizedDate,
+            updatedGroups: groups.length,
+            updatedSlots,
+            updatedSubscriptions: subscriptionIds.size,
+        };
+    },
+});
+
 
 export const seedMarketplace = mutation({
     handler: async (ctx) => {

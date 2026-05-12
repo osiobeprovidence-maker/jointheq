@@ -25,6 +25,7 @@ const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
 const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
 const QquestPage = lazy(() => import("./pages/QquestPage"));
+const SubscriptionManagerPage = lazy(() => import("./pages/SubscriptionManagerPage"));
 
 function RouteFallback() {
   return (
@@ -123,6 +124,15 @@ export default function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <AdminListingsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/subscriptions"
+            element={
+              <ProtectedRoute requireAdmin>
+                <SubscriptionManagerPage />
               </ProtectedRoute>
             }
           />

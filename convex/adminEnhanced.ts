@@ -140,6 +140,98 @@ export const adminAssignUserToSlot = mutation({
     }
 });
 
+async function updateMarketplaceCountsForSlot(ctx: any, slot: any) {
+    if (!slot?.group_id) return;
+    const group = await ctx.db.get(slot.group_id);
+    if (!group?.subscription_catalog_id) return;
+
+    const listings = await ctx.db
+        .query("marketplace")
+        .withIndex("by_catalog", (q: any) => q.eq("subscription_catalog_id", group.subscription_catalog_id))
+        .filter((q: any) => q.and(
+            q.eq(q.field("account_email"), group.account_email),
+            q.eq(q.field("billing_cycle_start"), group.billing_cycle_start),
+            q.eq(q.field("plan_owner"), group.plan_owner)
+        ))
+        .collect();
+
+    const listing = listings[0];
+    if (!listing) return;
+
+    const groups = await ctx.db
+        .query("groups")
+        .withIndex("by_catalog", (q: any) => q.eq("subscription_catalog_id", listing.subscription_catalog_id))
+        .filter((q: any) => q.and(
+            q.eq(q.field("account_email"), listing.account_email),
+            q.eq(q.field("billing_cycle_start"), listing.billing_cycle_start),
+            q.eq(q.field("plan_owner"), listing.plan_owner)
+        ))
+        .collect();
+
+    let filled = 0;
+    let total = 0;
+    for (const listingGroup of groups) {
+        const slots = await ctx.db
+            .query("subscription_slots")
+            .withIndex("by_group", (q: any) => q.eq("group_id", listingGroup._id))
+            .collect();
+        total += slots.length;
+        filled += slots.filter((item: any) => item.status === "filled").length;
+    }
+
+    await ctx.db.patch(listing._id, {
+        total_slots: total,
+        filled_slots: filled,
+        available_slots: Math.max(0, total - filled),
+        updated_at: Date.now(),
+    });
+}
+
+export const adminAssignUserToExactSlot = mutation({
+    args: {
+        adminId: v.id("users"),
+        userId: v.id("users"),
+        slotId: v.id("subscription_slots"),
+        reason: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const user = await ctx.db.get(args.userId);
+        const slot = await ctx.db.get(args.slotId);
+        if (!user || !slot) throw new Error("User or slot not found");
+        if (slot.status === "filled" || slot.user_id) {
+            throw new Error("This slot is already occupied. Use Replace User instead.");
+        }
+
+        const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
+        const renewalDate = slot.renewal_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        await ctx.db.patch(args.slotId, {
+            user_id: args.userId,
+            status: "filled",
+            renewal_date: renewalDate,
+            auto_renew: false,
+        });
+
+        await updateMarketplaceCountsForSlot(ctx, slot);
+
+        await logAdminAction(
+            ctx,
+            args.adminId,
+            "slot_assignment",
+            "subscription_slot",
+            args.slotId,
+            slotType?.name || `Slot ${slot.slot_number || ""}`.trim(),
+            `Assigned user ${user.full_name} to ${slotType?.name || "subscription slot"}`,
+            args.reason || "Manual assignment via Subscription Manager"
+        );
+
+        return { success: true, slotId: args.slotId };
+    }
+});
+
 export const adminRemoveUserFromSlot = mutation({
     args: {
         adminId: v.id("users"),
@@ -162,6 +254,8 @@ export const adminRemoveUserFromSlot = mutation({
             renewal_date: undefined,
             auto_renew: false,
         });
+
+        await updateMarketplaceCountsForSlot(ctx, slot);
 
         // Log action
         await logAdminAction(

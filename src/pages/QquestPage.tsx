@@ -1895,7 +1895,7 @@ export default function QquestPage() {
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [startedQuestIds, setStartedQuestIds] = useState<string[]>([]);
   const [createdQuests, setCreatedQuests] = useState<Quest[]>([]);
-  const questWalletBalance = userWallet?.quest_wallet_balance ?? liveUser?.wallet_balance ?? 0;
+  const questWalletBalance = userWallet?.quest_wallet_balance ?? 0;
   const questQic = liveUser?.qic || "";
   const sidebarUsername = liveUser?.username || storedUser?.username || "member";
   const launchCountdown = useMemo(() => getQuestLaunchCountdown(now), [now]);

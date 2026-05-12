@@ -10,6 +10,18 @@ async function resolveStorageUrl(ctx: any, value: string | undefined) {
     return await ctx.storage.getUrl(value as Id<"_storage">) ?? undefined;
 }
 
+async function getLegacyQuestWalletBalance(ctx: any, userId: Id<"users">) {
+    const transactions = await ctx.db
+        .query("wallet_transactions")
+        .withIndex("by_user", (q: any) => q.eq("user_id", userId))
+        .collect();
+
+    return transactions.reduce((total: number, transaction: any) => {
+        if (transaction.wallet_type !== "quest_wallet" || transaction.status !== "completed") return total;
+        return transaction.type === "debit" ? total - transaction.amount : total + transaction.amount;
+    }, 0);
+}
+
 export const createQuest = mutation({
     args: {
         creatorId: v.id("users"),
@@ -70,10 +82,22 @@ export const createQuest = mutation({
         });
 
         if (args.paymentMethod === "q_wallet") {
-            const wallet = await ctx.db
+            let wallet = await ctx.db
                 .query("wallets")
                 .withIndex("by_user", (q) => q.eq("user_id", args.creatorId))
                 .unique();
+
+            if (!wallet && (user.wallet_balance || 0) > 0) {
+                const questWalletBalance = await getLegacyQuestWalletBalance(ctx, args.creatorId);
+                const walletId = await ctx.db.insert("wallets", {
+                    user_id: args.creatorId,
+                    q_wallet_balance: Math.max(0, (user.wallet_balance || 0) - questWalletBalance),
+                    quest_wallet_balance: questWalletBalance,
+                    created_at: Date.now(),
+                    updated_at: Date.now(),
+                });
+                wallet = await ctx.db.get(walletId);
+            }
 
             if (!wallet || wallet.q_wallet_balance < args.totalBudget) {
                 throw new Error("Insufficient Q Wallet balance");
@@ -358,14 +382,6 @@ export const adminReviewCompletion = mutation({
                     quest_wallet_balance: quest.rewardPerUser,
                     created_at: Date.now(),
                     updated_at: Date.now(),
-                });
-            }
-
-            // Update user balance too for compatibility
-            const user = await ctx.db.get(completion.userId);
-            if (user) {
-                await ctx.db.patch(user._id, {
-                    wallet_balance: (user.wallet_balance || 0) + quest.rewardPerUser,
                 });
             }
 

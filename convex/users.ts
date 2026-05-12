@@ -26,6 +26,18 @@ function normalizeSignInProvider(provider: string | undefined) {
     return value;
 }
 
+async function getLegacyQuestWalletBalance(ctx: any, userId: any) {
+    const transactions = await ctx.db
+        .query("wallet_transactions")
+        .withIndex("by_user", (q: any) => q.eq("user_id", userId))
+        .collect();
+
+    return transactions.reduce((total: number, transaction: any) => {
+        if (transaction.wallet_type !== "quest_wallet" || transaction.status !== "completed") return total;
+        return transaction.type === "debit" ? total - transaction.amount : total + transaction.amount;
+    }, 0);
+}
+
 function buildSignInTrackingPatch(
     user: { sign_in_history?: Array<{ provider: string; signed_in_at: number }> } | null,
     provider: string,
@@ -80,10 +92,24 @@ export const list = query({
 export const getWallet = query({
     args: { userId: v.id("users") },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const wallet = await ctx.db
             .query("wallets")
             .withIndex("by_user", (q) => q.eq("user_id", args.userId))
             .unique();
+
+        if (wallet) return wallet;
+
+        const user = await ctx.db.get(args.userId);
+        if (!user) return null;
+        const questWalletBalance = await getLegacyQuestWalletBalance(ctx, args.userId);
+
+        return {
+            user_id: args.userId,
+            q_wallet_balance: Math.max(0, (user.wallet_balance || 0) - questWalletBalance),
+            quest_wallet_balance: questWalletBalance,
+            created_at: Date.now(),
+            updated_at: Date.now(),
+        };
     },
 });
 

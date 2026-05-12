@@ -166,6 +166,26 @@ export const approveFunding = mutation({
         wallet_balance: (user.wallet_balance || 0) + request.base_amount,
       });
 
+      const wallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", request.user_id))
+        .unique();
+
+      if (wallet) {
+        await ctx.db.patch(wallet._id, {
+          q_wallet_balance: wallet.q_wallet_balance + request.base_amount,
+          updated_at: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("wallets", {
+          user_id: request.user_id,
+          q_wallet_balance: (user.wallet_balance || 0) + request.base_amount,
+          quest_wallet_balance: 0,
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        });
+      }
+
       await ctx.db.insert("wallet_transactions", {
         user_id: request.user_id,
         amount: request.base_amount,
