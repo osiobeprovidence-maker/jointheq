@@ -610,6 +610,9 @@ export default defineSchema({
         category: v.optional(v.string()),
         admin_note: v.optional(v.string()),
         request_id: v.optional(v.string()), // For idempotency
+        isListed: v.optional(v.boolean()),
+        visibility: v.optional(v.string()), // "marketplace" | "internal" | "private"
+        auto_hide_when_full: v.optional(v.boolean()),
 
         // Timestamps
         created_at: v.number(),

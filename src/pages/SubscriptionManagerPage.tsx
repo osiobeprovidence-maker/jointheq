@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  Eye,
+  EyeOff,
   Filter,
   GraduationCap,
   Headphones,
@@ -17,11 +19,12 @@ import {
   Mail,
   Megaphone,
   Menu,
+  PauseCircle,
   Save,
   Search,
   Shield,
   ShieldCheck,
-  ShoppingBag,
+  Trash2,
   UserMinus,
   UserPlus,
   Users,
@@ -36,7 +39,7 @@ import { fmtCurrency } from "../lib/utils";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-type ManagerStatus = "Active" | "Almost Full" | "Full";
+type ManagerStatus = "active" | "full" | "paused" | "expired" | "hidden";
 
 type SlotRecord = {
   slot_id: Id<"subscription_slots">;
@@ -66,22 +69,27 @@ type SubscriptionRecord = {
   renewal_date?: string;
   status: string;
   listing_status?: string;
+  isListed?: boolean;
+  visibility?: "marketplace" | "internal" | "private";
+  visible_to_users?: boolean;
+  auto_hide_when_full?: boolean;
   category: string;
   account_email: string;
   slots: SlotRecord[];
 };
 
 const statusStyles: Record<ManagerStatus, string> = {
-  Active: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  "Almost Full": "bg-orange-50 text-orange-700 border-orange-100",
-  Full: "bg-red-50 text-red-700 border-red-100",
+  active: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  full: "bg-red-50 text-red-700 border-red-100",
+  paused: "bg-amber-50 text-amber-700 border-amber-100",
+  expired: "bg-zinc-100 text-zinc-600 border-zinc-200",
+  hidden: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 function getManagerStatus(subscription: SubscriptionRecord): ManagerStatus {
-  if (subscription.status === "Full" || subscription.status === "Almost Full" || subscription.status === "Active") return subscription.status;
-  if (subscription.available_slots <= 0) return "Full";
-  if (subscription.available_slots === 1) return "Almost Full";
-  return "Active";
+  if (subscription.status === "paused" || subscription.status === "expired" || subscription.status === "hidden") return subscription.status;
+  if (subscription.available_slots <= 0 || subscription.status === "full") return "full";
+  return "active";
 }
 
 function formatDate(date?: string) {
@@ -102,7 +110,19 @@ function toDateInputValue(date?: string) {
 function StatusPill({ status }: { status: ManagerStatus }) {
   return (
     <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black ${statusStyles[status]}`}>
-      {status}
+      {status.replace("_", " ")}
+    </span>
+  );
+}
+
+function VisibilityPill({ subscription }: { subscription: SubscriptionRecord }) {
+  const visible = subscription.visible_to_users;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black ${
+      visible ? "border-blue-100 bg-blue-50 text-blue-700" : "border-zinc-200 bg-zinc-100 text-zinc-500"
+    }`}>
+      {visible ? <Eye size={12} /> : <EyeOff size={12} />}
+      {visible ? "Marketplace" : subscription.visibility || "internal"}
     </span>
   );
 }
@@ -121,8 +141,7 @@ function StatTile({ label, value, icon }: { label: string; value: ReactNode; ico
 
 const adminNavItems = [
   { label: "Dashboard", icon: <LayoutDashboard size={18} />, path: "/admin" },
-  { label: "Marketplace", icon: <ShoppingBag size={18} />, path: "/admin" },
-  { label: "Subscription Manager", icon: <Layers size={18} />, path: "/admin/subscriptions", active: true },
+  { label: "Subscriptions", icon: <Layers size={18} />, path: "/admin/subscriptions", active: true },
   { label: "Payments", icon: <CreditCard size={18} />, path: "/admin/payments" },
   { label: "Campaigns", icon: <Megaphone size={18} />, path: "/admin" },
   { label: "Quest Approval", icon: <ListTodo size={18} />, path: "/admin" },
@@ -220,8 +239,8 @@ function AdminPageShell({ children, currentUser }: { children: ReactNode; curren
       <main className="min-h-screen pt-16 md:ml-64 md:pt-0">
         <div className="hidden items-center justify-between border-b border-black/5 bg-white px-8 py-5 md:flex">
           <div>
-            <h1 className="text-xl font-black">Subscription Manager</h1>
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Slot Assignments</p>
+            <h1 className="text-xl font-black">Subscriptions</h1>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Subscription OS</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-black">
@@ -371,13 +390,18 @@ export default function SubscriptionManagerPage() {
   const activityLogs = useQuery(api.adminEnhanced.getAdminLogs, { limit: 12 }) || [];
   const removeUser = useMutation(api.adminEnhanced.adminRemoveUserFromSlot);
   const updateSlotRenewalDate = useMutation(api.subscriptions.adminUpdateSlotRenewalDate);
+  const updateSubscriptionControls = useMutation(api.subscriptions.adminUpdateSubscriptionControls);
+  const deleteSubscription = useMutation(api.subscriptions.adminDeleteGroup);
   const [search, setSearch] = useState("");
   const [serviceFilter, setServiceFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [visibilityFilter, setVisibilityFilter] = useState("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [assignSlot, setAssignSlot] = useState<SlotRecord | null>(null);
   const [dateDrafts, setDateDrafts] = useState<Record<string, string>>({});
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [savingDateFor, setSavingDateFor] = useState<string | null>(null);
+  const [savingControlFor, setSavingControlFor] = useState<string | null>(null);
 
   const services = useMemo(() => ["All", ...Array.from(new Set(subscriptions.map((item) => item.service_name))).sort()], [subscriptions]);
   const enrichedSubscriptions = useMemo(
@@ -390,7 +414,8 @@ export default function SubscriptionManagerPage() {
       .includes(search.trim().toLowerCase());
     const matchesService = serviceFilter === "All" || subscription.service_name === serviceFilter;
     const matchesStatus = statusFilter === "All" || subscription.manager_status === statusFilter;
-    return matchesSearch && matchesService && matchesStatus;
+    const matchesVisibility = visibilityFilter === "All" || subscription.visibility === visibilityFilter || (visibilityFilter === "listed" && subscription.visible_to_users);
+    return matchesSearch && matchesService && matchesStatus && matchesVisibility;
   });
   const selectedSubscription = filteredSubscriptions.find((item) => item._id === selectedId) || filteredSubscriptions[0];
 
@@ -443,6 +468,49 @@ export default function SubscriptionManagerPage() {
     }
   };
 
+  const handleControlUpdate = async (subscription: SubscriptionRecord, patch: Record<string, any>) => {
+    if (!currentUser?._id) return;
+    try {
+      setSavingControlFor(subscription._id);
+      await updateSubscriptionControls({
+        adminId: currentUser._id as Id<"users">,
+        marketplaceId: subscription._id,
+        ...patch,
+      });
+      toast.success("Subscription controls updated");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update subscription controls");
+    } finally {
+      setSavingControlFor(null);
+    }
+  };
+
+  const handlePriceSave = async (subscription: SubscriptionRecord) => {
+    const draft = priceDrafts[subscription._id] ?? String(subscription.price_per_user || 0);
+    const slotPrice = Number(draft);
+    if (!Number.isFinite(slotPrice)) {
+      toast.error("Enter a valid price");
+      return;
+    }
+    await handleControlUpdate(subscription, { slotPrice });
+    setPriceDrafts((current) => {
+      const next = { ...current };
+      delete next[subscription._id];
+      return next;
+    });
+  };
+
+  const handleDeleteSubscription = async (subscription: SubscriptionRecord) => {
+    if (!window.confirm(`Delete ${subscription.service_name} and all of its slots? This cannot be undone.`)) return;
+    try {
+      await deleteSubscription({ group_id: subscription._id });
+      toast.success("Subscription deleted");
+      setSelectedId(null);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to delete subscription");
+    }
+  };
+
   return (
     <AdminPageShell currentUser={currentUser}>
       <div className="space-y-6">
@@ -451,9 +519,9 @@ export default function SubscriptionManagerPage() {
             <button onClick={() => navigate("/admin")} className="mb-3 inline-flex items-center gap-2 text-xs font-black text-zinc-400 hover:text-zinc-900">
               <ArrowLeft size={14} /> Back to admin
             </button>
-            <h1 className="text-3xl font-black tracking-tight text-zinc-950">Subscription Manager</h1>
+            <h1 className="text-3xl font-black tracking-tight text-zinc-950">Subscriptions</h1>
             <p className="mt-2 max-w-2xl text-sm font-semibold text-zinc-500">
-              Manage accounts, slots, renewals, pricing, and user assignments from one clear workspace.
+              Manage inventory, slots, marketplace visibility, renewals, pricing, and assignments from one operating system.
             </p>
           </div>
           <div className="rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 text-sm font-black text-violet-700">
@@ -471,7 +539,7 @@ export default function SubscriptionManagerPage() {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,.9fr)]">
           <section className="rounded-xl border border-zinc-200 bg-white">
             <div className="border-b border-zinc-100 p-4">
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_190px_170px]">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_170px_150px_170px]">
                 <div className="relative">
                   <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                   <input
@@ -488,7 +556,10 @@ export default function SubscriptionManagerPage() {
                   </select>
                 </div>
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm font-black outline-none">
-                  {["All", "Active", "Almost Full", "Full"].map((status) => <option key={status}>{status}</option>)}
+                  {["All", "active", "full", "paused", "expired", "hidden"].map((status) => <option key={status} value={status}>{status === "All" ? "All" : status}</option>)}
+                </select>
+                <select value={visibilityFilter} onChange={(event) => setVisibilityFilter(event.target.value)} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm font-black outline-none">
+                  {["All", "listed", "marketplace", "internal", "private"].map((visibility) => <option key={visibility} value={visibility}>{visibility === "All" ? "All visibility" : visibility}</option>)}
                 </select>
               </div>
             </div>
@@ -508,6 +579,7 @@ export default function SubscriptionManagerPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-base font-black text-zinc-950">{subscription.service_name}</h2>
                         <StatusPill status={subscription.manager_status} />
+                        <VisibilityPill subscription={subscription} />
                       </div>
                       <p className="mt-1 text-sm font-semibold text-zinc-500">{subscription.plan_type}</p>
                       <p className="mt-2 flex items-center gap-2 text-xs font-bold text-zinc-400">
@@ -559,6 +631,72 @@ export default function SubscriptionManagerPage() {
                 <div className="mt-5 rounded-lg bg-zinc-50 p-4">
                   <p className="text-xs font-black uppercase text-zinc-400">Owner email</p>
                   <p className="mt-1 break-all text-sm font-black text-zinc-900">{selectedSubscription.owner_email}</p>
+                </div>
+
+                <div className="mt-5 rounded-lg border border-zinc-200 bg-white p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-black uppercase text-zinc-500">Marketplace Control</h3>
+                      <p className="mt-1 text-xs font-semibold text-zinc-400">Listing, visibility, pricing, and lifecycle controls.</p>
+                    </div>
+                    <VisibilityPill subscription={selectedSubscription} />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <label className="flex items-center justify-between gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-3">
+                      <span className="text-xs font-black text-zinc-700">Listed on Marketplace</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedSubscription.isListed ?? true}
+                        onChange={(event) => handleControlUpdate(selectedSubscription, { isListed: event.target.checked })}
+                        disabled={savingControlFor === selectedSubscription._id}
+                      />
+                    </label>
+                    <label className="flex items-center justify-between gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-3">
+                      <span className="text-xs font-black text-zinc-700">Visible to users</span>
+                      <input
+                        type="checkbox"
+                        checked={(selectedSubscription.visibility ?? "marketplace") === "marketplace"}
+                        onChange={(event) => handleControlUpdate(selectedSubscription, { visibility: event.target.checked ? "marketplace" : "internal" })}
+                        disabled={savingControlFor === selectedSubscription._id}
+                      />
+                    </label>
+                    <label className="flex items-center justify-between gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-3">
+                      <span className="text-xs font-black text-zinc-700">Auto-hide when full</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedSubscription.auto_hide_when_full ?? true}
+                        onChange={(event) => handleControlUpdate(selectedSubscription, { autoHideWhenFull: event.target.checked })}
+                        disabled={savingControlFor === selectedSubscription._id}
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr]">
+                    <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+                      <label className="text-[10px] font-black uppercase text-zinc-400">User price</label>
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          value={priceDrafts[selectedSubscription._id] ?? String(selectedSubscription.price_per_user || 0)}
+                          onChange={(event) => setPriceDrafts((current) => ({ ...current, [selectedSubscription._id]: event.target.value }))}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-black outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+                        />
+                        <button
+                          onClick={() => handlePriceSave(selectedSubscription)}
+                          disabled={savingControlFor === selectedSubscription._id}
+                          className="inline-flex items-center gap-2 rounded-lg bg-zinc-950 px-3 py-2 text-xs font-black text-white disabled:opacity-50"
+                        >
+                          <Save size={14} /> Save
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <button onClick={() => handleControlUpdate(selectedSubscription, { status: "active" })} className="rounded-lg bg-emerald-50 px-3 py-3 text-xs font-black text-emerald-700">Activate</button>
+                      <button onClick={() => handleControlUpdate(selectedSubscription, { status: "paused" })} className="inline-flex items-center justify-center gap-1 rounded-lg bg-amber-50 px-3 py-3 text-xs font-black text-amber-700"><PauseCircle size={14} /> Pause</button>
+                      <button onClick={() => handleControlUpdate(selectedSubscription, { status: "hidden", isListed: false, visibility: "private" })} className="rounded-lg bg-zinc-100 px-3 py-3 text-xs font-black text-zinc-600">Hide</button>
+                      <button onClick={() => handleDeleteSubscription(selectedSubscription)} className="inline-flex items-center justify-center gap-1 rounded-lg bg-red-50 px-3 py-3 text-xs font-black text-red-700"><Trash2 size={14} /> Delete</button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-6">

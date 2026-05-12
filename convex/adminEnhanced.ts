@@ -179,10 +179,18 @@ async function updateMarketplaceCountsForSlot(ctx: any, slot: any) {
         filled += slots.filter((item: any) => item.status === "filled").length;
     }
 
+    const available = Math.max(0, total - filled);
+    const nextStatus = available === 0 && (listing.auto_hide_when_full ?? true)
+        ? "full"
+        : listing.status === "full" && available > 0
+            ? "active"
+            : listing.status;
+
     await ctx.db.patch(listing._id, {
         total_slots: total,
         filled_slots: filled,
-        available_slots: Math.max(0, total - filled),
+        available_slots: available,
+        status: nextStatus,
         updated_at: Date.now(),
     });
 }

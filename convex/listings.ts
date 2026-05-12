@@ -309,6 +309,9 @@ export const approveListing = mutation({
 
         category: normalizedCategory,
         admin_note: args.admin_note,
+        isListed: true,
+        visibility: "marketplace",
+        auto_hide_when_full: true,
 
         created_at: Date.now(),
         updated_at: Date.now(),
