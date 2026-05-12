@@ -7,7 +7,12 @@
 /* eslint-disable no-undef */
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
 
+self.skipWaiting();
+
 if (self.workbox) {
+  self.workbox.core.clientsClaim();
+  self.workbox.precaching.cleanupOutdatedCaches();
+
   // Precaching placeholder populated by workbox-build during injectManifest
   self.workbox.precaching.precacheAndRoute(self.__WB_MANIFEST || []);
 

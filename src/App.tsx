@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/auth/AuthGuards";
 import InstallBanner from "./components/InstallBanner";
+import SubscriptionManagerPage from "./pages/SubscriptionManagerPage";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -25,7 +26,6 @@ const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
 const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
 const QquestPage = lazy(() => import("./pages/QquestPage"));
-const SubscriptionManagerPage = lazy(() => import("./pages/SubscriptionManagerPage"));
 
 function RouteFallback() {
   return (
