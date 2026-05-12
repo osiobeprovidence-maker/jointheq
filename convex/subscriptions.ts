@@ -75,14 +75,9 @@ export const getActiveSubscriptions = query({
         const marketplaceListings = await ctx.db.query("marketplace")
             .withIndex("by_status", q => q.eq("status", "active"))
             .collect();
-        const visibleMarketplaceListings = marketplaceListings.filter((listing) =>
-            (listing.isListed ?? true) &&
-            (listing.visibility ?? "marketplace") === "marketplace" &&
-            (listing.available_slots ?? 0) > 0
-        );
 
         const result = await Promise.all(
-            visibleMarketplaceListings.map(async (listing) => {
+            marketplaceListings.map(async (listing) => {
                 // Get the subscription catalog info for this listing
                 const catalog = await ctx.db.get(listing.subscription_catalog_id);
                 const effectiveCategory = normalizeMarketplaceCategory(listing.category, catalog?.category);
@@ -494,11 +489,9 @@ export const joinSlot = mutation({
             if (marketplace) {
                 const filled = (marketplace.filled_slots || 0) + 1;
                 const total = marketplace.total_slots || 0;
-                const available = Math.max(0, total - filled);
                 await ctx.db.patch(marketplace._id, {
                     filled_slots: filled,
-                    available_slots: available,
-                    status: available === 0 && (marketplace.auto_hide_when_full ?? true) ? "full" : marketplace.status,
+                    available_slots: Math.max(0, total - filled),
                     updated_at: Date.now()
                 });
             }
@@ -885,9 +878,6 @@ export const adminCreateListing = mutation({
             category: normalizedCategory,
             admin_note: undefined,
             request_id: args.request_id,
-            isListed: true,
-            visibility: "marketplace",
-            auto_hide_when_full: true,
 
             created_at: Date.now(),
             updated_at: Date.now(),
@@ -1114,14 +1104,10 @@ export const getSubscriptionManagerData = query({
             const totalSlots = slots.length || listing.total_slots || 0;
             const usedSlots = slots.filter(slot => slot.status === "filled").length;
             const availableSlots = Math.max(0, totalSlots - usedSlots);
-            const operationalStatus = listing.status === "paused" || listing.status === "expired" || listing.status === "hidden"
-                ? listing.status
-                : availableSlots <= 0 ? "full" : "active";
+            const managerStatus = availableSlots <= 0 ? "Full" : availableSlots === 1 ? "Almost Full" : "Active";
             const slotTypes = [...new Set(slots.map(slot => slot.slot_name).filter(Boolean))];
             const prices = slots.map(slot => slot.slot_price).filter(price => price > 0);
             const pricePerUser = prices[0] || listing.slot_price || 0;
-            const isListed = listing.isListed ?? true;
-            const visibility = listing.visibility ?? "marketplace";
 
             return {
                 _id: listing._id,
@@ -1135,75 +1121,14 @@ export const getSubscriptionManagerData = query({
                 used_slots: usedSlots,
                 available_slots: availableSlots,
                 renewal_date: listing.billing_cycle_start,
-                status: operationalStatus,
+                status: managerStatus,
                 listing_status: listing.status,
-                isListed,
-                visibility,
-                visible_to_users: isListed && visibility === "marketplace" && availableSlots > 0 && operationalStatus === "active",
-                auto_hide_when_full: listing.auto_hide_when_full ?? true,
                 category: listing.category || catalog?.category || "Other",
                 account_email: listing.account_email,
                 slots: slots.sort((a, b) => a.slot_number - b.slot_number),
             };
         }));
     }
-});
-
-export const adminUpdateSubscriptionControls = mutation({
-    args: {
-        adminId: v.id("users"),
-        marketplaceId: v.id("marketplace"),
-        isListed: v.optional(v.boolean()),
-        visibility: v.optional(v.string()),
-        autoHideWhenFull: v.optional(v.boolean()),
-        status: v.optional(v.string()),
-        slotPrice: v.optional(v.number()),
-    },
-    handler: async (ctx, args) => {
-        const admin = await ctx.db.get(args.adminId);
-        if (!admin?.is_admin) throw new Error("Unauthorized");
-
-        const listing = await ctx.db.get(args.marketplaceId);
-        if (!listing) throw new Error("Subscription not found");
-
-        const allowedStatuses = new Set(["active", "full", "paused", "expired", "hidden"]);
-        const allowedVisibility = new Set(["marketplace", "internal", "private"]);
-        const patch: Record<string, any> = { updated_at: Date.now() };
-
-        if (args.isListed !== undefined) patch.isListed = args.isListed;
-        if (args.autoHideWhenFull !== undefined) patch.auto_hide_when_full = args.autoHideWhenFull;
-        if (args.visibility !== undefined) {
-            if (!allowedVisibility.has(args.visibility)) throw new Error("Invalid visibility");
-            patch.visibility = args.visibility;
-        }
-        if (args.status !== undefined) {
-            if (!allowedStatuses.has(args.status)) throw new Error("Invalid status");
-            patch.status = args.status;
-            if (args.status === "hidden") {
-                patch.isListed = false;
-                patch.visibility = "private";
-            }
-        }
-        if (args.slotPrice !== undefined) {
-            if (!Number.isFinite(args.slotPrice) || args.slotPrice < 0) throw new Error("Invalid price");
-            patch.slot_price = args.slotPrice;
-        }
-
-        await ctx.db.patch(args.marketplaceId, patch);
-        await ctx.db.insert("admin_logs", {
-            admin_id: args.adminId,
-            admin_role: admin.admin_role || "admin",
-            action_type: "subscription_controls_update",
-            target_type: "marketplace",
-            target_id: args.marketplaceId,
-            target_name: listing.platform_name,
-            details: "Updated unified subscription controls",
-            metadata: patch,
-            created_at: Date.now(),
-        });
-
-        return { success: true };
-    },
 });
 
 export const adminUpdateSubscriptionRenewalDate = mutation({

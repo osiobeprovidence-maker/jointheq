@@ -72,9 +72,6 @@ export const migrateGroupsToMarketplace = mutation({
                     category: catalog.category,
                     admin_note: subscription?.admin_note,
                     request_id: group.request_id,
-                    isListed: availableSlots > 0,
-                    visibility: "marketplace",
-                    auto_hide_when_full: true,
                     
                     created_at: group._creationTime || Date.now(),
                     updated_at: Date.now(),
@@ -132,13 +129,8 @@ export const getPublicMarketplace = query({
             .withIndex("by_status", q => q.eq("status", "active"))
             .filter(q => q.neq(q.field("plan_owner"), "owner_listed"))
             .collect();
-        const storefrontListings = listings.filter((listing) =>
-            (listing.isListed ?? true) &&
-            (listing.visibility ?? "marketplace") === "marketplace" &&
-            (listing.available_slots ?? 0) > 0
-        );
 
-        const visibleListings = await Promise.all(storefrontListings.map(async (listing) => {
+        const visibleListings = await Promise.all(listings.map(async (listing) => {
             const groups = await ctx.db.query("groups")
                 .withIndex("by_catalog", q => q.eq("subscription_catalog_id", listing.subscription_catalog_id))
                 .filter(q => q.and(
@@ -354,9 +346,6 @@ export const createMarketplaceListing = mutation({
             
             category: args.category || catalog.category,
             request_id: args.request_id,
-            isListed: true,
-            visibility: "marketplace",
-            auto_hide_when_full: true,
             
             created_at: Date.now(),
             updated_at: Date.now(),
