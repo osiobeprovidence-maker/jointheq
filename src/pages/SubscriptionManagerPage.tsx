@@ -25,7 +25,7 @@ import { fmtCurrency } from "../lib/utils";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-type ManagerStatus = "Active" | "Almost Full" | "Full" | "Expiring Soon";
+type ManagerStatus = "Active" | "Almost Full" | "Full";
 
 type SlotRecord = {
   slot_id: Id<"subscription_slots">;
@@ -54,6 +54,7 @@ type SubscriptionRecord = {
   available_slots: number;
   renewal_date?: string;
   status: string;
+  listing_status?: string;
   category: string;
   account_email: string;
   slots: SlotRecord[];
@@ -63,20 +64,11 @@ const statusStyles: Record<ManagerStatus, string> = {
   Active: "bg-emerald-50 text-emerald-700 border-emerald-100",
   "Almost Full": "bg-orange-50 text-orange-700 border-orange-100",
   Full: "bg-red-50 text-red-700 border-red-100",
-  "Expiring Soon": "bg-violet-50 text-violet-700 border-violet-100",
 };
 
-function getDaysUntil(date?: string) {
-  if (!date) return null;
-  const ms = Date.parse(date);
-  if (!Number.isFinite(ms)) return null;
-  return Math.ceil((ms - Date.now()) / (24 * 60 * 60 * 1000));
-}
-
 function getManagerStatus(subscription: SubscriptionRecord): ManagerStatus {
-  const daysUntilRenewal = getDaysUntil(subscription.renewal_date);
+  if (subscription.status === "Full" || subscription.status === "Almost Full" || subscription.status === "Active") return subscription.status;
   if (subscription.available_slots <= 0) return "Full";
-  if (daysUntilRenewal !== null && daysUntilRenewal >= 0 && daysUntilRenewal <= 3) return "Expiring Soon";
   if (subscription.available_slots === 1) return "Almost Full";
   return "Active";
 }
@@ -365,7 +357,7 @@ export default function SubscriptionManagerPage() {
                   </select>
                 </div>
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm font-black outline-none">
-                  {["All", "Active", "Almost Full", "Full", "Expiring Soon"].map((status) => <option key={status}>{status}</option>)}
+                  {["All", "Active", "Almost Full", "Full"].map((status) => <option key={status}>{status}</option>)}
                 </select>
               </div>
             </div>

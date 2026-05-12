@@ -1055,7 +1055,22 @@ export const getSubscriptionManagerData = query({
                 ))
                 .collect();
 
-            const slots = [];
+            const slots: Array<{
+                slot_id: Id<"subscription_slots">;
+                slot_number: number;
+                slot_type_id?: Id<"slot_types">;
+                slot_name: string;
+                slot_price: number;
+                user_id?: Id<"users">;
+                user_name?: string;
+                user_email?: string;
+                user_status: string;
+                payment_status: string;
+                status: string;
+                renewal_date?: string;
+                auto_renew: boolean;
+                group_id?: Id<"groups">;
+            }> = [];
             for (const group of groups) {
                 const groupSlots = await ctx.db.query("subscription_slots")
                     .withIndex("by_group", q => q.eq("group_id", group._id))
@@ -1089,6 +1104,7 @@ export const getSubscriptionManagerData = query({
             const totalSlots = slots.length || listing.total_slots || 0;
             const usedSlots = slots.filter(slot => slot.status === "filled").length;
             const availableSlots = Math.max(0, totalSlots - usedSlots);
+            const managerStatus = availableSlots <= 0 ? "Full" : availableSlots === 1 ? "Almost Full" : "Active";
             const slotTypes = [...new Set(slots.map(slot => slot.slot_name).filter(Boolean))];
             const prices = slots.map(slot => slot.slot_price).filter(price => price > 0);
             const pricePerUser = prices[0] || listing.slot_price || 0;
@@ -1105,7 +1121,8 @@ export const getSubscriptionManagerData = query({
                 used_slots: usedSlots,
                 available_slots: availableSlots,
                 renewal_date: listing.billing_cycle_start,
-                status: listing.status,
+                status: managerStatus,
+                listing_status: listing.status,
                 category: listing.category || catalog?.category || "Other",
                 account_email: listing.account_email,
                 slots: slots.sort((a, b) => a.slot_number - b.slot_number),
