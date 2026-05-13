@@ -284,6 +284,24 @@ export const processDailySubscriptionReminders = internalMutation({
             sent += 1;
 
             if (eventKey === "cancelled") {
+                const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
+                const subscription = slotType?.subscription_id ? await ctx.db.get(slotType.subscription_id as any) : null;
+
+                await ctx.db.insert("canceled_subscriptions", {
+                    user_id: slot.user_id,
+                    user_name: user.full_name || user.username || "Unknown",
+                    user_email: user.email || "",
+                    source_type: "slot",
+                    source_id: String(slot._id),
+                    subscription_name: (subscription as any)?.name || "Subscription",
+                    slot_name: slotType?.name || slot.profile_name || "Slot",
+                    price: slotType?.price || 0,
+                    renewal_date: slot.renewal_date,
+                    reason: "Automatically canceled after overdue renewal window",
+                    canceled_at: Date.now(),
+                    created_at: Date.now(),
+                });
+
                 await ctx.db.patch(slot._id, {
                     user_id: undefined,
                     status: "open",

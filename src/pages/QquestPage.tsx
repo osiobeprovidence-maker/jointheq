@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Upload,
   Image as ImageIcon,
+  ExternalLink,
 } from "lucide-react";
 import { TermsAcceptanceModal } from "../components/TermsAcceptanceModal";
 import { Logo } from "../components/ui/Logo";
@@ -99,27 +100,6 @@ const withdrawalFee = 20;
 const minimumCampaignBudget = 7500;
 const qquestRewardPerUser = 150;
 const serviceFeeCap = 2500;
-const questLaunchAt = new Date("2026-05-09T23:00:00.000Z").getTime();
-const questLaunchDateLabel = "May 10";
-const questLaunchTimeLabel = "12:00 AM WAT";
-
-function getQuestLaunchCountdown(now: number) {
-  const totalMs = Math.max(0, questLaunchAt - now);
-  const totalSeconds = Math.floor(totalMs / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return {
-    totalMs,
-    days,
-    hours,
-    minutes,
-    seconds,
-    label: totalMs > 0 ? `${days}d ${hours}h ${minutes}m` : "Live now",
-  };
-}
 
 const defaultPaystackBanks: PaystackBank[] = [
   { name: "Access Bank", code: "044" },
@@ -179,6 +159,13 @@ const historyItems = [
 
 const quests: Quest[] = [];
 
+const toExternalUrl = (value?: string) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
 const sortOptions = ["Suggested", "Highest Paying", "Quick Quests", "Trending"];
 const questTypeOptions = [
   { title: "Follow", description: "Instagram, TikTok, X, and creator pages.", time: "20 sec", emoji: "👥" },
@@ -220,13 +207,9 @@ function campaignToQuest(form: CreateQquestState, estimatedUsers: number, servic
 function QuestCard({
   quest,
   onOpen,
-  isLocked,
-  countdownLabel,
 }: {
   quest: Quest;
   onOpen: (quest: Quest) => void;
-  isLocked: boolean;
-  countdownLabel: string;
 }) {
   const reward = quest.rewardPerUser ?? (Number(quest.reward.replace(/\D/g, "")) || qquestRewardPerUser);
   const reach = quest.estimatedUsers ? `${quest.estimatedUsers.toLocaleString()} target users` : quest.users;
@@ -239,13 +222,8 @@ function QuestCard({
     >
       <div className="relative h-40 bg-cover bg-center" style={{ backgroundImage: quest.image }}>
         <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black uppercase tracking-[.16em] text-zinc-900 shadow-sm backdrop-blur-md">
-          {isLocked ? "Queued" : quest.tag}
+          {quest.tag}
         </span>
-        {isLocked ? (
-          <span className="absolute right-4 top-4 rounded-full bg-zinc-950/75 px-3 py-1 text-[11px] font-black uppercase tracking-[.14em] text-white backdrop-blur-md">
-            {countdownLabel}
-          </span>
-        ) : null}
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
       </div>
 
@@ -272,17 +250,17 @@ function QuestCard({
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-black text-zinc-500">
             <span>{budget}</span>
-            <span>{isLocked ? "Launch lock" : `${quest.progress}%`}</span>
+            <span>{quest.progress}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-            <div className={`h-full rounded-full bg-gradient-to-r ${quest.accent}`} style={{ width: isLocked ? "100%" : `${quest.progress}%` }} />
+            <div className={`h-full rounded-full bg-gradient-to-r ${quest.accent}`} style={{ width: `${quest.progress}%` }} />
           </div>
         </div>
 
         <div className="flex items-center justify-between rounded-2xl bg-zinc-50 p-1.5">
-          <span className="pl-3 text-xs font-black uppercase tracking-[.14em] text-zinc-400">{isLocked ? `Opens ${questLaunchDateLabel}` : quest.proofRequirement || "Proof review"}</span>
-          <span className={`rounded-xl px-4 py-2 text-sm font-black transition group-hover:scale-105 ${isLocked ? "bg-zinc-200 text-zinc-500" : "bg-zinc-950 text-white"}`}>
-            {isLocked ? "Queued" : "Start Quest"}
+          <span className="pl-3 text-xs font-black uppercase tracking-[.14em] text-zinc-400">{quest.proofRequirement || "Proof review"}</span>
+          <span className="rounded-xl bg-zinc-950 px-4 py-2 text-sm font-black text-white transition group-hover:scale-105">
+            Start Quest
           </span>
         </div>
       </div>
@@ -290,39 +268,9 @@ function QuestCard({
   );
 }
 
-function CountdownTiles({
-  countdown,
-  tone = "dark",
-}: {
-  countdown: ReturnType<typeof getQuestLaunchCountdown>;
-  tone?: "dark" | "light";
-}) {
-  const tiles = [
-    ["Days", countdown.days],
-    ["Hours", countdown.hours],
-    ["Minutes", countdown.minutes],
-    ["Seconds", countdown.seconds],
-  ];
-
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {tiles.map(([label, value]) => (
-        <div key={label} className={`rounded-2xl p-4 text-center ${tone === "dark" ? "bg-white/10 text-white" : "bg-zinc-50 text-zinc-950"}`}>
-          <div className="text-3xl font-black tabular-nums">{String(value).padStart(2, "0")}</div>
-          <div className={`mt-1 text-[10px] font-black uppercase tracking-[.16em] ${tone === "dark" ? "text-white/45" : "text-zinc-400"}`}>{label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function QuestLaunchHero({
-  countdown,
-  isLive,
   onCreate,
 }: {
-  countdown: ReturnType<typeof getQuestLaunchCountdown>;
-  isLive: boolean;
   onCreate: () => void;
 }) {
   return (
@@ -345,18 +293,27 @@ function QuestLaunchHero({
               Create Quest
             </button>
             <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-black text-white backdrop-blur-md">
-              {isLive ? "Engagement is open" : `Unlocks ${questLaunchDateLabel} at ${questLaunchTimeLabel}`}
+              Engagement is open
             </div>
           </div>
         </div>
 
         <div className="flex items-end">
           <div className="w-full rounded-[1.5rem] bg-white/12 p-4 shadow-2xl backdrop-blur-xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <span className="text-xs font-black uppercase tracking-[.18em] text-white/55">Launch Countdown</span>
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white">{isLive ? "Live now" : countdown.label}</span>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-white/10 p-4 text-white">
+                <div className="text-3xl font-black">₦150</div>
+                <div className="mt-1 text-[10px] font-black uppercase tracking-[.16em] text-white/45">Per proof</div>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-4 text-white">
+                <div className="text-3xl font-black">Fast</div>
+                <div className="mt-1 text-[10px] font-black uppercase tracking-[.16em] text-white/45">Reviews</div>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-4 text-white">
+                <div className="text-3xl font-black">Live</div>
+                <div className="mt-1 text-[10px] font-black uppercase tracking-[.16em] text-white/45">Now</div>
+              </div>
             </div>
-            <CountdownTiles countdown={countdown} />
           </div>
         </div>
       </div>
@@ -365,29 +322,22 @@ function QuestLaunchHero({
 }
 
 function QuestLaunchEmptyState({
-  countdown,
-  isLive,
   onCreate,
 }: {
-  countdown: ReturnType<typeof getQuestLaunchCountdown>;
-  isLive: boolean;
   onCreate: () => void;
 }) {
   return (
     <section className="grid min-h-[360px] place-items-center rounded-[2rem] bg-white p-6 text-center shadow-sm sm:p-8">
       <div className="w-full max-w-3xl">
         <div className="mx-auto mb-6 grid h-20 w-20 place-items-center rounded-[1.75rem] bg-zinc-950 text-white">
-          {isLive ? <Trophy size={36} /> : <Clock3 size={36} />}
+          <Trophy size={36} />
         </div>
-        <h2 className="text-2xl font-black sm:text-3xl">{isLive ? "No Quests yet" : "No live Quests yet"}</h2>
+        <h2 className="text-2xl font-black sm:text-3xl">No Quests yet</h2>
         <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-6 text-zinc-500">
-          {isLive
-            ? "Approved earning quests will appear here when they are listed."
-            : "Quest earning goes live on May 10. This space is reserved for approved quests, and every queued quest stays locked until launch."}
+          Approved earning quests will appear here when they are listed.
         </p>
-        {!isLive ? <div className="mt-6"><CountdownTiles countdown={countdown} tone="light" /></div> : null}
         <button onClick={onCreate} className="mt-7 rounded-full bg-zinc-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5">
-          {isLive ? "Create Quest" : "Prepare a Quest"}
+          Create Quest
         </button>
       </div>
     </section>
@@ -434,8 +384,8 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
         <div className="border-b border-white/10 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black tracking-tight">{isLaunched ? "Quest Queued" : "Create Quest"}</h2>
-              <p className="mt-1 text-sm font-bold text-white/45">Prepare campaigns now. Engagement opens May 10.</p>
+              <h2 className="text-2xl font-black tracking-tight">{isLaunched ? "Quest Live" : "Create Quest"}</h2>
+              <p className="mt-1 text-sm font-bold text-white/45">Create campaigns and start getting engagement.</p>
             </div>
             <button onClick={onClose} className="rounded-xl bg-white/10 p-2 text-white/60 transition hover:bg-white/15 hover:text-white" aria-label="Close create quest">
               <X size={20} />
@@ -503,6 +453,7 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
       {isPaymentOpen && (
         <PaymentModal
           totalCost={totalCost}
+          platformFee={platformFee}
           form={form}
           imageFile={imageFile}
           onClose={() => setIsPaymentOpen(false)}
@@ -774,12 +725,14 @@ async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promis
 
 function PaymentModal({ 
   totalCost, 
+  platformFee,
   form,
   imageFile,
   onClose, 
   onPaid 
 }: { 
   totalCost: number; 
+  platformFee: number;
   form: CreateQquestState;
   imageFile: File | null;
   onClose: () => void; 
@@ -827,6 +780,8 @@ function PaymentModal({
           audienceType: form.audienceType,
           rewardPerUser: qquestRewardPerUser,
           totalBudget: form.budget,
+          serviceFee: platformFee,
+          paymentAmount: totalCost,
           paymentMethod: "q_wallet",
           requestId,
         });
@@ -859,6 +814,8 @@ function PaymentModal({
         audienceType: form.audienceType,
         rewardPerUser: qquestRewardPerUser,
         totalBudget: form.budget,
+        serviceFee: platformFee,
+        paymentAmount: totalCost,
         paymentMethod: "paystack",
         requestId,
       });
@@ -936,13 +893,13 @@ function PostLaunchState({ quest, estimatedUsers, onClose }: { quest: Quest | nu
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#F26522] text-white animate-pulse">
           <CheckCircle2 size={30} />
         </div>
-        <h3 className="mt-4 text-2xl font-black">{quest?.title || "Quest"} is queued</h3>
-        <p className="mt-2 text-sm font-bold text-orange-100/65">Your Quest is prepared and visible, but users cannot engage until May 10.</p>
+        <h3 className="mt-4 text-2xl font-black">{quest?.title || "Quest"} is live</h3>
+        <p className="mt-2 text-sm font-bold text-orange-100/65">Your Quest is visible and ready for users to engage.</p>
       </div>
       <div className="rounded-2xl bg-white/7 p-5">
         <div className="flex items-center justify-between text-sm font-black">
           <span>{estimatedUsers.toLocaleString()} target users reserved</span>
-          <span className="rounded-full bg-[#F26522] px-3 py-1 text-xs text-white">Queued</span>
+          <span className="rounded-full bg-[#F26522] px-3 py-1 text-xs text-white">Live</span>
         </div>
         <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
           <div className="h-full rounded-full bg-[#F26522] transition-all duration-700" style={{ width: "100%" }} />
@@ -1023,15 +980,11 @@ function CostRow({ label, value, strong = false }: { label: string; value: strin
 function QuestDetailModal({
   quest,
   isStarted,
-  isLaunchLocked,
-  countdownLabel,
   onBack,
   onStart,
 }: {
   quest: Quest;
   isStarted: boolean;
-  isLaunchLocked: boolean;
-  countdownLabel: string;
   onBack: () => void;
   onStart: () => void;
 }) {
@@ -1042,9 +995,9 @@ function QuestDetailModal({
   
   const user = auth.getCurrentUser();
   const submitCompletionMutation = useMutation(api.quests.submitCompletion);
+  const questExternalUrl = toExternalUrl(quest.link);
 
   const startQuest = () => {
-    if (isLaunchLocked) return;
     onStart();
     setIsProofOpen(true);
   };
@@ -1119,7 +1072,7 @@ function QuestDetailModal({
             </div>
             <div>
               <p className="uppercase tracking-[.14em] text-zinc-400">Status</p>
-              <p className="mt-1 text-zinc-950">{(quest as any).isCompleted ? "Completed" : isLaunchLocked ? `Queued until ${questLaunchDateLabel}` : isStarted ? "Active" : quest.source === "admin-featured" ? "Featured" : "Available"}</p>
+              <p className="mt-1 text-zinc-950">{(quest as any).isCompleted ? "Completed" : isStarted ? "Active" : quest.source === "admin-featured" ? "Featured" : "Available"}</p>
             </div>
           </div>
           {quest.instructions ? (
@@ -1129,6 +1082,17 @@ function QuestDetailModal({
               {quest.link ? <p className="mt-2 break-all text-xs font-black text-zinc-950">{quest.link}</p> : null}
             </div>
           ) : null}
+          {questExternalUrl ? (
+            <a
+              href={questExternalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#F26522] px-5 py-4 text-sm font-black text-white transition hover:-translate-y-0.5"
+            >
+              <ExternalLink size={18} />
+              Open Quest Link
+            </a>
+          ) : null}
           <div className="grid grid-cols-3 gap-3">
             {[quest.time, quest.users, quest.urgency].map((item) => (
               <div key={item} className="rounded-2xl bg-zinc-50 p-3 text-center text-xs font-black text-zinc-500">
@@ -1136,22 +1100,7 @@ function QuestDetailModal({
               </div>
             ))}
           </div>
-          {isLaunchLocked ? (
-            <div className="space-y-4 rounded-[1.5rem] bg-zinc-950 p-4 text-white">
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/10 text-white">
-                  <Clock3 size={19} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black">Queued for launch</h3>
-                  <p className="text-xs font-bold text-white/50">Users can view this quest, but starting and proof submission unlock in {countdownLabel}.</p>
-                </div>
-              </div>
-              <button disabled className="w-full rounded-2xl bg-white/10 px-5 py-4 text-sm font-black text-white/45">
-                Opens {questLaunchDateLabel}
-              </button>
-            </div>
-          ) : isProofOpen || isSubmitted ? (
+          {isProofOpen || isSubmitted ? (
             <div className="space-y-4 rounded-[1.5rem] bg-zinc-950 p-4 text-white">
               {isSubmitted ? (
                 <div className="text-center py-4">
@@ -1891,15 +1840,12 @@ export default function QquestPage() {
   const [isConnectAccountOpen, setIsConnectAccountOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [startedQuestIds, setStartedQuestIds] = useState<string[]>([]);
   const [createdQuests, setCreatedQuests] = useState<Quest[]>([]);
   const questWalletBalance = userWallet?.quest_wallet_balance ?? 0;
   const questQic = liveUser?.qic || "";
   const sidebarUsername = liveUser?.username || storedUser?.username || "member";
-  const launchCountdown = useMemo(() => getQuestLaunchCountdown(now), [now]);
-  const isQuestLive = launchCountdown.totalMs === 0;
   const connectedAccount: ConnectedAccount | null = liveUser?.quest_withdrawal_account
     ? {
         bankName: liveUser.quest_withdrawal_account.bank_name,
@@ -1916,12 +1862,6 @@ export default function QquestPage() {
       console.error("Failed to generate Quest ID", error);
     });
   }, [ensureQuestIdentity, liveUser, storedUser?._id]);
-
-  useEffect(() => {
-    if (isQuestLive) return;
-    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [isQuestLive]);
 
   const questsFromDb = useQuery(api.quests.listQuests, user?._id ? { userId: user._id as Id<"users"> } : "skip");
   
@@ -1984,14 +1924,10 @@ export default function QquestPage() {
     }
   };
   const startSelectedQuest = () => {
-    if (!selectedQuest || !isQuestLive) return;
+    if (!selectedQuest) return;
     setStartedQuestIds((current) => current.includes(selectedQuest.id) ? current : [...current, selectedQuest.id]);
   };
   const startQuest = (quest: Quest) => {
-    if (!isQuestLive) {
-      openQuestDetail(quest);
-      return;
-    }
     setStartedQuestIds((current) => current.includes(quest.id) ? current : [...current, quest.id]);
     setActiveTab("mine");
     openQuestDetail(quest);
@@ -2156,7 +2092,7 @@ export default function QquestPage() {
         <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {activePage === "quest" ? (
             <>
-          <QuestLaunchHero countdown={launchCountdown} isLive={isQuestLive} onCreate={() => setIsCreateOpen(true)} />
+          <QuestLaunchHero onCreate={() => setIsCreateOpen(true)} />
 
           <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex rounded-full bg-white p-1 shadow-sm">
@@ -2256,11 +2192,11 @@ export default function QquestPage() {
           {visibleQuests.length ? (
             <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {visibleQuests.map((quest) => (
-                <QuestCard key={quest.id} quest={quest} onOpen={openQuestDetail} isLocked={!isQuestLive} countdownLabel={launchCountdown.label} />
+                <QuestCard key={quest.id} quest={quest} onOpen={openQuestDetail} />
               ))}
             </section>
           ) : (
-            <QuestLaunchEmptyState countdown={launchCountdown} isLive={isQuestLive} onCreate={() => setIsCreateOpen(true)} />
+            <QuestLaunchEmptyState onCreate={() => setIsCreateOpen(true)} />
           )}
             </>
           ) : (
@@ -2306,8 +2242,6 @@ export default function QquestPage() {
         <QuestDetailModal
           quest={selectedQuest}
           isStarted={startedQuestIds.includes(selectedQuest.id)}
-          isLaunchLocked={!isQuestLive}
-          countdownLabel={launchCountdown.label}
           onBack={closeQuestDetail}
           onStart={startSelectedQuest}
         />

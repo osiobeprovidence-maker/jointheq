@@ -308,6 +308,7 @@ export default function AdminPanel() {
 
     // Leave Requests Query
     const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
+    const canceledSubscriptions = useQuery(api.admin.getCanceledSubscriptions) || [];
     const pendingLeaveCount = pendingLeaveRequests.slots.length + pendingLeaveRequests.migrations.length;
 
     // User Logs Query
@@ -795,7 +796,7 @@ export default function AdminPanel() {
 
     const handleApproveLeave = async (id: Id<"subscription_slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
         try {
-            await approveLeaveRequest({ id, type });
+            await approveLeaveRequest({ id, type, adminId: currentUser!._id });
             toast.success("Leave request approved");
         } catch (e: any) { toast.error(e.message); }
     };
@@ -3874,6 +3875,66 @@ export default function AdminPanel() {
                                                 </div>
                                             ))}
                                         </>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <SectionHeader
+                                        title="Canceled Subscriptions"
+                                        sub="Completed exits and automatic overdue cancellations"
+                                        action={<span className="rounded-full bg-red-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600">{canceledSubscriptions.length} records</span>}
+                                    />
+
+                                    {canceledSubscriptions.length === 0 ? (
+                                        <div className="rounded-[2.5rem] border border-dashed border-black/10 bg-white p-12 text-center text-xs font-black uppercase tracking-widest text-gray-400">
+                                            No canceled subscriptions recorded yet
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {canceledSubscriptions.map((item: any) => (
+                                                <div key={item._id} className="rounded-[2.5rem] border border-black/5 bg-white p-6 shadow-sm">
+                                                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                                                        <div className="flex min-w-[260px] items-center gap-4">
+                                                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                                                                <UserMinus size={24} />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <h3 className="truncate text-base font-black">{item.user_name || "Unknown user"}</h3>
+                                                                <p className="mt-1 truncate text-xs font-bold text-gray-500">{item.user_email || "No email"}</p>
+                                                                <span className="mt-2 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                                                    {item.source_type === "migration" ? "Legacy migration" : "Marketplace slot"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid flex-1 grid-cols-2 gap-4 md:grid-cols-4">
+                                                            <div>
+                                                                <div className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-gray-400">Subscription</div>
+                                                                <div className="truncate text-sm font-bold">{item.subscription_name || item.platform || "Subscription"}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-gray-400">Slot / Account</div>
+                                                                <div className="truncate text-sm font-bold">{item.slot_name || item.account_email || "N/A"}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-gray-400">Price</div>
+                                                                <div className="text-sm font-bold text-emerald-600">{item.price ? fmtCurrency(item.price) : "N/A"}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-gray-400">Canceled</div>
+                                                                <div className="text-sm font-bold">{item.canceled_at ? new Date(item.canceled_at).toLocaleDateString() : "N/A"}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-5 grid gap-3 rounded-2xl bg-zinc-50 p-4 text-xs font-bold text-gray-600 md:grid-cols-3">
+                                                        <div><span className="font-black uppercase tracking-widest text-gray-400">Reason: </span>{item.reason || "No reason recorded"}</div>
+                                                        <div><span className="font-black uppercase tracking-widest text-gray-400">Renewal: </span>{item.renewal_date || "N/A"}</div>
+                                                        <div><span className="font-black uppercase tracking-widest text-gray-400">Record ID: </span>{String(item.source_id || item._id).slice(-8)}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             </motion.div>

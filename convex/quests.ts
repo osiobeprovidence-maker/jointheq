@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, action } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
+import { createNotification } from "./notificationHelpers";
 
 // --- Quests Logic ---
 
@@ -22,6 +23,25 @@ async function getLegacyQuestWalletBalance(ctx: any, userId: Id<"users">) {
     }, 0);
 }
 
+async function notifyAdminsOfQuestPayment(ctx: any, input: {
+    creatorName: string;
+    title: string;
+    amount: number;
+}) {
+    const admins = (await ctx.db.query("users").collect()).filter((user: any) => user.is_admin);
+
+    for (const admin of admins) {
+        await createNotification(ctx, {
+            userId: admin._id,
+            title: "Quest payment received",
+            message: `${input.creatorName} paid N${input.amount.toLocaleString()} for "${input.title}". Review the Quest payment/admin queue.`,
+            type: "admin",
+            ctaText: "Open Quest Admin",
+            ctaUrl: "/admin?tab=quests",
+        });
+    }
+}
+
 export const createQuest = mutation({
     args: {
         creatorId: v.id("users"),
@@ -36,6 +56,8 @@ export const createQuest = mutation({
         audienceType: v.optional(v.string()),
         rewardPerUser: v.number(),
         totalBudget: v.number(),
+        serviceFee: v.optional(v.number()),
+        paymentAmount: v.optional(v.number()),
         paymentMethod: v.string(), // "q_wallet" | "paystack"
         requestId: v.optional(v.string()),
     },
@@ -57,6 +79,7 @@ export const createQuest = mutation({
 
         const totalSlots = Math.floor(args.totalBudget / args.rewardPerUser);
         if (totalSlots <= 0) throw new Error("Budget is too low for the reward amount");
+        const paymentAmount = args.paymentAmount ?? args.totalBudget;
 
         const questId = await ctx.db.insert("quests", {
             creatorId: args.creatorId,
@@ -72,6 +95,8 @@ export const createQuest = mutation({
             audienceType: args.audienceType,
             rewardPerUser: args.rewardPerUser,
             totalBudget: args.totalBudget,
+            serviceFee: args.serviceFee,
+            paymentAmount,
             totalSlots: totalSlots,
             usedSlots: 0,
             paymentStatus: "pending",
@@ -99,14 +124,18 @@ export const createQuest = mutation({
                 wallet = await ctx.db.get(walletId);
             }
 
-            if (!wallet || wallet.q_wallet_balance < args.totalBudget) {
+            if (!wallet || wallet.q_wallet_balance < paymentAmount) {
                 throw new Error("Insufficient Q Wallet balance");
             }
 
             // Deduct from Q Wallet
+            const nextQWalletBalance = wallet.q_wallet_balance - paymentAmount;
             await ctx.db.patch(wallet._id, {
-                q_wallet_balance: wallet.q_wallet_balance - args.totalBudget,
+                q_wallet_balance: nextQWalletBalance,
                 updated_at: Date.now(),
+            });
+            await ctx.db.patch(args.creatorId, {
+                wallet_balance: nextQWalletBalance,
             });
 
             const paymentRef = `quest_payment_${questId}_${Date.now()}`;
@@ -122,12 +151,19 @@ export const createQuest = mutation({
                 user_id: args.creatorId,
                 wallet_type: "q_wallet",
                 type: "debit",
-                amount: args.totalBudget,
+                amount: paymentAmount,
                 reference: paymentRef,
                 description: `Quest Payment: ${args.title}`,
                 related_quest_id: questId,
                 status: "completed",
+                wallet_balance: nextQWalletBalance,
                 created_at: Date.now(),
+            });
+
+            await notifyAdminsOfQuestPayment(ctx, {
+                creatorName: user.full_name || user.username || "A user",
+                title: args.title,
+                amount: paymentAmount,
             });
 
             return { success: true, questId, status: "live" };
@@ -460,6 +496,7 @@ export const markQuestAsPaid = internalMutation({
     handler: async (ctx, args) => {
         const quest = await ctx.db.get(args.questId);
         if (!quest) throw new Error("Quest not found");
+        const wasAlreadyPaid = quest.paymentStatus === "paid";
 
         await ctx.db.patch(args.questId, {
             paymentStatus: "paid",
@@ -467,6 +504,15 @@ export const markQuestAsPaid = internalMutation({
             paymentReference: args.reference,
             updatedAt: Date.now(),
         });
+
+        if (!wasAlreadyPaid) {
+            const creator = await ctx.db.get(quest.creatorId);
+            await notifyAdminsOfQuestPayment(ctx, {
+                creatorName: creator?.full_name || creator?.username || "A user",
+                title: quest.title,
+                amount: quest.paymentAmount || args.amount,
+            });
+        }
 
         return { success: true };
     }

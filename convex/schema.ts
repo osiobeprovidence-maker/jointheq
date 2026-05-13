@@ -141,6 +141,26 @@ export default defineSchema({
         .index("by_group", ["group_id"])
         .index("by_status", ["status"]),
 
+    canceled_subscriptions: defineTable({
+        user_id: v.optional(v.id("users")),
+        user_name: v.optional(v.string()),
+        user_email: v.optional(v.string()),
+        source_type: v.string(),
+        source_id: v.string(),
+        subscription_name: v.optional(v.string()),
+        slot_name: v.optional(v.string()),
+        platform: v.optional(v.string()),
+        account_email: v.optional(v.string()),
+        price: v.optional(v.number()),
+        renewal_date: v.optional(v.string()),
+        reason: v.optional(v.string()),
+        canceled_by: v.optional(v.id("users")),
+        canceled_at: v.number(),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_source", ["source_type", "source_id"])
+        .index("by_canceled_at", ["canceled_at"]),
+
     // PILLAR 4: Wallets
     wallets: defineTable({
         user_id: v.id("users"),
@@ -324,6 +344,8 @@ export default defineSchema({
         audienceType: v.optional(v.string()),
         rewardPerUser: v.number(),
         totalBudget: v.number(),
+        serviceFee: v.optional(v.number()),
+        paymentAmount: v.optional(v.number()),
         totalSlots: v.number(),
         usedSlots: v.number(),
         paymentStatus: v.string(), // "pending", "paid", "failed"

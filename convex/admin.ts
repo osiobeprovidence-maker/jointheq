@@ -494,12 +494,43 @@ export const getPendingLeaveRequests = query({
     }
 });
 
+export const getCanceledSubscriptions = query({
+    handler: async (ctx) => {
+        return await ctx.db
+            .query("canceled_subscriptions")
+            .withIndex("by_canceled_at")
+            .order("desc")
+            .take(100);
+    }
+});
+
 export const approveLeaveRequest = mutation({
-    args: { id: v.any(), type: v.string() },
+    args: { id: v.any(), type: v.string(), adminId: v.optional(v.id("users")) },
     handler: async (ctx, args) => {
         if (args.type === "slot") {
-            const slot = await ctx.db.get(args.id);
+            const slot = await ctx.db.get(args.id) as any;
             if (slot) {
+                const user = slot.user_id ? await ctx.db.get(slot.user_id) as any : null;
+                const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) as any : null;
+                const subscription = slotType?.subscription_id ? await ctx.db.get(slotType.subscription_id as any) : null;
+                const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
+
+                await ctx.db.insert("canceled_subscriptions", {
+                    user_id: slot.user_id,
+                    user_name: user?.full_name || user?.username || "Unknown",
+                    user_email: user?.email || "",
+                    source_type: "slot",
+                    source_id: String(args.id),
+                    subscription_name: (subscription as any)?.name || (group as any)?.platform_name || "Subscription",
+                    slot_name: slotType?.name || slot.profile_name || "Slot",
+                    price: slotType?.price || 0,
+                    renewal_date: slot.renewal_date,
+                    reason: "Leave request approved by admin",
+                    canceled_by: args.adminId,
+                    canceled_at: Date.now(),
+                    created_at: Date.now(),
+                });
+
                 await ctx.db.patch(args.id, {
                     user_id: undefined,
                     status: "open",
@@ -508,7 +539,26 @@ export const approveLeaveRequest = mutation({
                 });
             }
         } else if (args.type === "migration") {
-            await ctx.db.delete(args.id);
+            const migration = await ctx.db.get(args.id) as any;
+            if (migration) {
+                const user = await ctx.db.get(migration.user_id) as any;
+                await ctx.db.insert("canceled_subscriptions", {
+                    user_id: migration.user_id,
+                    user_name: user?.full_name || user?.username || migration.profile_name || "Unknown",
+                    user_email: user?.email || migration.email || "",
+                    source_type: "migration",
+                    source_id: String(args.id),
+                    subscription_name: migration.platform,
+                    platform: migration.platform,
+                    account_email: migration.email,
+                    renewal_date: String(migration.payment_day || ""),
+                    reason: "Migrated subscription leave request approved by admin",
+                    canceled_by: args.adminId,
+                    canceled_at: Date.now(),
+                    created_at: Date.now(),
+                });
+                await ctx.db.delete(args.id);
+            }
         }
         return { success: true };
     }
