@@ -308,7 +308,7 @@ export default function AdminPanel() {
 
     // Leave Requests Query
     const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
-    const canceledSubscriptions = useQuery(api.admin.getCanceledSubscriptions) || [];
+    const canceledSubscriptions = pendingLeaveRequests.canceled || [];
     const pendingLeaveCount = pendingLeaveRequests.slots.length + pendingLeaveRequests.migrations.length;
 
     // User Logs Query

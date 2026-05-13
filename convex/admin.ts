@@ -490,7 +490,13 @@ export const getPendingLeaveRequests = query({
             };
         }));
 
-        return { slots: enrichedSlots, migrations: enrichedMigrations };
+        const canceled = await ctx.db
+            .query("canceled_subscriptions")
+            .withIndex("by_canceled_at")
+            .order("desc")
+            .take(100);
+
+        return { slots: enrichedSlots, migrations: enrichedMigrations, canceled };
     }
 });
 
