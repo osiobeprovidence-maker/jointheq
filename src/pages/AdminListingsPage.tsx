@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
-  ArrowLeft,
   CheckCircle,
   XCircle,
   Clock,
@@ -20,14 +19,13 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
-import { MainLayout } from "../layouts/MainLayout";
+import { AdminShell } from "../components/admin/AdminShell";
 
 const STATUSES = ["All", "Pending Review", "Active", "Rejected"];
 const CATEGORIES = ["Streaming", "Music", "Design", "AI", "Productivity", "Gaming", "VPN", "Software", "Utility", "Education"];
 
 export default function AdminListingsPage() {
   const admin = auth.getCurrentUser();
-  const [activeTab, setActiveTab] = useState('marketplace'); // For layout
   const [filterStatus, setFilterStatus] = useState("Pending Review");
 
   // Approval Form fields for the modal
@@ -106,7 +104,7 @@ export default function AdminListingsPage() {
   };
 
   return (
-    <MainLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+    <AdminShell activeItem="user_listings" currentUser={admin} title="Listing Review" subtitle="Content Moderation">
       <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
         {/* Unified Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 border-b border-gray-100 pb-6 sm:pb-8">
@@ -348,6 +346,6 @@ export default function AdminListingsPage() {
           )}
         </AnimatePresence>
       </div>
-    </MainLayout>
+    </AdminShell>
   );
 }

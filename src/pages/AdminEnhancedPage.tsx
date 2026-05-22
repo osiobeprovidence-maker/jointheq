@@ -33,14 +33,12 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
-import { MainLayout } from "../layouts/MainLayout";
+import { AdminShell } from "../components/admin/AdminShell";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
 
 type AdminEnhancedTab = "dashboard" | "slots" | "payments" | "groups" | "waitlist" | "logs";
 
 export default function AdminEnhancedPage() {
-    const navigate = useNavigate();
     const user = auth.getCurrentUser();
     const [activeTab, setActiveTab] = useState<AdminEnhancedTab>("dashboard");
     const [selectedUser, setSelectedUser] = useState<Id<"users"> | null>(null);
@@ -120,7 +118,7 @@ export default function AdminEnhancedPage() {
 
     if (!user?.is_admin) {
         return (
-            <MainLayout activeTab="dashboard" setActiveTab={() => navigate("/dashboard")}>
+            <AdminShell activeItem="enhanced" currentUser={user} title="Enhanced Admin System" subtitle="Advanced Operations">
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center">
                         <AlertTriangle size={48} className="mx-auto text-amber-500 mb-4" />
@@ -128,12 +126,12 @@ export default function AdminEnhancedPage() {
                         <p className="text-gray-500">You don't have permission to access this page.</p>
                     </div>
                 </div>
-            </MainLayout>
+            </AdminShell>
         );
     }
 
     return (
-        <MainLayout activeTab="dashboard" setActiveTab={setActiveTab as any}>
+        <AdminShell activeItem="enhanced" currentUser={user} title="Enhanced Admin System" subtitle="Advanced Operations">
             <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -584,7 +582,7 @@ export default function AdminEnhancedPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </MainLayout>
+        </AdminShell>
     );
 }
 

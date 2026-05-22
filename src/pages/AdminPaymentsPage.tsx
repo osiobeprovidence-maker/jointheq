@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { 
-  ArrowLeft, 
   Search, 
   Filter, 
   CheckCircle, 
@@ -23,6 +22,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
+import { AdminShell } from "../components/admin/AdminShell";
 
 const STATUSES = ["All", "Awaiting Review", "Approved", "Rejected", "Failed"];
 
@@ -82,31 +82,8 @@ export default function AdminPaymentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F5F8] text-zinc-900 font-sans">
-      <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <button onClick={() => window.location.href = "/admin"} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-base sm:text-xl font-black tracking-tight">Manual Payments Review</h1>
-              <p className="text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase tracking-widest hidden sm:block">Finance Operations</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-             <div className="text-right hidden sm:block">
-               <div className="text-xs font-black">{user?.full_name}</div>
-               <div className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">Finance Admin</div>
-             </div>
-             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black text-white flex items-center justify-center font-black text-sm">
-               {user?.full_name?.[0]}
-             </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 overflow-x-hidden">
+    <AdminShell activeItem="review_payments" currentUser={user} title="Manual Payments Review" subtitle="Finance Operations">
+      <main className="mx-auto max-w-7xl overflow-x-hidden">
         {/* Stats / Summary - Scrollable on mobile */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-10 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible">
           <div className="bg-white p-5 sm:p-8 rounded-[2rem] border border-black/5 shadow-sm min-w-[140px] sm:min-w-0">
@@ -323,6 +300,6 @@ export default function AdminPaymentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </AdminShell>
   );
 }

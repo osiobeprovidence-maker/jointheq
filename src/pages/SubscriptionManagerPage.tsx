@@ -2,26 +2,14 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   AlertCircle,
   ArrowLeft,
-  Bell,
   Calendar,
   CheckCircle2,
   Clock,
-  CreditCard,
   Filter,
-  GraduationCap,
-  Headphones,
-  Layers,
-  LayoutDashboard,
-  ListTodo,
-  LogOut,
   Mail,
-  Megaphone,
-  Menu,
   Save,
   Search,
-  Shield,
   ShieldCheck,
-  ShoppingBag,
   UserMinus,
   UserPlus,
   Users,
@@ -35,6 +23,7 @@ import { auth } from "../lib/auth";
 import { fmtCurrency } from "../lib/utils";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { AdminShell } from "../components/admin/AdminShell";
 
 type ManagerStatus = "Active" | "Almost Full" | "Full";
 
@@ -115,127 +104,6 @@ function StatTile({ label, value, icon }: { label: string; value: ReactNode; ico
         <div className="text-violet-500">{icon}</div>
       </div>
       <p className="mt-2 text-xl font-black text-zinc-950">{value}</p>
-    </div>
-  );
-}
-
-const adminNavItems = [
-  { label: "Dashboard", icon: <LayoutDashboard size={18} />, path: "/admin" },
-  { label: "Marketplace", icon: <ShoppingBag size={18} />, path: "/admin" },
-  { label: "Subscription Manager", icon: <Layers size={18} />, path: "/admin/subscriptions", active: true },
-  { label: "Payments", icon: <CreditCard size={18} />, path: "/admin/payments" },
-  { label: "Campaigns", icon: <Megaphone size={18} />, path: "/admin" },
-  { label: "Quest Approval", icon: <ListTodo size={18} />, path: "/admin" },
-  { label: "Security", icon: <ShieldCheck size={18} />, path: "/admin" },
-  { label: "Support", icon: <Headphones size={18} />, path: "/admin" },
-  { label: "Admins", icon: <Shield size={18} />, path: "/admin" },
-  { label: "Campus Q", icon: <GraduationCap size={18} />, path: "/admin" },
-  { label: "Notifications", icon: <Bell size={18} />, path: "/admin" },
-  { label: "Leave Requests", icon: <UserMinus size={18} />, path: "/admin" },
-];
-
-function AdminPageShell({ children, currentUser }: { children: ReactNode; currentUser: any }) {
-  const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handleNavigate = (path: string) => {
-    setMobileMenuOpen(false);
-    navigate(path);
-  };
-
-  const nav = (
-    <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-      {adminNavItems.map((item) => (
-        <button
-          key={item.label}
-          onClick={() => handleNavigate(item.path)}
-          className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all ${
-            item.active ? "bg-white text-zinc-950" : "text-white/55 hover:bg-white/10 hover:text-white"
-          }`}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-
-  return (
-    <div className="min-h-screen bg-[#f5f5f7] font-['Inter',sans-serif] text-zinc-950">
-      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col bg-zinc-950 text-white md:flex">
-        <div className="border-b border-white/5 p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-lg font-black">Q</div>
-            <div>
-              <div className="text-sm font-black">JoinTheQ</div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-white/40">Admin Control</div>
-            </div>
-          </div>
-        </div>
-        {nav}
-        <div className="border-t border-white/5 p-4">
-          <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-3 py-3">
-            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-black">
-              {currentUser?.profile_image_url ? (
-                <img src={currentUser.profile_image_url} alt="Admin profile" className="h-full w-full object-cover" />
-              ) : (
-                currentUser?.full_name?.[0] || "A"
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-bold">{currentUser?.full_name || currentUser?.username || "Admin"}</div>
-              <div className="truncate text-[10px] font-bold uppercase tracking-widest text-white/35">{currentUser?.admin_role || "Admin"}</div>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              if (window.confirm("Logout now?")) auth.logout();
-            }}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-white/5 py-3 text-xs font-bold text-white/70 transition hover:bg-red-500/15 hover:text-red-200"
-          >
-            <LogOut size={15} /> Logout
-          </button>
-        </div>
-      </aside>
-
-      <header className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between bg-zinc-950 px-4 text-white shadow-lg md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 font-black">Q</div>
-          <span className="text-sm font-black">Admin Control</span>
-        </div>
-        <button onClick={() => setMobileMenuOpen((current) => !current)} className="rounded-xl bg-white/10 p-2">
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </header>
-
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button className="absolute inset-0 bg-black/40" aria-label="Close admin menu" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="absolute bottom-0 left-0 top-16 flex w-[88%] max-w-[320px] flex-col bg-zinc-950 text-white">
-            {nav}
-          </aside>
-        </div>
-      )}
-
-      <main className="min-h-screen pt-16 md:ml-64 md:pt-0">
-        <div className="hidden items-center justify-between border-b border-black/5 bg-white px-8 py-5 md:flex">
-          <div>
-            <h1 className="text-xl font-black">Subscription Manager</h1>
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Slot Assignments</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-zinc-100 text-sm font-black">
-              {currentUser?.profile_image_url ? (
-                <img src={currentUser.profile_image_url} alt="Admin profile" className="h-full w-full object-cover" />
-              ) : (
-                currentUser?.full_name?.[0] || "A"
-              )}
-            </div>
-            <span className="text-sm font-black">{currentUser?.username || currentUser?.full_name || "Admin"}</span>
-          </div>
-        </div>
-        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
-      </main>
     </div>
   );
 }
@@ -444,7 +312,7 @@ export default function SubscriptionManagerPage() {
   };
 
   return (
-    <AdminPageShell currentUser={currentUser}>
+    <AdminShell activeItem="subscriptions" currentUser={currentUser} title="Subscription Manager" subtitle="Slot Assignments">
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -667,6 +535,6 @@ export default function SubscriptionManagerPage() {
           onClose={() => setAssignSlot(null)}
         />
       )}
-    </AdminPageShell>
+    </AdminShell>
   );
 }
