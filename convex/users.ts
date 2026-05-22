@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { awardReputation } from "./reputation";
 import bcrypt from "bcryptjs";
 
@@ -1238,6 +1238,56 @@ export const creditWalletAndSaveCard = internalMutation({
         });
 
         return { success: true };
+    },
+});
+
+export const setSuperAdminTelegramChatId = internalMutation({
+    args: {
+        chatId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const superAdmin = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", "riderezzy@gmail.com"))
+            .unique();
+
+        if (!superAdmin || !superAdmin.is_admin || superAdmin.admin_role !== "super") {
+            throw new Error("Configured superadmin was not found.");
+        }
+
+        const chatId = args.chatId.trim();
+        if (!/^\d+$/.test(chatId)) {
+            throw new Error("Telegram chat id must be numeric.");
+        }
+
+        await ctx.db.patch(superAdmin._id, { telegram_chat_id: chatId });
+
+        return {
+            success: true,
+            userId: superAdmin._id,
+            email: superAdmin.email,
+            chatId,
+        };
+    },
+});
+
+export const getSuperAdminTelegramTarget = internalQuery({
+    args: {},
+    handler: async (ctx) => {
+        const superAdmin = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", "riderezzy@gmail.com"))
+            .unique();
+
+        if (!superAdmin || !superAdmin.is_admin || superAdmin.admin_role !== "super") {
+            throw new Error("Configured superadmin was not found.");
+        }
+
+        return {
+            userId: superAdmin._id,
+            email: superAdmin.email,
+            chatId: superAdmin.telegram_chat_id,
+        };
     },
 });
 

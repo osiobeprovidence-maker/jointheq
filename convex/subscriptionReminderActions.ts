@@ -205,3 +205,39 @@ export const sendReminderTelegram = internalAction({
         return { success: response.ok, status: response.status };
     },
 });
+
+export const sendSuperAdminTelegramTest = internalAction({
+    args: {},
+    handler: async (ctx) => {
+        const target = await ctx.runQuery(internal.users.getSuperAdminTelegramTarget, {});
+        if (!target.chatId) {
+            return { success: false, reason: "missing_chat_id", email: target.email };
+        }
+
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (!token) {
+            return { success: false, reason: "missing_bot_token", email: target.email };
+        }
+
+        const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                chat_id: target.chatId,
+                text: "JoinTheQ Telegram test\n\nTelegram renewal reminders are connected for the superadmin.",
+            }),
+        });
+        const payload = await response.json().catch(() => null);
+
+        return {
+            success: response.ok && payload?.ok === true,
+            status: response.status,
+            email: target.email,
+            telegramOk: payload?.ok === true,
+            description: typeof payload?.description === "string" ? payload.description : undefined,
+            messageId: payload?.result?.message_id,
+        };
+    },
+});
