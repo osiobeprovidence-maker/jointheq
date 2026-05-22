@@ -638,6 +638,38 @@ export const approveLeaveRequest = mutation({
     }
 });
 
+export const keepOverdueSubscriptionActive = mutation({
+    args: {
+        slotId: v.id("subscription_slots"),
+        adminId: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const slot = await ctx.db.get(args.slotId);
+        if (!slot) throw new Error("Subscription slot not found");
+        if (!slot.user_id) throw new Error("This slot no longer has a user to keep active");
+        if (slot.status !== "closing" || !slot.removal_scheduled_at) {
+            throw new Error("This subscription is not waiting for overdue review");
+        }
+
+        await ctx.db.patch(slot._id, {
+            status: "filled",
+            removal_scheduled_at: undefined,
+        });
+
+        await createNotification(ctx, {
+            userId: slot.user_id,
+            title: "Subscription kept active",
+            message: "Admin confirmed your subscription remains active after renewal review.",
+            type: "subscription",
+        });
+
+        return { success: true, renewalDate: slot.renewal_date };
+    }
+});
+
 // ─── User Management Enhancements ───────────────────────────────────────────
 
 export const restoreCanceledSubscription = mutation({
@@ -670,7 +702,9 @@ export const restoreCanceledSubscription = mutation({
         }
 
         const recordedRenewal = record.renewal_date ? new Date(record.renewal_date) : null;
-        const baseDate = recordedRenewal && recordedRenewal.getTime() > Date.now() ? recordedRenewal : new Date();
+        const baseDate = recordedRenewal && Number.isFinite(recordedRenewal.getTime())
+            ? recordedRenewal
+            : new Date();
         const nextRenewal = addDays(baseDate, 30).toISOString();
 
         await ctx.db.patch(slotId, {

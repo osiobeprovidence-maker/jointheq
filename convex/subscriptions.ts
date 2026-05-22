@@ -378,7 +378,8 @@ export const renewSlot = mutation({
         await ctx.db.patch(slot._id, {
             renewal_date: nextRenewal.toISOString(),
             status: "filled",
-            auto_renew: true
+            auto_renew: true,
+            removal_scheduled_at: undefined,
         });
 
         await createNotification(ctx, {
@@ -1082,6 +1083,44 @@ export const reorderMarketplaceListing = mutation({
         }
 
         return { success: true, moved: true };
+    }
+});
+
+/** Keep every listing for one subscription together at the top of the marketplace. */
+export const moveMarketplaceServiceToTop = mutation({
+    args: {
+        adminId: v.id("users"),
+        serviceName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const serviceName = args.serviceName.trim().toLowerCase();
+        if (!serviceName) throw new Error("Enter a subscription name");
+
+        const listings = sortMarketplaceListings(await ctx.db.query("marketplace").collect());
+        const serviceListings = listings.filter(
+            (listing) => listing.platform_name.toLowerCase().includes(serviceName)
+        );
+
+        if (serviceListings.length === 0) {
+            throw new Error("Marketplace service listings not found");
+        }
+
+        const serviceListingIds = new Set(serviceListings.map((listing) => listing._id));
+        const otherListings = listings.filter((listing) => !serviceListingIds.has(listing._id));
+        const nextOrder = [...serviceListings, ...otherListings];
+        const updatedAt = Date.now();
+
+        for (const [index, listing] of nextOrder.entries()) {
+            await ctx.db.patch(listing._id, {
+                display_order: index,
+                updated_at: updatedAt,
+            });
+        }
+
+        return { success: true, movedListings: serviceListings.length };
     }
 });
 

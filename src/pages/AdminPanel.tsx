@@ -338,6 +338,7 @@ export default function AdminPanel() {
     const [overridePaymentStatus, setOverridePaymentStatus] = useState("filled");
     const [overrideReason, setOverrideReason] = useState("");
     const [overrideAmount, setOverrideAmount] = useState("");
+    const [marketplaceServiceSearch, setMarketplaceServiceSearch] = useState("");
     const [supportContacts, setSupportContacts] = useState<SupportContact[]>([
         { name: "Support 1", label: "General Support", phone: "" },
         { name: "Support 2", label: "Payments Help", phone: "" },
@@ -358,6 +359,7 @@ export default function AdminPanel() {
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
     const adminUpdateFullListingMut = useMutation(api.subscriptions.adminUpdateFullListing);
     const reorderMarketplaceListingMut = useMutation(api.subscriptions.reorderMarketplaceListing);
+    const moveMarketplaceServiceToTopMut = useMutation(api.subscriptions.moveMarketplaceServiceToTop);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
     const restoreCanceledSubscriptionMut = useMutation(api.admin.restoreCanceledSubscription);
 
@@ -371,6 +373,7 @@ export default function AdminPanel() {
 
     const adminSendNotification = useMutation(api.admin.adminSendNotification);
     const approveLeaveRequest = useMutation(api.admin.approveLeaveRequest);
+    const keepOverdueSubscriptionActiveMut = useMutation(api.admin.keepOverdueSubscriptionActive);
     const createCampaignMut = useMutation(api.campaigns.create);
     const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
     const editCampaignMut = useMutation(api.campaigns.editCampaign);
@@ -780,6 +783,22 @@ export default function AdminPanel() {
         }
     };
 
+    const handleMoveMarketplaceServiceToTop = async (serviceName: string) => {
+        if (!currentUser?._id) return;
+        const normalizedServiceName = serviceName.trim();
+        if (!normalizedServiceName) return toast.error("Enter a subscription name");
+
+        try {
+            const result = await moveMarketplaceServiceToTopMut({
+                adminId: currentUser._id,
+                serviceName: normalizedServiceName,
+            });
+            toast.success(`${normalizedServiceName} listings moved to the top (${result.movedListings})`);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to group marketplace listings");
+        }
+    };
+
     const handleSendNotification = async () => {
         if (!notifForm.title || !notifForm.message) return toast.error("Title and message are required");
         setIsSendingNotif(true);
@@ -818,6 +837,18 @@ export default function AdminPanel() {
             await approveLeaveRequest({ id, type, adminId: currentUser!._id });
             toast.success("Leave request approved");
         } catch (e: any) { toast.error(e.message); }
+    };
+
+    const handleKeepOverdueSubscriptionActive = async (slotId: Id<"subscription_slots">) => {
+        if (!currentUser?._id) return;
+        if (!confirm("Keep this renewed subscription active and remove it from due review?")) return;
+
+        try {
+            await keepOverdueSubscriptionActiveMut({ slotId, adminId: currentUser._id });
+            toast.success("Subscription kept active");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to keep subscription active");
+        }
     };
 
     const handleRejectLeave = async (id: Id<"subscription_slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
@@ -1774,6 +1805,66 @@ export default function AdminPanel() {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
+                                        <div className="flex flex-col gap-3 rounded-3xl border border-black/5 bg-white p-4">
+                                            <div>
+                                                <div className="text-sm font-black text-zinc-900">Quick arrange</div>
+                                                <div className="text-xs text-gray-400">Search a name like Netflix or CapCut to move matching listings together.</div>
+                                            </div>
+                                            <form
+                                                className="flex flex-col gap-2 sm:flex-row"
+                                                onSubmit={(event) => {
+                                                    event.preventDefault();
+                                                    handleMoveMarketplaceServiceToTop(marketplaceServiceSearch);
+                                                }}
+                                            >
+                                                <label className="relative min-w-0 flex-1">
+                                                    <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                    <input
+                                                        value={marketplaceServiceSearch}
+                                                        onChange={(event) => setMarketplaceServiceSearch(event.target.value)}
+                                                        placeholder="Netflix, CapCut, Spotify..."
+                                                        className="h-11 w-full rounded-2xl border border-black/5 bg-zinc-50 pl-9 pr-3 text-sm font-bold outline-none transition focus:border-zinc-900 focus:bg-white"
+                                                    />
+                                                </label>
+                                                <button
+                                                    type="submit"
+                                                    className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 text-sm font-black text-white transition hover:bg-black"
+                                                >
+                                                    <Layers size={15} />
+                                                    Move Matches To Top
+                                                </button>
+                                            </form>
+                                            <div className="flex flex-wrap gap-2">
+                                                {Array.from(
+                                                    (allSubscriptions as any[]).reduce((services, listing) => {
+                                                        if (!listing.subscription_catalog_id || services.has(listing.subscription_catalog_id)) {
+                                                            const service = services.get(listing.subscription_catalog_id);
+                                                            if (service) service.count += 1;
+                                                            return services;
+                                                        }
+
+                                                        services.set(listing.subscription_catalog_id, {
+                                                            name: listing.subscription_name || "Unknown",
+                                                            count: 1,
+                                                        });
+                                                        return services;
+                                                    }, new Map<string, { name: string; count: number }>())
+                                                ).map(([serviceId, service]: [string, { name: string; count: number }]) => (
+                                                    <button
+                                                        key={serviceId}
+                                                        type="button"
+                                                        onClick={() => handleMoveMarketplaceServiceToTop(service.name)}
+                                                        title={`Move matching ${service.name} listings to the top`}
+                                                        className="flex items-center gap-2 rounded-xl border border-black/5 bg-zinc-50 px-3 py-2 text-xs font-black text-zinc-800 transition hover:border-zinc-900 hover:bg-zinc-900 hover:text-white"
+                                                    >
+                                                        <Layers size={14} />
+                                                        <span>{service.name}</span>
+                                                        <span className="rounded-md bg-white/80 px-1.5 py-0.5 text-[10px] text-zinc-500">{service.count}</span>
+                                                        <ArrowUp size={13} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                         {(allSubscriptions as any[]).map((group: any, index: number) => {
                                             const isExpanded = expandedGroup === group._id;
                                             const members = Array.isArray(group.members) ? group.members : [];
@@ -3913,6 +4004,15 @@ export default function AdminPanel() {
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">
+                                                        {req.is_automatic_overdue_leave_request && (
+                                                            <button
+                                                                onClick={() => handleKeepOverdueSubscriptionActive(req._id)}
+                                                                className="px-6 py-3.5 bg-emerald-600 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-emerald-600/15"
+                                                            >
+                                                                <RefreshCw size={16} />
+                                                                Keep Active
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleApproveLeave(req._id, "slot")}
                                                             className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
