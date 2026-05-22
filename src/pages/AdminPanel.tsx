@@ -1286,27 +1286,6 @@ export default function AdminPanel() {
                     {renderNavSections()}
                 </nav>
 
-                {/* Admin Profile + Mode Switch */}
-                <div className="p-4 border-t border-white/5 space-y-2">
-                    <div className="flex items-center gap-3 px-2 py-2">
-                        <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            {currentUser?.full_name?.[0]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold truncate">{currentUser?.full_name}</div>
-                            <div className="text-[10px] text-white/40 capitalize">{currentUser?.admin_role || "Super Admin"}</div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => navigate("/dashboard")}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-xs font-bold transition-all"
-                    >
-                        <ArrowLeft size={14} /> Switch to User Mode
-                    </button>
-                    <div className="pt-2 text-[10px] text-white/20 font-bold uppercase text-center tracking-widest">
-                        Terminal v2.4.0
-                    </div>
-                </div>
             </aside>
 
             {/* Profile Drawer Overlay (Right Side) */}
@@ -1437,17 +1416,6 @@ export default function AdminPanel() {
                                 {renderNavSections(true)}
                             </nav>
 
-                            <div className="pt-3 border-t border-white/10 mt-3">
-                                <div className="flex items-center gap-3 px-2 py-2">
-                                    <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                                        {currentUser?.full_name?.[0]}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-xs font-bold truncate">{currentUser?.full_name}</div>
-                                        <div className="text-[10px] text-white/40 capitalize">{currentUser?.admin_role || "Super Admin"}</div>
-                                    </div>
-                                </div>
-                            </div>
                         </motion.aside>
                     </>
                 )}

@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from "react";
 import {
-  ArrowLeft,
   Bell,
   CreditCard,
   GraduationCap,
@@ -8,7 +7,6 @@ import {
   Layers,
   LayoutDashboard,
   ListTodo,
-  LogOut,
   Megaphone,
   Menu,
   Shield,
@@ -21,7 +19,6 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../../lib/auth";
 
 export type AdminMenuKey =
   | "dashboard"
@@ -74,24 +71,22 @@ const menuItems: MenuItem[] = [
   { id: "campaigns", label: "Campaigns", sub: "Growth & Commissions", path: "/admin?tab=campaigns", icon: <Megaphone size={18} /> },
   { id: "campus", label: "Campus Q", sub: "Campus Rep Program", path: "/admin?tab=campus", icon: <GraduationCap size={18} /> },
   { id: "notifications", label: "Notifications", sub: "Push Updates", path: "/admin?tab=notifications", icon: <Bell size={18} /> },
-  { id: "migrations", label: "Migrations", sub: "Legacy Imports", path: "/admin/migrations", icon: <ArrowLeft size={18} /> },
-  { id: "enhanced", label: "Enhanced Admin", sub: "Advanced Operations", path: "/admin/enhanced", icon: <ShieldCheck size={18} /> },
 ];
 
 const menuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Overview", items: ["dashboard"] },
-  { label: "Subscriptions", items: ["marketplace", "subscriptions", "leave_requests", "migrations"] },
+  { label: "Subscriptions", items: ["marketplace", "subscriptions", "leave_requests"] },
   { label: "Finance", items: ["payments", "review_payments"] },
   { label: "Reviews", items: ["user_listings", "quests"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins"] },
-  { label: "Engagement", items: ["campaigns", "campus", "notifications", "enhanced"] },
+  { label: "Engagement", items: ["campaigns", "campus", "notifications"] },
 ];
 
 const menuItemById = new Map(menuItems.map((item) => [item.id, item]));
 
 export function AdminShell({ activeItem, children, currentUser: suppliedUser, subtitle, title }: AdminShellProps) {
   const navigate = useNavigate();
-  const currentUser = suppliedUser || auth.getCurrentUser();
+  const currentUser = suppliedUser;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigateTo = (path: string) => {
@@ -158,27 +153,6 @@ export function AdminShell({ activeItem, children, currentUser: suppliedUser, su
           </div>
         </div>
         {menu()}
-        <div className="space-y-2 border-t border-white/5 p-4">
-          <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 text-white">{avatar}</div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-bold">{currentUser?.full_name || currentUser?.username || "Admin"}</div>
-              <div className="truncate text-[10px] capitalize text-white/40">{currentUser?.admin_role || "Admin"}</div>
-            </div>
-          </div>
-          <button type="button" onClick={() => navigate("/dashboard")} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/5 py-3 text-xs font-bold transition hover:bg-white/10">
-            <ArrowLeft size={14} /> Switch to User Mode
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm("Logout now?")) auth.logout();
-            }}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl py-2 text-xs font-bold text-white/45 transition hover:bg-red-500/10 hover:text-red-200"
-          >
-            <LogOut size={14} /> Logout
-          </button>
-        </div>
       </aside>
 
       <header className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between bg-zinc-950 px-4 text-white shadow-lg md:hidden">
