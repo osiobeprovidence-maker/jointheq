@@ -23,7 +23,7 @@ import { useNavigate } from "react-router-dom";
 export type AdminMenuKey =
   | "dashboard"
   | "marketplace"
-  | "subscriptions"
+  | "subscription_manager"
   | "leave_requests"
   | "payments"
   | "review_payments"
@@ -47,7 +47,7 @@ type AdminShellProps = {
   title: string;
 };
 
-type MenuItem = {
+export type AdminMenuItem = {
   id: AdminMenuKey;
   label: string;
   path: string;
@@ -55,10 +55,10 @@ type MenuItem = {
   icon: ReactNode;
 };
 
-const menuItems: MenuItem[] = [
+export const adminMenuItems: AdminMenuItem[] = [
   { id: "dashboard", label: "Dashboard", sub: "Platform Command Center", path: "/admin?tab=dashboard", icon: <LayoutDashboard size={18} /> },
   { id: "marketplace", label: "Marketplace", sub: "Subscription Inventory", path: "/admin?tab=marketplace", icon: <ShoppingBag size={18} /> },
-  { id: "subscriptions", label: "Subscription Manager", sub: "Slot Assignments", path: "/admin/subscriptions", icon: <Layers size={18} /> },
+  { id: "subscription_manager", label: "Subscription Manager", sub: "Slot Assignments", path: "/admin/subscriptions", icon: <Layers size={18} /> },
   { id: "leave_requests", label: "Leave Requests", sub: "Cancellations", path: "/admin?tab=leave_requests", icon: <UserMinus size={18} /> },
   { id: "payments", label: "Payments", sub: "Transaction History", path: "/admin?tab=payments", icon: <CreditCard size={18} /> },
   { id: "review_payments", label: "Payments Review", sub: "Finance Operations", path: "/admin/payments", icon: <Wallet size={18} /> },
@@ -73,16 +73,16 @@ const menuItems: MenuItem[] = [
   { id: "notifications", label: "Notifications", sub: "Push Updates", path: "/admin?tab=notifications", icon: <Bell size={18} /> },
 ];
 
-const menuSections: { label: string; items: AdminMenuKey[] }[] = [
+export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Overview", items: ["dashboard"] },
-  { label: "Subscriptions", items: ["marketplace", "subscriptions", "leave_requests"] },
+  { label: "Subscriptions", items: ["marketplace", "subscription_manager", "leave_requests"] },
   { label: "Finance", items: ["payments", "review_payments"] },
   { label: "Reviews", items: ["user_listings", "quests"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins"] },
   { label: "Engagement", items: ["campaigns", "campus", "notifications"] },
 ];
 
-const menuItemById = new Map(menuItems.map((item) => [item.id, item]));
+const menuItemById = new Map(adminMenuItems.map((item) => [item.id, item]));
 
 export function AdminShell({ activeItem, children, currentUser: suppliedUser, subtitle, title }: AdminShellProps) {
   const navigate = useNavigate();
@@ -95,10 +95,10 @@ export function AdminShell({ activeItem, children, currentUser: suppliedUser, su
   };
 
   const menu = (mobile = false) => (
-    <nav className="flex-1 space-y-3 overflow-y-auto p-4">
-      {menuSections.map((section) => (
-        <div key={section.label} className="space-y-1.5">
-          <div className="px-3 pt-2 text-[9px] font-black uppercase tracking-widest text-white/30">{section.label}</div>
+    <nav className="flex-1 space-y-2 overflow-y-auto p-3">
+      {adminMenuSections.map((section) => (
+        <div key={section.label} className="space-y-1">
+          <div className="px-3 pt-1.5 text-[9px] font-black uppercase tracking-widest text-white/30">{section.label}</div>
           {section.items.map((itemId) => {
             const item = menuItemById.get(itemId);
             if (!item) return null;
@@ -109,7 +109,7 @@ export function AdminShell({ activeItem, children, currentUser: suppliedUser, su
                 key={item.id}
                 type="button"
                 onClick={() => navigateTo(item.path)}
-                className={`group w-full rounded-2xl px-3 py-2.5 text-left transition-all ${
+                className={`group w-full rounded-2xl px-3 py-2 text-left transition-all ${
                   active
                     ? "bg-white text-zinc-900 shadow-lg shadow-black/15"
                     : mobile
@@ -118,11 +118,11 @@ export function AdminShell({ activeItem, children, currentUser: suppliedUser, su
                 }`}
               >
                 <span className="flex items-center gap-3">
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${active ? "bg-zinc-100" : "bg-white/5 group-hover:bg-white/10"}`}>
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? "bg-zinc-100" : "bg-white/5 group-hover:bg-white/10"}`}>
                     {item.icon}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">{item.label}</span>
+                    <span className="block truncate text-[13px] font-bold">{item.label}</span>
                     {active && item.sub ? <span className="block truncate text-[10px] font-bold text-zinc-400">{item.sub}</span> : null}
                   </span>
                 </span>

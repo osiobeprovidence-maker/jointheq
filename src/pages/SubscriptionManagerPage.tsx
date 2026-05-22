@@ -312,7 +312,7 @@ export default function SubscriptionManagerPage() {
   };
 
   return (
-    <AdminShell activeItem="subscriptions" currentUser={currentUser} title="Subscription Manager" subtitle="Slot Assignments">
+    <AdminShell activeItem="subscription_manager" currentUser={currentUser} title="Subscription Manager" subtitle="Slot Assignments">
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -76,6 +76,7 @@ import { auth } from "../lib/auth";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
+import { adminMenuItems, adminMenuSections } from "../components/admin/AdminShell";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -1168,31 +1169,8 @@ export default function AdminPanel() {
         );
     }
 
-    const navItems: { id: AdminTab; label: string; icon: React.ReactNode; sub?: string }[] = [
-        { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} />, sub: "Platform Command Center" },
-        { id: "users", label: "Users", icon: <Users size={18} />, sub: "User Management & Audit" },
-        { id: "marketplace", label: "Marketplace", icon: <ShoppingBag size={18} />, sub: "Subscription Inventory" },
-        { id: "subscription_manager", label: "Subscription Manager", icon: <Layers size={18} />, sub: "Slot Assignments" },
-        { id: "payments", label: "Payments", icon: <CreditCard size={18} />, sub: "Transaction History" },
-        { id: "campaigns", label: "Campaigns", icon: <Megaphone size={18} />, sub: "Growth & Commissions" },
-        { id: "quests", label: "Quest Approval", icon: <ListTodo size={18} />, sub: "Approve Quests & Proofs" },
-        { id: "security", label: "Security", icon: <ShieldCheck size={18} />, sub: "Fraud & Anti-Spam" },
-        { id: "support", label: "Support", icon: <HeadphonesIcon size={18} />, sub: "Customer Experience" },
-        { id: "admins", label: "Admins", icon: <Shield size={18} />, sub: "Workforce & Tasks" },
-        { id: "campus", label: "Campus Q", icon: <GraduationCap size={18} />, sub: "Campus Rep Program" },
-        { id: "review_payments", label: "Payments Review", icon: <Wallet size={18} />, sub: "FINANCE OPERATIONS" },
-        { id: "user_listings", label: "Listing Review", icon: <Layers size={18} />, sub: "CONTENT MODERATION" },
-        { id: "notifications", label: "Notifications", icon: <Bell size={18} />, sub: "Push Updates" },
-        { id: "leave_requests", label: "Leave Requests", icon: <UserMinus size={18} />, sub: "Cancellations" },
-    ];
-    const navSections: { label: string; items: AdminTab[] }[] = [
-        { label: "Overview", items: ["dashboard"] },
-        { label: "Subscriptions", items: ["marketplace", "subscription_manager", "leave_requests"] },
-        { label: "Finance", items: ["payments", "review_payments"] },
-        { label: "Reviews", items: ["user_listings", "quests"] },
-        { label: "People & Trust", items: ["users", "support", "security", "admins"] },
-        { label: "Engagement", items: ["campaigns", "campus", "notifications"] },
-    ];
+    const navItems = adminMenuItems as { id: AdminTab; label: string; icon: React.ReactNode; sub?: string }[];
+    const navSections = adminMenuSections as { label: string; items: AdminTab[] }[];
     const navItemById = new Map(navItems.map((item) => [item.id, item]));
     const openTicketsCount = allTickets.filter(t => t.status === "open").length;
     const openFraudFlagsCount = fraudFlags.filter((flag: any) => flag.status === "open").length;
@@ -1216,8 +1194,8 @@ export default function AdminPanel() {
     };
     const renderNavSections = (mobile = false) => (
         navSections.map((section) => (
-            <div key={section.label} className="space-y-1.5">
-                <div className="px-3 pt-2 text-[9px] font-black uppercase tracking-widest text-white/30">
+            <div key={section.label} className="space-y-1">
+                <div className="px-3 pt-1.5 text-[9px] font-black uppercase tracking-widest text-white/30">
                     {section.label}
                 </div>
                 {section.items.map((itemId) => {
@@ -1230,7 +1208,7 @@ export default function AdminPanel() {
                         <button
                             key={item.id}
                             onClick={() => selectNavItem(item)}
-                            className={`group w-full rounded-2xl px-3 py-2.5 text-left transition-all ${activeTab === item.id
+                            className={`group w-full rounded-2xl px-3 py-2 text-left transition-all ${activeTab === item.id
                                 ? "bg-white text-zinc-900 shadow-lg shadow-black/15"
                                 : mobile
                                     ? "text-white/75 hover:bg-white/10 hover:text-white"
@@ -1238,11 +1216,11 @@ export default function AdminPanel() {
                                 }`}
                         >
                             <span className="flex items-center gap-3">
-                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${activeTab === item.id ? "bg-zinc-100" : "bg-white/5 group-hover:bg-white/10"}`}>
+                                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${activeTab === item.id ? "bg-zinc-100" : "bg-white/5 group-hover:bg-white/10"}`}>
                                     {item.icon}
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-sm font-bold">{item.label}</span>
+                                    <span className="block truncate text-[13px] font-bold">{item.label}</span>
                                     {activeTab === item.id && item.sub && (
                                         <span className="block truncate text-[10px] font-bold text-zinc-400">{item.sub}</span>
                                     )}
@@ -1282,7 +1260,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Nav */}
-                <nav className="flex-1 space-y-3 overflow-y-auto p-4">
+                <nav className="flex-1 space-y-2 overflow-y-auto p-3">
                     {renderNavSections()}
                 </nav>
 
@@ -1412,7 +1390,7 @@ export default function AdminPanel() {
                                 <div className="text-[10px] text-white/50 uppercase tracking-widest">Navigation</div>
                                 <div className="text-sm font-black mt-1">Admin Control</div>
                             </div>
-                            <nav className="flex-1 space-y-3 overflow-y-auto">
+                            <nav className="flex-1 space-y-2 overflow-y-auto">
                                 {renderNavSections(true)}
                             </nav>
 
