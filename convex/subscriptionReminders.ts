@@ -25,7 +25,7 @@ const DEFAULT_TEMPLATES: ReminderTemplate[] = [
         message: "Hi {{name}},\nYour subscription on Q is expiring in 10 days.\n\nRenew now to avoid interruption and keep enjoying all your active subscriptions without stress.",
         cta_text: "Renew Now",
         cta_url: RENEWAL_URL,
-        channels: ["in_app", "push", "email", "whatsapp"],
+        channels: ["in_app", "push", "email", "whatsapp", "telegram"],
     },
     {
         key: "5_days",
@@ -33,15 +33,15 @@ const DEFAULT_TEMPLATES: ReminderTemplate[] = [
         message: "Hey {{name}},\nYour Q subscription will expire in 5 days.\n\nTo avoid losing access to your shared subscriptions and benefits, renew before the due date.",
         cta_text: "Renew Now",
         cta_url: RENEWAL_URL,
-        channels: ["in_app", "push", "email", "whatsapp"],
+        channels: ["in_app", "push", "email", "whatsapp", "telegram"],
     },
     {
         key: "due",
         title: "SUBSCRIPTION DUE",
-        message: "Hi {{name}},\nYour Q subscription is now due.\n\nYour account may be restricted soon if payment is not completed.\n\nAccounts unpaid after 3 days will be automatically cancelled.",
+        message: "Hi {{name}},\nYour Q subscription is now due.\n\nPlease renew now to keep your subscription active. If payment is still not confirmed after the grace period, admins will review it before any removal happens.",
         cta_text: "Pay Now",
         cta_url: RENEWAL_URL,
-        channels: ["in_app", "push", "email", "whatsapp"],
+        channels: ["in_app", "push", "email", "whatsapp", "telegram"],
     },
     {
         key: "overdue",
@@ -49,13 +49,15 @@ const DEFAULT_TEMPLATES: ReminderTemplate[] = [
         message: "Your Q subscription payment is overdue.\n\nPlease renew immediately to avoid account cancellation.",
         cta_text: "Renew Now",
         cta_url: RENEWAL_URL,
-        channels: ["in_app", "push", "email", "whatsapp"],
+        channels: ["in_app", "push", "email", "whatsapp", "telegram"],
     },
     {
         key: "cancelled",
-        title: "SUBSCRIPTION CANCELLED",
-        message: "Your subscription has been cancelled due to non-payment.\n\nTo restore access, please subscribe again on Q.",
-        channels: ["in_app", "push", "email", "whatsapp"],
+        title: "SUBSCRIPTION NEEDS REVIEW",
+        message: "Your subscription is overdue and has been sent to Q admins for review.\n\nYou have not been removed automatically. Please renew now or contact support if you already paid.",
+        cta_text: "Renew Now",
+        cta_url: RENEWAL_URL,
+        channels: ["in_app", "push", "email", "whatsapp", "telegram"],
     },
 ];
 
@@ -90,6 +92,24 @@ const ensureDefaultTemplates = async (ctx: any) => {
             .first();
 
         if (existing) {
+            const shouldRefreshDefaultCopy =
+                (template.key === "due" && existing.message.includes("automatically cancelled")) ||
+                (template.key === "cancelled" && existing.message.includes("cancelled due to non-payment"));
+            const shouldAddTelegram = !existing.channels.includes("telegram");
+
+            if (shouldRefreshDefaultCopy || shouldAddTelegram) {
+                await ctx.db.patch(existing._id, {
+                    title: shouldRefreshDefaultCopy ? template.title : existing.title,
+                    message: shouldRefreshDefaultCopy ? template.message : existing.message,
+                    cta_text: shouldRefreshDefaultCopy ? template.cta_text : existing.cta_text,
+                    cta_url: shouldRefreshDefaultCopy ? template.cta_url : existing.cta_url,
+                    channels: [...new Set([...existing.channels, "telegram"])],
+                    updated_at: Date.now(),
+                });
+                templates.set(template.key, (await ctx.db.get(existing._id))!);
+                continue;
+            }
+
             templates.set(template.key, existing);
             continue;
         }
@@ -143,6 +163,7 @@ const sendReminder = async (
         push: "queued",
         email: "pending",
         whatsapp: "pending",
+        telegram: "pending",
     };
 
     const notificationId = await createNotification(ctx, {
@@ -202,29 +223,18 @@ const sendReminder = async (
         });
     }
 
+    if (template.channels.includes("telegram")) {
+        await ctx.scheduler.runAfter(0, internal.subscriptionReminderActions.sendReminderTelegram, {
+            logId,
+            chatId: user.telegram_chat_id,
+            title,
+            message,
+            ctaText: template.cta_text,
+            ctaUrl: template.cta_url,
+        });
+    }
+
     return logId;
-};
-
-const updateMarketplaceCounts = async (ctx: any, slot: Doc<"subscription_slots">) => {
-    if (!slot.group_id) return;
-    const group = await ctx.db.get(slot.group_id);
-    if (!group?.account_email || !group.subscription_catalog_id) return;
-
-    const marketplace = await ctx.db
-        .query("marketplace")
-        .withIndex("by_account_email", (q: any) => q.eq("account_email", group.account_email))
-        .filter((q: any) => q.eq(q.field("subscription_catalog_id"), group.subscription_catalog_id))
-        .first();
-
-    if (!marketplace) return;
-
-    const filled = Math.max(0, (marketplace.filled_slots || 0) - 1);
-    const total = marketplace.total_slots || 0;
-    await ctx.db.patch(marketplace._id, {
-        filled_slots: filled,
-        available_slots: Math.max(0, total - filled),
-        updated_at: Date.now(),
-    });
 };
 
 export const processDailySubscriptionReminders = internalMutation({
@@ -239,7 +249,7 @@ export const processDailySubscriptionReminders = internalMutation({
             .collect();
 
         let sent = 0;
-        let cancelled = 0;
+        let reviewRequests = 0;
         let skipped = 0;
 
         for (const slot of slots) {
@@ -284,37 +294,16 @@ export const processDailySubscriptionReminders = internalMutation({
             sent += 1;
 
             if (eventKey === "cancelled") {
-                const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
-                const subscription = slotType?.subscription_id ? await ctx.db.get(slotType.subscription_id as any) : null;
-
-                await ctx.db.insert("canceled_subscriptions", {
-                    user_id: slot.user_id,
-                    user_name: user.full_name || user.username || "Unknown",
-                    user_email: user.email || "",
-                    source_type: "slot",
-                    source_id: String(slot._id),
-                    subscription_name: (subscription as any)?.name || "Subscription",
-                    slot_name: slotType?.name || slot.profile_name || "Slot",
-                    price: slotType?.price || 0,
-                    renewal_date: slot.renewal_date,
-                    reason: "Automatically canceled after overdue renewal window",
-                    canceled_at: Date.now(),
-                    created_at: Date.now(),
-                });
-
                 await ctx.db.patch(slot._id, {
-                    user_id: undefined,
-                    status: "open",
-                    renewal_date: undefined,
+                    status: "closing",
                     auto_renew: false,
-                    removal_scheduled_at: undefined,
+                    removal_scheduled_at: Date.now(),
                 });
-                await updateMarketplaceCounts(ctx, slot);
-                cancelled += 1;
+                reviewRequests += 1;
             }
         }
 
-        return { success: true, sent, cancelled, skipped, checked: slots.length };
+        return { success: true, sent, reviewRequests, skipped, checked: slots.length };
     },
 });
 

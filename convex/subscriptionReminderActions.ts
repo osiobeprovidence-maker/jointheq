@@ -151,3 +151,57 @@ export const sendReminderWhatsApp = internalAction({
         return { success: response.ok, status: response.status };
     },
 });
+
+export const sendReminderTelegram = internalAction({
+    args: {
+        logId: v.id("subscription_notification_logs"),
+        chatId: v.optional(v.string()),
+        title: v.string(),
+        message: v.string(),
+        ctaText: v.optional(v.string()),
+        ctaUrl: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        if (!args.chatId) {
+            await ctx.runMutation(internal.subscriptionReminders.markChannelDelivery, {
+                logId: args.logId,
+                channel: "telegram",
+                status: "skipped",
+                reason: "missing_chat_id",
+            });
+            return { success: false, reason: "missing_chat_id" };
+        }
+
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (!token) {
+            await ctx.runMutation(internal.subscriptionReminders.markChannelDelivery, {
+                logId: args.logId,
+                channel: "telegram",
+                status: "skipped",
+                reason: "missing_bot_token",
+            });
+            return { success: false, reason: "missing_bot_token" };
+        }
+
+        const body = `${args.title}\n\n${args.message}${args.ctaText && args.ctaUrl ? `\n\n${args.ctaText}: ${args.ctaUrl}` : ""}`;
+        const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                chat_id: args.chatId,
+                text: body,
+            }),
+        });
+
+        await ctx.runMutation(internal.subscriptionReminders.markChannelDelivery, {
+            logId: args.logId,
+            channel: "telegram",
+            status: response.ok ? "sent" : "failed",
+            reason: response.ok ? undefined : String(response.status),
+        });
+
+        return { success: response.ok, status: response.status };
+    },
+});

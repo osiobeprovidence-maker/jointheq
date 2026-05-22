@@ -6,6 +6,7 @@ export default defineSchema({
     users: defineTable({
         email: v.string(),
         phone: v.optional(v.string()),
+        telegram_chat_id: v.optional(v.string()),
         full_name: v.string(),
         username: v.optional(v.string()),
         qic: v.optional(v.string()),
@@ -156,6 +157,8 @@ export default defineSchema({
         reason: v.optional(v.string()),
         canceled_by: v.optional(v.id("users")),
         canceled_at: v.number(),
+        restored_by: v.optional(v.id("users")),
+        restored_at: v.optional(v.number()),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_source", ["source_type", "source_id"])
@@ -632,6 +635,7 @@ export default defineSchema({
         category: v.optional(v.string()),
         admin_note: v.optional(v.string()),
         request_id: v.optional(v.string()), // For idempotency
+        display_order: v.optional(v.number()),
 
         // Timestamps
         created_at: v.number(),

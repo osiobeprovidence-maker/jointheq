@@ -32,6 +32,33 @@ const isLiveMarketplaceStatus = (status?: string) => status === "active";
 const normalizeMarketplacePlatformName = (name?: string) =>
     (name || "").trim().replace(/\s+/g, " ").toLowerCase();
 
+const addDays = (date: Date, days: number) =>
+    new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+
+const updateMarketplaceCountsForSlot = async (ctx: any, slot: any, delta: number) => {
+    if (!slot.group_id) return;
+
+    const group = await ctx.db.get(slot.group_id);
+    if (!group?.account_email || !group.subscription_catalog_id) return;
+
+    const marketplace = await ctx.db
+        .query("marketplace")
+        .withIndex("by_account_email", (q: any) => q.eq("account_email", group.account_email))
+        .filter((q: any) => q.eq(q.field("subscription_catalog_id"), group.subscription_catalog_id))
+        .first();
+
+    if (!marketplace) return;
+
+    const total = marketplace.total_slots || 0;
+    const filled = Math.max(0, Math.min(total, (marketplace.filled_slots || 0) + delta));
+
+    await ctx.db.patch(marketplace._id, {
+        filled_slots: filled,
+        available_slots: Math.max(0, total - filled),
+        updated_at: Date.now(),
+    });
+};
+
 // ─── Platform Overview ───────────────────────────────────────────────────────
 
 export const getPlatformStats = query({
@@ -450,6 +477,37 @@ export const adminSendNotification = mutation({
     }
 });
 
+const enrichCanceledSubscriptions = async (ctx: any, records: any[]) => {
+    return await Promise.all(records.map(async (record) => {
+        if (record.source_type !== "slot") {
+            return {
+                ...record,
+                restore_available: false,
+                restore_blocked_reason: record.restored_at ? "Already restored" : "Legacy cancellations must be recreated manually",
+            };
+        }
+
+        const slotId = ctx.db.normalizeId("subscription_slots", record.source_id);
+        const slot = slotId ? await ctx.db.get(slotId) : null;
+        const restoreAvailable = Boolean(!record.restored_at && slot && !slot.user_id && slot.status === "open");
+
+        return {
+            ...record,
+            current_slot_status: slot?.status,
+            restore_available: restoreAvailable,
+            restore_blocked_reason: record.restored_at
+                ? "Already restored"
+                : !slot
+                    ? "Original slot no longer exists"
+                    : slot.user_id
+                        ? "Original slot has already been filled"
+                        : slot.status !== "open"
+                            ? `Original slot is ${slot.status}`
+                            : undefined,
+        };
+    }));
+};
+
 export const getPendingLeaveRequests = query({
     handler: async (ctx) => {
         const slots = await ctx.db.query("subscription_slots")
@@ -475,6 +533,11 @@ export const getPendingLeaveRequests = query({
                 sub_name: (subscription as any)?.name || group?.subscription_catalog_id ? "Subscription" : "Unknown",
                 renewal_date: slot.renewal_date,
                 price: slotType?.price || 0,
+                is_automatic_overdue_leave_request: Boolean(slot.removal_scheduled_at),
+                leave_reason: slot.removal_scheduled_at
+                    ? "Subscription overdue - admin review required before removal"
+                    : "User requested to leave",
+                requested_at: slot.removal_scheduled_at,
             };
         }));
 
@@ -490,11 +553,12 @@ export const getPendingLeaveRequests = query({
             };
         }));
 
-        const canceled = await ctx.db
+        const canceledRecords = await ctx.db
             .query("canceled_subscriptions")
             .withIndex("by_canceled_at")
             .order("desc")
             .take(100);
+        const canceled = await enrichCanceledSubscriptions(ctx, canceledRecords);
 
         return { slots: enrichedSlots, migrations: enrichedMigrations, canceled };
     }
@@ -502,11 +566,13 @@ export const getPendingLeaveRequests = query({
 
 export const getCanceledSubscriptions = query({
     handler: async (ctx) => {
-        return await ctx.db
+        const records = await ctx.db
             .query("canceled_subscriptions")
             .withIndex("by_canceled_at")
             .order("desc")
             .take(100);
+
+        return await enrichCanceledSubscriptions(ctx, records);
     }
 });
 
@@ -531,7 +597,9 @@ export const approveLeaveRequest = mutation({
                     slot_name: slotType?.name || slot.profile_name || "Slot",
                     price: slotType?.price || 0,
                     renewal_date: slot.renewal_date,
-                    reason: "Leave request approved by admin",
+                    reason: slot.removal_scheduled_at
+                        ? "Automatic overdue leave request approved by admin"
+                        : "Leave request approved by admin",
                     canceled_by: args.adminId,
                     canceled_at: Date.now(),
                     created_at: Date.now(),
@@ -571,6 +639,65 @@ export const approveLeaveRequest = mutation({
 });
 
 // ─── User Management Enhancements ───────────────────────────────────────────
+
+export const restoreCanceledSubscription = mutation({
+    args: {
+        canceledId: v.id("canceled_subscriptions"),
+        adminId: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const record = await ctx.db.get(args.canceledId);
+        if (!record) throw new Error("Cancellation record not found");
+        if (record.restored_at) throw new Error("This subscription has already been added back");
+        if (record.source_type !== "slot") {
+            throw new Error("Only marketplace slot cancellations can be added back automatically");
+        }
+        if (!record.user_id) throw new Error("This cancellation record has no user to restore");
+
+        const user = await ctx.db.get(record.user_id);
+        if (!user) throw new Error("User no longer exists");
+
+        const slotId = ctx.db.normalizeId("subscription_slots", record.source_id);
+        if (!slotId) throw new Error("Original slot ID is invalid");
+
+        const slot = await ctx.db.get(slotId);
+        if (!slot) throw new Error("Original slot no longer exists");
+        if (slot.user_id || slot.status !== "open") {
+            throw new Error("Original slot is no longer available");
+        }
+
+        const recordedRenewal = record.renewal_date ? new Date(record.renewal_date) : null;
+        const baseDate = recordedRenewal && recordedRenewal.getTime() > Date.now() ? recordedRenewal : new Date();
+        const nextRenewal = addDays(baseDate, 30).toISOString();
+
+        await ctx.db.patch(slotId, {
+            user_id: record.user_id,
+            status: "filled",
+            renewal_date: nextRenewal,
+            auto_renew: true,
+            removal_scheduled_at: undefined,
+        });
+
+        await ctx.db.patch(record._id, {
+            restored_by: args.adminId,
+            restored_at: Date.now(),
+        });
+
+        await updateMarketplaceCountsForSlot(ctx, slot, 1);
+
+        await createNotification(ctx, {
+            userId: record.user_id,
+            title: "Subscription restored",
+            message: `Admin has added you back to ${record.subscription_name || "your subscription"}. Your next renewal is ${new Date(nextRenewal).toLocaleDateString()}.`,
+            type: "subscription",
+        });
+
+        return { success: true, nextRenewal };
+    }
+});
 
 export const adjustUserBalance = mutation({
     args: {

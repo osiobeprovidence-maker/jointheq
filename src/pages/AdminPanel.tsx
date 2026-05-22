@@ -39,6 +39,8 @@ import {
     Eye,
     ChevronDown,
     ArrowDownCircle,
+    ArrowDown,
+    ArrowUp,
     Users2,
     AlertTriangle,
     AlertCircle,
@@ -355,7 +357,9 @@ export default function AdminPanel() {
     const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
     const adminUpdateFullListingMut = useMutation(api.subscriptions.adminUpdateFullListing);
+    const reorderMarketplaceListingMut = useMutation(api.subscriptions.reorderMarketplaceListing);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
+    const restoreCanceledSubscriptionMut = useMutation(api.admin.restoreCanceledSubscription);
 
     // God Mode Mutations (Enhanced Admin)
     const assignUserToSlot = useMutation(api.adminEnhanced.adminAssignUserToSlot);
@@ -435,7 +439,7 @@ export default function AdminPanel() {
                         message: template.message || "",
                         cta_text: template.cta_text || "",
                         cta_url: template.cta_url || "",
-                        channels: template.channels || ["in_app", "push", "email", "whatsapp"],
+                        channels: template.channels || ["in_app", "push", "email", "whatsapp", "telegram"],
                     };
                 }
             }
@@ -761,6 +765,21 @@ export default function AdminPanel() {
         }
     };
 
+    const handleMoveMarketplaceListing = async (listingId: Id<"marketplace">, direction: "up" | "down") => {
+        if (!currentUser?._id) return;
+
+        try {
+            await reorderMarketplaceListingMut({
+                adminId: currentUser._id,
+                listingId,
+                direction,
+            });
+            toast.success("Marketplace order updated");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to update marketplace order");
+        }
+    };
+
     const handleSendNotification = async () => {
         if (!notifForm.title || !notifForm.message) return toast.error("Title and message are required");
         setIsSendingNotif(true);
@@ -805,6 +824,18 @@ export default function AdminPanel() {
         toast("Rejection not implemented yet. Contact ops.");
     };
 
+    const handleRestoreCanceledSubscription = async (id: Id<"canceled_subscriptions">) => {
+        if (!currentUser?._id) return;
+        if (!confirm("Add this user back to their original subscription slot?")) return;
+
+        try {
+            await restoreCanceledSubscriptionMut({ canceledId: id, adminId: currentUser._id });
+            toast.success("Subscription added back");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to add subscription back");
+        }
+    };
+
     if (!currentUser?.is_admin) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
@@ -837,6 +868,79 @@ export default function AdminPanel() {
         { id: "notifications", label: "Notifications", icon: <Bell size={18} />, sub: "Push Updates" },
         { id: "leave_requests", label: "Leave Requests", icon: <UserMinus size={18} />, sub: "Cancellations" },
     ];
+    const navSections: { label: string; items: AdminTab[] }[] = [
+        { label: "Overview", items: ["dashboard"] },
+        { label: "Subscriptions", items: ["marketplace", "subscription_manager", "leave_requests"] },
+        { label: "Finance", items: ["payments", "review_payments"] },
+        { label: "Reviews", items: ["user_listings", "quests"] },
+        { label: "People & Trust", items: ["users", "support", "security", "admins"] },
+        { label: "Engagement", items: ["campaigns", "campus", "notifications"] },
+    ];
+    const navItemById = new Map(navItems.map((item) => [item.id, item]));
+    const openTicketsCount = allTickets.filter(t => t.status === "open").length;
+    const openFraudFlagsCount = fraudFlags.filter((flag: any) => flag.status === "open").length;
+    const navBadges: Partial<Record<AdminTab, { count: number; className: string }>> = {
+        support: { count: openTicketsCount, className: "bg-red-500" },
+        security: { count: openFraudFlagsCount, className: "bg-red-500" },
+        review_payments: { count: pendingPaymentsCount, className: "bg-amber-500" },
+        quests: { count: pendingQuestApprovalsCount, className: "bg-emerald-500" },
+        user_listings: { count: pendingListingsCount, className: "bg-amber-500" },
+        leave_requests: { count: pendingLeaveCount, className: "bg-purple-500" },
+    };
+    const selectNavItem = (item: { id: AdminTab }) => {
+        if (item.id === "subscription_manager") {
+            navigate("/admin/subscriptions");
+            return;
+        }
+
+        setActiveTab(item.id);
+        setMobileMenuOpen(false);
+    };
+    const renderNavSections = (mobile = false) => (
+        navSections.map((section) => (
+            <div key={section.label} className="space-y-1.5">
+                <div className="px-3 pt-2 text-[9px] font-black uppercase tracking-widest text-white/30">
+                    {section.label}
+                </div>
+                {section.items.map((itemId) => {
+                    const item = navItemById.get(itemId);
+                    const badge = navBadges[itemId];
+
+                    if (!item) return null;
+
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => selectNavItem(item)}
+                            className={`group w-full rounded-2xl px-3 py-2.5 text-left transition-all ${activeTab === item.id
+                                ? "bg-white text-zinc-900 shadow-lg shadow-black/15"
+                                : mobile
+                                    ? "text-white/75 hover:bg-white/10 hover:text-white"
+                                    : "text-white/55 hover:bg-white/5 hover:text-white"
+                                }`}
+                        >
+                            <span className="flex items-center gap-3">
+                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${activeTab === item.id ? "bg-zinc-100" : "bg-white/5 group-hover:bg-white/10"}`}>
+                                    {item.icon}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm font-bold">{item.label}</span>
+                                    {activeTab === item.id && item.sub && (
+                                        <span className="block truncate text-[10px] font-bold text-zinc-400">{item.sub}</span>
+                                    )}
+                                </span>
+                                {badge && badge.count > 0 && (
+                                    <span className={`${badge.className} min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-black text-white`}>
+                                        {badge.count}
+                                    </span>
+                                )}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        ))
+    );
 
     const filteredUsers = allUsers.filter(u =>
     (u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -860,57 +964,8 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Nav */}
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                    {navItems.map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => {
-                                if (item.id === "subscription_manager") {
-                                    navigate("/admin/subscriptions");
-                                    return;
-                                }
-                                setActiveTab(item.id);
-                                setMobileMenuOpen(false);
-                            }}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === item.id
-                                ? 'bg-white text-zinc-900'
-                                : 'text-white/50 hover:text-white hover:bg-white/5'
-                                }`}
-                        >
-                            {item.icon}
-                            {item.label}
-                            {item.id === "support" && allTickets.filter(t => t.status === "open").length > 0 && (
-                                <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                    {allTickets.filter(t => t.status === "open").length}
-                                </span>
-                            )}
-                            {item.id === "security" && (fraudFlags.filter((f: any) => f.status === "open").length) > 0 && (
-                                <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                    {fraudFlags.filter((f: any) => f.status === "open").length}
-                                </span>
-                            )}
-                            {item.id === "review_payments" && pendingPaymentsCount > 0 && (
-                                <span className="ml-auto bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                    {pendingPaymentsCount}
-                                </span>
-                            )}
-                            {item.id === "quests" && pendingQuestApprovalsCount > 0 && (
-                                <span className="ml-auto bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                    {pendingQuestApprovalsCount}
-                                </span>
-                            )}
-                            {item.id === "user_listings" && pendingListingsCount > 0 && (
-                                <span className="ml-auto bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                    {pendingListingsCount}
-                                </span>
-                            )}
-                            {item.id === "leave_requests" && pendingLeaveCount > 0 && (
-                                <span className="ml-auto bg-purple-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                    {pendingLeaveCount}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                <nav className="flex-1 space-y-3 overflow-y-auto p-4">
+                    {renderNavSections()}
                 </nav>
 
                 {/* Admin Profile + Mode Switch */}
@@ -1060,42 +1115,8 @@ export default function AdminPanel() {
                                 <div className="text-[10px] text-white/50 uppercase tracking-widest">Navigation</div>
                                 <div className="text-sm font-black mt-1">Admin Control</div>
                             </div>
-                            <nav className="flex-1 space-y-1 overflow-y-auto">
-                                {navItems.map(item => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            if (item.id === "subscription_manager") {
-                                                navigate("/admin/subscriptions");
-                                                return;
-                                            }
-                                            setActiveTab(item.id);
-                                            setMobileMenuOpen(false);
-                                        }}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${activeTab === item.id
-                                            ? 'bg-white text-zinc-900'
-                                            : 'text-white/70 hover:text-white hover:bg-white/10'
-                                            }`}
-                                    >
-                                        {item.icon}
-                                        {item.label}
-                                        {item.id === "support" && allTickets.filter(t => t.status === "open").length > 0 && (
-                                            <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                                {allTickets.filter(t => t.status === "open").length}
-                                            </span>
-                                        )}
-                                        {item.id === "security" && (fraudFlags.filter((f: any) => f.status === "open").length) > 0 && (
-                                            <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                                {fraudFlags.filter((f: any) => f.status === "open").length}
-                                            </span>
-                                        )}
-                                        {item.id === "quests" && pendingQuestApprovalsCount > 0 && (
-                                            <span className="ml-auto bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                                {pendingQuestApprovalsCount}
-                                            </span>
-                                        )}
-                                    </button>
-                                ))}
+                            <nav className="flex-1 space-y-3 overflow-y-auto">
+                                {renderNavSections(true)}
                             </nav>
 
                             <div className="pt-3 border-t border-white/10 mt-3">
@@ -1753,7 +1774,7 @@ export default function AdminPanel() {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {(allSubscriptions as any[]).map((group: any) => {
+                                        {(allSubscriptions as any[]).map((group: any, index: number) => {
                                             const isExpanded = expandedGroup === group._id;
                                             const members = Array.isArray(group.members) ? group.members : [];
                                             const memberPreview = members.slice(0, 50);
@@ -1763,10 +1784,11 @@ export default function AdminPanel() {
                                             return (
                                                 <div key={group._id} className="bg-white rounded-3xl border border-black/5 overflow-hidden hover:shadow-lg transition-all">
                                                     {/* Card header Ã¢â‚¬â€ clickable to expand */}
-                                                    <button
-                                                        onClick={() => setExpandedGroup(isExpanded ? null : group._id)}
-                                                        className="w-full p-5 flex items-center justify-between text-left"
-                                                    >
+                                                    <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+                                                        <button
+                                                            onClick={() => setExpandedGroup(isExpanded ? null : group._id)}
+                                                            className="flex min-w-0 flex-1 items-center justify-between gap-4 text-left"
+                                                        >
                                                         <div className="flex items-center gap-4">
                                                             <div className="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0">
                                                                 {group.subscription_name?.[0] ?? "?"}
@@ -1788,7 +1810,29 @@ export default function AdminPanel() {
                                                             </div>
                                                             <ChevronDown size={18} className={`text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                                                         </div>
-                                                    </button>
+                                                        </button>
+                                                        <div className="flex items-center gap-1.5 self-end rounded-2xl bg-zinc-50 p-1.5 sm:self-auto">
+                                                            <span className="px-2 text-[9px] font-black uppercase tracking-widest text-gray-400">Order</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleMoveMarketplaceListing(group._id, "up")}
+                                                                disabled={index === 0}
+                                                                title="Move listing up in marketplace"
+                                                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
+                                                            >
+                                                                <ArrowUp size={15} />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleMoveMarketplaceListing(group._id, "down")}
+                                                                disabled={index === allSubscriptions.length - 1}
+                                                                title="Move listing down in marketplace"
+                                                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
+                                                            >
+                                                                <ArrowDown size={15} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
 
                                                     {/* Expanded slot management panel */}
                                                     <AnimatePresence>
@@ -3637,7 +3681,7 @@ export default function AdminPanel() {
                                                             <h3 className="mt-1 text-lg font-black text-zinc-950">{draft.title}</h3>
                                                         </div>
                                                         <div className="flex flex-wrap gap-2">
-                                                            {(["in_app", "push", "email", "whatsapp"] as const).map((channel) => {
+                                                            {(["in_app", "push", "email", "whatsapp", "telegram"] as const).map((channel) => {
                                                                 const enabled = draft.channels.includes(channel);
                                                                 return (
                                                                     <button
@@ -3778,7 +3822,7 @@ export default function AdminPanel() {
                         {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â LEAVE REQUESTS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
                         {activeTab === "leave_requests" && (
                             <motion.div key="leave_requests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Leave Requests" sub="Approve users wanting to cancel or leave subscriptions" />
+                                <SectionHeader title="Leave Requests" sub="Review user leave requests and overdue subscriptions before removing anyone" />
 
                                 <div className="grid grid-cols-1 gap-4">
                                     {(pendingLeaveRequests.slots.length === 0 && pendingLeaveRequests.migrations.length === 0) ? (
@@ -3832,17 +3876,22 @@ export default function AdminPanel() {
                                             {/* Standard Slots */}
                                             {pendingLeaveRequests.slots.map((req: any) => (
                                                 <div key={req._id} className="bg-white border border-black/5 rounded-[2.5rem] p-6 flex flex-col lg:flex-row items-center gap-6 hover:shadow-xl transition-all shadow-sm relative overflow-hidden">
-                                                    <div className="absolute top-0 left-0 w-2 h-full bg-amber-400" />
+                                                    <div className={`absolute top-0 left-0 w-2 h-full ${req.is_automatic_overdue_leave_request ? "bg-red-400" : "bg-amber-400"}`} />
                                                     <div className="flex items-center gap-4 min-w-[280px]">
-                                                        <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center font-black text-xl">
-                                                            <UserMinus size={24} />
+                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl ${req.is_automatic_overdue_leave_request ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
+                                                            {req.is_automatic_overdue_leave_request ? <AlertTriangle size={24} /> : <UserMinus size={24} />}
                                                         </div>
                                                         <div className="min-w-0">
                                                             <h3 className="font-black text-base truncate">{req.user_name}</h3>
                                                             <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">Slot</span>
+                                                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${req.is_automatic_overdue_leave_request ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
+                                                                    {req.is_automatic_overdue_leave_request ? "Due review" : "Slot"}
+                                                                </span>
                                                                 <span className="text-[10px] font-bold text-gray-600 truncate">{req.user_email}</span>
                                                             </div>
+                                                            {req.leave_reason && (
+                                                                <p className="mt-2 text-[10px] font-bold text-gray-400 line-clamp-2">{req.leave_reason}</p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -3869,7 +3918,7 @@ export default function AdminPanel() {
                                                             className="px-6 py-3.5 bg-zinc-900 text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 text-xs shadow-lg shadow-black/10"
                                                         >
                                                             <CheckCircle2 size={16} />
-                                                            Approve Exit
+                                                            {req.is_automatic_overdue_leave_request ? "Confirm Removal" : "Approve Exit"}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -3881,7 +3930,7 @@ export default function AdminPanel() {
                                 <div className="space-y-4">
                                     <SectionHeader
                                         title="Canceled Subscriptions"
-                                        sub="Completed exits and automatic overdue cancellations"
+                                        sub="Completed exits approved by admins"
                                         action={<span className="rounded-full bg-red-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600">{canceledSubscriptions.length} records</span>}
                                     />
 
@@ -3901,9 +3950,21 @@ export default function AdminPanel() {
                                                             <div className="min-w-0">
                                                                 <h3 className="truncate text-base font-black">{item.user_name || "Unknown user"}</h3>
                                                                 <p className="mt-1 truncate text-xs font-bold text-gray-500">{item.user_email || "No email"}</p>
-                                                                <span className="mt-2 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                                                    {item.source_type === "migration" ? "Legacy migration" : "Marketplace slot"}
-                                                                </span>
+                                                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                                                    <span className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                                                        {item.source_type === "migration" ? "Legacy migration" : "Marketplace slot"}
+                                                                    </span>
+                                                                    {!item.canceled_by && (
+                                                                        <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-red-600">
+                                                                            System
+                                                                        </span>
+                                                                    )}
+                                                                    {item.restored_at && (
+                                                                        <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-600">
+                                                                            Restored
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
 
@@ -3925,12 +3986,27 @@ export default function AdminPanel() {
                                                                 <div className="text-sm font-bold">{item.canceled_at ? new Date(item.canceled_at).toLocaleDateString() : "N/A"}</div>
                                                             </div>
                                                         </div>
+
+                                                        <div className="flex lg:justify-end">
+                                                            <button
+                                                                onClick={() => handleRestoreCanceledSubscription(item._id)}
+                                                                disabled={!item.restore_available}
+                                                                title={item.restore_available ? "Add user back to original slot" : item.restore_blocked_reason || "Cannot add back"}
+                                                                className="inline-flex items-center gap-2 rounded-2xl bg-zinc-900 px-5 py-3 text-xs font-black text-white shadow-lg shadow-black/10 transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none disabled:hover:scale-100"
+                                                            >
+                                                                <UserPlus size={16} />
+                                                                Add Back
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     <div className="mt-5 grid gap-3 rounded-2xl bg-zinc-50 p-4 text-xs font-bold text-gray-600 md:grid-cols-3">
                                                         <div><span className="font-black uppercase tracking-widest text-gray-400">Reason: </span>{item.reason || "No reason recorded"}</div>
                                                         <div><span className="font-black uppercase tracking-widest text-gray-400">Renewal: </span>{item.renewal_date || "N/A"}</div>
                                                         <div><span className="font-black uppercase tracking-widest text-gray-400">Record ID: </span>{String(item.source_id || item._id).slice(-8)}</div>
+                                                        {!item.restore_available && item.restore_blocked_reason && (
+                                                            <div className="md:col-span-3"><span className="font-black uppercase tracking-widest text-gray-400">Restore: </span>{item.restore_blocked_reason}</div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

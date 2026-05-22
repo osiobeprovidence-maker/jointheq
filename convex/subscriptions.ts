@@ -65,6 +65,18 @@ const nextPaymentDayMs = (paymentDay: number, now: number) => {
     return candidate.getTime();
 };
 
+const getMarketplaceDisplayOrder = (listing: {
+    display_order?: number;
+    created_at?: number;
+    _creationTime: number;
+}) => listing.display_order ?? listing.created_at ?? listing._creationTime;
+
+const sortMarketplaceListings = <T extends {
+    display_order?: number;
+    created_at?: number;
+    _creationTime: number;
+}>(listings: T[]) => listings.sort((a, b) => getMarketplaceDisplayOrder(a) - getMarketplaceDisplayOrder(b));
+
 /**
  * Returns EACH listing as a separate item (no aggregation across listings).
  * Uses the new marketplace table for consolidated data.
@@ -75,6 +87,7 @@ export const getActiveSubscriptions = query({
         const marketplaceListings = await ctx.db.query("marketplace")
             .withIndex("by_status", q => q.eq("status", "active"))
             .collect();
+        sortMarketplaceListings(marketplaceListings);
 
         const result = await Promise.all(
             marketplaceListings.map(async (listing) => {
@@ -968,7 +981,7 @@ export const adminDeleteGroup = mutation({
 export const getAdminMarketplace = query({
     handler: async (ctx) => {
         // Use the new marketplace table as the primary source
-        const listings = await ctx.db.query("marketplace").collect();
+        const listings = sortMarketplaceListings(await ctx.db.query("marketplace").collect());
 
         return await Promise.all(listings.map(async (listing) => {
             const catalog = listing.subscription_catalog_id ? await ctx.db.get(listing.subscription_catalog_id) : null;
@@ -1036,10 +1049,46 @@ export const getAdminMarketplace = query({
     }
 });
 
+/** Move one marketplace listing in the order members see it. */
+export const reorderMarketplaceListing = mutation({
+    args: {
+        adminId: v.id("users"),
+        listingId: v.id("marketplace"),
+        direction: v.union(v.literal("up"), v.literal("down")),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const listings = sortMarketplaceListings(await ctx.db.query("marketplace").collect());
+        const currentIndex = listings.findIndex((listing) => listing._id === args.listingId);
+        if (currentIndex < 0) throw new Error("Marketplace listing not found");
+
+        const nextIndex = args.direction === "up" ? currentIndex - 1 : currentIndex + 1;
+        if (nextIndex < 0 || nextIndex >= listings.length) {
+            return { success: true, moved: false };
+        }
+
+        const nextOrder = [...listings];
+        const [listingToMove] = nextOrder.splice(currentIndex, 1);
+        nextOrder.splice(nextIndex, 0, listingToMove);
+
+        const updatedAt = Date.now();
+        for (const [index, listing] of nextOrder.entries()) {
+            await ctx.db.patch(listing._id, {
+                display_order: index,
+                updated_at: updatedAt,
+            });
+        }
+
+        return { success: true, moved: true };
+    }
+});
+
 /** Subscription Manager: full operational view for admins */
 export const getSubscriptionManagerData = query({
     handler: async (ctx) => {
-        const listings = await ctx.db.query("marketplace").collect();
+        const listings = sortMarketplaceListings(await ctx.db.query("marketplace").collect());
 
         return await Promise.all(listings.map(async (listing) => {
             const catalog = await ctx.db.get(listing.subscription_catalog_id);
