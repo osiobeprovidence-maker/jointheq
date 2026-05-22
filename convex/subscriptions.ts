@@ -1039,6 +1039,7 @@ export const getAdminMarketplace = query({
                 platform_logo: catalog?.logo_url,
                 owner_name: owner?.full_name,
                 owner_email: owner?.email,
+                owner_flagged: owner?.is_fraud_flagged ?? false,
                 admin_name: admin?.full_name,
                 primary_group_id: allGroups[0]?._id,
                 group_ids: allGroups.map(group => group._id),
@@ -1122,6 +1123,49 @@ export const moveMarketplaceServiceToTop = mutation({
 
         return { success: true, movedListings: serviceListings.length };
     }
+});
+
+export const adminBulkUpdateMarketplaceStatus = mutation({
+    args: {
+        adminId: v.id("users"),
+        listingIds: v.array(v.id("marketplace")),
+        status: v.union(v.literal("active"), v.literal("paused"), v.literal("closed")),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const updatedAt = Date.now();
+        let updatedListings = 0;
+        let updatedGroups = 0;
+
+        for (const listingId of [...new Set(args.listingIds)]) {
+            const listing = await ctx.db.get(listingId);
+            if (!listing) continue;
+
+            await ctx.db.patch(listingId, {
+                status: args.status,
+                updated_at: updatedAt,
+            });
+            updatedListings += 1;
+
+            const groups = await ctx.db.query("groups")
+                .withIndex("by_listing_key", q => q
+                    .eq("subscription_catalog_id", listing.subscription_catalog_id)
+                    .eq("account_email", listing.account_email)
+                    .eq("billing_cycle_start", listing.billing_cycle_start)
+                    .eq("plan_owner", listing.plan_owner)
+                )
+                .collect();
+
+            for (const group of groups) {
+                await ctx.db.patch(group._id, { status: args.status });
+                updatedGroups += 1;
+            }
+        }
+
+        return { success: true, updatedListings, updatedGroups };
+    },
 });
 
 /** Subscription Manager: full operational view for admins */

@@ -66,7 +66,8 @@ import {
     ListTodo,
     Send,
     History,
-    Target
+    Target,
+    Download
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -87,6 +88,49 @@ type SupportContact = {
     name: string;
     label: string;
     phone: string;
+};
+
+type MarketplaceSort = "service" | "members" | "expiring" | "recent" | "empty" | "revenue" | "problems";
+
+const MARKETPLACE_SERVICES = [
+    { name: "Netflix", aliases: ["netflix"], tone: "bg-red-500" },
+    { name: "Spotify", aliases: ["spotify"], tone: "bg-emerald-500" },
+    { name: "YouTube", aliases: ["youtube"], tone: "bg-red-600" },
+    { name: "ChatGPT", aliases: ["chatgpt", "openai"], tone: "bg-zinc-900" },
+    { name: "Canva", aliases: ["canva"], tone: "bg-purple-500" },
+    { name: "Apple Music", aliases: ["apple music"], tone: "bg-pink-500" },
+    { name: "Prime Video", aliases: ["prime video", "amazon prime"], tone: "bg-sky-500" },
+    { name: "CapCut", aliases: ["capcut"], tone: "bg-cyan-500" },
+] as const;
+
+const getMarketplaceService = (listing: any) => {
+    const label = String(listing.subscription_name || listing.platform_name || "Unknown").trim();
+    const normalized = label.toLowerCase();
+    const matchedService = MARKETPLACE_SERVICES.find(service =>
+        service.aliases.some(alias => normalized.includes(alias))
+    );
+
+    if (matchedService) return matchedService;
+
+    const fallbackName = label.split(/\s+/).slice(0, 2).join(" ") || "Other";
+    return { name: fallbackName, aliases: [fallbackName.toLowerCase()], tone: "bg-zinc-500" };
+};
+
+const getMarketplacePlanName = (listing: any, serviceName: string) => {
+    const label = String(listing.subscription_name || listing.platform_name || "Listing").trim();
+    const planName = label.replace(new RegExp(`^${serviceName}\\s*`, "i"), "").trim();
+    return planName || label;
+};
+
+const marketplaceDateValue = (value?: string) => {
+    const parsed = value ? Date.parse(value) : NaN;
+    return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+};
+
+const addMarketplaceCycle = (value?: string) => {
+    const base = value && Number.isFinite(Date.parse(value)) ? new Date(value) : new Date();
+    base.setDate(base.getDate() + 30);
+    return base.toISOString().slice(0, 10);
 };
 
 const buildSupportContacts = (platformSettings: Record<string, any>): SupportContact[] => {
@@ -262,7 +306,8 @@ export default function AdminPanel() {
     const recentTxns = useQuery(api.admin.getRecentTransactions) || [];
     const campaigns = useQuery(api.campaigns.getAllAnalytics) || [];
     const adminsList = useQuery(api.users.getAdmins) || [];
-    const allSubscriptions = useQuery(api.subscriptions.getAdminMarketplace) || [];
+    const allSubscriptionsQuery = useQuery(api.subscriptions.getAdminMarketplace);
+    const allSubscriptions = allSubscriptionsQuery || [];
     const duePayments = useQuery(api.subscriptions.getAdminDuePayments, { windowDays: 14 }) || [];
     const campaignAnalytics = useQuery(
         api.campaigns.getAnalytics,
@@ -338,7 +383,11 @@ export default function AdminPanel() {
     const [overridePaymentStatus, setOverridePaymentStatus] = useState("filled");
     const [overrideReason, setOverrideReason] = useState("");
     const [overrideAmount, setOverrideAmount] = useState("");
-    const [marketplaceServiceSearch, setMarketplaceServiceSearch] = useState("");
+    const [marketplaceSearch, setMarketplaceSearch] = useState("");
+    const [marketplaceServiceFilter, setMarketplaceServiceFilter] = useState("All");
+    const [marketplaceSort, setMarketplaceSort] = useState<MarketplaceSort>("service");
+    const [selectedMarketplaceIds, setSelectedMarketplaceIds] = useState<Id<"marketplace">[]>([]);
+    const [collapsedMarketplaceServices, setCollapsedMarketplaceServices] = useState<Record<string, boolean>>({});
     const [supportContacts, setSupportContacts] = useState<SupportContact[]>([
         { name: "Support 1", label: "General Support", phone: "" },
         { name: "Support 2", label: "Payments Help", phone: "" },
@@ -360,6 +409,8 @@ export default function AdminPanel() {
     const adminUpdateFullListingMut = useMutation(api.subscriptions.adminUpdateFullListing);
     const reorderMarketplaceListingMut = useMutation(api.subscriptions.reorderMarketplaceListing);
     const moveMarketplaceServiceToTopMut = useMutation(api.subscriptions.moveMarketplaceServiceToTop);
+    const adminBulkUpdateMarketplaceStatusMut = useMutation(api.subscriptions.adminBulkUpdateMarketplaceStatus);
+    const adminUpdateSubscriptionRenewalDateMut = useMutation(api.subscriptions.adminUpdateSubscriptionRenewalDate);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
     const restoreCanceledSubscriptionMut = useMutation(api.admin.restoreCanceledSubscription);
 
@@ -449,6 +500,128 @@ export default function AdminPanel() {
             return next;
         });
     }, [reminderTemplates.length]);
+
+    const marketplaceInventory = useMemo(() => {
+        const query = marketplaceSearch.trim().toLowerCase();
+        const now = Date.now();
+        const nextWeek = now + 7 * 24 * 60 * 60 * 1000;
+        const serviceCounts = new Map<string, number>();
+
+        const decorated = (allSubscriptions as any[]).map((listing) => {
+            const service = getMarketplaceService(listing);
+            const planName = getMarketplacePlanName(listing, service.name);
+            const searchText = [
+                service.name,
+                planName,
+                listing.subscription_name,
+                listing.platform_name,
+                listing.account_email,
+                listing.owner_email,
+                listing.category,
+            ].filter(Boolean).join(" ").toLowerCase();
+            const memberCount = Number(listing.filled_slots ?? listing.member_count ?? listing.members?.length ?? 0);
+            const emptySlots = Number(listing.available_slots ?? Math.max(0, (listing.total_slots || 0) - memberCount));
+            const renewalAt = marketplaceDateValue(listing.billing_cycle_start);
+            const problemScore = Number(Boolean(listing.owner_flagged)) * 4
+                + Number(listing.status !== "active") * 2
+                + Number(renewalAt < now);
+
+            serviceCounts.set(service.name, (serviceCounts.get(service.name) || 0) + 1);
+
+            return {
+                listing,
+                service,
+                planName,
+                memberCount,
+                emptySlots,
+                renewalAt,
+                estimatedRevenue: memberCount * Number(listing.slot_price || 0),
+                problemScore,
+                searchText,
+            };
+        });
+
+        const visible = decorated.filter((item) => {
+            if (marketplaceServiceFilter !== "All" && item.service.name !== marketplaceServiceFilter) return false;
+            return !query || item.searchText.includes(query);
+        });
+
+        const compareListings = (a: typeof visible[number], b: typeof visible[number]) => {
+            if (marketplaceSort === "members") return b.memberCount - a.memberCount || a.planName.localeCompare(b.planName);
+            if (marketplaceSort === "expiring") return a.renewalAt - b.renewalAt || a.planName.localeCompare(b.planName);
+            if (marketplaceSort === "recent") return Number(b.listing.created_at || 0) - Number(a.listing.created_at || 0);
+            if (marketplaceSort === "empty") return b.emptySlots - a.emptySlots || a.planName.localeCompare(b.planName);
+            if (marketplaceSort === "revenue") return b.estimatedRevenue - a.estimatedRevenue || a.planName.localeCompare(b.planName);
+            if (marketplaceSort === "problems") return b.problemScore - a.problemScore || a.renewalAt - b.renewalAt;
+            return Number(b.listing.created_at || 0) - Number(a.listing.created_at || 0);
+        };
+
+        const groupsMap = new Map<string, {
+            name: string;
+            tone: string;
+            items: typeof visible;
+            memberCount: number;
+            emptySlots: number;
+            revenue: number;
+            nextRenewal: number;
+            problemScore: number;
+        }>();
+
+        for (const item of visible) {
+            const existing = groupsMap.get(item.service.name) || {
+                name: item.service.name,
+                tone: item.service.tone,
+                items: [],
+                memberCount: 0,
+                emptySlots: 0,
+                revenue: 0,
+                nextRenewal: Number.POSITIVE_INFINITY,
+                problemScore: 0,
+            };
+            existing.items.push(item);
+            existing.memberCount += item.memberCount;
+            existing.emptySlots += item.emptySlots;
+            existing.revenue += item.estimatedRevenue;
+            existing.nextRenewal = Math.min(existing.nextRenewal, item.renewalAt);
+            existing.problemScore += item.problemScore;
+            groupsMap.set(item.service.name, existing);
+        }
+
+        const groups = [...groupsMap.values()].map(group => ({
+            ...group,
+            items: group.items.sort(compareListings),
+        })).sort((a, b) => {
+            if (marketplaceSort === "members") return b.memberCount - a.memberCount || a.name.localeCompare(b.name);
+            if (marketplaceSort === "expiring") return a.nextRenewal - b.nextRenewal || a.name.localeCompare(b.name);
+            if (marketplaceSort === "recent") return Number(b.items[0]?.listing.created_at || 0) - Number(a.items[0]?.listing.created_at || 0);
+            if (marketplaceSort === "empty") return b.emptySlots - a.emptySlots || a.name.localeCompare(b.name);
+            if (marketplaceSort === "revenue") return b.revenue - a.revenue || a.name.localeCompare(b.name);
+            if (marketplaceSort === "problems") return b.problemScore - a.problemScore || a.name.localeCompare(b.name);
+            return a.name.localeCompare(b.name);
+        });
+
+        const stats = decorated.reduce((summary, item) => {
+            summary.activeMembers += item.memberCount;
+            summary.emptySlots += item.emptySlots;
+            summary.expiringThisWeek += Number(item.renewalAt >= now && item.renewalAt <= nextWeek);
+            summary.flaggedAccounts += Number(Boolean(item.listing.owner_flagged));
+            return summary;
+        }, {
+            totalListings: decorated.length,
+            activeMembers: 0,
+            expiringThisWeek: 0,
+            emptySlots: 0,
+            flaggedAccounts: 0,
+        });
+
+        return {
+            groups,
+            stats,
+            serviceCounts,
+            letters: [...new Set(groups.map(group => group.name[0]?.toUpperCase()).filter(Boolean))].sort(),
+            visibleIds: visible.map(item => item.listing._id as Id<"marketplace">),
+        };
+    }, [allSubscriptions, marketplaceSearch, marketplaceServiceFilter, marketplaceSort]);
 
     const handleSaveCampaign = async () => {
 
@@ -797,6 +970,110 @@ export default function AdminPanel() {
         } catch (error: any) {
             toast.error(error.message || "Failed to group marketplace listings");
         }
+    };
+
+    const toggleMarketplaceSelection = (listingId: Id<"marketplace">) => {
+        setSelectedMarketplaceIds((current) =>
+            current.includes(listingId)
+                ? current.filter(id => id !== listingId)
+                : [...current, listingId]
+        );
+    };
+
+    const toggleVisibleMarketplaceSelection = () => {
+        setSelectedMarketplaceIds((current) => {
+            const visibleIds = marketplaceInventory.visibleIds;
+            const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => current.includes(id));
+            return allVisibleSelected
+                ? current.filter(id => !visibleIds.includes(id))
+                : [...new Set([...current, ...visibleIds])];
+        });
+    };
+
+    const handleBulkMarketplaceStatus = async (status: "active" | "paused" | "closed") => {
+        if (!currentUser?._id || selectedMarketplaceIds.length === 0) return;
+        const actionLabel = status === "closed" ? "archive" : status;
+        if (!confirm(`${actionLabel[0].toUpperCase()}${actionLabel.slice(1)} ${selectedMarketplaceIds.length} selected listings?`)) return;
+
+        try {
+            await adminBulkUpdateMarketplaceStatusMut({
+                adminId: currentUser._id,
+                listingIds: selectedMarketplaceIds,
+                status,
+            });
+            toast.success(`Listings ${status === "closed" ? "archived" : status}`);
+            setSelectedMarketplaceIds([]);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to update listings");
+        }
+    };
+
+    const handleBulkMarketplaceRenew = async () => {
+        if (!currentUser?._id || selectedMarketplaceIds.length === 0) return;
+        if (!confirm(`Move renewal dates forward for ${selectedMarketplaceIds.length} selected listings?`)) return;
+
+        try {
+            const selectedListings = (allSubscriptions as any[]).filter(listing => selectedMarketplaceIds.includes(listing._id));
+            await Promise.all(selectedListings.map(listing => adminUpdateSubscriptionRenewalDateMut({
+                adminId: currentUser._id,
+                listingId: listing._id,
+                renewalDate: addMarketplaceCycle(listing.billing_cycle_start),
+            })));
+            toast.success("Selected listing renewal dates updated");
+            setSelectedMarketplaceIds([]);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to renew selected listings");
+        }
+    };
+
+    const handleBulkMarketplaceDelete = async () => {
+        if (selectedMarketplaceIds.length === 0) return;
+        if (!confirm(`Delete ${selectedMarketplaceIds.length} selected listings and their slots? This cannot be undone.`)) return;
+
+        try {
+            for (const listingId of selectedMarketplaceIds) {
+                let done = false;
+                while (!done) {
+                    const result = await adminDeleteGroupMut({ group_id: listingId });
+                    done = result?.done ?? true;
+                }
+            }
+            toast.success("Selected listings deleted");
+            setSelectedMarketplaceIds([]);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to delete selected listings");
+        }
+    };
+
+    const handleBulkMarketplaceExport = () => {
+        if (selectedMarketplaceIds.length === 0) return;
+        const selectedListings = (allSubscriptions as any[]).filter(listing => selectedMarketplaceIds.includes(listing._id));
+        const csvCell = (value: unknown) => `"${String(value ?? "").replace(/"/g, "\"\"")}"`;
+        const csvRows = [
+            ["Service", "Listing", "Owner Email", "Category", "Renewal", "Members", "Empty Slots", "Status", "Slot Price"],
+            ...selectedListings.map(listing => {
+                const service = getMarketplaceService(listing);
+                return [
+                    service.name,
+                    listing.subscription_name || listing.platform_name,
+                    listing.owner_email || listing.account_email,
+                    listing.category || "",
+                    listing.billing_cycle_start || "",
+                    listing.filled_slots ?? listing.member_count ?? 0,
+                    listing.available_slots ?? 0,
+                    listing.status || "",
+                    listing.slot_price || 0,
+                ];
+            }),
+        ].map(row => row.map(csvCell).join(",")).join("\n");
+        const blob = new Blob([csvRows], { type: "text/csv;charset=utf-8" });
+        const href = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.download = `marketplace-listings-${new Date().toISOString().slice(0, 10)}.csv`;
+        anchor.click();
+        URL.revokeObjectURL(href);
+        toast.success("Marketplace export downloaded");
     };
 
     const handleSendNotification = async () => {
@@ -1784,125 +2061,232 @@ export default function AdminPanel() {
                         {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â MARKETPLACE Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
                         {activeTab === "marketplace" && (
                             <motion.div key="marketplace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader
-                                    title="Marketplace Management"
-                                    sub="All subscription listings - tap a card to manage slots"
-                                    action={
+                                <div className="flex flex-col gap-4 rounded-3xl border border-black/5 bg-white p-5 shadow-sm shadow-black/[0.03] lg:flex-row lg:items-end lg:justify-between">
+                                    <div>
+                                        <h2 className="text-xl font-black text-zinc-950">Marketplace</h2>
+                                        <p className="mt-1 text-xs font-bold text-gray-400">Subscription Inventory</p>
+                                    </div>
+                                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(240px,1fr)_180px_auto] lg:max-w-3xl">
+                                        <label className="relative min-w-0">
+                                            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input
+                                                value={marketplaceSearch}
+                                                onChange={(event) => setMarketplaceSearch(event.target.value)}
+                                                placeholder="Search service, plan, owner or category"
+                                                className="h-11 w-full rounded-2xl border border-black/5 bg-zinc-50 pl-10 pr-3 text-sm font-bold text-zinc-900 outline-none transition focus:border-zinc-900 focus:bg-white"
+                                            />
+                                        </label>
+                                        <select
+                                            value={marketplaceSort}
+                                            onChange={(event) => setMarketplaceSort(event.target.value as MarketplaceSort)}
+                                            className="h-11 rounded-2xl border border-black/5 bg-zinc-50 px-3 text-sm font-bold text-zinc-800 outline-none transition focus:border-zinc-900 focus:bg-white"
+                                            aria-label="Sort marketplace listings"
+                                        >
+                                            <option value="service">Service Name</option>
+                                            <option value="members">Most Members</option>
+                                            <option value="expiring">Expiring Soon</option>
+                                            <option value="recent">Recently Added</option>
+                                            <option value="empty">Empty Slots</option>
+                                            <option value="revenue">Revenue</option>
+                                            <option value="problems">Problem Accounts</option>
+                                        </select>
                                         <button
                                             onClick={() => setShowListingModal(true)}
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white rounded-2xl font-bold text-sm hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
+                                            className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 text-sm font-black text-white shadow-lg shadow-black/10 transition hover:bg-black"
                                         >
                                             <Plus size={16} /> Create New Listing
                                         </button>
-                                    }
-                                />
+                                    </div>
+                                    <div className="inline-flex h-11 items-center gap-2 self-start rounded-2xl border border-emerald-100 bg-emerald-50 px-3 text-xs font-black text-emerald-700 lg:self-auto">
+                                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        System Active
+                                    </div>
+                                </div>
 
-                                {allSubscriptions.length === 0 ? (
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                                    {[
+                                        ["Total Listings", marketplaceInventory.stats.totalListings, <Layers size={16} />],
+                                        ["Active Members", marketplaceInventory.stats.activeMembers, <Users2 size={16} />],
+                                        ["Expiring This Week", marketplaceInventory.stats.expiringThisWeek, <Calendar size={16} />],
+                                        ["Empty Slots", marketplaceInventory.stats.emptySlots, <UserPlus size={16} />],
+                                        ["Flagged Accounts", marketplaceInventory.stats.flaggedAccounts, <Flag size={16} />],
+                                    ].map(([label, value, icon]) => (
+                                        <div key={String(label)} className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm shadow-black/[0.02]">
+                                            <div className="flex items-center justify-between text-gray-400">
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+                                                {icon}
+                                            </div>
+                                            <div className="mt-3 text-2xl font-black text-zinc-950">{Number(value).toLocaleString()}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="sticky top-0 z-20 space-y-3 rounded-3xl border border-black/5 bg-[#f7f7f9]/95 p-3 shadow-sm shadow-black/[0.03] backdrop-blur">
+                                    <div className="flex gap-2 overflow-x-auto pb-1">
+                                        {["All", ...MARKETPLACE_SERVICES.filter(service => service.name !== "CapCut").map(service => service.name)].map(serviceName => {
+                                            const count = serviceName === "All"
+                                                ? allSubscriptions.length
+                                                : marketplaceInventory.serviceCounts.get(serviceName) || 0;
+                                            return (
+                                                <button
+                                                    key={serviceName}
+                                                    type="button"
+                                                    onClick={() => setMarketplaceServiceFilter(serviceName)}
+                                                    className={`flex h-10 shrink-0 items-center gap-2 rounded-2xl px-3 text-xs font-black transition ${marketplaceServiceFilter === serviceName ? "bg-zinc-900 text-white shadow-lg shadow-black/10" : "border border-black/5 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-950"}`}
+                                                >
+                                                    {serviceName}
+                                                    <span className={`rounded-lg px-1.5 py-0.5 text-[10px] ${marketplaceServiceFilter === serviceName ? "bg-white/15 text-white" : "bg-zinc-100 text-zinc-500"}`}>{count}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedMarketplaceIds.length > 0 && (
+                                        <div className="flex flex-col gap-2 rounded-2xl border border-black/5 bg-white p-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="px-2 text-xs font-black text-zinc-700">{selectedMarketplaceIds.length} listings selected</div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                <button onClick={handleBulkMarketplaceRenew} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 text-xs font-black text-emerald-700 hover:bg-emerald-100"><RefreshCw size={13} /> Renew</button>
+                                                <button onClick={() => handleBulkMarketplaceStatus("paused")} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-amber-50 px-3 text-xs font-black text-amber-700 hover:bg-amber-100"><PauseCircle size={13} /> Pause</button>
+                                                <button onClick={() => handleBulkMarketplaceStatus("closed")} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-zinc-100 px-3 text-xs font-black text-zinc-700 hover:bg-zinc-200"><X size={13} /> Archive</button>
+                                                <button onClick={handleBulkMarketplaceExport} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-blue-50 px-3 text-xs font-black text-blue-700 hover:bg-blue-100"><Download size={13} /> Export</button>
+                                                <button onClick={handleBulkMarketplaceDelete} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-red-50 px-3 text-xs font-black text-red-600 hover:bg-red-100"><Trash2 size={13} /> Delete</button>
+                                                <button onClick={() => setSelectedMarketplaceIds([])} className="h-9 rounded-xl px-3 text-xs font-black text-gray-400 hover:text-zinc-900">Clear</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {allSubscriptionsQuery === undefined ? (
+                                    <div className="space-y-3">
+                                        {[0, 1, 2].map(item => <div key={item} className="h-28 animate-pulse rounded-3xl border border-black/5 bg-white" />)}
+                                    </div>
+                                ) : allSubscriptions.length === 0 ? (
                                     <div className="text-center py-20 text-gray-400">
                                         <ShoppingBag size={40} className="mx-auto mb-3 opacity-20" />
                                         <p className="font-bold">No listings yet</p>
                                         <p className="text-sm mt-1">Click "Create New Listing" to add one</p>
                                     </div>
+                                ) : marketplaceInventory.groups.length === 0 ? (
+                                    <div className="rounded-3xl border border-dashed border-black/10 bg-white py-16 text-center">
+                                        <Search size={28} className="mx-auto text-gray-300" />
+                                        <p className="mt-3 text-sm font-black text-zinc-800">No marketplace listings match this view</p>
+                                        <p className="mt-1 text-xs font-bold text-gray-400">Clear search or switch service filters.</p>
+                                    </div>
                                 ) : (
-                                    <div className="space-y-4">
-                                        <div className="flex flex-col gap-3 rounded-3xl border border-black/5 bg-white p-4">
-                                            <div>
-                                                <div className="text-sm font-black text-zinc-900">Quick arrange</div>
-                                                <div className="text-xs text-gray-400">Search a name like Netflix or CapCut to move matching listings together.</div>
-                                            </div>
-                                            <form
-                                                className="flex flex-col gap-2 sm:flex-row"
-                                                onSubmit={(event) => {
-                                                    event.preventDefault();
-                                                    handleMoveMarketplaceServiceToTop(marketplaceServiceSearch);
-                                                }}
+                                    <div className="flex gap-4">
+                                        <div className="hidden w-9 shrink-0 flex-col gap-1 self-start rounded-2xl border border-black/5 bg-white p-1 shadow-sm lg:sticky lg:top-40 lg:flex">
+                                            <button
+                                                type="button"
+                                                onClick={toggleVisibleMarketplaceSelection}
+                                                title="Select visible listings"
+                                                className="flex h-7 items-center justify-center rounded-xl text-[10px] font-black text-zinc-500 hover:bg-zinc-900 hover:text-white"
                                             >
-                                                <label className="relative min-w-0 flex-1">
-                                                    <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                    <input
-                                                        value={marketplaceServiceSearch}
-                                                        onChange={(event) => setMarketplaceServiceSearch(event.target.value)}
-                                                        placeholder="Netflix, CapCut, Spotify..."
-                                                        className="h-11 w-full rounded-2xl border border-black/5 bg-zinc-50 pl-9 pr-3 text-sm font-bold outline-none transition focus:border-zinc-900 focus:bg-white"
-                                                    />
-                                                </label>
+                                                All
+                                            </button>
+                                            {marketplaceInventory.letters.map(letter => (
                                                 <button
-                                                    type="submit"
-                                                    className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 text-sm font-black text-white transition hover:bg-black"
+                                                    key={letter}
+                                                    type="button"
+                                                    onClick={() => document.querySelector(`[data-marketplace-letter="${letter}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                                                    className="flex h-7 items-center justify-center rounded-xl text-xs font-black text-gray-400 hover:bg-zinc-900 hover:text-white"
                                                 >
-                                                    <Layers size={15} />
-                                                    Move Matches To Top
+                                                    {letter}
                                                 </button>
-                                            </form>
-                                            <div className="flex flex-wrap gap-2">
-                                                {Array.from(
-                                                    (allSubscriptions as any[]).reduce((services, listing) => {
-                                                        if (!listing.subscription_catalog_id || services.has(listing.subscription_catalog_id)) {
-                                                            const service = services.get(listing.subscription_catalog_id);
-                                                            if (service) service.count += 1;
-                                                            return services;
-                                                        }
-
-                                                        services.set(listing.subscription_catalog_id, {
-                                                            name: listing.subscription_name || "Unknown",
-                                                            count: 1,
-                                                        });
-                                                        return services;
-                                                    }, new Map<string, { name: string; count: number }>())
-                                                ).map(([serviceId, service]: [string, { name: string; count: number }]) => (
-                                                    <button
-                                                        key={serviceId}
-                                                        type="button"
-                                                        onClick={() => handleMoveMarketplaceServiceToTop(service.name)}
-                                                        title={`Move matching ${service.name} listings to the top`}
-                                                        className="flex items-center gap-2 rounded-xl border border-black/5 bg-zinc-50 px-3 py-2 text-xs font-black text-zinc-800 transition hover:border-zinc-900 hover:bg-zinc-900 hover:text-white"
-                                                    >
-                                                        <Layers size={14} />
-                                                        <span>{service.name}</span>
-                                                        <span className="rounded-md bg-white/80 px-1.5 py-0.5 text-[10px] text-zinc-500">{service.count}</span>
-                                                        <ArrowUp size={13} />
-                                                    </button>
-                                                ))}
-                                            </div>
+                                            ))}
                                         </div>
-                                        {(allSubscriptions as any[]).map((group: any, index: number) => {
+                                        <div className="min-w-0 flex-1 space-y-4">
+                                        {marketplaceInventory.groups.map((serviceGroup) => (
+                                            <section key={serviceGroup.name} data-marketplace-letter={serviceGroup.name[0]?.toUpperCase()} className="scroll-mt-44 overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm shadow-black/[0.02]">
+                                                <div className="flex flex-col gap-3 border-b border-black/5 p-4 md:flex-row md:items-center md:justify-between">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCollapsedMarketplaceServices(current => ({ ...current, [serviceGroup.name]: !current[serviceGroup.name] }))}
+                                                        className="flex min-w-0 items-center gap-3 text-left"
+                                                    >
+                                                        <span className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-black text-white ${serviceGroup.tone}`}>{serviceGroup.name[0]}</span>
+                                                        <span className="min-w-0">
+                                                            <span className="flex items-center gap-2 text-base font-black text-zinc-950">
+                                                                {serviceGroup.name}
+                                                                <ChevronDown size={16} className={`text-gray-400 transition ${collapsedMarketplaceServices[serviceGroup.name] ? "-rotate-90" : ""}`} />
+                                                            </span>
+                                                            <span className="mt-0.5 block text-xs font-bold text-gray-400">{serviceGroup.items.length} Listings · {serviceGroup.memberCount} members · {serviceGroup.emptySlots} empty slots</span>
+                                                        </span>
+                                                    </button>
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleMoveMarketplaceServiceToTop(serviceGroup.name)}
+                                                            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-zinc-50 px-3 text-xs font-black text-zinc-700 hover:bg-zinc-900 hover:text-white"
+                                                        >
+                                                            <ArrowUp size={13} /> Top
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedMarketplaceIds(current => [...new Set([...current, ...serviceGroup.items.map(item => item.listing._id as Id<"marketplace">)])])}
+                                                            className="h-9 rounded-xl border border-black/5 px-3 text-xs font-black text-zinc-600 hover:border-zinc-900 hover:text-zinc-950"
+                                                        >
+                                                            Select Group
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {!collapsedMarketplaceServices[serviceGroup.name] && (
+                                                    <div className="space-y-3 bg-zinc-50/70 p-3">
+                                        {serviceGroup.items.map(({ listing: group, planName, service, memberCount, emptySlots }, index: number) => {
                                             const isExpanded = expandedGroup === group._id;
                                             const members = Array.isArray(group.members) ? group.members : [];
                                             const memberPreview = members.slice(0, 50);
                                             const hiddenMemberCount = Math.max(0, members.length - memberPreview.length);
-                                            const filledSlots = members.length;
                                             const displayOwner = (group.plan_owner || "Unknown").trim().replace(/^@+/, "") || "Unknown";
                                             return (
-                                                <div key={group._id} className="bg-white rounded-3xl border border-black/5 overflow-hidden hover:shadow-lg transition-all">
+                                                <div key={group._id} className="overflow-hidden rounded-2xl border border-black/5 bg-white transition hover:border-zinc-200 hover:shadow-lg hover:shadow-black/[0.04]">
                                                     {/* Card header Ã¢â‚¬â€ clickable to expand */}
-                                                    <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+                                                    <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center">
+                                                        <label className="flex h-10 w-10 shrink-0 items-center justify-center self-start rounded-xl border border-black/5 bg-zinc-50 xl:self-auto" title="Select listing">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedMarketplaceIds.includes(group._id)}
+                                                                onChange={() => toggleMarketplaceSelection(group._id)}
+                                                                className="h-4 w-4 accent-zinc-900"
+                                                                aria-label={`Select ${group.subscription_name || group.platform_name}`}
+                                                            />
+                                                        </label>
                                                         <button
                                                             onClick={() => setExpandedGroup(isExpanded ? null : group._id)}
-                                                            className="flex min-w-0 flex-1 items-center justify-between gap-4 text-left"
+                                                            className="grid min-w-0 flex-1 gap-3 text-left md:grid-cols-[minmax(210px,1.3fr)_repeat(4,minmax(96px,.7fr))_auto] md:items-center"
                                                         >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0">
-                                                                {group.subscription_name?.[0] ?? "?"}
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-base font-black text-white ${service.tone}`}>
+                                                                    {service.name[0]}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="truncate text-sm font-black text-zinc-950">{group.subscription_name || group.platform_name}</div>
+                                                                    <div className="truncate text-xs font-bold text-gray-400">{planName} - {group.owner_email || group.account_email}</div>
+                                                                    <div className="mt-1 inline-flex rounded-lg bg-zinc-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-500">{group.category || "Other"}</div>
+                                                                </div>
                                                             </div>
                                                             <div>
-                                                                <div className="font-black text-base">{group.subscription_name}</div>
-                                                                <div className="text-xs text-gray-400">
-                                                                    {group.account_email} - Owner: {displayOwner}
-                                                                </div>
-                                                                <div className="text-[10px] text-amber-600 font-bold mt-0.5">
-                                                                    Renews {group.billing_cycle_start}
-                                                                </div>
+                                                                <div className="text-[9px] font-black uppercase tracking-widest text-gray-400">Owner</div>
+                                                                <div className="truncate text-xs font-bold text-zinc-700">{displayOwner}</div>
                                                             </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="text-right">
-                                                                <div className="font-black text-sm text-emerald-600">{filledSlots} Members</div>
-                                                                <div className="text-[10px] text-gray-400">{group.slot_types?.length ?? 0} slot types</div>
+                                                            <div>
+                                                                <div className="text-[9px] font-black uppercase tracking-widest text-gray-400">Renewal</div>
+                                                                <div className="text-xs font-black text-amber-600">{group.billing_cycle_start || "N/A"}</div>
                                                             </div>
-                                                            <ChevronDown size={18} className={`text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                                                        </div>
+                                                            <div>
+                                                                <div className="text-[9px] font-black uppercase tracking-widest text-gray-400">Members</div>
+                                                                <div className="text-xs font-black text-emerald-600">{memberCount} / {group.total_slots || memberCount}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[9px] font-black uppercase tracking-widest text-gray-400">Slots</div>
+                                                                <div className="text-xs font-black text-zinc-700">{emptySlots} empty</div>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-widest ${group.owner_flagged ? "bg-red-50 text-red-600" : group.status === "active" ? "bg-emerald-50 text-emerald-700" : group.status === "paused" ? "bg-amber-50 text-amber-700" : "bg-zinc-100 text-zinc-500"}`}>
+                                                                    {group.owner_flagged ? "Flagged" : group.status || "Unknown"}
+                                                                </span>
+                                                                <ChevronDown size={17} className={`text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                                                            </div>
                                                         </button>
-                                                        <div className="flex items-center gap-1.5 self-end rounded-2xl bg-zinc-50 p-1.5 sm:self-auto">
+                                                        <div className="flex items-center gap-1.5 self-end rounded-2xl bg-zinc-50 p-1.5 xl:self-auto">
                                                             <span className="px-2 text-[9px] font-black uppercase tracking-widest text-gray-400">Order</span>
                                                             <button
                                                                 type="button"
@@ -1916,7 +2300,7 @@ export default function AdminPanel() {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleMoveMarketplaceListing(group._id, "down")}
-                                                                disabled={index === allSubscriptions.length - 1}
+                                                                disabled={index === serviceGroup.items.length - 1}
                                                                 title="Move listing down in marketplace"
                                                                 className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
                                                             >
@@ -2114,6 +2498,11 @@ export default function AdminPanel() {
                                                 </div>
                                             );
                                         })}
+                                                    </div>
+                                                )}
+                                            </section>
+                                        ))}
+                                        </div>
                                     </div>
                                 )}
                             </motion.div>
