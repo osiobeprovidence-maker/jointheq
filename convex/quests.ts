@@ -6,6 +6,16 @@ import { createNotification } from "./notificationHelpers";
 
 // --- Quests Logic ---
 
+function getPaystackSecretKey() {
+    return (
+        process.env.PAYSTACK_SECRET_KEY ||
+        process.env.PAYSTACK_SECRET ||
+        process.env.PAYSTACK_SECURITY_KEY ||
+        process.env.PAYSTACK_SECRET_LIVE ||
+        ""
+    );
+}
+
 async function resolveStorageUrl(ctx: any, value: string | undefined) {
     if (!value || value.startsWith("http") || value.startsWith("/")) return value;
     return await ctx.storage.getUrl(value as Id<"_storage">) ?? undefined;
@@ -141,7 +151,7 @@ export const createQuest = mutation({
             const paymentRef = `quest_payment_${questId}_${Date.now()}`;
             await ctx.db.patch(questId, {
                 paymentStatus: "paid",
-                status: "live", // Automatically live after payment as per requirements
+                status: "pending_admin_approval",
                 paymentReference: paymentRef,
                 updatedAt: Date.now(),
             });
@@ -166,7 +176,7 @@ export const createQuest = mutation({
                 amount: paymentAmount,
             });
 
-            return { success: true, questId, status: "live" };
+            return { success: true, questId, status: "pending_admin_approval" };
         }
 
         return { success: true, questId, status: "pending_payment" };
@@ -181,7 +191,12 @@ export const listQuests = query({
             .withIndex("by_status", (q) => q.eq("status", "live"))
             .collect();
 
-        const questsWithCoverUrls = await Promise.all(quests.map(async (quest) => {
+        const orderedQuests = [...quests].sort((a, b) => {
+            if (!!a.isFeatured !== !!b.isFeatured) return a.isFeatured ? -1 : 1;
+            return b.updatedAt - a.updatedAt;
+        });
+
+        const questsWithCoverUrls = await Promise.all(orderedQuests.map(async (quest) => {
             const resolvedUrl = await resolveStorageUrl(ctx, quest.coverImageUrl);
             return {
                 ...quest,
@@ -466,7 +481,11 @@ export const verifyQuestPayment = action({
         questId: v.id("quests"),
     },
     handler: async (ctx, args) => {
-        const secretKey = process.env.PAYSTACK_SECRET_KEY || "";
+        const secretKey = getPaystackSecretKey();
+        if (!secretKey) {
+            throw new Error("Paystack secret key is not configured.");
+        }
+
         const response = await fetch(`https://api.paystack.co/transaction/verify/${args.reference}`, {
             headers: {
                 Authorization: `Bearer ${secretKey}`,
@@ -477,10 +496,19 @@ export const verifyQuestPayment = action({
             throw new Error("Payment verification failed");
         }
 
+        const quest = await ctx.runQuery(api.quests.getQuestById, { id: args.questId });
+        if (!quest) throw new Error("Quest not found");
+
+        const paidAmount = payload.data.amount / 100;
+        const expectedAmount = quest.paymentAmount ?? quest.totalBudget;
+        if (paidAmount < expectedAmount) {
+            throw new Error("Paid amount is lower than the quest payment amount.");
+        }
+
         await ctx.runMutation(internal.quests.markQuestAsPaid, {
             questId: args.questId,
             reference: args.reference,
-            amount: payload.data.amount / 100,
+            amount: paidAmount,
         });
 
         return { success: true };
@@ -500,7 +528,7 @@ export const markQuestAsPaid = internalMutation({
 
         await ctx.db.patch(args.questId, {
             paymentStatus: "paid",
-            status: "live",
+            status: "pending_admin_approval",
             paymentReference: args.reference,
             updatedAt: Date.now(),
         });

@@ -246,7 +246,86 @@ export default defineSchema({
         base_cost: v.number(),
     }),
 
-    slot_types: defineTable({
+        // ─── QUEUE MARKETPLACE SYSTEM ────────────────────────────────────────
+        queues: defineTable({
+            // Admin info
+            admin_id: v.id("users"),
+        
+            // Service details
+            service_name: v.string(),
+            description: v.string(),
+            category: v.string(),
+            service_image_url: v.optional(v.string()),
+        
+            // Pricing & capacity
+            total_cost: v.number(),
+            max_members: v.number(),
+            current_members: v.number(),
+            current_price_per_member: v.number(),
+        
+            // Queue status
+            status: v.string(), // "active", "full", "closed", "cancelled"
+            visibility: v.boolean(), // whether queue is visible in marketplace
+            closing_date: v.number(), // timestamp
+        
+            // Metadata
+            created_at: v.number(),
+            updated_at: v.number(),
+            completed_at: v.optional(v.number()),
+            cancelled_reason: v.optional(v.string()),
+        }).index("by_admin", ["admin_id"])
+            .index("by_status", ["status"])
+            .index("by_category", ["category"])
+            .index("by_visibility", ["visibility"])
+            .index("by_closing_date", ["closing_date"]),
+
+        queue_members: defineTable({
+            queue_id: v.id("queues"),
+            user_id: v.id("users"),
+            status: v.string(), // "pending", "approved", "rejected", "left"
+            join_date: v.number(),
+            approved_date: v.optional(v.number()),
+            approved_by: v.optional(v.id("users")), // admin who approved
+            member_notes: v.optional(v.string()),
+        }).index("by_queue", ["queue_id"])
+            .index("by_user", ["user_id"])
+            .index("by_status", ["status"])
+            .index("by_queue_user", ["queue_id", "user_id"]),
+
+        queue_invitations: defineTable({
+            // Invitation details
+            queue_id: v.id("queues"),
+            sender_id: v.id("users"), // admin who sent
+            recipient_id: v.id("users"),
+        
+            // Invitation status
+            status: v.string(), // "pending", "accepted", "declined", "expired"
+            message: v.optional(v.string()),
+            expires_at: v.number(),
+        
+            // Timeline
+            sent_at: v.number(),
+            responded_at: v.optional(v.number()),
+        
+            // Notifications
+            email_sent: v.boolean(),
+            in_app_notification_id: v.optional(v.id("notifications")),
+        }).index("by_queue", ["queue_id"])
+            .index("by_recipient", ["recipient_id"])
+            .index("by_status", ["status"])
+            .index("by_sender", ["sender_id"])
+            .index("by_expires_at", ["expires_at"]),
+
+        queue_announcements: defineTable({
+            queue_id: v.id("queues"),
+            admin_id: v.id("users"),
+            title: v.string(),
+            message: v.string(),
+            sent_to_all: v.boolean(),
+            created_at: v.number(),
+        }).index("by_queue", ["queue_id"])
+            .index("by_admin", ["admin_id"]),
+    });
         subscription_id: v.optional(v.union(v.id("subscription_catalog"), v.id("subscriptions"))),
         name: v.string(),
         price: v.number(),

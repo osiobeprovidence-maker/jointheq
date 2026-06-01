@@ -1409,7 +1409,7 @@ export const adminUpdateSlotRenewalDate = mutation({
 });
 
 
-export const seedMarketplace = mutation({
+export const seedMarketplace = internalMutation({
     handler: async (ctx) => {
         // Netflix
         const netflixId = await ctx.db.insert("subscription_catalog", {

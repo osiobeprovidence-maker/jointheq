@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -722,7 +722,7 @@ export const buyRaffleTicket = mutation({
 });
 
 /** Seed dummy campaigns for testing */
-export const seedDummy = mutation({
+export const seedDummy = internalMutation({
     args: {},
     handler: async (ctx) => {
         const old = await ctx.db.query("campaigns").collect();

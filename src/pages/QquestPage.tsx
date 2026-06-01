@@ -32,7 +32,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 
-type QuestTag = "Sponsored" | "Trending" | "New";
+type QuestTag = "Featured" | "Sponsored" | "Trending" | "New";
 type QuestStatus = "all" | "mine" | "completed";
 type NavPage = "dashboard" | "marketplace" | "notifications" | "quest" | "wallet" | "referrals" | "history" | "support" | "profile";
 type ConnectedAccount = {
@@ -458,7 +458,12 @@ function CreateQuestModal({ onClose, onLaunch }: { onClose: () => void; onLaunch
           imageFile={imageFile}
           onClose={() => setIsPaymentOpen(false)}
           onPaid={(questId, status) => {
-            const quest = campaignToQuest(form, estimatedUsers, platformFee);
+            const quest = {
+              ...campaignToQuest(form, estimatedUsers, platformFee),
+              _id: questId,
+              tag: "Sponsored" as QuestTag,
+              urgency: status === "pending_admin_approval" ? "Pending admin approval" : `${estimatedUsers.toLocaleString()} spots left`,
+            };
             setLaunchedQuest(quest);
             onLaunch(quest);
             setIsPaymentOpen(false);
@@ -1876,7 +1881,7 @@ export default function QquestPage() {
       time: "2 min", // Fallback or dynamic
       users: `${q.usedSlots} joined`,
       urgency: `${(q.totalSlots - q.usedSlots)} spots left`,
-      tag: q.isFeatured ? "Trending" : "New",
+      tag: q.isFeatured ? "Featured" : "Sponsored",
       status: ["all", q.creatorId === user?._id ? "mine" : undefined].filter(Boolean) as QuestStatus[],
       image: q.coverImageUrl ? `url(${q.coverImageUrl})` : "linear-gradient(135deg, rgba(31,241,176,.7), rgba(41,64,255,.44))",
       progress: (q.usedSlots / q.totalSlots) * 100,
@@ -1909,6 +1914,7 @@ export default function QquestPage() {
       .filter((quest) => quest.title.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
     if (sort === "Highest Paying") return [...filtered].sort((a, b) => rewardValue(b) - rewardValue(a));
+    if (sort === "Trending") return [...filtered].sort((a, b) => Number(b.tag === "Featured") - Number(a.tag === "Featured"));
     return filtered;
   }, [activeTab, allQuests, searchQuery, selectedTag, sort]);
   const activeTitle = pageTitles[activePage];
@@ -2159,7 +2165,7 @@ export default function QquestPage() {
                 <div className="absolute left-0 top-14 z-10 w-72 rounded-2xl bg-white p-3 shadow-[0_18px_48px_rgba(15,15,20,.14)]">
                   <p className="px-2 pb-2 text-xs font-black uppercase tracking-[.16em] text-zinc-400">Filter by type</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {(["All", "Sponsored", "Trending", "New"] as const).map((tag) => (
+                    {(["All", "Featured", "Sponsored", "Trending", "New"] as const).map((tag) => (
                       <button
                         key={tag}
                         onClick={() => {

@@ -579,7 +579,6 @@ export default function DashboardPage() {
     const updateAllocationMutation = useMutation(api.subscriptions.updateAllocation);
     const leaveSlotMutation = useMutation(api.subscriptions.leaveSlot);
     const resetQScoresMutation = useMutation(api.users.resetQScores);
-    const seedMarketplaceMutation = useMutation(api.subscriptions.seedMarketplace);
     const createTaskMutation = useMutation(api.tasks.createTask);
     const startTaskMutation = useMutation(api.tasks.startTask);
     const submitTaskMutation = useMutation(api.tasks.submitTask);

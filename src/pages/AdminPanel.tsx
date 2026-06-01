@@ -326,6 +326,18 @@ export default function AdminPanel() {
     const withdrawals = useQuery(api.campaigns.getWithdrawals, {}) || [];
     const allAdminReviewQuests = useQuery(api.quests.adminListQuests) || [];
     const adminReviewQuests = (allAdminReviewQuests as any[]).filter((quest: any) => quest.status === taskReviewStatus);
+    const questMonetizationSummary = useMemo(() => {
+        const quests = allAdminReviewQuests as any[];
+        const paidQuests = quests.filter((quest) => quest.paymentStatus === "paid");
+        return {
+            total: quests.length,
+            pendingApproval: quests.filter((quest) => quest.status === "pending_admin_approval").length,
+            live: quests.filter((quest) => quest.status === "live").length,
+            pendingPayment: quests.filter((quest) => quest.status === "pending_payment").length,
+            featured: quests.filter((quest) => quest.isFeatured).length,
+            sponsoredRevenue: paidQuests.reduce((sum, quest) => sum + Number(quest.paymentAmount || quest.total_cost || quest.totalBudget || 0), 0),
+        };
+    }, [allAdminReviewQuests]);
     const adminQuestCompletions = useQuery(api.quests.adminListCompletions, { status: submissionReviewStatus }) || [];
     // Security / Fraud
     const fraudFlags = useQuery(api.fraud.getFraudFlags, {}) || [];
@@ -361,7 +373,7 @@ export default function AdminPanel() {
     // Pending Counts for Badges
     const pendingPaymentsCount = useQuery(api.funding.getManualRequests, { status: "Awaiting Review" })?.length || 0;
     const pendingListingsCount = useQuery(api.listings.getAdminListings, { status: "Pending Review" })?.length || 0;
-    const pendingQuestApprovalsCount = adminReviewQuests.filter((q: any) => q.status === "pending_admin_approval").length;
+    const pendingQuestApprovalsCount = questMonetizationSummary.pendingApproval;
 
     // Leave Requests Query
     const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
@@ -2830,7 +2842,15 @@ export default function AdminPanel() {
                         {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â SUPPORT Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
                         {activeTab === "quests" && (
                             <motion.div key="quests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Quest Moderation" sub="Review and approve user-created quests and proof submissions" />
+                                <SectionHeader title="Ad Monetization" sub="Review paid Quest ads, approve sponsored content, and manage featured placements" />
+
+                                <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+                                    <StatCard label="Sponsored Revenue" value={fmt(questMonetizationSummary.sponsoredRevenue)} icon={<CreditCard size={18} />} color="bg-emerald-500" />
+                                    <StatCard label="Pending Review" value={questMonetizationSummary.pendingApproval} icon={<Clock size={18} />} color="bg-amber-500" />
+                                    <StatCard label="Live Ads" value={questMonetizationSummary.live} icon={<Megaphone size={18} />} color="bg-blue-500" />
+                                    <StatCard label="Featured" value={questMonetizationSummary.featured} icon={<Star size={18} />} color="bg-purple-500" />
+                                    <StatCard label="Payment Pending" value={questMonetizationSummary.pendingPayment} icon={<Wallet size={18} />} color="bg-zinc-900" />
+                                </div>
 
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                     <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
@@ -2857,7 +2877,14 @@ export default function AdminPanel() {
                                                                 <div className="text-[10px] font-bold text-gray-300 mt-1">Creator ID: {quest.creator_id}</div>
                                                             </div>
                                                         </div>
-                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${quest.status === "live" ? "bg-emerald-100 text-emerald-700" : quest.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{quest.status.replace('_', ' ')}</span>
+                                                        <div className="flex flex-col items-end gap-2">
+                                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${quest.status === "live" ? "bg-emerald-100 text-emerald-700" : quest.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{quest.status.replace(/_/g, ' ')}</span>
+                                                            {quest.isFeatured && (
+                                                                <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-purple-600">
+                                                                    <Star size={11} /> Featured
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <p className="text-sm text-gray-500 leading-relaxed">{quest.description}</p>
                                                     <div className="grid grid-cols-2 gap-3 text-xs font-bold text-gray-500">
@@ -2874,8 +2901,35 @@ export default function AdminPanel() {
                                                             <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "reject", adminNote: note }); toast.error("Quest rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
                                                         </div>
                                                     )}
-                                                    {quest.status === "live" && (
-                                                        <button onClick={async () => { await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "pause" }); toast.success("Quest paused"); }} className="w-full py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100">Pause Suspicious Task</button>
+                                                    {(quest.status === "live" || quest.status === "paused") && (
+                                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: quest.isFeatured ? "unfeature" : "feature" });
+                                                                    toast.success(quest.isFeatured ? "Removed from featured content" : "Quest added to featured content");
+                                                                }}
+                                                                className="py-3 bg-purple-50 text-purple-600 rounded-2xl text-xs font-black hover:bg-purple-100"
+                                                            >
+                                                                {quest.isFeatured ? "Unfeature" : "Feature"}
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: quest.status === "paused" ? "resume" : "pause" });
+                                                                    toast.success(quest.status === "paused" ? "Quest resumed" : "Quest paused");
+                                                                }}
+                                                                className="py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100"
+                                                            >
+                                                                {quest.status === "paused" ? "Resume" : "Pause"}
+                                                            </button>
+                                                            <a
+                                                                href={quest.questLink || quest.quest_link || "#"}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="py-3 bg-zinc-50 text-zinc-700 rounded-2xl text-xs font-black hover:bg-zinc-100 text-center"
+                                                            >
+                                                                Open Link
+                                                            </a>
+                                                        </div>
                                                     )}
                                                     {quest.status !== "rejected" && (
                                                         <button onClick={async () => { if(window.confirm("Remove this quest post?")) { await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "reject", adminNote: "Removed for violation of community rules" }); toast.success("Quest removed"); } }} className="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 size={14} /> Remove Quest</button>

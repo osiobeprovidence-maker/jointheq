@@ -1186,10 +1186,10 @@ export const creditWalletAndSaveCard = internalMutation({
     },
     handler: async (ctx, args) => {
         // Prevent double credit
+        const paystackReference = `paystack_${args.reference}`;
         const existingTx = await ctx.db
             .query("wallet_transactions")
-            .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-            .filter((q) => q.eq(q.field("description"), `Paystack: ${args.reference}`))
+            .withIndex("by_reference", (q) => q.eq("reference", paystackReference))
             .first();
 
         if (existingTx) {
@@ -1231,7 +1231,7 @@ export const creditWalletAndSaveCard = internalMutation({
             wallet_type: "q_wallet",
             amount: args.amount,
             type: "credit",
-            reference: `paystack_${args.reference}`,
+            reference: paystackReference,
             status: "completed",
             description: `Paystack Funding: ${args.reference}`,
             created_at: Date.now(),

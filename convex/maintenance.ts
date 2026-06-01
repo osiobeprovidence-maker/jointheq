@@ -1,10 +1,27 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 
 type UserRefTable = {
   table: string;
   fields: string[];
 };
+
+const RECENT_SEED_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+const SEEDED_CAMPAIGN_NAMES = new Set([
+  "Easter Reward Jar",
+  "Campus Q Program",
+  "Viral Referral Storm",
+  "Easter Raffle Draw",
+]);
+
+const SEEDED_CATALOG_NAMES = new Set([
+  "Netflix",
+  "Spotify",
+  "YouTube",
+  "Canva",
+  "ChatGPT",
+]);
 
 const USER_REF_TABLES: UserRefTable[] = [
   { table: "users", fields: ["referred_by"] },
@@ -57,6 +74,62 @@ const USER_REF_TABLES: UserRefTable[] = [
 const normalizeEmail = (email?: string) => (email || "").trim().toLowerCase();
 const normalizePhone = (phone?: string) => (phone || "").replace(/\D/g, "");
 const asIdString = (value: unknown) => String(value || "");
+
+export const cleanupRecentSeedArtifacts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - RECENT_SEED_WINDOW_MS;
+    let deletedCampaigns = 0;
+    let deletedCatalogs = 0;
+    let deletedSlotTypes = 0;
+
+    const campaigns = await ctx.db.query("campaigns").collect();
+    for (const campaign of campaigns) {
+      const createdAt = typeof campaign.created_at === "number" ? campaign.created_at : campaign._creationTime;
+      if (!SEEDED_CAMPAIGN_NAMES.has(campaign.name) || createdAt < cutoff) continue;
+
+      const participants = await ctx.db
+        .query("campaign_participants")
+        .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign._id))
+        .take(1);
+
+      if (participants.length > 0) continue;
+      await ctx.db.delete(campaign._id);
+      deletedCampaigns += 1;
+    }
+
+    const catalogs = await ctx.db.query("subscription_catalog").collect();
+    for (const catalog of catalogs) {
+      if (!SEEDED_CATALOG_NAMES.has(catalog.name) || catalog._creationTime < cutoff) continue;
+
+      const marketplaceRefs = await ctx.db
+        .query("marketplace")
+        .withIndex("by_catalog", (q) => q.eq("subscription_catalog_id", catalog._id))
+        .take(1);
+      const groupRefs = await ctx.db
+        .query("groups")
+        .withIndex("by_catalog", (q) => q.eq("subscription_catalog_id", catalog._id))
+        .take(1);
+
+      if (marketplaceRefs.length > 0 || groupRefs.length > 0) continue;
+
+      const slotTypes = await ctx.db
+        .query("slot_types")
+        .withIndex("by_subscription", (q) => q.eq("subscription_id", catalog._id))
+        .collect();
+
+      for (const slotType of slotTypes) {
+        await ctx.db.delete(slotType._id);
+        deletedSlotTypes += 1;
+      }
+
+      await ctx.db.delete(catalog._id);
+      deletedCatalogs += 1;
+    }
+
+    return { deletedCampaigns, deletedCatalogs, deletedSlotTypes };
+  },
+});
 
 const userScore = (user: any, referenceCount = 0) =>
   (user.is_admin ? 100000 : 0) +
