@@ -300,11 +300,12 @@ export const approveMember = mutation({
     if (!queue) throw new Error("Queue not found");
 
     // Check if queue is full
-    const approvedCount = await ctx.db
+    const approvedMembers = await ctx.db
       .query("queue_members")
       .withIndex("by_queue", (q) => q.eq("queue_id", args.queueId))
       .filter((q) => q.eq(q.field("status"), "approved"))
-      .count();
+      .collect();
+    const approvedCount = approvedMembers.length;
 
     if (approvedCount >= queue.max_members)
       throw new Error("Queue is full");
@@ -405,11 +406,12 @@ export const leaveQueue = mutation({
       const queue = await ctx.db.get(args.queueId);
       if (!queue) throw new Error("Queue not found");
 
-      const approvedCount = await ctx.db
+      const approvedMembers = await ctx.db
         .query("queue_members")
         .withIndex("by_queue", (q) => q.eq("queue_id", args.queueId))
         .filter((q) => q.eq(q.field("status"), "approved"))
-        .count();
+        .collect();
+      const approvedCount = approvedMembers.length;
 
       const newMemberCount = Math.max(0, approvedCount - 1);
       const newPricePerMember =
@@ -530,11 +532,12 @@ export const acceptInvitation = mutation({
       // Update queue pricing
       const queue = await ctx.db.get(invitation.queue_id);
       if (queue) {
-        const approvedCount = await ctx.db
+        const approvedMembers = await ctx.db
           .query("queue_members")
           .withIndex("by_queue", (q) => q.eq("queue_id", invitation.queue_id))
           .filter((q) => q.eq(q.field("status"), "approved"))
-          .count();
+          .collect();
+        const approvedCount = approvedMembers.length;
 
         const newPricePerMember = queue.total_cost / (approvedCount + 1);
 
