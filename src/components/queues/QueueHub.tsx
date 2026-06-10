@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -7,7 +6,8 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Search, Users, Plus, Share2, Loader2, CheckCircle,
   TrendingDown, ChevronRight, Clock, Zap, X, ArrowRight,
-  Copy, ExternalLink,
+  Copy, ExternalLink, Info, ChevronDown, Calendar,
+  Tag, FileText, MessageSquare,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -19,19 +19,17 @@ export default function QueueHub({ userId }: QueueHubProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
-  // Queries
   const interestQueues = useQuery(api.queues.getQueueRequests) || [];
   const officialQueues = useQuery(api.queues.getOfficialQueues) || [];
   const myRequests = useQuery(api.queues.getMyQueueRequests, { userId }) || [];
   const myQueues = useQuery(api.queues.getUserQueues, { userId }) || [];
 
-  // Mutations
   const createRequest = useMutation(api.queues.createQueueRequest);
   const joinRequest = useMutation(api.queues.joinQueueRequest);
   const selectPlan = useMutation(api.queues.selectQueuePlan);
 
-  // Form state
   const [form, setForm] = useState({ service_name: "", description: "", estimated_price: "", category: "streaming", notes: "" });
   const [creating, setCreating] = useState(false);
 
@@ -104,6 +102,10 @@ export default function QueueHub({ userId }: QueueHubProps) {
     toast.success("Link copied!");
   };
 
+  const toggleExpand = (id: string) => {
+    setExpandedCard(expandedCard === id ? null : id);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -154,32 +156,77 @@ export default function QueueHub({ userId }: QueueHubProps) {
         <section>
           <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-3">My Requests</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {myRequests.map((req: any) => (
-              <div key={req._id} className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-zinc-900">{req.service_name}</h3>
-                    <p className="text-xs text-zinc-400">{req.total_interested} interested</p>
+            {myRequests.map((req: any) => {
+              const isExpanded = expandedCard === req._id;
+              return (
+                <div key={req._id} className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-bold text-zinc-900">{req.service_name}</h3>
+                      <p className="text-xs text-zinc-400">{req.total_interested} interested</p>
+                    </div>
+                    <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-bold uppercase">
+                      {req.stage}
+                    </span>
                   </div>
-                  <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-bold uppercase">
-                    {req.stage}
-                  </span>
-                </div>
-                {req.description && <p className="text-sm text-zinc-500 line-clamp-2">{req.description}</p>}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${Math.min(100, (req.total_interested / Math.max(req.max_members, 1)) * 100)}%` }} />
+                  {req.description && <p className="text-sm text-zinc-500 line-clamp-2">{req.description}</p>}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-400 rounded-full" style={{ width: `${Math.min(100, (req.total_interested / Math.max(req.max_members, 1)) * 100)}%` }} />
+                    </div>
+                    <span className="text-[10px] font-bold text-zinc-400">{req.total_interested}/{req.max_members}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-zinc-400">{req.total_interested}/{req.max_members}</span>
+
+                  {/* More Info toggle */}
+                  <button
+                    onClick={() => toggleExpand(req._id)}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-zinc-50 rounded-xl text-xs font-bold text-zinc-500 hover:bg-zinc-100 transition-colors"
+                  >
+                    <Info size={12} />
+                    {isExpanded ? "Less Info" : "More Info"}
+                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                  </button>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="space-y-2 pt-1"
+                    >
+                      {req.category && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <Tag size={12} className="text-zinc-400" />
+                          <span className="font-medium">Category:</span> {req.category}
+                        </div>
+                      )}
+                      {req.notes && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <MessageSquare size={12} className="text-zinc-400" />
+                          <span className="font-medium">Notes:</span> {req.notes}
+                        </div>
+                      )}
+                      {req.estimated_price && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <FileText size={12} className="text-zinc-400" />
+                          <span className="font-medium">Est. Price:</span> ₦{Number(req.estimated_price).toLocaleString()}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <Calendar size={12} className="text-zinc-400" />
+                        <span className="font-medium">Created:</span> {new Date(req._creationTime).toLocaleDateString()}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <button
+                    onClick={() => copyShareLink(`share-${req._id}`)}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-zinc-50 rounded-xl text-xs font-bold text-zinc-600 hover:bg-zinc-100 transition-colors"
+                  >
+                    <Copy size={12} /> Copy Share Link
+                  </button>
                 </div>
-                <button
-                  onClick={() => copyShareLink(`share-${req._id}`)}
-                  className="w-full flex items-center justify-center gap-2 py-2 bg-zinc-50 rounded-xl text-xs font-bold text-zinc-600 hover:bg-zinc-100 transition-colors"
-                >
-                  <Copy size={12} /> Copy Share Link
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -192,6 +239,7 @@ export default function QueueHub({ userId }: QueueHubProps) {
             {filteredInterest.map((q: any) => {
               const joined = myJoinedIds.has(q._id);
               const isMine = myRequestIds.has(q._id);
+              const isExpanded = expandedCard === q._id;
               return (
                 <motion.div
                   key={q._id}
@@ -231,6 +279,47 @@ export default function QueueHub({ userId }: QueueHubProps) {
                       />
                     </div>
                   </div>
+
+                  {/* More Info toggle */}
+                  <button
+                    onClick={() => toggleExpand(q._id)}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-zinc-50 rounded-xl text-xs font-bold text-zinc-500 hover:bg-zinc-100 transition-colors"
+                  >
+                    <Info size={12} />
+                    {isExpanded ? "Less Info" : "More Info"}
+                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                  </button>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="space-y-2 pt-1"
+                    >
+                      {q.category && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <Tag size={12} className="text-zinc-400" />
+                          <span className="font-medium">Category:</span> {q.category}
+                        </div>
+                      )}
+                      {q.notes && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <MessageSquare size={12} className="text-zinc-400" />
+                          <span className="font-medium">Notes:</span> {q.notes}
+                        </div>
+                      )}
+                      {q.estimated_price && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <FileText size={12} className="text-zinc-400" />
+                          <span className="font-medium">Est. Price:</span> ₦{Number(q.estimated_price).toLocaleString()}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <Calendar size={12} className="text-zinc-400" />
+                        <span className="font-medium">Created:</span> {new Date(q._creationTime).toLocaleDateString()}
+                      </div>
+                    </motion.div>
+                  )}
 
                   {isMine ? (
                     <button
@@ -273,103 +362,140 @@ export default function QueueHub({ userId }: QueueHubProps) {
             Active Queues <span className="text-zinc-300 font-normal normal-case">({filteredOfficial.length})</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredOfficial.map((q: any) => (
-              <motion.div
-                key={q._id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-zinc-900">{q.service_name}</h3>
-                    <p className="text-xs text-zinc-400">{q.total_members} members</p>
+            {filteredOfficial.map((q: any) => {
+              const isExpanded = expandedCard === q._id;
+              return (
+                <motion.div
+                  key={q._id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-bold text-zinc-900">{q.service_name}</h3>
+                      <p className="text-xs text-zinc-400">{q.total_members} members</p>
+                    </div>
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold uppercase">
+                      Live
+                    </span>
                   </div>
-                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold uppercase">
-                    Live
-                  </span>
-                </div>
 
-                {/* Plans */}
-                <div className="space-y-2">
-                  {q.plans?.map((plan: any) => {
-                    const myQueue = myQueues.find((mq: any) => mq._id === q._id);
-                    const myPlanId = myQueue?.membership?.plan_id;
-                    const isSelected = myPlanId === plan._id;
+                  {/* Plans */}
+                  <div className="space-y-2">
+                    {q.plans?.map((plan: any) => {
+                      const myQueue = myQueues.find((mq: any) => mq._id === q._id);
+                      const myPlanId = myQueue?.membership?.plan_id;
+                      const isSelected = myPlanId === plan._id;
 
-                    return (
-                      <div
-                        key={plan._id}
-                        className={`p-3 rounded-xl border transition-all ${
-                          isSelected
-                            ? "border-zinc-900 bg-zinc-50"
-                            : "border-zinc-100 hover:border-zinc-200"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <span className="font-bold text-sm text-zinc-900">{plan.name}</span>
-                            <span className="text-xs text-zinc-400 ml-2">
-                              ₦{plan.full_price?.toLocaleString()}/mo
-                            </span>
-                          </div>
-                          {isSelected && (
-                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                              Selected
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Dynamic pricing */}
-                        <div className="space-y-1.5 mb-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-zinc-400">
-                              <Users size={11} className="inline mr-1" />
-                              {plan.filled}/{plan.remaining + plan.filled}
-                            </span>
-                            {plan.current_price && (
-                              <span className="font-bold text-emerald-600 flex items-center gap-1">
-                                <TrendingDown size={12} />
-                                ₦{plan.current_price?.toLocaleString()}/person
+                      return (
+                        <div
+                          key={plan._id}
+                          className={`p-3 rounded-xl border transition-all ${
+                            isSelected
+                              ? "border-zinc-900 bg-zinc-50"
+                              : "border-zinc-100 hover:border-zinc-200"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <span className="font-bold text-sm text-zinc-900">{plan.name}</span>
+                              <span className="text-xs text-zinc-400 ml-2">
+                                ₦{plan.full_price?.toLocaleString()}/mo
+                              </span>
+                            </div>
+                            {isSelected && (
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                Selected
                               </span>
                             )}
                           </div>
-                          <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-zinc-900 rounded-full transition-all"
-                              style={{ width: `${plan.progress_pct || 0}%` }}
-                            />
+
+                          <div className="space-y-1.5 mb-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-zinc-400">
+                                <Users size={11} className="inline mr-1" />
+                                {plan.filled}/{plan.remaining + plan.filled}
+                              </span>
+                              {plan.current_price && (
+                                <span className="font-bold text-emerald-600 flex items-center gap-1">
+                                  <TrendingDown size={12} />
+                                  ₦{plan.current_price?.toLocaleString()}/person
+                                </span>
+                              )}
+                            </div>
+                            <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-zinc-900 rounded-full transition-all"
+                                style={{ width: `${plan.progress_pct || 0}%` }}
+                              />
+                            </div>
                           </div>
+
+                          {!isSelected && myJoinedIds.has(q._id) && (
+                            <button
+                              onClick={() => handleSelectPlan(q._id, plan._id)}
+                              disabled={plan.filled >= plan.max_members}
+                              className={`w-full py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                plan.filled >= plan.max_members
+                                  ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                              }`}
+                            >
+                              {plan.filled >= plan.max_members ? "Full" : "Select This Plan"}
+                            </button>
+                          )}
                         </div>
+                      );
+                    })}
+                  </div>
 
-                        {!isSelected && myJoinedIds.has(q._id) && (
-                          <button
-                            onClick={() => handleSelectPlan(q._id, plan._id)}
-                            disabled={plan.filled >= plan.max_members}
-                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                              plan.filled >= plan.max_members
-                                ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                                : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
-                            }`}
-                          >
-                            {plan.filled >= plan.max_members ? "Full" : "Select This Plan"}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {!myJoinedIds.has(q._id) && (
+                  {/* More Info toggle */}
                   <button
-                    onClick={() => handleJoin(q._id)}
-                    className="w-full py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors"
+                    onClick={() => toggleExpand(q._id)}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-zinc-50 rounded-xl text-xs font-bold text-zinc-500 hover:bg-zinc-100 transition-colors"
                   >
-                    Join Queue
+                    <Info size={12} />
+                    {isExpanded ? "Less Info" : "More Info"}
+                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                   </button>
-                )}
-              </motion.div>
-            ))}
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="space-y-2 pt-1"
+                    >
+                      {q.category && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <Tag size={12} className="text-zinc-400" />
+                          <span className="font-medium">Category:</span> {q.category}
+                        </div>
+                      )}
+                      {q.description && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <FileText size={12} className="text-zinc-400" />
+                          <span className="font-medium">About:</span> {q.description}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <Calendar size={12} className="text-zinc-400" />
+                        <span className="font-medium">Opened:</span> {new Date(q._creationTime).toLocaleDateString()}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {!myJoinedIds.has(q._id) && (
+                    <button
+                      onClick={() => handleJoin(q._id)}
+                      className="w-full py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors"
+                    >
+                      Join Queue
+                    </button>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         </section>
       )}

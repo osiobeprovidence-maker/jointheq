@@ -2940,9 +2940,17 @@ export default function DashboardPage() {
                                                             notif.type === 'listing' ? 'bg-purple-100 text-purple-600' :
                                                                 notif.type === 'message' || notif.type === 'admin' ? 'bg-sky-100 text-sky-600' :
                                                                     notif.type === 'subscription' ? 'bg-blue-100 text-blue-600' :
-                                                                        'bg-zinc-100 text-zinc-600'
+                                                                        notif.type === 'queue_join' ? 'bg-pink-100 text-pink-600' :
+                                                                            notif.type === 'queue_request' ? 'bg-orange-100 text-orange-600' :
+                                                                                notif.type === 'queue_approval' ? 'bg-emerald-100 text-emerald-600' :
+                                                                                    notif.type === 'queue_ready' ? 'bg-violet-100 text-violet-600' :
+                                                                                        'bg-zinc-100 text-zinc-600'
                                                     }`}>
-                                                    <Bell size={20} />
+                                                    {notif.type === 'queue_join' ? <Users size={20} /> :
+                                                        notif.type === 'queue_request' ? <Zap size={20} /> :
+                                                            notif.type === 'queue_approval' ? <CheckCircle size={20} /> :
+                                                                notif.type === 'queue_ready' ? <Sparkles size={20} /> :
+                                                                    <Bell size={20} />}
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex items-center justify-between mb-1">

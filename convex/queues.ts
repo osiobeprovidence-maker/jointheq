@@ -788,17 +788,15 @@ export const createQueueRequest = mutation({
       approved_date: now,
     });
 
-    // Notify admins about new queue request
-    const admins = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("is_admin"), true))
-      .collect();
+    // Notify everyone about the new queue
+    const allUsers = await ctx.db.query("users").collect();
 
-    for (const admin of admins) {
+    for (const user of allUsers) {
+      if (user._id === args.userId) continue;
       await ctx.db.insert("notifications", {
-        user_id: admin._id,
-        title: "New Queue Request",
-        message: `${args.service_name} — A user wants to start a new subscription queue`,
+        user_id: user._id,
+        title: "🔥 New Interest Queue!",
+        message: `${args.service_name} just dropped — jump in before it pops off!`,
         type: "queue_request",
         is_read: false,
         created_at: now,
@@ -854,15 +852,37 @@ export const joinQueueRequest = mutation({
       updated_at: now,
     });
 
-    // Notify creator
+    // Notify creator + all existing approved members
+    const existingMembers = await ctx.db
+      .query("queue_members")
+      .withIndex("by_queue", (q) => q.eq("queue_id", args.queueId))
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .collect();
+
+    const notifiedIds = new Set<string>();
+    notifiedIds.add(queue.creator_id);
+
     await ctx.db.insert("notifications", {
       user_id: queue.creator_id,
-      title: "Someone joined your queue",
-      message: `A new person is interested in ${queue.service_name}`,
+      title: "🎉 New member joined!",
+      message: `Someone new is interested in ${queue.service_name} — your queue is growing!`,
       type: "queue_join",
       is_read: false,
       created_at: now,
     });
+
+    for (const member of existingMembers) {
+      if (notifiedIds.has(member.user_id)) continue;
+      notifiedIds.add(member.user_id);
+      await ctx.db.insert("notifications", {
+        user_id: member.user_id,
+        title: "🎉 Queue growing!",
+        message: `A new person joined ${queue.service_name} — ${existingMembers.length + 1} people interested so far!`,
+        type: "queue_join",
+        is_read: false,
+        created_at: now,
+      });
+    }
 
     return memberId;
   },
