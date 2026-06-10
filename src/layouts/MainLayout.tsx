@@ -56,6 +56,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
+        { id: 'queues', label: 'Queues', icon: <Users size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
         { id: 'tasks', label: 'Quest', icon: <ListTodo size={20} /> },
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },

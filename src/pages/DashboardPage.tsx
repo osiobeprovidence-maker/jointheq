@@ -56,6 +56,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import { MainLayout } from "../layouts/MainLayout";
 import { UserSlot, SlotType } from "../types";
+import QueueHub from "../components/queues/QueueHub";
 import toast from "react-hot-toast";
 import SupportChatUser from "../components/chat/SupportChatUser";
 import { getUserFacingErrorMessage } from "../lib/errors";
@@ -167,7 +168,7 @@ export default function DashboardPage() {
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
     ];
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'tasks' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'tasks' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [enableAutoDebit, setEnableAutoDebit] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -1318,6 +1319,12 @@ export default function DashboardPage() {
                                     />
                                 ))}
                         </div>
+                    </motion.div>
+                )}
+
+                {activeTab === 'queues' && currentUser && (
+                    <motion.div key="queues" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                        <QueueHub userId={currentUser._id as any} />
                     </motion.div>
                 )}
 

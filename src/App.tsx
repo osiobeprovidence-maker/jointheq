@@ -26,6 +26,7 @@ const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
 const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
 const QquestPage = lazy(() => import("./pages/QquestPage"));
+const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
 function RouteFallback() {
   return (
@@ -182,6 +183,9 @@ export default function App() {
             path="/migrate"
             element={<Navigate to="/dashboard" replace />}
           />
+
+          {/* Admin Invitation Acceptance */}
+          <Route path="/admin-accept" element={<AdminAcceptPage />} />
 
           {/* Admin Routes (Console) */}
           <Route

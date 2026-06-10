@@ -143,6 +143,59 @@ export const revokeInvitation = mutation({
     },
 });
 
+/** Accept an admin invitation by token */
+export const acceptAdminInvitation = mutation({
+    args: { token: v.string(), userId: v.id("users") },
+    handler: async (ctx, args) => {
+        const invite = await ctx.db.query("admin_invitations")
+            .withIndex("by_token", q => q.eq("token", args.token))
+            .first();
+        if (!invite) throw new Error("Invalid or expired invitation token");
+        if (invite.status !== "pending") throw new Error("This invitation has already been used or revoked");
+        if (invite.expires_at < Date.now()) throw new Error("This invitation has expired");
+
+        // Validate the accepting user matches invited email
+        const user = await ctx.db.get(args.userId);
+        if (!user) throw new Error("User not found");
+        if (user.email !== invite.email) throw new Error("This invitation was sent to a different email address");
+
+        // Check work_username is still available
+        const existingUsername = await ctx.db.query("users")
+            .filter(q => q.eq(q.field("work_username"), invite.work_username))
+            .first();
+        if (existingUsername && existingUsername._id !== args.userId) {
+            throw new Error(`Work username @${invite.work_username} has been taken since invitation was sent`);
+        }
+
+        // Grant admin access
+        await ctx.db.patch(args.userId, {
+            is_admin: true,
+            admin_role: invite.role,
+            work_username: invite.work_username,
+        });
+
+        // Mark invitation as accepted
+        await ctx.db.patch(invite._id, {
+            status: "accepted",
+            accepted_at: Date.now(),
+            accepted_by: args.userId,
+        });
+
+        // Log the action
+        await ctx.db.insert("admin_logs", {
+            admin_id: args.userId,
+            action: "accepted_admin_invitation",
+            target_type: "invitation",
+            target_id: invite._id,
+            target_name: user.full_name,
+            details: `Accepted invite for @${invite.work_username} (${invite.role})`,
+            created_at: Date.now(),
+        });
+
+        return { success: true, role: invite.role };
+    },
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────

@@ -36,6 +36,7 @@ export type AdminMenuKey =
   | "campaigns"
   | "campus"
   | "notifications"
+  | "queues"
   | "migrations"
   | "enhanced";
 
@@ -71,6 +72,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { id: "campaigns", label: "Campaigns", sub: "Growth & Commissions", path: "/admin?tab=campaigns", icon: <Megaphone size={18} /> },
   { id: "campus", label: "Campus Q", sub: "Campus Rep Program", path: "/admin?tab=campus", icon: <GraduationCap size={18} /> },
   { id: "notifications", label: "Notifications", sub: "Push Updates", path: "/admin?tab=notifications", icon: <Bell size={18} /> },
+  { id: "queues", label: "Queues", sub: "Queue Requests", path: "/admin?tab=queues", icon: <Users size={18} /> },
 ];
 
 export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
@@ -79,7 +81,7 @@ export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Finance", items: ["payments", "review_payments"] },
   { label: "Reviews", items: ["user_listings", "quests"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins"] },
-  { label: "Engagement", items: ["campaigns", "campus", "notifications"] },
+  { label: "Engagement", items: ["campaigns", "campus", "notifications", "queues"] },
 ];
 
 const menuItemById = new Map(adminMenuItems.map((item) => [item.id, item]));
@@ -141,7 +143,7 @@ export function AdminShell({ activeItem, children, currentUser: suppliedUser, su
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] font-['Inter',sans-serif] text-zinc-950">
+    <div className="h-screen bg-[#f5f5f7] font-['Inter',sans-serif] text-zinc-950 overflow-hidden">
       <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col bg-zinc-950 text-white md:flex">
         <div className="border-b border-white/5 p-6">
           <div className="flex items-center gap-3">
@@ -168,11 +170,11 @@ export function AdminShell({ activeItem, children, currentUser: suppliedUser, su
       {mobileMenuOpen ? (
         <div className="fixed inset-0 z-50 md:hidden">
           <button type="button" aria-label="Close admin menu" className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="absolute bottom-0 left-0 top-16 flex w-[88%] max-w-[320px] flex-col bg-zinc-950 text-white">{menu(true)}</aside>
+          <aside className="absolute bottom-0 left-0 top-16 flex w-[88%] max-w-[320px] flex-col bg-zinc-950 text-white overflow-y-auto">{menu(true)}</aside>
         </div>
       ) : null}
 
-      <main className="min-h-screen pt-16 md:ml-64 md:pt-0">
+      <main className="h-screen pt-16 md:ml-64 md:pt-0 overflow-y-auto">
         <div className="sticky top-0 z-30 hidden items-center justify-between border-b border-black/5 bg-white px-8 py-5 md:flex">
           <div>
             <h1 className="text-xl font-black">{title}</h1>

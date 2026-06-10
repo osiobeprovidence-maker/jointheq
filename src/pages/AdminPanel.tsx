@@ -77,11 +77,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { adminMenuItems, adminMenuSections } from "../components/admin/AdminShell";
+import { QueueRequestManager } from "../components/queues/QueueRequestManager";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "subscription_manager" | "payments" | "campaigns" | "quests" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests";
-const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "subscription_manager", "payments", "campaigns", "quests", "support", "admins", "campus", "security", "review_payments", "user_listings", "notifications", "leave_requests"]);
+type AdminTab = "dashboard" | "users" | "marketplace" | "subscription_manager" | "payments" | "campaigns" | "quests" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues";
+const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "subscription_manager", "payments", "campaigns", "quests", "support", "admins", "campus", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues"]);
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const fmt = fmtCurrency;
@@ -1257,9 +1258,9 @@ export default function AdminPanel() {
     );
 
     return (
-        <div className="min-h-screen bg-[#f5f5f7] flex font-['Inter',sans-serif]">
+        <div className="h-screen bg-[#f5f5f7] flex font-['Inter',sans-serif] overflow-hidden">
             {/* Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar Ã¢â€â‚¬Ã¢â€â‚¬ */}
-            <aside className="hidden md:flex w-64 flex-col bg-zinc-950 text-white min-h-screen fixed top-0 left-0 z-40">
+            <aside className="hidden md:flex w-64 flex-col bg-zinc-950 text-white h-screen fixed top-0 left-0 z-40">
                 {/* Logo */}
                 <div className="p-6 border-b border-white/5">
                     <div className="flex items-center gap-3">
@@ -1412,7 +1413,7 @@ export default function AdminPanel() {
             </AnimatePresence>
 
             {/* Ã¢â€â‚¬Ã¢â€â‚¬ Main Content Ã¢â€â‚¬Ã¢â€â‚¬ */}
-            <main className="flex-1 md:ml-64 mt-16 md:mt-0 min-h-screen">
+            <main className="flex-1 md:ml-64 mt-16 md:mt-0 h-screen overflow-y-auto">
                 {/* Top bar (desktop) */}
                 <div className="hidden md:flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 bg-white border-b border-black/5 sticky top-0 z-30">
                     <div className="flex items-center gap-2 sm:gap-4">
@@ -3232,11 +3233,11 @@ export default function AdminPanel() {
                                                             </div>
                                                             <div className="flex gap-2">
                                                                 <button
-                                                                    onClick={() => {
-                                                                        const link = `https://jointheq.sbs/admin-accept?token=${inv.token}`;
-                                                                        navigator.clipboard.writeText(link);
-                                                                        toast.success("Invite link copied!");
-                                                                    }}
+                                    onClick={() => {
+                                        const link = `${window.location.origin}/admin-accept?token=${inv.token}`;
+                                        navigator.clipboard.writeText(link);
+                                        toast.success("Invite link copied!");
+                                    }}
 
                                                                     className="px-3 py-1.5 bg-zinc-100 rounded-xl text-xs font-bold hover:bg-zinc-200"
                                                                 >Copy Link</button>
@@ -4512,6 +4513,14 @@ export default function AdminPanel() {
                                         </div>
                                     )}
                                 </div>
+                            </motion.div>
+                        )}
+
+                        {activeTab === "queues" && (
+                            <motion.div key="queues" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
+                                <SectionHeader title="Queue Requests" sub="Review and manage interest queues, convert to official queues" />
+
+                                <QueueRequestManager />
                             </motion.div>
                         )}
                     </AnimatePresence>

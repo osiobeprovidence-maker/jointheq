@@ -15,7 +15,10 @@ export const getActiveQueues = query({
     const queues = await ctx.db
       .query("queues")
       .withIndex("by_visibility", (q) => q.eq("visibility", true))
-      .filter((q) => q.eq(q.field("status"), "active"))
+      .filter((q) => q.and(
+        q.eq(q.field("stage"), "official"),
+        q.eq(q.field("status"), "active"),
+      ))
       .collect();
 
     // Enhance with member details
@@ -177,22 +180,24 @@ export const createQueue = mutation({
     visibility: v.boolean(),
   },
   handler: async (ctx, args) => {
-    // Create the queue
+    const now = Date.now();
     const queueId = await ctx.db.insert("queues", {
+      creator_id: args.admin_id,
       admin_id: args.admin_id,
       service_name: args.service_name,
       description: args.description,
       category: args.category,
       service_image_url: args.service_image_url,
+      stage: "official",
       total_cost: args.total_cost,
       max_members: args.max_members,
       current_members: 0,
-      current_price_per_member: args.total_cost, // Initially, cost is full
+      current_price_per_member: args.total_cost,
       status: "active",
       visibility: args.visibility,
       closing_date: args.closing_date,
-      created_at: Date.now(),
-      updated_at: Date.now(),
+      created_at: now,
+      updated_at: now,
     });
 
     return queueId;
@@ -652,5 +657,495 @@ export const closeQueue = mutation({
     }
 
     return args.queueId;
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// QUEUE REQUESTS (Interest Queue System)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get all interest queues (requests that haven't been converted yet)
+ */
+export const getQueueRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    const queues = await ctx.db
+      .query("queues")
+      .withIndex("by_stage", (q) => q.eq("stage", "interest"))
+      .filter((q) => q.and(
+        q.eq(q.field("status"), "interest"),
+        q.eq(q.field("visibility"), true),
+      ))
+      .collect();
+
+    return Promise.all(
+      queues.map(async (queue) => {
+        const creator = await ctx.db.get(queue.creator_id);
+        const members = await ctx.db
+          .query("queue_members")
+          .withIndex("by_queue", (q) => q.eq("queue_id", queue._id))
+          .collect();
+        const approvedMembers = members.filter((m) => m.status === "approved");
+        return {
+          ...queue,
+          creator_name: creator?.full_name || "Unknown",
+          creator_username: creator?.username || "",
+          total_interested: approvedMembers.length,
+        };
+      })
+    );
+  },
+});
+
+/**
+ * Get user's own queue requests
+ */
+export const getMyQueueRequests = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const queues = await ctx.db
+      .query("queues")
+      .withIndex("by_creator", (q) => q.eq("creator_id", args.userId))
+      .collect();
+
+    return Promise.all(
+      queues.map(async (queue) => {
+        const members = await ctx.db
+          .query("queue_members")
+          .withIndex("by_queue", (q) => q.eq("queue_id", queue._id))
+          .collect();
+        const approvedMembers = members.filter((m) => m.status === "approved");
+        return {
+          ...queue,
+          total_interested: approvedMembers.length,
+        };
+      })
+    );
+  },
+});
+
+/**
+ * Create a queue request (interest queue)
+ * User enters service name, optional description, estimated price, notes
+ */
+export const createQueueRequest = mutation({
+  args: {
+    userId: v.id("users"),
+    service_name: v.string(),
+    description: v.optional(v.string()),
+    estimated_price: v.optional(v.number()),
+    category: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Rate limit: check user doesn't have too many active requests
+    const existingRequests = await ctx.db
+      .query("queues")
+      .withIndex("by_creator", (q) => q.eq("creator_id", args.userId))
+      .filter((q) => q.eq(q.field("stage"), "interest"))
+      .filter((q) => q.eq(q.field("status"), "interest"))
+      .collect();
+
+    if (existingRequests.length >= 3) {
+      throw new Error("You can have at most 3 active queue requests");
+    }
+
+    const now = Date.now();
+    const slug = `${args.service_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${now.toString(36)}`;
+
+    // Create the queue as an interest request
+    const queueId = await ctx.db.insert("queues", {
+      creator_id: args.userId,
+      admin_id: undefined,
+      service_name: args.service_name,
+      description: args.description || `I need ${args.service_name}`,
+      category: args.category || "other",
+      service_image_url: undefined,
+      notes: args.notes,
+      stage: "interest",
+      total_cost: args.estimated_price || 0,
+      max_members: 1,
+      current_members: 1,
+      current_price_per_member: args.estimated_price || 0,
+      service_fee: undefined,
+      status: "interest",
+      visibility: true,
+      closing_date: now + 30 * 24 * 60 * 60 * 1000, // 30 days
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Auto-add creator as first member
+    await ctx.db.insert("queue_members", {
+      queue_id: queueId,
+      user_id: args.userId,
+      status: "approved",
+      join_date: now,
+      approved_date: now,
+    });
+
+    // Notify admins about new queue request
+    const admins = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("is_admin"), true))
+      .collect();
+
+    for (const admin of admins) {
+      await ctx.db.insert("notifications", {
+        user_id: admin._id,
+        title: "New Queue Request",
+        message: `${args.service_name} — A user wants to start a new subscription queue`,
+        type: "queue_request",
+        is_read: false,
+        created_at: now,
+      });
+    }
+
+    return {
+      queueId,
+      slug,
+      share_link: `/queue/${slug}`,
+    };
+  },
+});
+
+/**
+ * Join an interest queue
+ */
+export const joinQueueRequest = mutation({
+  args: {
+    queueId: v.id("queues"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const queue = await ctx.db.get(args.queueId);
+    if (!queue) throw new Error("Queue not found");
+    if (queue.stage !== "interest") throw new Error("This is not an interest queue");
+    if (queue.status !== "interest") throw new Error("This queue is not accepting members");
+
+    // Check if already joined
+    const existing = await ctx.db
+      .query("queue_members")
+      .withIndex("by_queue_user", (q) =>
+        q.eq("queue_id", args.queueId).eq("user_id", args.userId)
+      )
+      .first();
+
+    if (existing) throw new Error("You already joined this queue");
+
+    const now = Date.now();
+
+    // Auto-approve for interest queues
+    const memberId = await ctx.db.insert("queue_members", {
+      queue_id: args.queueId,
+      user_id: args.userId,
+      status: "approved",
+      join_date: now,
+      approved_date: now,
+    });
+
+    // Update member count
+    await ctx.db.patch(args.queueId, {
+      current_members: queue.current_members + 1,
+      updated_at: now,
+    });
+
+    // Notify creator
+    await ctx.db.insert("notifications", {
+      user_id: queue.creator_id,
+      title: "Someone joined your queue",
+      message: `A new person is interested in ${queue.service_name}`,
+      type: "queue_join",
+      is_read: false,
+      created_at: now,
+    });
+
+    return memberId;
+  },
+});
+
+/**
+ * Get all plans for a queue
+ */
+export const getQueuePlans = query({
+  args: { queueId: v.id("queues") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("queue_plans")
+      .withIndex("by_queue", (q) => q.eq("queue_id", args.queueId))
+      .collect();
+  },
+});
+
+/**
+ * Admin converts interest queue to official with plans
+ */
+export const convertToOfficialQueue = mutation({
+  args: {
+    queueId: v.id("queues"),
+    adminId: v.id("users"),
+    service_fee: v.optional(v.number()),
+    closing_date: v.optional(v.number()),
+    max_members: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
+
+    const queue = await ctx.db.get(args.queueId);
+    if (!queue) throw new Error("Queue not found");
+    if (queue.stage !== "interest") throw new Error("Queue is already official");
+
+    const now = Date.now();
+
+    // Convert to official
+    await ctx.db.patch(args.queueId, {
+      stage: "official",
+      status: "active",
+      admin_id: args.adminId,
+      service_fee: args.service_fee || 0,
+      max_members: args.max_members || queue.max_members,
+      closing_date: args.closing_date || queue.closing_date,
+      updated_at: now,
+    });
+
+    // Notify all interested members
+    const members = await ctx.db
+      .query("queue_members")
+      .withIndex("by_queue", (q) => q.eq("queue_id", args.queueId))
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .collect();
+
+    for (const member of members) {
+      await ctx.db.insert("notifications", {
+        user_id: member.user_id,
+        title: `${queue.service_name} is now available!`,
+        message: `Plans are now available. Choose your plan and secure your spot.`,
+        type: "queue_ready",
+        is_read: false,
+        created_at: now,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Admin adds a plan to a queue
+ */
+export const addQueuePlan = mutation({
+  args: {
+    queueId: v.id("queues"),
+    adminId: v.id("users"),
+    name: v.string(),
+    price: v.number(),
+    description: v.optional(v.string()),
+    max_members: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
+
+    const queue = await ctx.db.get(args.queueId);
+    if (!queue) throw new Error("Queue not found");
+
+    // Check plan name uniqueness
+    const existing = await ctx.db
+      .query("queue_plans")
+      .withIndex("by_queue_name", (q) =>
+        q.eq("queue_id", args.queueId).eq("name", args.name)
+      )
+      .first();
+
+    if (existing) throw new Error(`A plan named "${args.name}" already exists`);
+
+    const planId = await ctx.db.insert("queue_plans", {
+      queue_id: args.queueId,
+      name: args.name,
+      price: args.price,
+      description: args.description,
+      max_members: args.max_members,
+      current_members: 0,
+      created_at: Date.now(),
+    });
+
+    return planId;
+  },
+});
+
+/**
+ * Admin updates a plan
+ */
+export const updateQueuePlan = mutation({
+  args: {
+    planId: v.id("queue_plans"),
+    adminId: v.id("users"),
+    name: v.optional(v.string()),
+    price: v.optional(v.number()),
+    description: v.optional(v.string()),
+    max_members: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
+
+    const plan = await ctx.db.get(args.planId);
+    if (!plan) throw new Error("Plan not found");
+
+    const updates: any = {};
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.price !== undefined) updates.price = args.price;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.max_members !== undefined) updates.max_members = args.max_members;
+
+    await ctx.db.patch(args.planId, updates);
+    return args.planId;
+  },
+});
+
+/**
+ * Admin removes a plan
+ */
+export const removeQueuePlan = mutation({
+  args: {
+    planId: v.id("queue_plans"),
+    adminId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
+
+    const plan = await ctx.db.get(args.planId);
+    if (!plan) throw new Error("Plan not found");
+
+    // Unselect plan for all members who chose it
+    const members = await ctx.db
+      .query("queue_members")
+      .withIndex("by_plan", (q) => q.eq("plan_id", args.planId))
+      .collect();
+
+    for (const member of members) {
+      await ctx.db.patch(member._id, { plan_id: undefined });
+    }
+
+    await ctx.db.delete(args.planId);
+    return { success: true };
+  },
+});
+
+/**
+ * Member selects a plan for a queue they've joined
+ */
+export const selectQueuePlan = mutation({
+  args: {
+    queueId: v.id("queues"),
+    userId: v.id("users"),
+    planId: v.id("queue_plans"),
+  },
+  handler: async (ctx, args) => {
+    const plan = await ctx.db.get(args.planId);
+    if (!plan) throw new Error("Plan not found");
+    if (plan.queue_id !== args.queueId) throw new Error("Plan does not belong to this queue");
+
+    // Check plan capacity
+    if (plan.current_members >= plan.max_members) {
+      throw new Error("This plan is full");
+    }
+
+    // Find user's membership
+    const member = await ctx.db
+      .query("queue_members")
+      .withIndex("by_queue_user", (q) =>
+        q.eq("queue_id", args.queueId).eq("user_id", args.userId)
+      )
+      .first();
+
+    if (!member) throw new Error("You haven't joined this queue");
+    if (member.status !== "approved") throw new Error("Your membership is not approved");
+
+    // If user had a previous plan, decrement its count
+    if (member.plan_id && member.plan_id !== args.planId) {
+      const oldPlan = await ctx.db.get(member.plan_id);
+      if (oldPlan) {
+        await ctx.db.patch(member.plan_id, {
+          current_members: Math.max(0, oldPlan.current_members - 1),
+        });
+      }
+    }
+
+    // Update member's plan
+    await ctx.db.patch(member._id, { plan_id: args.planId });
+
+    // Increment plan's member count (only if changing to a different plan)
+    if (member.plan_id !== args.planId) {
+      await ctx.db.patch(args.planId, {
+        current_members: plan.current_members + 1,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Get official queues with plan info for marketplace
+ */
+export const getOfficialQueues = query({
+  args: {},
+  handler: async (ctx) => {
+    const queues = await ctx.db
+      .query("queues")
+      .withIndex("by_stage", (q) => q.eq("stage", "official"))
+      .filter((q) => q.and(
+        q.eq(q.field("status"), "active"),
+        q.eq(q.field("visibility"), true),
+      ))
+      .collect();
+
+    return Promise.all(
+      queues.map(async (queue) => {
+        const plans = await ctx.db
+          .query("queue_plans")
+          .withIndex("by_queue", (q) => q.eq("queue_id", queue._id))
+          .collect();
+
+        const members = await ctx.db
+          .query("queue_members")
+          .withIndex("by_queue", (q) => q.eq("queue_id", queue._id))
+          .filter((q) => q.eq(q.field("status"), "approved"))
+          .collect();
+
+        const totalApproved = members.length;
+
+        // Dynamic pricing: for each plan, calculate effective price
+        const plansWithPricing = plans.map((plan) => {
+          const filled = plan.current_members;
+          const remaining = plan.max_members - filled;
+          const fullPrice = plan.price;
+          const currentPrice = plan.max_members > 0
+            ? Math.ceil((plan.price + (queue.service_fee || 0)) / Math.max(filled + 1, 1))
+            : plan.price;
+
+          return {
+            ...plan,
+            filled,
+            remaining,
+            full_price: fullPrice,
+            current_price: currentPrice,
+            progress_pct: plan.max_members > 0
+              ? Math.min(100, Math.round((filled / plan.max_members) * 100))
+              : 0,
+          };
+        });
+
+        return {
+          ...queue,
+          plans: plansWithPricing,
+          total_members: totalApproved,
+        };
+      })
+    );
   },
 });

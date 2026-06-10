@@ -248,23 +248,29 @@ export default defineSchema({
 
         // ─── QUEUE MARKETPLACE SYSTEM ────────────────────────────────────────
         queues: defineTable({
-            // Admin info
-            admin_id: v.id("users"),
+            // Creator info
+            creator_id: v.id("users"), // who created (user or admin)
+            admin_id: v.optional(v.id("users")), // reviewing admin
         
             // Service details
             service_name: v.string(),
             description: v.string(),
             category: v.string(),
             service_image_url: v.optional(v.string()),
+            notes: v.optional(v.string()), // creator's notes
+        
+            // Queue stage
+            stage: v.string(), // "interest" | "official"
         
             // Pricing & capacity
             total_cost: v.number(),
             max_members: v.number(),
             current_members: v.number(),
             current_price_per_member: v.number(),
+            service_fee: v.optional(v.number()), // Q service fee
         
             // Queue status
-            status: v.string(), // "active", "full", "closed", "cancelled"
+            status: v.string(), // "interest", "active", "full", "closed", "cancelled"
             visibility: v.boolean(), // whether queue is visible in marketplace
             closing_date: v.number(), // timestamp
         
@@ -274,15 +280,29 @@ export default defineSchema({
             completed_at: v.optional(v.number()),
             cancelled_reason: v.optional(v.string()),
         }).index("by_admin", ["admin_id"])
+            .index("by_creator", ["creator_id"])
+            .index("by_stage", ["stage"])
             .index("by_status", ["status"])
             .index("by_category", ["category"])
             .index("by_visibility", ["visibility"])
             .index("by_closing_date", ["closing_date"]),
 
+        queue_plans: defineTable({
+            queue_id: v.id("queues"),
+            name: v.string(), // e.g. "Grok Lite", "Grok Pro"
+            price: v.number(), // base price per month
+            description: v.optional(v.string()),
+            max_members: v.number(),
+            current_members: v.number(),
+            created_at: v.number(),
+        }).index("by_queue", ["queue_id"])
+            .index("by_queue_name", ["queue_id", "name"]),
+
         queue_members: defineTable({
             queue_id: v.id("queues"),
             user_id: v.id("users"),
             status: v.string(), // "pending", "approved", "rejected", "left"
+            plan_id: v.optional(v.id("queue_plans")), // selected plan
             join_date: v.number(),
             approved_date: v.optional(v.number()),
             approved_by: v.optional(v.id("users")), // admin who approved
@@ -290,6 +310,7 @@ export default defineSchema({
         }).index("by_queue", ["queue_id"])
             .index("by_user", ["user_id"])
             .index("by_status", ["status"])
+            .index("by_plan", ["plan_id"])
             .index("by_queue_user", ["queue_id", "user_id"]),
 
         queue_invitations: defineTable({
@@ -325,19 +346,20 @@ export default defineSchema({
             created_at: v.number(),
         }).index("by_queue", ["queue_id"])
             .index("by_admin", ["admin_id"]),
-    });
-        subscription_id: v.optional(v.union(v.id("subscription_catalog"), v.id("subscriptions"))),
-        name: v.string(),
-        price: v.number(),
-        capacity: v.optional(v.number()),
-        access_type: v.optional(v.string()),
-        device_limit: v.number(),
-        downloads_enabled: v.boolean(),
-        min_q_score: v.number(),
-        features: v.optional(v.array(v.string())),
-    }).index("by_subscription", ["subscription_id"]),
 
-    groups: defineTable({
+        slot_types: defineTable({
+            subscription_id: v.optional(v.union(v.id("subscription_catalog"), v.id("subscriptions"))),
+            name: v.string(),
+            price: v.number(),
+            capacity: v.optional(v.number()),
+            access_type: v.optional(v.string()),
+            device_limit: v.number(),
+            downloads_enabled: v.boolean(),
+            min_q_score: v.number(),
+            features: v.optional(v.array(v.string())),
+        }).index("by_subscription", ["subscription_id"]),
+
+        groups: defineTable({
         subscription_catalog_id: v.optional(v.id("subscription_catalog")),
         subscription_id: v.optional(v.id("subscriptions")),
         billing_cycle_start: v.string(),
