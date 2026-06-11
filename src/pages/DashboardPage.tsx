@@ -2664,7 +2664,7 @@ export default function DashboardPage() {
                                                     }`}>
                                                     {notif.type === 'queue_join' ? <Users size={20} /> :
                                                         notif.type === 'queue_request' ? <Zap size={20} /> :
-                                                            notif.type === 'queue_approval' ? <CheckCircle size={20} /> :
+                                                            notif.type === 'queue_approval' ? <CheckCircle2 size={20} /> :
                                                                 notif.type === 'queue_ready' ? <Sparkles size={20} /> :
                                                                     <Bell size={20} />}
                                                 </div>

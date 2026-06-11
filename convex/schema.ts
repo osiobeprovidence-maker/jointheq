@@ -912,6 +912,17 @@ export default defineSchema({
     }).index("by_user", ["user_id"])
         .index("by_endpoint", ["endpoint"]),
 
+    user_login_logs: defineTable({
+        user_id: v.id("users"),
+        provider: v.string(),
+        ip_address: v.optional(v.string()),
+        user_agent: v.optional(v.string()),
+        success: v.boolean(),
+        failure_reason: v.optional(v.string()),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_created_at", ["created_at"]),
+
     admin_logs: defineTable({
         admin_id: v.id("users"),
         admin_role: v.optional(v.string()),

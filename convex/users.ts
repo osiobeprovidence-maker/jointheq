@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 import { awardReputation } from "./reputation";
 import bcrypt from "bcryptjs";
 
@@ -549,6 +550,18 @@ export const updatePhone = mutation({
 export const login = mutation({
     args: { identifier: v.string(), password: v.string() },
     handler: async (ctx, args) => {
+        const now = Date.now();
+
+        const logLogin = async (userId: Id<"users">, success: boolean, failureReason?: string) => {
+            await ctx.db.insert("user_login_logs", {
+                user_id: userId,
+                provider: "password",
+                success,
+                failure_reason: failureReason,
+                created_at: now,
+            });
+        };
+
         // Try to find by email first
         let user = await ctx.db
             .query("users")
@@ -564,8 +577,6 @@ export const login = mutation({
         }
 
         if (!user) return { success: false, error: "Invalid credentials" };
-
-        const now = Date.now();
 
         // Check if user is locked out
         if (user.lockout_until && now < user.lockout_until) {
@@ -630,6 +641,8 @@ export const login = mutation({
                     lockout_until: lockoutTime
                 });
 
+                await logLogin(user._id, false, "locked_out");
+
                 return {
                     success: false,
                     error: `Too many failed attempts. Account locked for 30 minutes.`,
@@ -640,6 +653,8 @@ export const login = mutation({
                 await ctx.db.patch(user._id, {
                     failed_login_attempts: currentAttempts
                 });
+
+                await logLogin(user._id, false, "invalid_password");
 
                 const remainingAttempts = maxAttempts - currentAttempts;
                 return {
@@ -667,6 +682,8 @@ export const login = mutation({
         await ctx.db.patch(user._id, updateData);
 
         const updatedUser = await ctx.db.get(user._id);
+
+        await logLogin(user._id, true);
 
         // Return user with verification status info
         return {
@@ -973,7 +990,18 @@ export const socialLogin = mutation({
     },
     handler: async (ctx, args) => {
         const normalizedEmail = args.email.trim().toLowerCase();
-        
+        const now = Date.now();
+
+        const logLogin = async (userId: Id<"users">, success: boolean, failureReason?: string) => {
+            await ctx.db.insert("user_login_logs", {
+                user_id: userId,
+                provider: args.provider,
+                success,
+                failure_reason: failureReason,
+                created_at: now,
+            });
+        };
+
         let user = await ctx.db
             .query("users")
             .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
@@ -981,7 +1009,6 @@ export const socialLogin = mutation({
 
         if (user) {
             // Check if locked out
-            const now = Date.now();
             if (user.lockout_until && now < user.lockout_until) {
                 const minutesRemaining = Math.ceil((user.lockout_until - now) / (60 * 1000));
                 return {
@@ -1008,6 +1035,8 @@ export const socialLogin = mutation({
 
             // Fetch the updated user
             user = await ctx.db.get(user._id);
+
+            await logLogin(user!._id, true);
             
             return {
                 success: true,

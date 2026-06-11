@@ -906,3 +906,23 @@ export const adminSyncAllMarketplace = mutation({
         return { success: true, count: marketplace.length };
     }
 });
+
+export const getLoginLogs = query({
+    args: { limit: v.optional(v.number()) },
+    handler: async (ctx, args) => {
+        const logs = await ctx.db
+            .query("user_login_logs")
+            .withIndex("by_created_at")
+            .order("desc")
+            .take(args.limit ?? 100);
+
+        const userIds = [...new Set(logs.map(l => l.user_id))];
+        const users = await Promise.all(userIds.map(id => ctx.db.get(id)));
+        const userMap = new Map(users.filter(Boolean).map(u => [u!._id, u!]));
+
+        return logs.map(log => ({
+            ...log,
+            user: userMap.get(log.user_id) ?? null,
+        }));
+    },
+});

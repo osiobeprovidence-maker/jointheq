@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import {
   Bell,
+  Clock,
   CreditCard,
   GraduationCap,
   Headphones,
@@ -37,6 +38,7 @@ export type AdminMenuKey =
   | "campus"
   | "notifications"
   | "queues"
+  | "login_logs"
   | "migrations"
   | "enhanced";
 
@@ -73,6 +75,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { id: "campus", label: "Campus Q", sub: "Campus Rep Program", path: "/admin?tab=campus", icon: <GraduationCap size={18} /> },
   { id: "notifications", label: "Notifications", sub: "Push Updates", path: "/admin?tab=notifications", icon: <Bell size={18} /> },
   { id: "queues", label: "Queues", sub: "Queue Requests", path: "/admin?tab=queues", icon: <Users size={18} /> },
+  { id: "login_logs", label: "Login Logs", sub: "User Sign-in Activity", path: "/admin?tab=login_logs", icon: <Clock size={18} /> },
 ];
 
 export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
@@ -80,7 +83,7 @@ export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Subscriptions", items: ["marketplace", "subscription_manager", "leave_requests"] },
   { label: "Finance", items: ["payments", "review_payments"] },
   { label: "Reviews", items: ["user_listings", "quests"] },
-  { label: "People & Trust", items: ["users", "support", "security", "admins"] },
+  { label: "People & Trust", items: ["users", "support", "security", "admins", "login_logs"] },
   { label: "Engagement", items: ["campaigns", "campus", "notifications", "queues"] },
 ];
 

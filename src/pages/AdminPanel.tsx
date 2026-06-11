@@ -81,8 +81,8 @@ import { QueueRequestManager } from "../components/queues/QueueRequestManager";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "subscription_manager" | "payments" | "campaigns" | "quests" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues";
-const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "subscription_manager", "payments", "campaigns", "quests", "support", "admins", "campus", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues"]);
+type AdminTab = "dashboard" | "users" | "marketplace" | "subscription_manager" | "payments" | "campaigns" | "quests" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs";
+const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "subscription_manager", "payments", "campaigns", "quests", "support", "admins", "campus", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs"]);
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const fmt = fmtCurrency;
@@ -383,6 +383,7 @@ export default function AdminPanel() {
 
     // User Logs Query
     const userAdminLogs = useQuery(api.admin.getUserAdminLogs, selectedUser ? { userId: selectedUser._id } : "skip") || [];
+    const loginLogs = useQuery(api.admin.getLoginLogs, {}) || [];
     const adjustBalanceMut = useMutation(api.admin.adjustUserBalance);
     const adjustBootsMut = useMutation(api.admin.adjustUserBoots);
 
@@ -3569,6 +3570,74 @@ export default function AdminPanel() {
                                                 ) : null}
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {activeTab === "login_logs" && (
+                            <motion.div key="login_logs" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
+                                <SectionHeader title="User Login Activity" sub="Recent sign-in attempts across the platform" />
+
+                                <div className="rounded-[2rem] border border-black/5 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-sm">
+                                            <thead>
+                                                <tr className="border-b border-black/5 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                                    <th className="px-5 py-4">User</th>
+                                                    <th className="px-5 py-4">Email</th>
+                                                    <th className="px-5 py-4">Provider</th>
+                                                    <th className="px-5 py-4">Status</th>
+                                                    <th className="px-5 py-4">Reason</th>
+                                                    <th className="px-5 py-4">Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {loginLogs.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-5 py-12 text-center text-sm text-zinc-400 font-semibold">No login activity recorded yet.</td>
+                                                    </tr>
+                                                )}
+                                                {loginLogs.map((log: any) => (
+                                                    <tr key={log._id} className="border-b border-black/5 hover:bg-zinc-50 transition-colors">
+                                                        <td className="px-5 py-3.5">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-black text-zinc-600">
+                                                                    {log.user?.full_name ? log.user.full_name.charAt(0).toUpperCase() : "?"}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="font-bold text-zinc-800 truncate max-w-[160px]">{log.user?.full_name || "Unknown"}</div>
+                                                                    {log.user?.work_username && <div className="text-[10px] font-semibold text-zinc-400">@{log.user.work_username}</div>}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-5 py-3.5 text-zinc-600 font-medium">{log.user?.email || "—"}</td>
+                                                        <td className="px-5 py-3.5">
+                                                            <span className="inline-block rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-600">
+                                                                {log.provider}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-3.5">
+                                                            {log.success ? (
+                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700">
+                                                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                                    Success
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-[10px] font-black text-red-700">
+                                                                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                                                    Failed
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-5 py-3.5 text-zinc-500 font-medium text-[11px]">{log.failure_reason || "—"}</td>
+                                                        <td className="px-5 py-3.5 text-zinc-400 font-medium text-[11px] whitespace-nowrap">
+                                                            {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </motion.div>
