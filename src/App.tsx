@@ -25,7 +25,7 @@ const ListSubscriptionPage = lazy(() => import("./pages/ListSubscriptionPage"));
 const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
 const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
-const QquestPage = lazy(() => import("./pages/QquestPage"));
+
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
 function RouteFallback() {
@@ -61,8 +61,6 @@ export default function App() {
           <Route path="/r/:refCode" element={<ReferralRedirect />} />
           <Route path="/guest-onboarding" element={<GuestOnboardingPage />} />
           <Route path="/console" element={<ConsoleLogin />} />
-          <Route path="/qquest" element={<Navigate to="/quest" replace />} />
-
           {/* Protected Routes */}
           <Route
             path="/dashboard"
@@ -72,16 +70,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          <Route
-            path="/quest"
-            element={
-              <ProtectedRoute>
-                <QquestPage />
-              </ProtectedRoute>
-            }
-          />
-
           {/* Admin Panel - Full Control Center */}
           <Route
             path="/admin"
