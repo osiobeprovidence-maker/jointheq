@@ -17,7 +17,6 @@ import {
     User,
     ChevronRight,
     Settings,
-    ListTodo
 } from "lucide-react";
 
 import { useQuery } from "convex/react";
@@ -58,7 +57,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
         { id: 'queues', label: 'Queues', icon: <Users size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
-        { id: 'tasks', label: 'Quest', icon: <ListTodo size={20} /> },
+
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
         { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
         { id: 'history', label: 'History', icon: <Clock size={20} /> },
@@ -69,11 +68,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const adminNavItem = { id: 'admin', label: 'Admin', icon: <Lock size={20} /> };
 
     const handleNavItemClick = (itemId: string) => {
-        if (itemId === 'tasks') {
-            navigate('/quest');
-            return;
-        }
-
         setActiveTab(itemId);
     };
 
