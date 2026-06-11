@@ -63,6 +63,7 @@ import {
     Sparkles,
     UserPlus,
     Trash2,
+    Repeat,
     ListTodo,
     Send,
     History,
@@ -420,6 +421,7 @@ export default function AdminPanel() {
 
     // Mutations
     const toggleAutoRenewMutation = useMutation(api.subscriptions.toggleAutoRenew);
+    const renewSlotMutation = useMutation(api.subscriptions.renewSlot);
     const markAsReadMutation = useMutation(api.notifications.markAsRead);
     const suspendUserMut = useMutation(api.admin.suspendUser);
     const unsuspendUserMut = useMutation(api.admin.unsuspendUser);
@@ -738,6 +740,16 @@ export default function AdminPanel() {
             toast.success("User removed from slot!");
         } catch (e: any) {
             toast.error(e.message || "Failed to remove user");
+        }
+    };
+
+    const handleAdminRenewSlot = async (slotId: Id<"subscription_slots">) => {
+        if (!confirm("Renew this subscription now? This will charge the user's wallet.")) return;
+        try {
+            await renewSlotMutation({ id: slotId });
+            toast.success("Subscription renewed successfully!");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to renew subscription");
         }
     };
 
@@ -5564,6 +5576,13 @@ export default function AdminPanel() {
                                                                         title="Quick Fix Status"
                                                                     >
                                                                         <RefreshCw size={14} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleAdminRenewSlot(slot._id)}
+                                                                        className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                                                                        title="Renew Subscription"
+                                                                    >
+                                                                        <Repeat size={14} />
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleRemoveFromSlot(slot._id)}
