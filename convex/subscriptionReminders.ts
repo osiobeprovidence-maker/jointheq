@@ -7,7 +7,7 @@ import { createNotification } from "./notificationHelpers";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RENEWAL_URL = "/dashboard?tab=dashboard";
 
-type ReminderKey = "10_days" | "5_days" | "due" | "overdue" | "cancelled";
+type ReminderKey = "10_days" | "7_days" | "5_days" | "due" | "overdue" | "cancelled";
 
 type ReminderTemplate = {
     key: ReminderKey;
@@ -23,6 +23,14 @@ const DEFAULT_TEMPLATES: ReminderTemplate[] = [
         key: "10_days",
         title: "10 DAYS TO RENEW",
         message: "Hi {{name}},\nYour subscription on Q is expiring in 10 days.\n\nRenew now to avoid interruption and keep enjoying all your active subscriptions without stress.",
+        cta_text: "Renew Now",
+        cta_url: RENEWAL_URL,
+        channels: ["in_app", "push", "email", "whatsapp", "telegram"],
+    },
+    {
+        key: "7_days",
+        title: "7 DAYS TO RENEW",
+        message: "Hi {{name}},\nYour Q subscription is expiring in 7 days.\n\nRenew soon to keep enjoying your subscriptions without interruption.",
         cta_text: "Renew Now",
         cta_url: RENEWAL_URL,
         channels: ["in_app", "push", "email", "whatsapp", "telegram"],
@@ -275,11 +283,12 @@ export const processDailySubscriptionReminders = internalMutation({
             const cycleDueDate = toDateKey(dueDay);
 
             let eventKey: ReminderKey | null = null;
-            if (daysUntilDue === 10) eventKey = "10_days";
-            if (daysUntilDue === 5) eventKey = "5_days";
-            if (daysUntilDue === 0) eventKey = "due";
-            if (daysUntilDue < 0 && daysUntilDue > -3) eventKey = "overdue";
-            if (daysUntilDue <= -3) eventKey = "cancelled";
+            if (daysUntilDue >= 10) eventKey = "10_days";
+            else if (daysUntilDue >= 7) eventKey = "7_days";
+            else if (daysUntilDue >= 5) eventKey = "5_days";
+            else if (daysUntilDue >= 0) eventKey = "due";
+            else if (daysUntilDue > -3) eventKey = "overdue";
+            else eventKey = "cancelled";
 
             if (!eventKey) continue;
             if (await hasLog(ctx, slot._id, eventKey, cycleDueDate, sendDate)) continue;
