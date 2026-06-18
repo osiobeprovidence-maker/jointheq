@@ -5253,41 +5253,40 @@ export default function AdminPanel() {
             {/* User Details Modal (HUB) */}
             <AnimatePresence>
                 {liveUser && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 overflow-hidden">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedUser(null)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden h-full max-h-[85vh] flex flex-col">
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="bg-white rounded-[2.5rem] shadow-2xl w-[min(95vw,1100px)] relative z-10 overflow-hidden max-h-[85vh] flex flex-col">
                             {/* Header Section */}
-                            <div className="p-6 border-b border-black/5 bg-zinc-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-[1.25rem] flex items-center justify-center font-black text-2xl shadow-lg flex-shrink-0">
+                            <div className="p-4 sm:p-6 border-b border-black/5 bg-zinc-50 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-[1.25rem] flex items-center justify-center font-black text-xl sm:text-2xl shadow-lg shrink-0">
                                         {liveUser.full_name?.[0]}
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <h2 className="text-2xl font-black truncate">{liveUser.full_name}</h2>
+                                            <h2 className="text-lg sm:text-2xl font-black truncate max-w-full">{liveUser.full_name}</h2>
                                             {liveUser.is_banned ? (
-                                                <span className="px-2.5 py-1 bg-red-100 text-red-600 text-[10px] font-black rounded-full uppercase">Banned</span>
+                                                <span className="px-2 py-1 bg-red-100 text-red-600 text-[10px] font-black rounded-full uppercase shrink-0">Banned</span>
                                             ) : liveUser.is_suspended ? (
-                                                <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-wider">Suspended</span>
+                                                <span className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-wider shrink-0">Suspended</span>
                                             ) : (
-                                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-wider">Active Account</span>
+                                                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-wider shrink-0">Active</span>
                                             )}
                                         </div>
-                                        <p className="text-sm font-medium text-gray-500 mt-0.5 truncate flex items-center gap-2">
+                                        <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5 truncate max-w-full">
                                             <span className="opacity-70">{liveUser.email}</span>
-                                            <span className="text-blue-500 font-bold">{liveUser.username && `@${liveUser.username}`}</span>
-                                            {liveUser.phone && <span className="w-1 h-1 bg-gray-300 rounded-full" />}
-                                            {liveUser.phone && <span className="font-semibold text-gray-500">{liveUser.phone}</span>}
+                                            {liveUser.username && <span className="text-blue-500 font-bold ml-2">@{liveUser.username}</span>}
+                                            {liveUser.phone && <span className="font-semibold text-gray-500 ml-2">{liveUser.phone}</span>}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 self-end md:self-auto">
-                                    <button onClick={() => setUserDetailTab("management")} className="p-3 bg-white hover:bg-zinc-900 hover:text-white rounded-2xl shadow-sm transition-all border border-black/5 flex items-center gap-2 text-sm font-bold">
-                                        <ShieldCheck size={18} />
-                                        Advanced Controls
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button onClick={() => setUserDetailTab("management")} className="px-3 py-2.5 bg-white hover:bg-zinc-900 hover:text-white rounded-2xl shadow-sm transition-all border border-black/5 flex items-center gap-1.5 text-xs font-bold">
+                                        <ShieldCheck size={16} />
+                                        Controls
                                     </button>
-                                    <button onClick={() => setSelectedUser(null)} className="p-3 bg-white rounded-2xl shadow-sm text-gray-400 hover:text-black transition-all border border-black/5">
-                                        <X size={20} />
+                                    <button onClick={() => setSelectedUser(null)} className="p-2.5 bg-white rounded-2xl shadow-sm text-gray-400 hover:text-black transition-all border border-black/5">
+                                        <X size={18} />
                                     </button>
                                 </div>
                             </div>
@@ -5309,7 +5308,7 @@ export default function AdminPanel() {
                             </div>
 
                             {/* Main Hub Content */}
-                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar" style={{ overflowX: 'hidden' }}>
                                 {userDetailTab === 'overview' && (
                                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                         {/* Snapshot Metrics */}
@@ -5420,7 +5419,7 @@ export default function AdminPanel() {
                                         {/* Wallet Management */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {/* Naira Management */}
-                                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                            <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
                                                 <div className="flex items-center justify-between mb-8">
                                                     <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-sm">
                                                         <Wallet size={28} />
@@ -5472,7 +5471,7 @@ export default function AdminPanel() {
                                             </div>
 
                                             {/* BOOTS Management */}
-                                            <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                            <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
                                                 <div className="flex items-center justify-between mb-8">
                                                     <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center shadow-sm">
                                                         <Zap size={28} />
@@ -5526,8 +5525,8 @@ export default function AdminPanel() {
                                 {userDetailTab === 'management' && (
                                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                         {/* Slot Allocation Control */}
-                                        <div className="bg-white p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
-                                            <div className="flex items-center gap-3 mb-8">
+                                        <div className="bg-white p-4 sm:p-6 rounded-[2.5rem] border border-black/5 shadow-sm">
+                                            <div className="flex items-center gap-3 mb-6">
                                                 <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-100/50">
                                                     <Sparkles size={24} />
                                                 </div>
@@ -5543,77 +5542,78 @@ export default function AdminPanel() {
                                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Current Assignments</h4>
                                                     <div className="space-y-3">
                                                         {liveUserSlots.map((slot: any) => (
-                                                            <div key={slot._id} className="p-4 bg-zinc-50 border border-black/5 rounded-2xl flex items-center justify-between group">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 bg-white border border-black/10 rounded-xl flex items-center justify-center font-black shadow-sm transition-transform">{slot.sub_name?.[0]}</div>
-                                                                    <div>
-                                                                        <div className="text-sm font-black">{slot.sub_name}</div>
-                                                                        <div className="text-[10px] font-bold text-gray-400">Account: {slot.account_email || 'n/a'}</div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <select
-                                                                        className="text-[10px] font-black uppercase bg-white border border-black/10 rounded-lg px-2 py-1 outline-none"
-                                                                        onChange={(e) => handleMoveUserGroup(e.target.value as Id<"groups">)}
-                                                                        defaultValue=""
-                                                                    >
-                                                                        <option value="" disabled>Move...</option>
-                                                                        {allSubscriptions
-                                                                            .filter((sub: any) => sub.subscription_name === slot.sub_name && sub.primary_group_id && sub.primary_group_id !== slot.group_id)
-                                                                            .map((g: any) => (
-                                                                                <option key={g._id} value={g.primary_group_id}>Group {g.account_email?.split('@')[0] || g.primary_group_id?.slice(-4)}</option>
-                                                                            ))}
-                                                                    </select>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            if (confirm("Quickly override this slot to 'filled'?")) {
-                                                                                setOverridePaymentStatus("filled");
-                                                                                setOverrideReason("One-tap admin fix via User Hub");
-                                                                                handleOverridePayment(slot._id);
-                                                                            }
-                                                                        }}
-                                                                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-zinc-900 hover:text-white transition-all shadow-sm group-hover:scale-105"
-                                                                        title="Quick Fix Status"
-                                                                    >
-                                                                        <RefreshCw size={14} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleAdminRenewSlot(slot._id)}
-                                                                        className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
-                                                                        title="Renew Subscription"
-                                                                    >
-                                                                        <Repeat size={14} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleRemoveFromSlot(slot._id)}
-                                                                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                                                                        title="Remove from Slot"
-                                                                    >
-                                                                        <Trash2 size={14} />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                                             <div key={slot._id} className="p-3 sm:p-4 bg-zinc-50 border border-black/5 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 group">
+                                                                 <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                                     <div className="w-10 h-10 bg-white border border-black/10 rounded-xl flex items-center justify-center font-black shadow-sm shrink-0 transition-transform">{slot.sub_name?.[0]}</div>
+                                                                     <div className="min-w-0" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                                                                         <div className="text-sm font-black truncate">{slot.sub_name}</div>
+                                                                         <div className="text-[10px] font-bold text-gray-400 truncate">Account: {slot.account_email || 'n/a'}</div>
+                                                                     </div>
+                                                                 </div>
+                                                                 <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                                                     <select
+                                                                         className="text-[10px] font-black uppercase bg-white border border-black/10 rounded-lg px-2 py-1 outline-none max-w-[120px]"
+                                                                         onChange={(e) => handleMoveUserGroup(e.target.value as Id<"groups">)}
+                                                                         defaultValue=""
+                                                                     >
+                                                                         <option value="" disabled>Move...</option>
+                                                                         {allSubscriptions
+                                                                             .filter((sub: any) => sub.subscription_name === slot.sub_name && sub.primary_group_id && sub.primary_group_id !== slot.group_id)
+                                                                             .map((g: any) => (
+                                                                                 <option key={g._id} value={g.primary_group_id}>Group {g.account_email?.split('@')[0] || g.primary_group_id?.slice(-4)}</option>
+                                                                             ))}
+                                                                     </select>
+                                                                     <button
+                                                                         onClick={() => {
+                                                                             if (confirm("Quickly override this slot to 'filled'?")) {
+                                                                                 setOverridePaymentStatus("filled");
+                                                                                 setOverrideReason("One-tap admin fix via User Hub");
+                                                                                 handleOverridePayment(slot._id);
+                                                                             }
+                                                                         }}
+                                                                         className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-zinc-900 hover:text-white transition-all shadow-sm"
+                                                                         title="Quick Fix Status"
+                                                                     >
+                                                                         <RefreshCw size={14} />
+                                                                     </button>
+                                                                     <button
+                                                                         onClick={() => handleAdminRenewSlot(slot._id)}
+                                                                         className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                                                                         title="Renew Subscription"
+                                                                     >
+                                                                         <Repeat size={14} />
+                                                                     </button>
+                                                                     <button
+                                                                         onClick={() => handleRemoveFromSlot(slot._id)}
+                                                                         className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                                         title="Remove from Slot"
+                                                                     >
+                                                                         <Trash2 size={14} />
+                                                                     </button>
+                                                                 </div>
+                                                             </div>
+                                                         ))}
                                                         {liveUserSlots.length === 0 && <div className="p-6 text-center text-gray-400 italic text-sm">No active slots found.</div>}
                                                     </div>
                                                 </div>
 
                                                 {/* Assign New Slot */}
-                                                <div className="space-y-4">
+                                                <div className="space-y-4 min-w-0">
                                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Assign New Plan</h4>
-                                                    <div className="bg-zinc-50 border border-black/5 p-6 rounded-3xl space-y-4">
+                                                    <div className="bg-zinc-50 border border-black/5 p-4 sm:p-6 rounded-3xl space-y-4">
                                                         <div>
                                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Choose Plan Type</label>
                                                             <select
-                                                                className="w-full p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-purple-400"
+                                                                className="w-full p-3 sm:p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-purple-400"
                                                                 onChange={(e) => setSelectedSlotForAssignment(e.target.value as Id<"slot_types">)}
                                                                 value={selectedSlotForAssignment || ""}
+                                                                style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                                                             >
                                                                 <option value="">Select a slot type...</option>
                                                                 {allSubscriptions.map((sub: any) => (
                                                                     <optgroup key={sub._id} label={`${sub.subscription_name} (${sub.account_email || 'admin'})`}>
                                                                         {(sub.slot_types || []).map((st: any) => (
-                                                                            <option key={st._id} value={st._id}>
+                                                                            <option key={st._id} value={st._id} className="whitespace-normal">
                                                                                 {st.name} ({(sub.account_email || 'admin').split('@')[0]}) - {fmt(st.price)}
                                                                             </option>
                                                                         ))}
