@@ -17,6 +17,7 @@ import {
     User,
     ChevronRight,
     Settings,
+    GraduationCap,
 } from "lucide-react";
 
 import { useQuery } from "convex/react";
@@ -55,6 +56,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
+        { id: 'qhub', label: 'Q Hub', icon: <GraduationCap size={20} /> },
         { id: 'queues', label: 'Queues', icon: <Users size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
 
@@ -68,6 +70,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const adminNavItem = { id: 'admin', label: 'Admin', icon: <Lock size={20} /> };
 
     const handleNavItemClick = (itemId: string) => {
+        if (itemId === 'qhub') {
+            navigate('/q-hub');
+            return;
+        }
         setActiveTab(itemId);
     };
 

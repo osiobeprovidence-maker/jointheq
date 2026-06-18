@@ -35,6 +35,7 @@ import type * as paystack from "../paystack.js";
 import type * as promotions from "../promotions.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
+import type * as qhub from "../qhub.js";
 import type * as quests from "../quests.js";
 import type * as queues from "../queues.js";
 import type * as reputation from "../reputation.js";
@@ -83,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   promotions: typeof promotions;
   push: typeof push;
   pushActions: typeof pushActions;
+  qhub: typeof qhub;
   quests: typeof quests;
   queues: typeof queues;
   reputation: typeof reputation;

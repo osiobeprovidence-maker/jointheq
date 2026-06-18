@@ -1081,6 +1081,10 @@ export default function DashboardPage() {
                     navigate('/admin');
                     return;
                 }
+                if (tab === 'qhub') {
+                    navigate('/q-hub');
+                    return;
+                }
                 setActiveTab(tab as typeof activeTab);
             }}
             qScore={currentUser?.q_score || 0}

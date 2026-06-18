@@ -25,6 +25,7 @@ const ListSubscriptionPage = lazy(() => import("./pages/ListSubscriptionPage"));
 const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
 const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
+const QHubPage = lazy(() => import("./pages/QHubPage"));
 
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
@@ -154,6 +155,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ListSubscriptionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/q-hub"
+            element={
+              <ProtectedRoute>
+                <QHubPage />
               </ProtectedRoute>
             }
           />

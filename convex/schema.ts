@@ -1025,5 +1025,250 @@ export default defineSchema({
         scheduled_id: v.optional(v.id("_scheduled_functions")), // ID for the scheduled task in Convex
     }).index("by_status", ["status"])
       .index("by_scheduled_for", ["scheduled_for"]),
+
+    // ══════════════════════════════════════════════
+    // Q HUB
+    // ══════════════════════════════════════════════
+
+    hub_discussion_categories: defineTable({
+        name: v.string(),
+        slug: v.string(),
+        description: v.optional(v.string()),
+        icon: v.optional(v.string()),
+        sort_order: v.optional(v.number()),
+        created_at: v.number(),
+    }).index("by_slug", ["slug"]),
+
+    hub_discussions: defineTable({
+        author_id: v.id("users"),
+        title: v.string(),
+        content: v.string(),
+        category: v.string(),
+        tags: v.optional(v.array(v.string())),
+        is_pinned: v.optional(v.boolean()),
+        is_locked: v.optional(v.boolean()),
+        view_count: v.optional(v.number()),
+        like_count: v.optional(v.number()),
+        comment_count: v.optional(v.number()),
+        last_activity_at: v.optional(v.number()),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_author", ["author_id"])
+        .index("by_category", ["category"])
+        .index("by_created_at", ["created_at"])
+        .index("by_pinned", ["is_pinned", "created_at"])
+        .index("by_last_activity", ["last_activity_at"]),
+
+    hub_discussion_comments: defineTable({
+        post_id: v.id("hub_discussions"),
+        author_id: v.id("users"),
+        parent_id: v.optional(v.id("hub_discussion_comments")),
+        content: v.string(),
+        is_deleted: v.optional(v.boolean()),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_post", ["post_id", "created_at"])
+        .index("by_author", ["author_id"])
+        .index("by_parent", ["parent_id"]),
+
+    hub_discussion_likes: defineTable({
+        post_id: v.id("hub_discussions"),
+        user_id: v.id("users"),
+        created_at: v.number(),
+    }).index("by_post_user", ["post_id", "user_id"])
+        .index("by_user", ["user_id"]),
+
+    hub_saved_posts: defineTable({
+        post_id: v.id("hub_discussions"),
+        user_id: v.id("users"),
+        created_at: v.number(),
+    }).index("by_user", ["user_id", "created_at"])
+        .index("by_post_user", ["post_id", "user_id"]),
+
+    hub_discussion_reports: defineTable({
+        post_id: v.id("hub_discussions"),
+        reported_by: v.id("users"),
+        reason: v.string(),
+        status: v.string(), // "pending", "resolved", "dismissed"
+        resolved_by: v.optional(v.id("users")),
+        created_at: v.number(),
+        resolved_at: v.optional(v.number()),
+    }).index("by_status", ["status"])
+        .index("by_reporter", ["reported_by"]),
+
+    hub_prompts: defineTable({
+        author_id: v.id("users"),
+        title: v.string(),
+        description: v.string(),
+        category: v.string(),
+        difficulty: v.string(), // "beginner", "intermediate", "advanced"
+        tool_compatibility: v.string(),
+        content: v.string(),
+        tags: v.optional(v.array(v.string())),
+        is_featured: v.optional(v.boolean()),
+        copy_count: v.optional(v.number()),
+        avg_rating: v.optional(v.number()),
+        rating_count: v.optional(v.number()),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_author", ["author_id"])
+        .index("by_category", ["category"])
+        .index("by_featured", ["is_featured", "created_at"])
+        .index("by_created_at", ["created_at"]),
+
+    hub_saved_prompts: defineTable({
+        prompt_id: v.id("hub_prompts"),
+        user_id: v.id("users"),
+        created_at: v.number(),
+    }).index("by_user", ["user_id", "created_at"])
+        .index("by_prompt_user", ["prompt_id", "user_id"]),
+
+    hub_prompt_ratings: defineTable({
+        prompt_id: v.id("hub_prompts"),
+        user_id: v.id("users"),
+        rating: v.number(), // 1-5
+        created_at: v.number(),
+    }).index("by_prompt_user", ["prompt_id", "user_id"]),
+
+    hub_resources: defineTable({
+        author_id: v.id("users"),
+        title: v.string(),
+        description: v.string(),
+        category: v.string(),
+        content_type: v.string(), // "pdf", "article", "guide", "checklist", "template"
+        file_url: v.optional(v.string()),
+        file_size: v.optional(v.number()),
+        thumbnail_url: v.optional(v.string()),
+        download_count: v.optional(v.number()),
+        tags: v.optional(v.array(v.string())),
+        is_featured: v.optional(v.boolean()),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_category", ["category"])
+        .index("by_content_type", ["content_type"])
+        .index("by_featured", ["is_featured", "created_at"])
+        .index("by_created_at", ["created_at"]),
+
+    hub_courses: defineTable({
+        author_id: v.id("users"),
+        title: v.string(),
+        description: v.string(),
+        category: v.string(),
+        thumbnail_url: v.optional(v.string()),
+        difficulty: v.string(), // "beginner", "intermediate", "advanced"
+        module_count: v.optional(v.number()),
+        lesson_count: v.optional(v.number()),
+        duration: v.optional(v.string()),
+        is_published: v.optional(v.boolean()),
+        is_featured: v.optional(v.boolean()),
+        enrollment_count: v.optional(v.number()),
+        completion_rate: v.optional(v.number()),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_category", ["category"])
+        .index("by_published", ["is_published", "created_at"])
+        .index("by_featured", ["is_featured", "created_at"]),
+
+    hub_modules: defineTable({
+        course_id: v.id("hub_courses"),
+        title: v.string(),
+        description: v.optional(v.string()),
+        sort_order: v.number(),
+        lesson_count: v.optional(v.number()),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_course", ["course_id", "sort_order"]),
+
+    hub_lessons: defineTable({
+        module_id: v.id("hub_modules"),
+        course_id: v.id("hub_courses"),
+        title: v.string(),
+        description: v.optional(v.string()),
+        content_type: v.string(), // "video", "text", "assignment"
+        video_url: v.optional(v.string()),
+        text_content: v.optional(v.string()),
+        attachment_url: v.optional(v.string()),
+        duration: v.optional(v.string()),
+        sort_order: v.number(),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_module", ["module_id", "sort_order"])
+        .index("by_course", ["course_id", "sort_order"]),
+
+    hub_lesson_progress: defineTable({
+        user_id: v.id("users"),
+        lesson_id: v.id("hub_lessons"),
+        course_id: v.id("hub_courses"),
+        completed: v.boolean(),
+        completed_at: v.optional(v.number()),
+        created_at: v.number(),
+    }).index("by_user_course", ["user_id", "course_id", "lesson_id"])
+        .index("by_user", ["user_id"])
+        .index("by_lesson", ["lesson_id"]),
+
+    hub_live_sessions: defineTable({
+        title: v.string(),
+        description: v.string(),
+        date: v.number(),
+        time: v.string(),
+        host: v.string(),
+        host_id: v.optional(v.id("users")),
+        meeting_link: v.optional(v.string()),
+        access_code: v.optional(v.string()),
+        max_attendees: v.optional(v.number()),
+        registered_count: v.optional(v.number()),
+        status: v.string(), // "upcoming", "live", "completed", "cancelled"
+        category: v.optional(v.string()),
+        created_by: v.id("users"),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_date", ["date"])
+        .index("by_status", ["status"]),
+
+    hub_session_registrations: defineTable({
+        session_id: v.id("hub_live_sessions"),
+        user_id: v.id("users"),
+        registered_at: v.number(),
+        attended: v.optional(v.boolean()),
+    }).index("by_session", ["session_id"])
+        .index("by_user", ["user_id"])
+        .index("by_session_user", ["session_id", "user_id"]),
+
+    hub_downloads: defineTable({
+        author_id: v.id("users"),
+        title: v.string(),
+        description: v.string(),
+        category: v.string(),
+        file_url: v.string(),
+        file_size: v.optional(v.number()),
+        file_type: v.string(), // "pdf", "doc", "xls", "zip", "notion", "json", "csv"
+        thumbnail_url: v.optional(v.string()),
+        download_count: v.optional(v.number()),
+        is_featured: v.optional(v.boolean()),
+        tags: v.optional(v.array(v.string())),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+    }).index("by_category", ["category"])
+        .index("by_featured", ["is_featured", "created_at"])
+        .index("by_downloads", ["download_count"])
+        .index("by_created_at", ["created_at"]),
+
+    hub_download_logs: defineTable({
+        download_id: v.id("hub_downloads"),
+        user_id: v.id("users"),
+        downloaded_at: v.number(),
+    }).index("by_download", ["download_id"])
+        .index("by_user", ["user_id"]),
+
+    hub_analytics_events: defineTable({
+        event_type: v.string(), // "view", "download", "enroll", "complete", "share"
+        entity_type: v.string(), // "course", "lesson", "resource", "prompt", "download", "discussion"
+        entity_id: v.string(),
+        user_id: v.optional(v.id("users")),
+        metadata: v.optional(v.any()),
+        created_at: v.number(),
+    }).index("by_event", ["event_type", "created_at"])
+        .index("by_entity", ["entity_type", "entity_id"])
+        .index("by_user", ["user_id"]),
 });
 
