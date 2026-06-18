@@ -35,7 +35,6 @@ type HubTab = (typeof hubTabs)[number]["id"];
 export default function QHubPage() {
     const user = auth.getCurrentUser();
     const [activeTab, setActiveTab] = useState<HubTab>("discussions");
-    const [showAccessDenied, setShowAccessDenied] = useState(false);
 
     const accessCheck = useQuery(
         api.qhub.checkHubAccess,
@@ -62,14 +61,10 @@ export default function QHubPage() {
         );
     }
 
-    if (!accessCheck.hasAccess && !showAccessDenied) {
-        setShowAccessDenied(true);
-    }
-
     return (
         <div className="min-h-screen bg-[#f4f5f8]">
-            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-                {showAccessDenied && !accessCheck.hasAccess ? (
+            <div className="lg:ml-64 pt-20 sm:pt-24 lg:pt-32 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+                {!accessCheck.hasAccess ? (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
