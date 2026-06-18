@@ -194,7 +194,7 @@ export const getLikedPosts = query({
     args: { userId: v.id("users") },
     handler: async (ctx, args) => {
         const likes = await ctx.db.query("hub_discussion_likes").withIndex("by_user", (q: any) => q.eq("user_id", args.userId)).collect();
-        return new Set(likes.map(l => l.post_id));
+        return likes.map(l => l.post_id);
     },
 });
 

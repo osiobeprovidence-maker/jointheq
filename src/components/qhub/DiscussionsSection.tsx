@@ -85,7 +85,7 @@ export default function DiscussionsSection() {
         }
     };
 
-    const isLiked = (postId: Id<"hub_discussions">) => likedPosts?.has(postId) ?? false;
+    const isLiked = (postId: Id<"hub_discussions">) => likedPosts?.includes(postId) ?? false;
     const isSaved = (postId: Id<"hub_discussions">) => savedPosts?.some((s: any) => s._id === postId) ?? false;
 
     return (
