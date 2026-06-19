@@ -5,7 +5,6 @@ import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/auth/AuthGuards";
 import InstallBanner from "./components/InstallBanner";
-import SubscriptionManagerPage from "./pages/SubscriptionManagerPage";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -118,14 +117,6 @@ export default function App() {
             }
           />
 
-          <Route
-            path="/admin/subscriptions"
-            element={
-              <ProtectedRoute requireAdmin>
-                <SubscriptionManagerPage />
-              </ProtectedRoute>
-            }
-          />
 
           <Route
             path="/admin/payments"

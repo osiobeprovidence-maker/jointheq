@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
     LayoutDashboard,
@@ -25,7 +25,6 @@ import {
     Star,
     Activity,
     RefreshCw,
-    GraduationCap,
     Ticket,
     X,
     Search,
@@ -33,12 +32,10 @@ import {
     Shield,
     Edit3,
     Pause,
-    StopCircle,
     Trophy,
     Share2,
     Eye,
     ChevronDown,
-    ArrowDownCircle,
     ArrowDown,
     ArrowUp,
     Users2,
@@ -64,7 +61,6 @@ import {
     UserPlus,
     Trash2,
     Repeat,
-    ListTodo,
     Send,
     History,
     Target,
@@ -81,11 +77,11 @@ import { adminMenuItems, adminMenuSections } from "../components/admin/AdminShel
 import { QueueRequestManager } from "../components/queues/QueueRequestManager";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "subscription_manager" | "payments" | "campaigns" | "quests" | "support" | "admins" | "campus" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs";
-const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "subscription_manager", "payments", "campaigns", "quests", "support", "admins", "campus", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs"]);
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Types ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs";
+const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs"]);
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Helpers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const fmt = fmtCurrency;
 
 type SupportContact = {
@@ -204,7 +200,7 @@ function SectionHeader({ title, sub, action }: { title: string; sub?: string; ac
     );
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Main Component Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Main Component ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 export default function AdminPanel() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -215,28 +211,13 @@ export default function AdminPanel() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreatingListing, setIsCreatingListing] = useState(false);
-    const [campusModalOpen, setCampusModalOpen] = useState(false);
-    const [campusUserId, setCampusUserId] = useState("");
-    const [campusName, setCampusName] = useState("");
+
 
     useEffect(() => {
         if (requestedAdminTab && adminTabs.has(requestedAdminTab) && requestedAdminTab !== activeTab) {
             setActiveTab(requestedAdminTab);
         }
     }, [activeTab, requestedAdminTab]);
-
-    // Campaign state
-    const [showCampaignModal, setShowCampaignModal] = useState(false);
-    const [editingCampaign, setEditingCampaign] = useState<any>(null);
-    const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-    const [campTab, setCampTab] = useState<'list' | 'analytics' | 'withdrawals'>('list');
-    const [campaignForm, setCampaignForm] = useState({
-        name: '', type: 'referral', description: '', about: '',
-        rules: [''], how_it_works: [''],
-        reward_structure: '', reward_type: 'boots', reward_amount: 0,
-        referral_boots: 5, commission_months: 3,
-        start_date: '', end_date: '', target_goal: 100,
-    });
 
     // Listing state
     const [showListingModal, setShowListingModal] = useState(false);
@@ -304,8 +285,6 @@ export default function AdminPanel() {
     const [reviewPricePerSlot, setReviewPricePerSlot] = useState<number>(0);
     const [reviewOwnerPayout, setReviewOwnerPayout] = useState<number>(0);
     const [reviewAdminNote, setReviewAdminNote] = useState("");
-    const [taskReviewStatus, setTaskReviewStatus] = useState("pending_admin_approval");
-    const [submissionReviewStatus, setSubmissionReviewStatus] = useState("pending_review");
     const [taskAdminNote, setTaskAdminNote] = useState("");
 
     // Queries
@@ -316,43 +295,16 @@ export default function AdminPanel() {
     const subBreakdown = useQuery(api.admin.getSubscriptionBreakdown) || [];
     const allUsers = useQuery(api.admin.getAllUsers) || [];
     const allTickets = useQuery(api.admin.getAllTickets) || [];
-    const campusReps = useQuery(api.admin.getCampusReps) || [];
     const recentTxns = useQuery(api.admin.getRecentTransactions) || [];
-    const campaigns = useQuery(api.campaigns.getAllAnalytics) || [];
     const adminsList = useQuery(api.users.getAdmins) || [];
     const allSubscriptionsQuery = useQuery(api.subscriptions.getAdminMarketplace);
     const allSubscriptions = allSubscriptionsQuery || [];
     const duePayments = useQuery(api.subscriptions.getAdminDuePayments, { windowDays: 14 }) || [];
-    const campaignAnalytics = useQuery(
-        api.campaigns.getAnalytics,
-        selectedCampaignId ? { campaign_id: selectedCampaignId as Id<"campaigns"> } : "skip"
-    );
-    const withdrawals = useQuery(api.campaigns.getWithdrawals, {}) || [];
-    const allAdminReviewQuests = useQuery(api.quests.adminListQuests) || [];
-    const adminReviewQuests = (allAdminReviewQuests as any[]).filter((quest: any) => quest.status === taskReviewStatus);
-    const questMonetizationSummary = useMemo(() => {
-        const quests = allAdminReviewQuests as any[];
-        const paidQuests = quests.filter((quest) => quest.paymentStatus === "paid");
-        return {
-            total: quests.length,
-            pendingApproval: quests.filter((quest) => quest.status === "pending_admin_approval").length,
-            live: quests.filter((quest) => quest.status === "live").length,
-            pendingPayment: quests.filter((quest) => quest.status === "pending_payment").length,
-            featured: quests.filter((quest) => quest.isFeatured).length,
-            sponsoredRevenue: paidQuests.reduce((sum, quest) => sum + Number(quest.paymentAmount || quest.total_cost || quest.totalBudget || 0), 0),
-        };
-    }, [allAdminReviewQuests]);
-    const adminQuestCompletions = useQuery(api.quests.adminListCompletions, { status: submissionReviewStatus }) || [];
     // Security / Fraud
     const fraudFlags = useQuery(api.fraud.getFraudFlags, {}) || [];
     const fraudSummary = useQuery(api.fraud.getFraudSummary);
     const manualRequests = useQuery(api.funding.getUserManualRequests, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const notifications = useQuery(api.notifications.list, currentUser ? { user_id: currentUser._id } : "skip") || [];
-    // Campus territories & events
-    const territories = useQuery(api.campus.getTerritories) || [];
-    const campusEvents = useQuery(api.campus.getEvents, {}) || [];
-    const campusOverview = useQuery(api.campus.getCampusOverview);
-    const campusApplications = useQuery(api.campus.getCampusApplications, {}) || [];
 
     // Payment Review Queries
     const paymentRequests = useQuery(api.funding.getManualRequests, {
@@ -377,7 +329,6 @@ export default function AdminPanel() {
     // Pending Counts for Badges
     const pendingPaymentsCount = useQuery(api.funding.getManualRequests, { status: "Awaiting Review" })?.length || 0;
     const pendingListingsCount = useQuery(api.listings.getAdminListings, { status: "Pending Review" })?.length || 0;
-    const pendingQuestApprovalsCount = questMonetizationSummary.pendingApproval;
 
     // Leave Requests Query
     const pendingLeaveRequests = useQuery(api.admin.getPendingLeaveRequests) || { slots: [], migrations: [] };
@@ -454,16 +405,6 @@ export default function AdminPanel() {
     const adminSendNotification = useMutation(api.admin.adminSendNotification);
     const approveLeaveRequest = useMutation(api.admin.approveLeaveRequest);
     const keepOverdueSubscriptionActiveMut = useMutation(api.admin.keepOverdueSubscriptionActive);
-    const createCampaignMut = useMutation(api.campaigns.create);
-    const updateCampaignStatusMut = useMutation(api.campaigns.updateStatus);
-    const editCampaignMut = useMutation(api.campaigns.editCampaign);
-    const processWithdrawalMut = useMutation(api.campaigns.processWithdrawal);
-    const approveQuestMut = useMutation(api.quests.adminReviewQuest);
-    const approveQuestCompletionMut = useMutation(api.quests.adminReviewCompletion);
-    
-    
-    
-    
     // Workforce Queries
     const workforceAdmins = useQuery(api.adminWorkforce.getAdminTeam) || [];
     const invitations = useQuery(api.adminWorkforce.getInvitations) || [];
@@ -486,11 +427,7 @@ export default function AdminPanel() {
     const deleteTaskMut = useMutation(api.adminWorkforce.deleteTask);
     // Security mutations
     const reviewFlagMut = useMutation(api.fraud.reviewFlag);
-    // Campus mutations
-    const createTerritoryMut = useMutation(api.campus.createTerritory);
-    const createEventMut = useMutation(api.campus.createEvent);
-    const updateEventMut = useMutation(api.campus.updateEvent);
-    const reviewCampusApplicationMut = useMutation(api.campus.reviewCampusApplication);
+
 
     // Payment Mutations
     const approvePaymentMut = useMutation(api.funding.approveFunding);
@@ -651,54 +588,6 @@ export default function AdminPanel() {
             visibleIds: visible.map(item => item.listing._id as Id<"marketplace">),
         };
     }, [allSubscriptions, marketplaceSearch, marketplaceServiceFilter, marketplaceSort]);
-
-    const handleSaveCampaign = async () => {
-
-        if (!campaignForm.name || !campaignForm.description || !campaignForm.start_date || !campaignForm.end_date) {
-            return toast.error('Fill in all required fields');
-        }
-        try {
-            if (editingCampaign) {
-                await editCampaignMut({
-                    id: editingCampaign._id,
-                    name: campaignForm.name,
-                    description: campaignForm.description,
-                    about: campaignForm.about,
-                    rules: campaignForm.rules.filter(r => r.trim()),
-                    how_it_works: campaignForm.how_it_works.filter(h => h.trim()),
-                    reward_structure: campaignForm.reward_structure,
-                    reward_type: campaignForm.reward_type,
-                    reward_amount: campaignForm.reward_amount,
-                    referral_boots: campaignForm.referral_boots,
-                    target_goal: campaignForm.target_goal,
-                    end_date: new Date(campaignForm.end_date).getTime(),
-                });
-                toast.success('Campaign updated!');
-            } else {
-                await createCampaignMut({
-                    name: campaignForm.name,
-                    type: campaignForm.type,
-                    description: campaignForm.description,
-                    about: campaignForm.about,
-                    rules: campaignForm.rules.filter(r => r.trim()),
-                    how_it_works: campaignForm.how_it_works.filter(h => h.trim()),
-                    reward_structure: campaignForm.reward_structure,
-                    reward_type: campaignForm.reward_type,
-                    reward_amount: campaignForm.reward_amount,
-                    referral_boots: campaignForm.referral_boots ?? 5,
-                    commission_months: campaignForm.commission_months ?? 3,
-                    start_date: new Date(campaignForm.start_date).getTime(),
-                    end_date: new Date(campaignForm.end_date).getTime(),
-                    target_goal: campaignForm.target_goal,
-                    created_by: currentUser!._id,
-                });
-                toast.success('Campaign created!');
-            }
-            setShowCampaignModal(false);
-            setEditingCampaign(null);
-            setCampaignForm({ name: '', type: 'referral', description: '', about: '', rules: [''], how_it_works: [''], reward_structure: '', reward_type: 'boots', reward_amount: 0, referral_boots: 5, commission_months: 3, start_date: '', end_date: '', target_goal: 100 });
-        } catch (e: any) { toast.error(e.message); }
-    };
 
     // User Management Handlers
     const handleAssignUserToSlot = async () => {
@@ -915,25 +804,6 @@ export default function AdminPanel() {
             toast.success("Listing approved and marketplace updated!");
             setSelectedReviewListing(null);
         } catch (e: any) { toast.error(e.message); }
-    };
-
-    const openEditCampaign = (camp: any) => {
-        setEditingCampaign(camp);
-        setCampaignForm({
-            name: camp.name, type: camp.type || 'referral',
-            description: camp.description, about: camp.about || '',
-            rules: camp.rules?.length ? camp.rules : [''],
-            how_it_works: camp.how_it_works?.length ? camp.how_it_works : [''],
-            reward_structure: camp.reward_structure || '',
-            reward_type: camp.reward_type || 'boots',
-            reward_amount: camp.reward_amount || 0,
-            referral_boots: camp.referral_boots || 5,
-            commission_months: camp.commission_months || 3,
-            start_date: camp.start_date ? new Date(camp.start_date).toISOString().split('T')[0] : '',
-            end_date: camp.end_date ? new Date(camp.end_date).toISOString().split('T')[0] : '',
-            target_goal: camp.target_goal || 100,
-        });
-        setShowCampaignModal(true);
     };
 
     const handleCreateListing = async () => {
@@ -1226,15 +1096,10 @@ export default function AdminPanel() {
         support: { count: openTicketsCount, className: "bg-red-500" },
         security: { count: openFraudFlagsCount, className: "bg-red-500" },
         review_payments: { count: pendingPaymentsCount, className: "bg-amber-500" },
-        quests: { count: pendingQuestApprovalsCount, className: "bg-emerald-500" },
         user_listings: { count: pendingListingsCount, className: "bg-amber-500" },
         leave_requests: { count: pendingLeaveCount, className: "bg-purple-500" },
     };
     const selectNavItem = (item: { id: AdminTab }) => {
-        if (item.id === "subscription_manager") {
-            navigate("/admin/subscriptions");
-            return;
-        }
 
         setActiveTab(item.id);
         setSearchParams(item.id === "dashboard" ? {} : { tab: item.id }, { replace: true });
@@ -1294,7 +1159,7 @@ export default function AdminPanel() {
 
     return (
         <div className="h-screen bg-[#f5f5f7] flex font-['Inter',sans-serif] overflow-hidden">
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Sidebar ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <aside className="hidden md:flex w-64 flex-col bg-zinc-950 text-white h-screen fixed top-0 left-0 z-40">
                 {/* Logo */}
                 <div className="p-6 border-b border-white/5">
@@ -1398,7 +1263,7 @@ export default function AdminPanel() {
                     </>
                 )}
             </AnimatePresence>
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Mobile Top Bar Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Mobile Top Bar ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950 text-white flex items-center justify-between px-4 py-3 h-16 shadow-lg">
                 <div className="flex items-center gap-2">
                     <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center font-black">Q</div>
@@ -1414,7 +1279,7 @@ export default function AdminPanel() {
                 </div>
             </div>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Mobile Hamburger Menu Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Mobile Hamburger Menu ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <AnimatePresence>
                 {mobileMenuOpen && (
                     <>
@@ -1447,7 +1312,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Main Content Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Main Content ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <main className="flex-1 md:ml-64 mt-16 md:mt-0 h-screen overflow-y-auto">
                 {/* Top bar (desktop) */}
                 <div className="hidden md:flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 bg-white border-b border-black/5 sticky top-0 z-30">
@@ -1482,12 +1347,12 @@ export default function AdminPanel() {
                 <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-4 sm:pt-6">
                     <AnimatePresence mode="wait">
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â DASHBOARD Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â DASHBOARD ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "dashboard" && (
                             <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
 
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ HERO KPI BANNER Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ HERO KPI BANNER ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-blue-950 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
                                     <div className="absolute inset-0 pointer-events-none">
                                         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full -mr-48 -mt-48 blur-3xl" />
@@ -1551,7 +1416,7 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ USER METRICS Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ USER METRICS ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 <div>
                                     <SectionHeader title="User Metrics" sub="Real-time platform user data" />
                                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -1563,7 +1428,7 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ SUBSCRIPTION SLOTS (with fill rate meter) Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SUBSCRIPTION SLOTS (with fill rate meter) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 <div>
                                     <SectionHeader title="Guest Onboarding" sub="Share this with guests so they can create an account first, then pay by transfer." />
                                     <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -1655,7 +1520,7 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ REVENUE BANNER Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ REVENUE BANNER ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 <div>
                                     <SectionHeader title="Revenue & Payments" sub="Financial performance" />
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1669,7 +1534,7 @@ export default function AdminPanel() {
                                                 <div className="text-4xl font-black mb-1">{stats ? fmt(stats.totalRevenue) : "-"}</div>
                                                 <div className="flex gap-3 mt-3 text-[10px] font-bold flex-wrap">
                                                     <span className="bg-white/20 px-2 py-1 rounded-full">Today: {stats ? fmt(stats.revenueToday) : "-"}</span>
-                                                    <span className="bg-white/20 px-2 py-1 rounded-full">Month: {stats ? fmt(stats.revenueThisMonth) : '— '}</span>
+                                                    <span className="bg-white/20 px-2 py-1 rounded-full">Month: {stats ? fmt(stats.revenueThisMonth) : 'â€” '}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1678,7 +1543,7 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* ── QUESTS & EARNINGS ── */}
+                                {/* â”€â”€ QUESTS & EARNINGS â”€â”€ */}
                                 <div>
                                     <SectionHeader title="Quest Performance" sub="User quests and participation" />
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1689,7 +1554,7 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* —— BOOTS & Growth —— */}
+                                {/* â€”â€” BOOTS & Growth â€”â€” */}
                                 <div>
                                     <SectionHeader title="BOOTS & Growth" sub="Token economy and circulation" />
                                     <div className="grid grid-cols-2 gap-4">
@@ -1698,9 +1563,9 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ MIGRATIONS Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ MIGRATIONS ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ TWO-COLUMN: Platform Breakdown + Transactions/Snapshots Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ TWO-COLUMN: Platform Breakdown + Transactions/Snapshots ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {/* Platform Breakdown */}
                                     <div>
@@ -1762,7 +1627,7 @@ export default function AdminPanel() {
                                                             </div>
                                                             <div>
                                                                 <div className="text-sm font-bold leading-tight">{t.user_name}</div>
-                                                                <div className="text-[10px] text-gray-400 capitalize">{t.type} · {t.description?.slice(0, 22)}</div>
+                                                                <div className="text-[10px] text-gray-400 capitalize">{t.type} Â· {t.description?.slice(0, 22)}</div>
                                                             </div>
                                                         </div>
                                                         <div className="text-right flex-shrink-0">
@@ -1866,7 +1731,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â USERS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â USERS ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "users" && (
                             <motion.div key="users" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-4 sm:space-y-6">
                                 <SectionHeader
@@ -2062,7 +1927,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â MARKETPLACE Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â MARKETPLACE ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "marketplace" && (
                             <motion.div key="marketplace" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <div className="flex flex-col gap-4 rounded-3xl border border-black/5 bg-white p-5 shadow-sm shadow-black/[0.03] lg:flex-row lg:items-end lg:justify-between">
@@ -2212,7 +2077,7 @@ export default function AdminPanel() {
                                                                 {serviceGroup.name}
                                                                 <ChevronDown size={16} className={`text-gray-400 transition ${collapsedMarketplaceServices[serviceGroup.name] ? "-rotate-90" : ""}`} />
                                                             </span>
-                                                            <span className="mt-0.5 block text-xs font-bold text-gray-400">{serviceGroup.items.length} Listings · {serviceGroup.memberCount} members · {serviceGroup.emptySlots} empty slots</span>
+                                                            <span className="mt-0.5 block text-xs font-bold text-gray-400">{serviceGroup.items.length} Listings Â· {serviceGroup.memberCount} members Â· {serviceGroup.emptySlots} empty slots</span>
                                                         </span>
                                                     </button>
                                                     <div className="flex flex-wrap items-center gap-2">
@@ -2242,7 +2107,7 @@ export default function AdminPanel() {
                                             const displayOwner = (group.plan_owner || "Unknown").trim().replace(/^@+/, "") || "Unknown";
                                             return (
                                                 <div key={group._id} className="overflow-hidden rounded-2xl border border-black/5 bg-white transition hover:border-zinc-200 hover:shadow-lg hover:shadow-black/[0.04]">
-                                                    {/* Card header Ã¢â‚¬â€ clickable to expand */}
+                                                    {/* Card header ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â clickable to expand */}
                                                     <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center">
                                                         <label className="flex h-10 w-10 shrink-0 items-center justify-center self-start rounded-xl border border-black/5 bg-zinc-50 xl:self-auto" title="Select listing">
                                                             <input
@@ -2446,7 +2311,7 @@ export default function AdminPanel() {
                                                                                         </div>
                                                                                         <div className="text-xs text-gray-400">
                                                                                             <span className="font-bold text-zinc-600">{m.slot_name}</span>
-                                                                                            {m.renewal && <span> · Renews {m.renewal}</span>}
+                                                                                            {m.renewal && <span> Â· Renews {m.renewal}</span>}
                                                                                         </div>
                                                                                     </div>
                                                                                 ))}
@@ -2486,7 +2351,7 @@ export default function AdminPanel() {
                                                                                         const result = await adminDeleteGroupMut({ group_id: group._id });
                                                                                         done = result?.done ?? true;
                                                                                     }
-                                                                                    toast("Listing deleted", { icon: "ðŸ—‘ï¸" });
+                                                                                    toast("Listing deleted", { icon: "Ã°Å¸â€”â€˜Ã¯Â¸Â" });
                                                                                     setExpandedGroup(null);
                                                                                 } catch (e: any) { toast.error(e.message); }
                                                                             }}
@@ -2512,7 +2377,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â PAYMENTS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â PAYMENTS ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "payments" && (
                             <motion.div key="payments" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Payment & Revenue" sub="Full financial overview of the platform" />
@@ -2633,402 +2498,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â CAMPAIGNS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
-                        {activeTab === "campaigns" && (
-                            <motion.div key="campaigns" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader
-                                    title="Campaigns & Growth"
-                                    sub="Create and manage growth programs"
-                                    action={
-                                        <button
-                                            onClick={() => { setEditingCampaign(null); setShowCampaignModal(true); }}
-                                            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white rounded-2xl font-bold text-sm hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
-                                        >
-                                            <Plus size={16} /> New Campaign
-                                        </button>
-                                    }
-                                />
-
-                                {/* Sub-tabs */}
-                                <div className="flex gap-2">
-                                    {(['list', 'analytics', 'withdrawals'] as const).map(t => (
-                                        <button key={t} onClick={() => setCampTab(t)}
-                                            className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all ${campTab === t ? 'bg-zinc-900 text-white' : 'bg-white text-gray-500 hover:text-black border border-black/5'
-                                                }`}>
-                                            {t === 'withdrawals' ? `Withdrawals (${withdrawals.filter((w: any) => w.status === 'pending').length})` : t}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* LIST */}
-                                {campTab === 'list' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                        {(campaigns as any[]).map((camp: any) => {
-                                            const daysLeft = Math.max(0, Math.ceil((camp.end_date - Date.now()) / 86400000));
-                                            const fillPct = camp.target_goal > 0 ? Math.min(100, Math.round((camp.current_progress ?? 0) / camp.target_goal * 100)) : 0;
-                                            return (
-                                                <div key={camp._id} className="bg-white rounded-3xl p-6 border border-black/5 hover:shadow-lg transition-all group">
-                                                    <div className="flex items-start justify-between mb-4">
-                                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${camp.type === 'campus' ? 'bg-yellow-100' : camp.type === 'referral' ? 'bg-blue-100' : camp.type === 'referral_storm' ? 'bg-purple-100' : 'bg-orange-100'
-                                                            }`}>
-                                                            {camp.type === 'campus' ? <GraduationCap size={18} className="text-yellow-600" /> :
-                                                                camp.type === 'referral' || camp.type === 'referral_storm' ? <Share2 size={18} className="text-blue-600" /> :
-                                                                    <Megaphone size={18} className="text-orange-600" />}
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full ${camp.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                                                                camp.status === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
-                                                                }`}>{camp.status}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <h3 className="font-black text-base mb-1">{camp.name}</h3>
-                                                    <p className="text-xs text-gray-400 mb-3 leading-relaxed line-clamp-2">{camp.description}</p>
-
-                                                    {/* Metrics */}
-                                                    <div className="grid grid-cols-3 gap-2 mb-4">
-                                                        <div className="bg-[#f8f9fa] rounded-xl p-2 text-center">
-                                                            <div className="font-black text-sm">{camp.participant_count ?? 0}</div>
-                                                            <div className="text-[9px] text-gray-400 font-bold">Joined</div>
-                                                        </div>
-                                                        <div className="bg-[#f8f9fa] rounded-xl p-2 text-center">
-                                                            <div className="font-black text-sm">{camp.referral_count ?? 0}</div>
-                                                            <div className="text-[9px] text-gray-400 font-bold">Referrals</div>
-                                                        </div>
-                                                        <div className="bg-[#f8f9fa] rounded-xl p-2 text-center">
-                                                            <div className="font-black text-sm">{daysLeft}d</div>
-                                                            <div className="text-[9px] text-gray-400 font-bold">Left</div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Progress */}
-                                                    <div className="mb-4">
-                                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1">
-                                                            <span>Progress</span><span>{fillPct}%</span>
-                                                        </div>
-                                                        <div className="h-1.5 bg-black/5 rounded-full">
-                                                            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${fillPct}%` }} />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Admin Controls */}
-                                                    <div className="flex gap-2 pt-4 border-t border-black/5">
-                                                        <button onClick={() => openEditCampaign(camp)}
-                                                            className="flex-1 flex items-center justify-center gap-1 py-2 bg-zinc-100 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
-                                                            <Edit3 size={12} /> Edit
-                                                        </button>
-                                                        <button onClick={() => { setSelectedCampaignId(camp._id); setCampTab('analytics'); }}
-                                                            className="flex-1 flex items-center justify-center gap-1 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors">
-                                                            <BarChart3 size={12} /> Analytics
-                                                        </button>
-                                                        {camp.status === 'active' ? (
-                                                            <button onClick={async () => { await updateCampaignStatusMut({ id: camp._id, status: 'paused' }); toast.success('Campaign paused'); }}
-                                                                className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform" title="Pause">
-                                                                <Pause size={14} />
-                                                            </button>
-                                                        ) : camp.status === 'paused' ? (
-                                                            <button onClick={async () => { await updateCampaignStatusMut({ id: camp._id, status: 'active' }); toast.success('Campaign resumed'); }}
-                                                                className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform" title="Resume">
-                                                                <PlayCircle size={14} />
-                                                            </button>
-                                                        ) : null}
-                                                        {camp.status !== 'ended' && (
-                                                            <button onClick={async () => { if (!window.confirm('End this campaign?')) return; await updateCampaignStatusMut({ id: camp._id, status: 'ended' }); toast.success('Campaign ended'); }}
-                                                                className="p-2 bg-red-50 text-red-500 rounded-xl hover:scale-110 transition-transform" title="End">
-                                                                <StopCircle size={14} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {campaigns.length === 0 && (
-                                            <div className="col-span-3 text-center py-20 text-gray-400">
-                                                <Megaphone size={40} className="mx-auto mb-4 opacity-20" />
-                                                <p className="font-black text-lg">No campaigns yet</p>
-                                                <p className="text-sm mt-1">Create your first campaign to start growing the platform.</p>
-                                                <button onClick={() => setShowCampaignModal(true)} className="mt-6 px-6 py-3 bg-zinc-900 text-white rounded-full font-bold text-sm">Create Campaign</button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* ANALYTICS */}
-                                {campTab === 'analytics' && (
-                                    <div className="space-y-6">
-                                        {/* Campaign selector */}
-                                        <div className="flex items-center gap-3">
-                                            <select
-                                                value={selectedCampaignId ?? ''}
-                                                onChange={e => setSelectedCampaignId(e.target.value)}
-                                                className="p-3 bg-white border border-black/5 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-black/10 min-w-[220px]"
-                                            >
-                                                <option value="">Select campaign</option>
-                                                {(campaigns as any[]).map((c: any) => <option key={c._id} value={c._id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
-
-                                        {selectedCampaignId && campaignAnalytics ? (
-                                            <>
-                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                                    <StatCard label="Participants" value={campaignAnalytics.total_participants} icon={<Users2 size={18} />} color="bg-blue-500" />
-                                                    <StatCard label="Referrals" value={campaignAnalytics.total_referrals} icon={<Share2 size={18} />} color="bg-purple-500" />
-                                                    <StatCard label="BOOTS Sent" value={(campaignAnalytics.total_boots_distributed ?? 0).toLocaleString()} icon={<Zap size={18} />} color="bg-yellow-500" />
-                                                    <StatCard label="Cash Sent" value={fmt(campaignAnalytics.total_cash_distributed ?? 0)} icon={<DollarSign size={18} />} color="bg-emerald-500" />
-                                                </div>
-
-                                                <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                                    <div className="p-6 border-b border-black/5 flex items-center gap-2">
-                                                        <Trophy size={18} className="text-yellow-500" />
-                                                        <h3 className="font-black">Top Referrers</h3>
-                                                    </div>
-                                                    {(campaignAnalytics.top_referrers as any[]).map((rep: any, i: number) => (
-                                                        <div key={rep._id} className="flex items-center justify-between p-4 border-b border-black/3">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs ${i === 0 ? 'bg-yellow-400 text-yellow-900' : i === 1 ? 'bg-gray-200 text-gray-700' : i === 2 ? 'bg-orange-200 text-orange-700' : 'bg-zinc-100 text-zinc-500'
-                                                                    }`}>{i + 1}</div>
-                                                                <div>
-                                                                    <div className="font-bold text-sm">{rep.full_name}</div>
-                                                                    <div className="text-[10px] text-gray-400">{rep.email}</div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <div className="font-black text-sm">{rep.referral_count ?? 0} referrals</div>
-                                                                <div className="text-[10px] text-emerald-600 font-bold">{(rep.boots_earned ?? 0)} BOOTS</div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {(campaignAnalytics.top_referrers as any[]).length === 0 && (
-                                                        <div className="p-8 text-center text-gray-400 text-sm">No referrers yet</div>
-                                                    )}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="bg-white rounded-3xl border border-black/5 p-16 text-center text-gray-400">
-                                                <BarChart3 size={40} className="mx-auto mb-4 opacity-20" />
-                                                <p className="font-bold">Select a campaign above to view its analytics</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* WITHDRAWALS */}
-                                {campTab === 'withdrawals' && (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <StatCard label="Pending" value={(withdrawals as any[]).filter((w: any) => w.status === 'pending').length} icon={<Clock size={18} />} color="bg-amber-500" />
-                                            <StatCard label="Approved" value={(withdrawals as any[]).filter((w: any) => w.status === 'approved').length} icon={<CheckCircle2 size={18} />} color="bg-emerald-500" />
-                                            <StatCard label="Rejected" value={(withdrawals as any[]).filter((w: any) => w.status === 'rejected').length} icon={<Ban size={18} />} color="bg-red-500" />
-                                        </div>
-                                        <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                            <div className="grid grid-cols-12 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b">
-                                                <div className="col-span-3">User</div>
-                                                <div className="col-span-2">Campaign</div>
-                                                <div className="col-span-2">Bank Info</div>
-                                                <div className="col-span-2">Amount</div>
-                                                <div className="col-span-1">Status</div>
-                                                <div className="col-span-2">Actions</div>
-                                            </div>
-                                            {(withdrawals as any[]).map((w: any) => (
-                                                <div key={w._id} className="grid grid-cols-12 items-center p-4 border-b border-black/3 hover:bg-black/[0.01]">
-                                                    <div className="col-span-3">
-                                                        <div className="font-bold text-sm">{w.full_name}</div>
-                                                        <div className="text-[10px] text-gray-400">{w.email}</div>
-                                                    </div>
-                                                    <div className="col-span-2 text-xs font-bold truncate pr-2">{w.campaign_name}</div>
-                                                    <div className="col-span-2">
-                                                        <div className="text-xs font-bold">{w.bank_name}</div>
-                                                        <div className="text-[10px] text-gray-400 font-mono">{w.account_number}</div>
-                                                    </div>
-                                                    <div className="col-span-2 font-black text-emerald-600">{fmt(w.amount)}</div>
-                                                    <div className="col-span-1">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${w.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                            w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
-                                                            }`}>{w.status}</span>
-                                                    </div>
-                                                    <div className="col-span-2 flex gap-1">
-                                                        {w.status === 'pending' && (
-                                                            <>
-                                                                <button onClick={async () => { await processWithdrawalMut({ withdrawal_id: w._id, status: 'approved' }); toast.success('Withdrawal approved!'); }}
-                                                                    className="flex-1 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black hover:scale-105 transition-transform">
-                                                                    Approve
-                                                                </button>
-                                                                <button onClick={async () => { await processWithdrawalMut({ withdrawal_id: w._id, status: 'rejected', admin_note: 'Rejected by admin' }); toast.error('Withdrawal rejected'); }}
-                                                                    className="flex-1 py-1.5 bg-red-50 text-red-500 rounded-xl text-[10px] font-black hover:scale-105 transition-transform">
-                                                                    Reject
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                        {w.status !== 'pending' && <span className="text-[10px] text-gray-400">{w.processed_at ? new Date(w.processed_at).toLocaleDateString() : "-"}</span>}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {withdrawals.length === 0 && (
-                                                <div className="p-12 text-center text-gray-400">
-                                                    <ArrowDownCircle size={32} className="mx-auto mb-3 opacity-20" />
-                                                    <p className="font-bold">No withdrawal requests yet</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </motion.div>
-                        )}
-
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â SUPPORT Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
-                        {activeTab === "quests" && (
-                            <motion.div key="quests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
-                                <SectionHeader title="Ad Monetization" sub="Review paid Quest ads, approve sponsored content, and manage featured placements" />
-
-                                <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
-                                    <StatCard label="Sponsored Revenue" value={fmt(questMonetizationSummary.sponsoredRevenue)} icon={<CreditCard size={18} />} color="bg-emerald-500" />
-                                    <StatCard label="Pending Review" value={questMonetizationSummary.pendingApproval} icon={<Clock size={18} />} color="bg-amber-500" />
-                                    <StatCard label="Live Ads" value={questMonetizationSummary.live} icon={<Megaphone size={18} />} color="bg-blue-500" />
-                                    <StatCard label="Featured" value={questMonetizationSummary.featured} icon={<Star size={18} />} color="bg-purple-500" />
-                                    <StatCard label="Payment Pending" value={questMonetizationSummary.pendingPayment} icon={<Wallet size={18} />} color="bg-zinc-900" />
-                                </div>
-
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                        <div className="p-6 border-b border-black/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                            <div>
-                                                <h3 className="font-black">Quest Listings</h3>
-                                                <p className="text-xs text-gray-400 mt-1">Review user-created quests before they go live.</p>
-                                            </div>
-                                            <select value={taskReviewStatus} onChange={(e) => setTaskReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
-                                                <option value="pending_admin_approval">Pending Approval</option><option value="live">Live</option><option value="pending_payment">Pending Payment</option><option value="paused">Paused</option><option value="rejected">Rejected</option><option value="completed">Completed</option>
-                                            </select>
-                                        </div>
-                                        <div className="divide-y divide-black/5">
-                                            {(adminReviewQuests as any[]).map((quest: any) => (
-                                                <div key={quest._id} className="p-5 space-y-4">
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div className="flex gap-4">
-                                                            {quest.cover_image_url && (
-                                                                <img src={quest.cover_image_url} className="w-16 h-16 rounded-xl object-cover border border-black/5" alt="" />
-                                                            )}
-                                                            <div>
-                                                                <div className="font-black">{quest.title}</div>
-                                                                <div className="text-xs text-gray-400 mt-1">{quest.platform} - {fmt(quest.reward_per_completion)} reward - {quest.current_completions}/{quest.max_completions} spots</div>
-                                                                <div className="text-[10px] font-bold text-gray-300 mt-1">Creator ID: {quest.creator_id}</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex flex-col items-end gap-2">
-                                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${quest.status === "live" ? "bg-emerald-100 text-emerald-700" : quest.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{quest.status.replace(/_/g, ' ')}</span>
-                                                            {quest.isFeatured && (
-                                                                <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-purple-600">
-                                                                    <Star size={11} /> Featured
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-sm text-gray-500 leading-relaxed">{quest.description}</p>
-                                                    <div className="grid grid-cols-2 gap-3 text-xs font-bold text-gray-500">
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Budget: {fmt(quest.total_cost)}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Max Spots: {quest.max_completions}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Completed: {quest.current_completions}</div>
-                                                        <div className="bg-zinc-50 rounded-2xl p-3">Reward/User: {fmt(quest.reward_per_completion)}</div>
-                                                        
-                                                        
-                                                    </div>
-                                                    {quest.status === "pending_admin_approval" && (
-                                                        <div className="flex gap-2">
-                                                            <button onClick={async () => { await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "approve" }); toast.success("Quest approved and is now live!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve</button>
-                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "reject", adminNote: note }); toast.error("Quest rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject</button>
-                                                        </div>
-                                                    )}
-                                                    {(quest.status === "live" || quest.status === "paused") && (
-                                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                                            <button
-                                                                onClick={async () => {
-                                                                    await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: quest.isFeatured ? "unfeature" : "feature" });
-                                                                    toast.success(quest.isFeatured ? "Removed from featured content" : "Quest added to featured content");
-                                                                }}
-                                                                className="py-3 bg-purple-50 text-purple-600 rounded-2xl text-xs font-black hover:bg-purple-100"
-                                                            >
-                                                                {quest.isFeatured ? "Unfeature" : "Feature"}
-                                                            </button>
-                                                            <button
-                                                                onClick={async () => {
-                                                                    await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: quest.status === "paused" ? "resume" : "pause" });
-                                                                    toast.success(quest.status === "paused" ? "Quest resumed" : "Quest paused");
-                                                                }}
-                                                                className="py-3 bg-amber-50 text-amber-600 rounded-2xl text-xs font-black hover:bg-amber-100"
-                                                            >
-                                                                {quest.status === "paused" ? "Resume" : "Pause"}
-                                                            </button>
-                                                            <a
-                                                                href={quest.questLink || quest.quest_link || "#"}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="py-3 bg-zinc-50 text-zinc-700 rounded-2xl text-xs font-black hover:bg-zinc-100 text-center"
-                                                            >
-                                                                Open Link
-                                                            </a>
-                                                        </div>
-                                                    )}
-                                                    {quest.status !== "rejected" && (
-                                                        <button onClick={async () => { if(window.confirm("Remove this quest post?")) { await approveQuestMut({ adminId: currentUser!._id as any, questId: quest._id, action: "reject", adminNote: "Removed for violation of community rules" }); toast.success("Quest removed"); } }} className="w-full mt-2 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 size={14} /> Remove Quest</button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {adminReviewQuests.length === 0 && (
-                                                <div className="p-12 text-center text-gray-400">
-                                                    <ListTodo size={34} className="mx-auto mb-3 opacity-20" />
-                                                    <p className="font-bold">No quests in this status.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                        <div className="p-6 border-b border-black/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                            <div>
-                                                <h3 className="font-black">Proof Review</h3>
-                                                <p className="text-xs text-gray-400 mt-1">Approve proof to release rewards from the creator's Q Wallet.</p>
-                                            </div>
-                                            <select value={submissionReviewStatus} onChange={(e) => setSubmissionReviewStatus(e.target.value)} className="bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-xs font-bold outline-none">
-                                                <option value="pending_review">Pending Review</option><option value="paid">Paid</option><option value="rejected">Rejected</option>
-                                            </select>
-                                        </div>
-                                        <div className="p-5 border-b border-black/5">
-                                            <input value={taskAdminNote} onChange={(e) => setTaskAdminNote(e.target.value)} placeholder="Optional rejection reason" className="w-full bg-zinc-50 border border-black/5 rounded-2xl px-4 py-3 text-sm font-bold outline-none" />
-                                        </div>
-                                        <div className="divide-y divide-black/5">
-                                            {(adminQuestCompletions as any[]).map((submission: any) => (
-                                                <div key={submission._id} className="p-5 space-y-4">
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div>
-                                                            <div className="font-black">Quest: {submission.quest_title || "Unknown Quest"}</div>
-                                                            <div className="text-xs text-gray-400 mt-1">User ID: {submission.user_id}</div>
-                                                        </div>
-                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${submission.status === "approved" ? "bg-emerald-100 text-emerald-700" : submission.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{submission.status}</span>
-                                                    </div>
-                                                    {submission.proof_text && <div className="bg-zinc-50 rounded-2xl p-4 text-sm text-gray-600 break-words border border-black/5">{submission.proof_text}</div>}
-                                                    {submission.proof_url && (
-                                                        <div className="overflow-hidden rounded-2xl bg-zinc-100">
-                                                            <img src={submission.proof_url} alt="Proof" className="w-full max-h-64 object-contain" />
-                                                        </div>
-                                                    )}
-                                                    {submission.status === "pending_review" && (
-                                                        <div className="flex gap-2">
-                                                            <button onClick={async () => { await approveQuestCompletionMut({ adminId: currentUser!._id as any, completionId: submission._id, action: "approve" }); toast.success("Proof approved and rewards released!"); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-xs font-black hover:bg-emerald-100">Approve Proof</button>
-                                                            <button onClick={async () => { const note = prompt("Rejection reason?"); if (note === null) return; await approveQuestCompletionMut({ adminId: currentUser!._id as any, completionId: submission._id, action: "reject", adminNote: note }); toast.error("Proof rejected"); }} className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-xs font-black hover:bg-red-100">Reject Proof</button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {adminQuestCompletions.length === 0 && (
-                                                <div className="p-12 text-center text-gray-400">
-                                                    <CheckCircle2 size={34} className="mx-auto mb-3 opacity-20" />
-                                                    <p className="font-bold">No submissions in this status.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â SUPPORT ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
 
                         {activeTab === "support" && (
                             <motion.div key="support" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
@@ -3113,7 +2583,7 @@ export default function AdminPanel() {
 
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â ADMINS Ã¢â‚¬â€ WORKFORCE CONTROL ROOM Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â ADMINS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â WORKFORCE CONTROL ROOM ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "admins" && (
                             <motion.div key="admins" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
 
@@ -3130,7 +2600,7 @@ export default function AdminPanel() {
                                     ))}
                                 </div>
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ TEAM Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ TEAM ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 {adminSubTab === "team" && (
                                     <div className="space-y-6">
                                         <SectionHeader
@@ -3263,7 +2733,7 @@ export default function AdminPanel() {
                                                         <div key={inv._id} className="p-4 flex items-center justify-between">
                                                             <div>
                                                                 <div className="font-bold text-sm">{inv.email}</div>
-                                                                <div className="text-xs text-gray-400">@{inv.work_username} · {inv.role} admin · Invited by {inv.invited_by_name}</div>
+                                                                <div className="text-xs text-gray-400">@{inv.work_username} Â· {inv.role} admin Â· Invited by {inv.invited_by_name}</div>
                                                                 <div className="text-[10px] text-amber-600 mt-0.5">Expires {new Date(inv.expires_at).toLocaleDateString()}</div>
                                                             </div>
                                                             <div className="flex gap-2">
@@ -3292,7 +2762,7 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ TASKS Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ TASKS ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 {adminSubTab === "tasks" && (
                                     <div className="space-y-6">
                                         <SectionHeader
@@ -3350,13 +2820,13 @@ export default function AdminPanel() {
                                                                         <div className="flex items-center justify-between">
                                                                             <div className="text-[10px] text-gray-400">
                                                                                 <span className="font-bold text-zinc-600">@{task.assignee_name}</span>
-                                                                                <span className="mx-1">·</span>
+                                                                                <span className="mx-1">Â·</span>
                                                                                 <span>{task.days_until_due > 0 ? `${task.days_until_due}d left` : `${Math.abs(task.days_until_due)}d ago`}</span>
                                                                             </div>
                                                                             {task.status !== "completed" && (
                                                                                 <div className="flex gap-1">
                                                                                     {task.status !== "in_progress" && (
-                                                                                        <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "in_progress" }); toast("Marked in progress", { icon: "Ã°Å¸â€Âµ" }); }} className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:scale-110 transition-transform" title="Start"><PlayCircle size={11} /></button>
+                                                                                        <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "in_progress" }); toast("Marked in progress", { icon: "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ" }); }} className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:scale-110 transition-transform" title="Start"><PlayCircle size={11} /></button>
                                                                                     )}
                                                                                     <button onClick={async () => { await updateTaskMut({ task_id: task._id, admin_id: currentUser!._id, status: "completed" }); toast.success("Task complete!"); }} className="p-1 bg-emerald-100 text-emerald-600 rounded-lg hover:scale-110 transition-transform" title="Complete"><CheckCircle2 size={11} /></button>
                                                                                     {isSuperAdmin && (
@@ -3376,7 +2846,7 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ DAILY REPORT Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ DAILY REPORT ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 {adminSubTab === "daily" && (
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
@@ -3428,7 +2898,7 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ PERFORMANCE Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ PERFORMANCE ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 {adminSubTab === "performance" && (
                                     <div className="space-y-6">
                                         <SectionHeader title="Admin Performance" sub="Monthly productivity metrics - who is actually working" />
@@ -3462,7 +2932,7 @@ export default function AdminPanel() {
                                     </div>
                                 )}
 
-                                {/* Ã¢â€â‚¬Ã¢â€â‚¬ AUDIT Ã¢â€â‚¬Ã¢â€â‚¬ */}
+                                {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ AUDIT ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
                                 {adminSubTab === "audit" && (
                                     <div className="space-y-6">
                                         <SectionHeader title="Activity Audit Log" sub="Every action taken by every admin, in real time" />
@@ -3487,7 +2957,7 @@ export default function AdminPanel() {
                                                             </div>
                                                             {log.details && <p className="text-[10px] text-gray-400 mt-0.5">{log.details}</p>}
                                                         </div>
-                                                        <div className="text-[10px] text-gray-400 flex-shrink-0">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {new Date(log.created_at).toLocaleDateString()}</div>
+                                                        <div className="text-[10px] text-gray-400 flex-shrink-0">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} Â· {new Date(log.created_at).toLocaleDateString()}</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -3498,7 +2968,7 @@ export default function AdminPanel() {
                         )}
 
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â SECURITY Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â SECURITY ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "security" && (
                             <motion.div key="security" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <SectionHeader title="Security & Fraud Prevention" sub="Monitor suspicious activity and protect platform integrity" />
@@ -3645,7 +3115,7 @@ export default function AdminPanel() {
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-5 py-3.5 text-zinc-600 font-medium">{log.user?.email || "—"}</td>
+                                                        <td className="px-5 py-3.5 text-zinc-600 font-medium">{log.user?.email || "â€”"}</td>
                                                         <td className="px-5 py-3.5">
                                                             <span className="inline-block rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-600">
                                                                 {log.provider}
@@ -3664,7 +3134,7 @@ export default function AdminPanel() {
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-5 py-3.5 text-zinc-500 font-medium text-[11px]">{log.failure_reason || "—"}</td>
+                                                        <td className="px-5 py-3.5 text-zinc-500 font-medium text-[11px]">{log.failure_reason || "â€”"}</td>
                                                         <td className="px-5 py-3.5 text-zinc-400 font-medium text-[11px] whitespace-nowrap">
                                                             {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                                         </td>
@@ -3677,311 +3147,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â CAMPUS Q (Territories + Events) Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
-                        {activeTab === "campus" && (
-                            <motion.div key="campus-full" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
-                                <SectionHeader
-                                    title="Campus Q Program"
-                                    sub="Territory management, ambassadors, and events"
-                                    action={
-                                        <button
-                                            onClick={() => {
-                                                const campusName = prompt("Campus name?");
-                                                const city = prompt("City?");
-                                                if (campusName && city) {
-                                                    createTerritoryMut({ campus_name: campusName, city, country: "Nigeria" })
-                                                        .then(() => toast.success(`Territory "${campusName}" created!`))
-                                                        .catch((e: any) => toast.error(e.message));
-                                                }
-                                            }}
-                                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-2xl text-xs font-bold hover:scale-105 transition-transform"
-                                        >
-                                            <Plus size={14} /> Add Territory
-                                        </button>
-                                    }
-                                />
-
-                                {/* Campus Overview Stats */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    <StatCard label="Territories" value={campusOverview?.total_territories ?? 0} icon={<MapPin size={18} />} color="bg-blue-500" />
-                                    <StatCard label="Ambassadors" value={campusOverview?.total_ambassadors ?? 0} icon={<Users size={18} />} color="bg-purple-500" />
-                                    <StatCard label="Total Events" value={campusOverview?.total_events ?? 0} icon={<Calendar size={18} />} color="bg-amber-500" />
-                                    <StatCard label="Users Acquired" value={campusOverview?.total_users_acquired ?? 0} icon={<TrendingUp size={18} />} color="bg-emerald-500" trend="up" sub="From events" />
-                                </div>
-
-                                {/* Campus Applications Review */}
-                                {campusApplications.filter((a: any) => a.status === "pending").length > 0 && (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="font-black text-lg flex items-center gap-2">
-                                                <div className="w-2.5 h-2.5 bg-amber-500 rounded-full" /> Pending Applications
-                                                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">{campusApplications.filter((a: any) => a.status === "pending").length}</span>
-                                            </h3>
-                                        </div>
-                                        <div className="bg-white rounded-[2.5rem] border border-black/5 overflow-hidden">
-                                            <div className="divide-y divide-black/5">
-                                                {campusApplications.filter((a: any) => a.status === "pending").map((app: any) => (
-                                                    <div key={app._id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-zinc-50 transition-colors">
-                                                        <div className="flex items-start gap-4">
-                                                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0">
-                                                                {app.user_name?.[0]}
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-black text-sm">{app.user_name}</span>
-                                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-zinc-100 px-2 py-0.5 rounded-full">{app.university}</span>
-                                                                </div>
-                                                                <div className="text-[10px] text-gray-400 mb-2">{app.user_email} • {app.social_handle || "No social handle"}</div>
-                                                                <p className="text-xs text-zinc-600 leading-relaxed max-w-lg">
-                                                                    <span className="font-bold text-zinc-400 uppercase text-[9px] tracking-tighter">Reason:</span> {app.reason}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 self-end md:self-center">
-                                                            <button
-                                                                onClick={async () => {
-                                                                    if (!confirm(`Approve ${app.user_name}'s application?`)) return;
-                                                                    try {
-                                                                        await reviewCampusApplicationMut({ applicationId: app._id, status: "approved", adminId: currentUser!._id });
-                                                                        toast.success("Application approved!");
-                                                                    } catch (e: any) { toast.error(e.message); }
-                                                                }}
-                                                                className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-black hover:bg-emerald-100 transition-all border border-emerald-100"
-                                                            >Approve</button>
-                                                            <button
-                                                                onClick={async () => {
-                                                                    const reason = prompt("Enter rejection reason (optional):");
-                                                                    if (reason === null) return;
-                                                                    try {
-                                                                        await reviewCampusApplicationMut({ applicationId: app._id, status: "rejected", adminId: currentUser!._id });
-                                                                        toast.error("Application rejected");
-                                                                    } catch (e: any) { toast.error(e.message); }
-                                                                }}
-                                                                className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-xs font-black hover:bg-red-100 transition-all border border-red-100"
-                                                            >Reject</button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Territories Grid */}
-                                <div>
-                                    <h3 className="font-black text-lg mb-4">Campus Territories</h3>
-                                    {(territories as any[]).length === 0 ? (
-                                        <div className="bg-white rounded-3xl p-12 border border-dashed border-black/20 text-center text-gray-400">
-                                            <MapPin size={32} className="mx-auto mb-3 opacity-20" />
-                                            <p className="font-bold">No territories yet</p>
-                                            <p className="text-xs mt-1">Add campus territories to manage ambassadors and events</p>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {(territories as any[]).map((t: any) => (
-                                                <div key={t._id} className="bg-white rounded-3xl p-5 border border-black/5 hover:shadow-lg transition-all">
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div>
-                                                            <h4 className="font-black">{t.campus_name}</h4>
-                                                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><MapPin size={10} /> {t.city}, {t.country}</p>
-                                                        </div>
-                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${t.is_active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                                                            {t.is_active ? "Active" : "Inactive"}
-                                                        </span>
-                                                    </div>
-                                                    <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                                                        <div className="bg-blue-50 rounded-xl p-2">
-                                                            <div className="font-black text-sm text-blue-700">{t.total_users ?? 0}</div>
-                                                            <div className="text-[9px] text-blue-500 font-bold">Users</div>
-                                                        </div>
-                                                        <div className="bg-purple-50 rounded-xl p-2">
-                                                            <div className="font-black text-sm text-purple-700">{t.ambassador_count ?? 0}</div>
-                                                            <div className="text-[9px] text-purple-500 font-bold">Ambassadors</div>
-                                                        </div>
-                                                        <div className="bg-amber-50 rounded-xl p-2">
-                                                            <div className="font-black text-sm text-amber-700">{t.event_count ?? 0}</div>
-                                                            <div className="text-[9px] text-amber-500 font-bold">Events</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="border-t border-black/5 pt-3 flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 bg-zinc-100 rounded-full flex items-center justify-center text-xs font-bold">{t.leader_name?.[0] ?? "?"}</div>
-                                                            <div>
-                                                                <div className="text-xs font-bold">{t.leader_name}</div>
-                                                                <div className="text-[10px] text-gray-400">Campus Leader</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Campus Events */}
-                                <div>
-                                    <SectionHeader
-                                        title="Campus Events"
-                                        sub="Track onboarding events, referral competitions, and meetups"
-                                        action={
-                                            <button
-                                                onClick={async () => {
-                                                    const name = prompt("Event name?");
-                                                    const campusName = prompt("Campus name?");
-                                                    const city = prompt("City?");
-                                                    const dateStr = prompt("Event date? (YYYY-MM-DD)");
-                                                    const type = prompt("Type? (onboarding/referral_comp/demo/meetup)") || "meetup";
-                                                    if (name && campusName && city && dateStr) {
-                                                        try {
-                                                            await createEventMut({
-                                                                name, campus_name: campusName, city,
-                                                                event_date: new Date(dateStr).getTime(),
-                                                                type,
-                                                                created_by: currentUser?._id,
-                                                            });
-                                                            toast.success(`Event "${name}" created!`);
-                                                        } catch (e: any) { toast.error(e.message); }
-                                                    }
-                                                }}
-                                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-2xl text-xs font-bold hover:scale-105 transition-transform"
-                                            >
-                                                <Plus size={14} /> Add Event
-                                            </button>
-                                        }
-                                    />
-                                    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                        {(campusEvents as any[]).length === 0 ? (
-                                            <div className="p-12 text-center text-gray-400">
-                                                <Calendar size={32} className="mx-auto mb-3 opacity-20" />
-                                                <p className="font-bold">No events yet</p>
-                                            </div>
-                                        ) : (
-                                            <div className="divide-y divide-black/5">
-                                                {(campusEvents as any[]).map((ev: any) => (
-                                                    <div key={ev._id} className="p-5 flex items-center gap-4">
-                                                        <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center ${ev.type === "onboarding" ? "bg-blue-100" : ev.type === "referral_comp" ? "bg-purple-100" : ev.type === "demo" ? "bg-green-100" : "bg-amber-100"}`}>
-                                                            <Calendar size={18} className="text-zinc-700" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="font-black text-sm">{ev.name}</div>
-                                                            <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
-                                                                <MapPin size={10} />{ev.campus_name}, {ev.city}
-                                                                <span>•</span>
-                                                                <Calendar size={10} />{new Date(ev.event_date).toLocaleDateString()}
-                                                                <span>•</span>
-                                                                Host: {ev.host_name}
-                                                            </div>
-                                                            {ev.status === "completed" && (
-                                                                <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500">
-                                                                    <span>{ev.actual_attendance ?? 0} attended</span>
-                                                                    <span>{ev.new_users_acquired ?? 0} new users</span>
-                                                                    <span>{ev.subscriptions_created ?? 0} subscriptions</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${ev.status === "upcoming" ? "bg-blue-100 text-blue-700" : ev.status === "completed" ? "bg-emerald-100 text-emerald-700" : ev.status === "cancelled" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                                                                {ev.status}
-                                                            </span>
-                                                            {ev.status === "upcoming" && (
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        const attendance = prompt("Actual attendance?");
-                                                                        const newUsers = prompt("New users acquired?");
-                                                                        const subs = prompt("Subscriptions created?");
-                                                                        if (attendance !== null) {
-                                                                            await updateEventMut({ id: ev._id, status: "completed", actual_attendance: Number(attendance), new_users_acquired: Number(newUsers || 0), subscriptions_created: Number(subs || 0) });
-                                                                            toast.success("Event marked complete!");
-                                                                        }
-                                                                    }}
-                                                                    className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-colors"
-                                                                >Complete</button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Commission Structure */}
-                                <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-3xl p-8 text-white">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <GraduationCap size={24} className="text-yellow-400" />
-                                        <h3 className="text-xl font-black">Campus Q Commission Structure</h3>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                                        {[
-                                            { name: "Netflix Premium", commission: 308 },
-                                            { name: "Spotify", commission: 90 },
-                                            { name: "Apple Music", commission: 90 },
-                                            { name: "Prime Video", commission: 120 },
-                                            { name: "YouTube Premium", commission: 96 },
-                                            { name: "YouTube Music", commission: 90 },
-                                            { name: "Crunchyroll", commission: 100 },
-                                            { name: "Canva", commission: 240 },
-                                            { name: "CapCut", commission: 500 },
-                                            { name: "ChatGPT Go", commission: 200 },
-                                        ].map(item => (
-                                            <div key={item.name} className="bg-white/10 rounded-2xl p-4">
-                                                <div className="text-xs text-white/60 mb-1">{item.name}</div>
-                                                <div className="font-black text-yellow-400">{"\u20A6"}{item.commission}</div>
-                                                <div className="text-[10px] text-white/40">per referral</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-xs text-white/40 mt-4">* Commissions are 2% of slot price, paid monthly as long as referred user remains subscribed.</p>
-                                </div>
-
-                                {/* Reps List */}
-                                <div className="space-y-4">
-                                    <SectionHeader title="Campus Representatives" sub="Active program members" />
-                                    {campusReps.length === 0 ? (
-                                        <div className="bg-white rounded-3xl border border-black/5 p-16 text-center text-gray-400">
-                                            <GraduationCap size={32} className="mx-auto mb-4 opacity-20" />
-                                            <p className="font-bold">No campus reps yet.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-white rounded-3xl border border-black/5 overflow-hidden">
-                                            <div className="grid grid-cols-6 text-[10px] font-black uppercase tracking-widest text-gray-400 p-4 border-b">
-                                                <div className="col-span-2">Rep</div>
-                                                <div>Campus</div>
-                                                <div className="text-center">Referred</div>
-                                                <div className="text-center">Status</div>
-                                                <div className="text-right">Earned</div>
-                                            </div>
-                                            {campusReps.map((rep: any) => (
-                                                <div key={rep._id} className="grid grid-cols-6 items-center p-4 border-b border-black/3 hover:bg-black/[0.01]">
-                                                    <div className="col-span-2 flex items-center gap-3">
-                                                        <div className="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center font-bold text-sm">
-                                                            {rep.full_name?.[0]}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-bold text-sm">{rep.full_name}</div>
-                                                            <div className="text-[10px] text-gray-400">{rep.email}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <GraduationCap size={12} className="text-gray-400" />
-                                                        <span className="text-sm font-bold">{rep.campus_name}</span>
-                                                    </div>
-                                                    <div className="text-center font-black">{rep.total_referred}</div>
-                                                    <div className="flex justify-center">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${rep.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
-                                                            {rep.is_active ? "Active" : "Inactive"}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-right font-black text-emerald-600">{fmtCurrency(rep.total_earned)}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â PAYMENTS REVIEW Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â PAYMENTS REVIEW ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "review_payments" && (
                             <motion.div key="review_payments" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -4069,7 +3235,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â LISTING REVIEW Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â LISTING REVIEW ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "user_listings" && (
                             <motion.div key="user_listings" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -4145,7 +3311,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ••• NOTIFICATIONS ••• */}
+                        {/* â€¢â€¢â€¢ NOTIFICATIONS â€¢â€¢â€¢ */}
                         {activeTab === "notifications" && (
                             <motion.div key="notifications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Campaign Notifications" sub="Compose broadcasts, schedule campaigns, and view delivery history" />
@@ -4413,7 +3579,7 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â LEAVE REQUESTS Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */}
+                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â LEAVE REQUESTS ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
                         {activeTab === "leave_requests" && (
                             <motion.div key="leave_requests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-6">
                                 <SectionHeader title="Leave Requests" sub="Review user leave requests and overdue subscriptions before removing anyone" />
@@ -4631,140 +3797,9 @@ export default function AdminPanel() {
                 </div>
             </main>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Campaign Create / Edit Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
-            <AnimatePresence>
-                {showCampaignModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
-                        <motion.div
-                            initial={{ y: "100%", opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: "100%", opacity: 0 }}
-                            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                            className="bg-[#f5f5f7] w-full sm:max-w-2xl sm:rounded-[3rem] rounded-t-[3rem] max-h-[90vh] overflow-y-auto shadow-2xl"
-                        >
-                            <div className="sticky top-0 bg-[#f5f5f7] z-10 px-8 pt-8 pb-4 border-b border-black/5 flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-2xl font-black">{editingCampaign ? 'Edit Campaign' : 'Create Campaign'}</h2>
-                                    <p className="text-sm text-gray-400 mt-1">Build a growth program for the platform</p>
-                                </div>
-                                <button onClick={() => { setShowCampaignModal(false); setEditingCampaign(null); }} className="p-3 bg-white rounded-full shadow-sm hover:scale-110 transition-transform"><X size={20} /></button>
-                            </div>
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Campaign Create / Edit Modal ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
 
-                            <div className="p-8 space-y-6">
-                                {/* Basic Info */}
-                                <div className="bg-white rounded-[2.5rem] p-8 space-y-5">
-                                    <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full" /> Basic Info</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5 sm:col-span-2">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Campaign Name *</label>
-                                            <input value={campaignForm.name} onChange={e => setCampaignForm({ ...campaignForm, name: e.target.value })} placeholder="e.g. Campus Q Program" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Campaign Type</label>
-                                            <select value={campaignForm.type} onChange={e => setCampaignForm({ ...campaignForm, type: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none">
-                                                <option value="referral">Referral Campaign</option>
-                                                <option value="campus">Campus Campaign</option>
-                                                <option value="engagement">Engagement Campaign</option>
-                                                <option value="promotion">Promotion Campaign</option>
-                                                <option value="referral_storm">Referral Storm</option>
-                                                <option value="jar">Reward Jar</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reward Type</label>
-                                            <select value={campaignForm.reward_type} onChange={e => setCampaignForm({ ...campaignForm, reward_type: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm appearance-none">
-                                                <option value="boots">BOOTS</option>
-                                                <option value="cash">Cash Commission</option>
-                                                <option value="subscription">Subscription Reward</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reward Amount</label>
-                                            <input type="number" value={campaignForm.reward_amount} onChange={e => setCampaignForm({ ...campaignForm, reward_amount: Number(e.target.value) })} placeholder="500" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">BOOTS per Referral</label>
-                                            <input type="number" value={campaignForm.referral_boots} onChange={e => setCampaignForm({ ...campaignForm, referral_boots: Number(e.target.value) })} placeholder="5" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
-                                        </div>
-                                        {campaignForm.type === 'campus' && (
-                                            <div className="space-y-1.5">
-                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Commission Months</label>
-                                                <input type="number" value={campaignForm.commission_months} onChange={e => setCampaignForm({ ...campaignForm, commission_months: Number(e.target.value) })} placeholder="3" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
-                                            </div>
-                                        )}
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Start Date *</label>
-                                            <input type="date" value={campaignForm.start_date} onChange={e => setCampaignForm({ ...campaignForm, start_date: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">End Date *</label>
-                                            <input type="date" value={campaignForm.end_date} onChange={e => setCampaignForm({ ...campaignForm, end_date: e.target.value })} className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
-                                        </div>
-                                        <div className="space-y-1.5 sm:col-span-2">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Target Goal (participants)</label>
-                                            <input type="number" value={campaignForm.target_goal} onChange={e => setCampaignForm({ ...campaignForm, target_goal: Number(e.target.value) })} placeholder="100" className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Description & About */}
-                                <div className="bg-white rounded-[2.5rem] p-8 space-y-5">
-                                    <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-purple-500 rounded-full" /> Description & About</h3>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Short Description * (shown on campaign card)</label>
-                                        <textarea rows={2} value={campaignForm.description} onChange={e => setCampaignForm({ ...campaignForm, description: e.target.value })} placeholder="Brief summary of the campaign..." className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none" />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">About the Campaign (full explanation)</label>
-                                        <textarea rows={3} value={campaignForm.about} onChange={e => setCampaignForm({ ...campaignForm, about: e.target.value })} placeholder="Full explanation of what this campaign is about..." className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none" />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Reward Structure</label>
-                                        <textarea rows={2} value={campaignForm.reward_structure} onChange={e => setCampaignForm({ ...campaignForm, reward_structure: e.target.value })} placeholder="What users earn. e.g. 2% per subscription for 3 months. 5 BOOTS per referral." className="w-full p-4 bg-[#f8f9fa] rounded-2xl font-bold outline-none focus:ring-2 ring-black/10 text-sm resize-none" />
-                                    </div>
-                                </div>
-
-                                {/* Rules */}
-                                <div className="bg-white rounded-[2.5rem] p-8 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-red-500 rounded-full" /> Campaign Rules</h3>
-                                        <button onClick={() => setCampaignForm({ ...campaignForm, rules: [...campaignForm.rules, ''] })} className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">+ Add Rule</button>
-                                    </div>
-                                    {campaignForm.rules.map((rule, i) => (
-                                        <div key={i} className="flex gap-2">
-                                            <div className="w-6 h-6 mt-3.5 flex-shrink-0 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-[10px] font-black">{i + 1}</div>
-                                            <input value={rule} onChange={e => { const r = [...campaignForm.rules]; r[i] = e.target.value; setCampaignForm({ ...campaignForm, rules: r }); }} placeholder={`Rule ${i + 1}`} className="flex-1 p-3 bg-[#f8f9fa] rounded-2xl font-medium outline-none focus:ring-2 ring-black/10 text-sm" />
-                                            {campaignForm.rules.length > 1 && <button onClick={() => { const r = campaignForm.rules.filter((_, ri) => ri !== i); setCampaignForm({ ...campaignForm, rules: r }); }} className="mt-2 p-2 text-red-400 hover:bg-red-50 rounded-full"><X size={14} /></button>}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* How it works */}
-                                <div className="bg-white rounded-[2.5rem] p-8 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-black text-base flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full" /> How It Works</h3>
-                                        <button onClick={() => setCampaignForm({ ...campaignForm, how_it_works: [...campaignForm.how_it_works, ''] })} className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">+ Add Step</button>
-                                    </div>
-                                    {campaignForm.how_it_works.map((step, i) => (
-                                        <div key={i} className="flex gap-2">
-                                            <div className="w-6 h-6 mt-3.5 flex-shrink-0 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-[10px] font-black">{i + 1}</div>
-                                            <input value={step} onChange={e => { const h = [...campaignForm.how_it_works]; h[i] = e.target.value; setCampaignForm({ ...campaignForm, how_it_works: h }); }} placeholder={`Step ${i + 1}`} className="flex-1 p-3 bg-[#f8f9fa] rounded-2xl font-medium outline-none focus:ring-2 ring-black/10 text-sm" />
-                                            {campaignForm.how_it_works.length > 1 && <button onClick={() => { const h = campaignForm.how_it_works.filter((_, hi) => hi !== i); setCampaignForm({ ...campaignForm, how_it_works: h }); }} className="mt-2 p-2 text-red-400 hover:bg-red-50 rounded-full"><X size={14} /></button>}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Submit */}
-                                <button onClick={handleSaveCampaign} className="w-full py-5 bg-zinc-900 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform shadow-xl shadow-black/10">
-                                    {editingCampaign ? 'Save Changes' : 'Create Campaign'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Listing Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Listing Modal ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <AnimatePresence>
                 {showListingModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
@@ -5012,74 +4047,9 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Campus Rep Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
 
-            <AnimatePresence>
-                {campusModalOpen && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-black flex items-center gap-2">
-                                    <GraduationCap size={22} className="text-blue-600" /> Add Campus Rep
-                                </h2>
-                                <button onClick={() => setCampusModalOpen(false)} className="p-2 rounded-full hover:bg-black/5">
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">User Email (must be existing user)</label>
-                                    <select
-                                        className="w-full p-4 bg-[#f8f9fa] rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-black/10"
-                                        onChange={e => setCampusUserId(e.target.value)}
-                                        defaultValue=""
-                                    >
-                                        <option value="" disabled>Select a user</option>
-                                        {allUsers.map((u: any) => (
-                                            <option key={u._id} value={u._id}>{u.full_name} - {u.email}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Campus Name</label>
-                                    <input
-                                        value={campusName}
-                                        onChange={e => setCampusName(e.target.value)}
-                                        placeholder="e.g. University of Lagos"
-                                        className="w-full p-4 bg-[#f8f9fa] rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-black/10"
-                                    />
-                                </div>
-                                <div className="p-4 bg-blue-50 rounded-2xl">
-                                    <p className="text-xs text-blue-700 font-bold">
-                                        This user will earn 2% commission on every subscription slot their referrals join. Commissions are ongoing as long as users remain subscribed.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={async () => {
-                                        if (!campusUserId || !campusName) return toast.error("Fill all fields");
-                                        try {
-                                            await addCampusRepMut({
-                                                user_id: campusUserId as Id<"users">,
-                                                campus_name: campusName,
-                                                executorId: currentUser!._id,
-                                            });
-                                            toast.success("Campus rep added!");
-                                            setCampusModalOpen(false);
-                                            setCampusUserId("");
-                                            setCampusName("");
-                                        } catch (e: any) { toast.error(e.message); }
-                                    }}
-                                    className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-bold hover:scale-[1.01] transition-transform"
-                                >
-                                    Add to Campus Q Program
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Invite Admin Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Invite Admin Modal ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <AnimatePresence>
                 {showInviteModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -5135,7 +4105,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Create Task Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Create Task Modal ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <AnimatePresence>
                 {showTaskModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -5218,7 +4188,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Screenshot Modal (Payments) Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Screenshot Modal (Payments) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <AnimatePresence>
                 {selectedScreenshot && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8" onClick={() => setSelectedScreenshot(null)}>
@@ -5232,7 +4202,7 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
 
-            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Listing Verification Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Listing Verification Modal ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
             <AnimatePresence>
                 {selectedReviewListing && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">

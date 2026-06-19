@@ -3,12 +3,9 @@ import {
   Bell,
   Clock,
   CreditCard,
-  GraduationCap,
   Headphones,
   Layers,
   LayoutDashboard,
-  ListTodo,
-  Megaphone,
   Menu,
   Shield,
   ShieldCheck,
@@ -24,18 +21,14 @@ import { useNavigate } from "react-router-dom";
 export type AdminMenuKey =
   | "dashboard"
   | "marketplace"
-  | "subscription_manager"
   | "leave_requests"
   | "payments"
   | "review_payments"
   | "user_listings"
-  | "quests"
   | "users"
   | "support"
   | "security"
   | "admins"
-  | "campaigns"
-  | "campus"
   | "notifications"
   | "queues"
   | "login_logs"
@@ -61,18 +54,14 @@ export type AdminMenuItem = {
 export const adminMenuItems: AdminMenuItem[] = [
   { id: "dashboard", label: "Dashboard", sub: "Platform Command Center", path: "/admin?tab=dashboard", icon: <LayoutDashboard size={18} /> },
   { id: "marketplace", label: "Marketplace", sub: "Subscription Inventory", path: "/admin?tab=marketplace", icon: <ShoppingBag size={18} /> },
-  { id: "subscription_manager", label: "Subscription Manager", sub: "Slot Assignments", path: "/admin/subscriptions", icon: <Layers size={18} /> },
   { id: "leave_requests", label: "Leave Requests", sub: "Cancellations", path: "/admin?tab=leave_requests", icon: <UserMinus size={18} /> },
   { id: "payments", label: "Payments", sub: "Transaction History", path: "/admin?tab=payments", icon: <CreditCard size={18} /> },
   { id: "review_payments", label: "Payments Review", sub: "Finance Operations", path: "/admin/payments", icon: <Wallet size={18} /> },
   { id: "user_listings", label: "Listing Review", sub: "Content Moderation", path: "/admin/listings", icon: <Layers size={18} /> },
-  { id: "quests", label: "Quest Approval", sub: "Approve Quests & Proofs", path: "/admin?tab=quests", icon: <ListTodo size={18} /> },
   { id: "users", label: "Users", sub: "User Management", path: "/admin?tab=users", icon: <Users size={18} /> },
   { id: "support", label: "Support", sub: "Customer Experience", path: "/admin?tab=support", icon: <Headphones size={18} /> },
   { id: "security", label: "Security", sub: "Fraud & Anti-Spam", path: "/admin?tab=security", icon: <ShieldCheck size={18} /> },
   { id: "admins", label: "Admins", sub: "Workforce & Tasks", path: "/admin?tab=admins", icon: <Shield size={18} /> },
-  { id: "campaigns", label: "Campaigns", sub: "Growth & Commissions", path: "/admin?tab=campaigns", icon: <Megaphone size={18} /> },
-  { id: "campus", label: "Campus Q", sub: "Campus Rep Program", path: "/admin?tab=campus", icon: <GraduationCap size={18} /> },
   { id: "notifications", label: "Notifications", sub: "Push Updates", path: "/admin?tab=notifications", icon: <Bell size={18} /> },
   { id: "queues", label: "Queues", sub: "Queue Requests", path: "/admin?tab=queues", icon: <Users size={18} /> },
   { id: "login_logs", label: "Login Logs", sub: "User Sign-in Activity", path: "/admin?tab=login_logs", icon: <Clock size={18} /> },
@@ -80,11 +69,11 @@ export const adminMenuItems: AdminMenuItem[] = [
 
 export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Overview", items: ["dashboard"] },
-  { label: "Subscriptions", items: ["marketplace", "subscription_manager", "leave_requests"] },
+  { label: "Subscriptions", items: ["marketplace", "leave_requests"] },
   { label: "Finance", items: ["payments", "review_payments"] },
-  { label: "Reviews", items: ["user_listings", "quests"] },
+  { label: "Reviews", items: ["user_listings"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins", "login_logs"] },
-  { label: "Engagement", items: ["campaigns", "campus", "notifications", "queues"] },
+  { label: "Engagement", items: ["notifications", "queues"] },
 ];
 
 const menuItemById = new Map(adminMenuItems.map((item) => [item.id, item]));
