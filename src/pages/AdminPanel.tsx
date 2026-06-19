@@ -1286,7 +1286,7 @@ export default function AdminPanel() {
                         <motion.button
                             type="button"
                             aria-label="Close menu overlay"
-                            className="md:hidden fixed inset-0 bg-black/40 z-40"
+                            className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -1344,7 +1344,7 @@ export default function AdminPanel() {
                     </div>
                 </div>
 
-                <div className="p-3 sm:p-4 md:p-6 lg:p-8 pt-4 sm:pt-6">
+                <div className="p-4 sm:p-5 md:p-6 lg:p-8 pt-4 sm:pt-6">
                     <AnimatePresence mode="wait">
 
                         {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â DASHBOARD ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
@@ -1807,7 +1807,7 @@ export default function AdminPanel() {
                                                                     e.stopPropagation();
                                                                     setSelectedUser(u);
                                                                 }}
-                                                                className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
+                                                                className="p-2 sm:p-1.5 bg-purple-50 text-purple-600 rounded-xl hover:scale-110 transition-transform"
                                                                 title="God Mode"
                                                             >
                                                                 <Sparkles size={14} />
@@ -1819,7 +1819,7 @@ export default function AdminPanel() {
                                                                         await unsuspendUserMut({ userId: u._id, executorId: currentUser!._id });
                                                                         toast.success("User unsuspended");
                                                                     }}
-                                                                    className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
+                                                                    className="p-2 sm:p-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 transition-transform"
                                                                     title="Unsuspend"
                                                                 >
                                                                     <PlayCircle size={14} />
@@ -1831,7 +1831,7 @@ export default function AdminPanel() {
                                                                         await suspendUserMut({ userId: u._id, executorId: currentUser!._id });
                                                                         toast.success("User suspended");
                                                                     }}
-                                                                    className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform"
+                                                                    className="p-2 sm:p-1.5 bg-amber-50 text-amber-600 rounded-xl hover:scale-110 transition-transform"
                                                                     title="Suspend"
                                                                 >
                                                                     <PauseCircle size={14} />
@@ -2162,7 +2162,7 @@ export default function AdminPanel() {
                                                                 onClick={() => handleMoveMarketplaceListing(group._id, "up")}
                                                                 disabled={index === 0}
                                                                 title="Move listing up in marketplace"
-                                                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
+                                                                className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
                                                             >
                                                                 <ArrowUp size={15} />
                                                             </button>
@@ -2171,7 +2171,7 @@ export default function AdminPanel() {
                                                                 onClick={() => handleMoveMarketplaceListing(group._id, "down")}
                                                                 disabled={index === serviceGroup.items.length - 1}
                                                                 title="Move listing down in marketplace"
-                                                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
+                                                                className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
                                                             >
                                                                 <ArrowDown size={15} />
                                                             </button>
@@ -2674,7 +2674,7 @@ export default function AdminPanel() {
                                                                             toast.success("Work username updated!");
                                                                         }
                                                                     }}
-                                                                    className="px-3 py-1.5 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center gap-1"
+                                                                    className="px-4 py-2 sm:px-3 sm:py-1.5 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center gap-1"
                                                                 ><Edit3 size={11} /> Username</button>
                                                                 <select
                                                                     defaultValue={admin.admin_role || "support"}
@@ -2682,7 +2682,7 @@ export default function AdminPanel() {
                                                                         await updateAdminProfileMut({ target_id: admin._id, updated_by: currentUser._id, admin_role: e.target.value });
                                                                         toast.success("Role updated");
                                                                     }}
-                                                                    className="px-2 py-1.5 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold border-0 outline-none"
+                                                                    className="px-3 py-2 sm:px-2 sm:py-1.5 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold border-0 outline-none"
                                                                 >
                                                                     <option value="support">Support</option>
                                                                     <option value="operations">Operations</option>
@@ -2696,7 +2696,7 @@ export default function AdminPanel() {
                                                                             await restoreAdminMut({ target_id: admin._id, restored_by: currentUser._id });
                                                                             toast.success("Access restored");
                                                                         }}
-                                                                        className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-colors"
+                                                                        className="px-4 py-2 sm:px-3 sm:py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-colors"
                                                                     >Restore</button>
                                                                 ) : (
                                                                     <button
@@ -2706,7 +2706,7 @@ export default function AdminPanel() {
                                                                             await suspendAdminMut({ target_id: admin._id, suspended_by: currentUser._id, reason });
                                                                             toast("Admin access suspended");
                                                                         }}
-                                                                        className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200 transition-colors"
+                                                                        className="px-4 py-2 sm:px-3 sm:py-1.5 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200 transition-colors"
                                                                     >Suspend</button>
                                                                 )}
                                                                 <button
@@ -2715,7 +2715,7 @@ export default function AdminPanel() {
                                                                         await removeAdminMut({ target_id: admin._id, removed_by: currentUser._id });
                                                                         toast.error("Admin removed");
                                                                     }}
-                                                                    className="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 transition-colors"
+                                                                    className="px-4 py-2 sm:px-3 sm:py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 transition-colors"
                                                                 >Remove</button>
                                                             </div>
                                                         )}
@@ -3084,7 +3084,7 @@ export default function AdminPanel() {
                                 <SectionHeader title="User Login Activity" sub="Recent sign-in attempts across the platform" />
 
                                 <div className="rounded-[2rem] border border-black/5 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
-                                    <div className="overflow-x-auto">
+                                    <div className="hidden md:block overflow-x-auto">
                                         <table className="w-full text-left text-sm">
                                             <thead>
                                                 <tr className="border-b border-black/5 text-[10px] font-black uppercase tracking-widest text-zinc-400">
@@ -3115,7 +3115,7 @@ export default function AdminPanel() {
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-5 py-3.5 text-zinc-600 font-medium">{log.user?.email || "â€”"}</td>
+                                                        <td className="px-5 py-3.5 text-zinc-600 font-medium">{log.user?.email || "—"}</td>
                                                         <td className="px-5 py-3.5">
                                                             <span className="inline-block rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-600">
                                                                 {log.provider}
@@ -3134,7 +3134,7 @@ export default function AdminPanel() {
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-5 py-3.5 text-zinc-500 font-medium text-[11px]">{log.failure_reason || "â€”"}</td>
+                                                        <td className="px-5 py-3.5 text-zinc-500 font-medium text-[11px]">{log.failure_reason || "—"}</td>
                                                         <td className="px-5 py-3.5 text-zinc-400 font-medium text-[11px] whitespace-nowrap">
                                                             {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                                         </td>
@@ -3142,6 +3142,49 @@ export default function AdminPanel() {
                                                 ))}
                                             </tbody>
                                         </table>
+                                    </div>
+                                    {/* Mobile card layout */}
+                                    <div className="md:hidden divide-y divide-black/5">
+                                        {loginLogs.length === 0 && (
+                                            <div className="px-5 py-12 text-center text-sm text-zinc-400 font-semibold">No login activity recorded yet.</div>
+                                        )}
+                                        {loginLogs.map((log: any) => (
+                                            <div key={log._id} className="p-4 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-black text-zinc-600">
+                                                            {log.user?.full_name ? log.user.full_name.charAt(0).toUpperCase() : "?"}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-zinc-800 truncate">{log.user?.full_name || "Unknown"}</div>
+                                                            <div className="text-xs text-zinc-400 truncate">{log.user?.email || "-"}</div>
+                                                        </div>
+                                                    </div>
+                                                    {log.success ? (
+                                                        <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Success
+                                                        </span>
+                                                    ) : (
+                                                        <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-[10px] font-black text-red-700">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" /> Failed
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                                    <div>
+                                                        <span className="text-zinc-400 font-semibold">Provider</span>
+                                                        <p className="font-bold text-zinc-700 mt-0.5">{log.provider}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-zinc-400 font-semibold">Date</span>
+                                                        <p className="font-bold text-zinc-700 mt-0.5">
+                                                            {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {log.failure_reason && <div className="text-xs text-zinc-500 bg-zinc-50 rounded-xl p-3 font-medium">{log.failure_reason}</div>}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </motion.div>
