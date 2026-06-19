@@ -273,6 +273,8 @@ export default function AdminPanel() {
     // Selected User state
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "management" | "logs">("overview");
+    const [slotDateDrafts, setSlotDateDrafts] = useState<Record<string, string>>({});
+    const [savingSlotDateId, setSavingSlotDateId] = useState<string | null>(null);
 
     // Workforce admin state
     const [adminSubTab, setAdminSubTab] = useState<"team" | "tasks" | "daily" | "performance" | "audit">("team");
@@ -437,6 +439,7 @@ export default function AdminPanel() {
     const moveMarketplaceServiceToTopMut = useMutation(api.subscriptions.moveMarketplaceServiceToTop);
     const adminBulkUpdateMarketplaceStatusMut = useMutation(api.subscriptions.adminBulkUpdateMarketplaceStatus);
     const adminUpdateSubscriptionRenewalDateMut = useMutation(api.subscriptions.adminUpdateSubscriptionRenewalDate);
+    const adminUpdateSlotRenewalDateMut = useMutation(api.subscriptions.adminUpdateSlotRenewalDate);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
     const restoreCanceledSubscriptionMut = useMutation(api.admin.restoreCanceledSubscription);
 
@@ -750,6 +753,25 @@ export default function AdminPanel() {
             toast.success("Subscription renewed successfully!");
         } catch (e: any) {
             toast.error(e.message || "Failed to renew subscription");
+        }
+    };
+
+    const handleSaveSlotDate = async (slot: any) => {
+        const draft = slotDateDrafts[slot._id];
+        if (!currentUser?._id || !draft) return;
+        try {
+            setSavingSlotDateId(slot._id);
+            await adminUpdateSlotRenewalDateMut({
+                adminId: currentUser._id,
+                slotId: slot._id,
+                renewalDate: draft,
+            });
+            setSlotDateDrafts((prev) => { const next = { ...prev }; delete next[slot._id]; return next; });
+            toast.success("Slot renewal date updated");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to update renewal date");
+        } finally {
+            setSavingSlotDateId(null);
         }
     };
 
@@ -5541,58 +5563,82 @@ export default function AdminPanel() {
                                                 <div className="space-y-4">
                                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Current Assignments</h4>
                                                     <div className="space-y-3">
-                                                        {liveUserSlots.map((slot: any) => (
-                                                             <div key={slot._id} className="p-3 sm:p-4 bg-zinc-50 border border-black/5 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 group">
-                                                                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                                     <div className="w-10 h-10 bg-white border border-black/10 rounded-xl flex items-center justify-center font-black shadow-sm shrink-0 transition-transform">{slot.sub_name?.[0]}</div>
-                                                                     <div className="min-w-0" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
-                                                                         <div className="text-sm font-black truncate">{slot.sub_name}</div>
-                                                                         <div className="text-[10px] font-bold text-gray-400 truncate">Account: {slot.account_email || 'n/a'}</div>
-                                                                     </div>
-                                                                 </div>
-                                                                 <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                                                                     <select
-                                                                         className="text-[10px] font-black uppercase bg-white border border-black/10 rounded-lg px-2 py-1 outline-none max-w-[120px]"
-                                                                         onChange={(e) => handleMoveUserGroup(e.target.value as Id<"groups">)}
-                                                                         defaultValue=""
-                                                                     >
-                                                                         <option value="" disabled>Move...</option>
-                                                                         {allSubscriptions
-                                                                             .filter((sub: any) => sub.subscription_name === slot.sub_name && sub.primary_group_id && sub.primary_group_id !== slot.group_id)
-                                                                             .map((g: any) => (
-                                                                                 <option key={g._id} value={g.primary_group_id}>Group {g.account_email?.split('@')[0] || g.primary_group_id?.slice(-4)}</option>
-                                                                             ))}
-                                                                     </select>
-                                                                     <button
-                                                                         onClick={() => {
-                                                                             if (confirm("Quickly override this slot to 'filled'?")) {
-                                                                                 setOverridePaymentStatus("filled");
-                                                                                 setOverrideReason("One-tap admin fix via User Hub");
-                                                                                 handleOverridePayment(slot._id);
-                                                                             }
-                                                                         }}
-                                                                         className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-zinc-900 hover:text-white transition-all shadow-sm"
-                                                                         title="Quick Fix Status"
-                                                                     >
-                                                                         <RefreshCw size={14} />
-                                                                     </button>
-                                                                     <button
-                                                                         onClick={() => handleAdminRenewSlot(slot._id)}
-                                                                         className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
-                                                                         title="Renew Subscription"
-                                                                     >
-                                                                         <Repeat size={14} />
-                                                                     </button>
-                                                                     <button
-                                                                         onClick={() => handleRemoveFromSlot(slot._id)}
-                                                                         className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                                                                         title="Remove from Slot"
-                                                                     >
-                                                                         <Trash2 size={14} />
-                                                                     </button>
-                                                                 </div>
-                                                             </div>
-                                                         ))}
+                                                         {liveUserSlots.map((slot: any) => {
+                                                             const slotDateVal = slot.renewal_date ? (() => { try { return new Date(slot.renewal_date).toISOString().slice(0, 10); } catch { return ''; } })() : '';
+                                                             const draft = slotDateDrafts[slot._id] ?? slotDateVal;
+                                                             const hasChanged = draft !== slotDateVal;
+                                                             return (
+                                                              <div key={slot._id} className="p-3 sm:p-4 bg-zinc-50 border border-black/5 rounded-2xl space-y-3 group">
+                                                                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                                                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                                          <div className="w-10 h-10 bg-white border border-black/10 rounded-xl flex items-center justify-center font-black shadow-sm shrink-0 transition-transform">{slot.sub_name?.[0]}</div>
+                                                                          <div className="min-w-0" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                                                                              <div className="text-sm font-black truncate">{slot.sub_name}</div>
+                                                                              <div className="text-[10px] font-bold text-gray-400 truncate">Account: {slot.account_email || 'n/a'}</div>
+                                                                          </div>
+                                                                      </div>
+                                                                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                                                          <select
+                                                                              className="text-[10px] font-black uppercase bg-white border border-black/10 rounded-lg px-2 py-1 outline-none max-w-[120px]"
+                                                                              onChange={(e) => handleMoveUserGroup(e.target.value as Id<"groups">)}
+                                                                              defaultValue=""
+                                                                          >
+                                                                              <option value="" disabled>Move...</option>
+                                                                              {allSubscriptions
+                                                                                  .filter((sub: any) => sub.subscription_name === slot.sub_name && sub.primary_group_id && sub.primary_group_id !== slot.group_id)
+                                                                                  .map((g: any) => (
+                                                                                      <option key={g._id} value={g.primary_group_id}>Group {g.account_email?.split('@')[0] || g.primary_group_id?.slice(-4)}</option>
+                                                                                  ))}
+                                                                          </select>
+                                                                          <button
+                                                                              onClick={() => {
+                                                                                  if (confirm("Quickly override this slot to 'filled'?")) {
+                                                                                      setOverridePaymentStatus("filled");
+                                                                                      setOverrideReason("One-tap admin fix via User Hub");
+                                                                                      handleOverridePayment(slot._id);
+                                                                                  }
+                                                                              }}
+                                                                              className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-zinc-900 hover:text-white transition-all shadow-sm"
+                                                                              title="Quick Fix Status"
+                                                                          >
+                                                                              <RefreshCw size={14} />
+                                                                          </button>
+                                                                          <button
+                                                                              onClick={() => handleAdminRenewSlot(slot._id)}
+                                                                              className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                                                                              title="Renew Subscription"
+                                                                          >
+                                                                              <Repeat size={14} />
+                                                                          </button>
+                                                                          <button
+                                                                              onClick={() => handleRemoveFromSlot(slot._id)}
+                                                                              className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                                              title="Remove from Slot"
+                                                                          >
+                                                                              <Trash2 size={14} />
+                                                                          </button>
+                                                                      </div>
+                                                                  </div>
+                                                                  {/* Renewal Date Editing */}
+                                                                  <div className="flex items-center gap-2 border-t border-black/5 pt-2.5">
+                                                                      <Calendar size={13} className="shrink-0 text-gray-400" />
+                                                                      <input
+                                                                          type="date"
+                                                                          value={draft}
+                                                                          onChange={(e) => setSlotDateDrafts((prev) => ({ ...prev, [slot._id]: e.target.value }))}
+                                                                          className="flex-1 min-w-0 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[11px] font-bold outline-none focus:ring-2 ring-purple-400"
+                                                                      />
+                                                                      <button
+                                                                          onClick={() => handleSaveSlotDate(slot)}
+                                                                          disabled={!hasChanged || savingSlotDateId === slot._id}
+                                                                          className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-purple-700 transition disabled:opacity-40"
+                                                                      >
+                                                                          {savingSlotDateId === slot._id ? "Saving" : "Save"}
+                                                                      </button>
+                                                                  </div>
+                                                              </div>
+                                                          );
+                                                       })}
                                                         {liveUserSlots.length === 0 && <div className="p-6 text-center text-gray-400 italic text-sm">No active slots found.</div>}
                                                     </div>
                                                 </div>
