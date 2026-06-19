@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -35,11 +35,23 @@ export const MarketplaceAssignModal: React.FC<Props> = ({
     onAssigned,
 }) => {
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
     const [selectedUser, setSelectedUser] = useState<{ _id: Id<"users">; full_name: string; email: string } | null>(null);
     const [selectedSlots, setSelectedSlots] = useState<Set<Id<"subscription_slots">>>(new Set());
     const [assigning, setAssigning] = useState(false);
 
-    const searchResults = useQuery(api.adminEnhanced.searchAllUsers, searchQuery.trim() ? { searchQuery, limit: 15 } : "skip");
+    useEffect(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }, [searchQuery]);
+
+    const searchEnabled = debouncedSearch.trim().length >= 2;
+    const searchResults = useQuery(
+        api.adminEnhanced.searchAllUsers,
+        searchEnabled ? { search: debouncedSearch.trim(), limit: 15 } : "skip"
+    );
     const userSubs = useQuery(
         api.adminEnhanced.getUserSubscriptionsSummary,
         selectedUser ? { userId: selectedUser._id } : "skip"
@@ -104,7 +116,7 @@ export const MarketplaceAssignModal: React.FC<Props> = ({
         }
     }, [selectedUser, selectedSlots, groupSlots, adminId, assignToSlot, bulkAssign, onAssigned, onClose]);
 
-    const filteredUsers = searchResults?.filter(u => !filledUserIds.has(u._id.toString())) ?? [];
+    const filteredUsers = (searchResults ?? []).filter((u: any) => u?._id && !filledUserIds.has(u._id.toString()));
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -159,11 +171,13 @@ export const MarketplaceAssignModal: React.FC<Props> = ({
                     </div>
 
                     {/* Search results */}
-                    {searchQuery.trim() && (
+                    {debouncedSearch.trim().length >= 2 && (
                         <div className="max-h-48 overflow-y-auto space-y-1 -mx-1 px-1">
-                            {filteredUsers.length === 0 ? (
+                            {!searchResults ? (
+                                <div className="text-center py-6 text-gray-400 text-sm font-bold">Searching...</div>
+                            ) : filteredUsers.length === 0 ? (
                                 <div className="text-center py-6 text-gray-400 text-sm font-bold">
-                                    {searchResults && searchResults.length > 0
+                                    {searchResults.length > 0
                                         ? "All users in results are already members of this group"
                                         : "No users found"}
                                 </div>

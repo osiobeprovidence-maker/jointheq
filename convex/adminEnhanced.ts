@@ -598,15 +598,18 @@ export const adminAutoBalanceGroups = mutation({
 // ─── USER SEARCH ──────────────────────────────────────────────────────────────
 
 export const searchAllUsers = query({
-    args: { searchQuery: v.string(), limit: v.optional(v.number()) },
+    args: { search: v.string(), limit: v.optional(v.number()) },
     handler: async (ctx, args) => {
-        const allUsers = await ctx.db.query("users").collect();
-        const query = args.searchQuery.trim().toLowerCase();
-        if (!query) return [];
+        const query = args.search.trim().toLowerCase();
+        if (!query || query.length < 2) return [];
 
+        const allUsers = await ctx.db.query("users").collect();
         const limit = args.limit ?? 20;
+
         const results = allUsers.filter(u =>
-            (u.full_name?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query)) &&
+            (u.full_name?.toLowerCase().includes(query) ||
+             u.email?.toLowerCase().includes(query) ||
+             u.username?.toLowerCase().includes(query)) &&
             !u.is_admin
         ).slice(0, limit);
 
