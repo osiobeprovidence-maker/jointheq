@@ -64,7 +64,8 @@ import {
     Send,
     History,
     Target,
-    Download
+    Download,
+    MoreVertical
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -75,6 +76,8 @@ import toast from "react-hot-toast";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { adminMenuItems, adminMenuSections } from "../components/admin/AdminShell";
 import { QueueRequestManager } from "../components/queues/QueueRequestManager";
+import { MarketplaceAssignModal } from "../components/admin/MarketplaceAssignModal";
+import { MarketplaceMemberMenu } from "../components/admin/MarketplaceMemberMenu";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Types ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
@@ -366,6 +369,14 @@ export default function AdminPanel() {
     const [marketplaceSort, setMarketplaceSort] = useState<MarketplaceSort>("service");
     const [selectedMarketplaceIds, setSelectedMarketplaceIds] = useState<Id<"marketplace">[]>([]);
     const [collapsedMarketplaceServices, setCollapsedMarketplaceServices] = useState<Record<string, boolean>>({});
+    const [assignModalContext, setAssignModalContext] = useState<{
+        listing: any;
+        groupSlots: any[];
+        emptySlots: any[];
+    } | null>(null);
+    const [replaceSlotId, setReplaceSlotId] = useState<Id<"subscription_slots"> | null>(null);
+    const [moveContext, setMoveContext] = useState<{ slotId: Id<"subscription_slots">; userId: Id<"users"> } | null>(null);
+    const [showAddMemberForGroup, setShowAddMemberForGroup] = useState<Id<"marketplace"> | null>(null);
     const [supportContacts, setSupportContacts] = useState<SupportContact[]>([
         { name: "Support 1", label: "General Support", phone: "" },
         { name: "Support 2", label: "Payments Help", phone: "" },
@@ -2292,32 +2303,95 @@ export default function AdminPanel() {
                                                                     </div>
 
                                                                     {/* Members inside this group */}
-                                                                    {members.length > 0 && (
-                                                                        <div>
-                                                                            <div className="flex items-center justify-between gap-3 mb-3">
-                                                                                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Current Members</p>
+                                                                    <div>
+                                                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                                                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                                                                                Members
+                                                                                <span className="ml-2 text-zinc-500">({members.length})</span>
+                                                                            </p>
+                                                                            <div className="flex items-center gap-2">
                                                                                 {hiddenMemberCount > 0 && (
                                                                                     <span className="text-[10px] font-black text-zinc-500 bg-white px-3 py-1 rounded-full">
                                                                                         Showing 50 of {members.length.toLocaleString()}
                                                                                     </span>
                                                                                 )}
-                                                                            </div>
-                                                                            <div className="space-y-1.5">
-                                                                                {memberPreview.map((m: any, i: number) => (
-                                                                                    <div key={i} className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5">
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <div className="w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center text-[10px] font-black">{m.user_name?.[0]}</div>
-                                                                                            <span className="text-sm font-bold">{m.user_name}</span>
-                                                                                        </div>
-                                                                                        <div className="text-xs text-gray-400">
-                                                                                            <span className="font-bold text-zinc-600">{m.slot_name}</span>
-                                                                                            {m.renewal && <span> Â· Renews {m.renewal}</span>}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ))}
+                                                                                <button
+                                                                                    onClick={() => setShowAddMemberForGroup(group._id)}
+                                                                                    className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-zinc-900 px-3 text-[10px] font-black text-white hover:bg-black transition-colors"
+                                                                                >
+                                                                                    <Plus size={12} /> Add Member
+                                                                                </button>
                                                                             </div>
                                                                         </div>
-                                                                    )}
+                                                                        <div className="space-y-1.5">
+                                                                            {memberPreview.map((m: any, i: number) => {
+                                                                                const renewalMs = m.renewal ? Date.parse(m.renewal) : NaN;
+                                                                                const now = Date.now();
+                                                                                const isFilled = !!m.user_id;
+                                                                                const isExpired = isFilled && !isNaN(renewalMs) && renewalMs < now;
+                                                                                const isExpiringSoon = isFilled && !isExpired && !isNaN(renewalMs) && renewalMs - now <= 7 * 24 * 60 * 60 * 1000;
+
+                                                                                let statusColor = "bg-emerald-400";
+                                                                                let statusLabel = "Filled";
+                                                                                if (!isFilled) { statusColor = "bg-gray-300"; statusLabel = "Empty"; }
+                                                                                else if (isExpired) { statusColor = "bg-red-400"; statusLabel = "Expired"; }
+                                                                                else if (isExpiringSoon) { statusColor = "bg-amber-400"; statusLabel = "Expiring"; }
+
+                                                                                return (
+                                                                                    <div key={`${m.slot_id}-${i}`} className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 gap-2">
+                                                                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                                                            <span className={`w-2 h-2 rounded-full shrink-0 ${statusColor}`} title={statusLabel} />
+                                                                                            {isFilled ? (
+                                                                                                <>
+                                                                                                    <div className="w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">
+                                                                                                        {m.user_name?.[0] || "?"}
+                                                                                                    </div>
+                                                                                                    <span className="text-sm font-bold truncate">{m.user_name}</span>
+                                                                                                </>
+                                                                                            ) : (
+                                                                                                <span className="text-sm font-bold text-gray-400 italic">Empty Slot</span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <div className="flex items-center gap-3 shrink-0">
+                                                                                            <div className="text-right">
+                                                                                                <div className="text-xs font-bold text-zinc-600">{m.slot_name}</div>
+                                                                                                {m.renewal && (
+                                                                                                    <span className={`text-[10px] font-bold ${isExpired ? "text-red-500" : isExpiringSoon ? "text-amber-500" : "text-gray-400"}`}>
+                                                                                                        {isExpired ? `Expired ${new Date(m.renewal).toLocaleDateString()}` : `Renews ${new Date(m.renewal).toLocaleDateString()}`}
+                                                                                                    </span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                            {isFilled ? (
+                                                                                                <MarketplaceMemberMenu
+                                                                                                    member={m}
+                                                                                                    adminId={currentUser!._id}
+                                                                                                    groupIds={group.group_ids || [group.primary_group_id].filter(Boolean)}
+                                                                                                    onViewProfile={(userId) => {
+                                                                                                        const u = allUsers.find((x: any) => x._id === userId);
+                                                                                                        if (u) { setSelectedUser(u); setUserDetailTab("overview"); }
+                                                                                                    }}
+                                                                                                    onRemove={(slotId) => handleRemoveFromSlot(slotId)}
+                                                                                                    onReplace={(slotId) => setReplaceSlotId(slotId)}
+                                                                                                    onMove={(slotId, userId) => setMoveContext({ slotId, userId })}
+                                                                                                />
+                                                                                            ) : (
+                                                                                                <button
+                                                                                                    onClick={() => {
+                                                                                                        const allSlots = members.map((x: any) => x);
+                                                                                                        const emptyOnes = members.filter((x: any) => !x.user_id);
+                                                                                                        setAssignModalContext({ listing: group, groupSlots: allSlots, emptySlots: emptyOnes });
+                                                                                                    }}
+                                                                                                    className="h-8 px-3 rounded-xl bg-zinc-100 text-[10px] font-black text-zinc-600 hover:bg-zinc-900 hover:text-white transition-colors"
+                                                                                                >
+                                                                                                    Assign
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
 
                                                                     {/* Edit & Delete listing */}
                                                                     <div className="pt-2 border-t border-black/5 flex items-center justify-between">
@@ -4284,6 +4358,59 @@ export default function AdminPanel() {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Assign Member Modal */}
+            {assignModalContext && (
+                <MarketplaceAssignModal
+                    listingId={assignModalContext.listing._id}
+                    listingName={assignModalContext.listing.subscription_name || assignModalContext.listing.platform_name}
+                    groupSlots={assignModalContext.groupSlots}
+                    emptySlots={assignModalContext.emptySlots}
+                    adminId={currentUser!._id}
+                    groupIds={assignModalContext.listing.group_ids || []}
+                    onClose={() => setAssignModalContext(null)}
+                    onAssigned={() => setAssignModalContext(null)}
+                />
+            )}
+
+            {/* Replace Member Modal */}
+            {replaceSlotId && (
+                <MarketplaceAssignModal
+                    listingId=""
+                    listingName="Replace Member"
+                    groupSlots={[]}
+                    emptySlots={(() => {
+                        // Find the slot and treat it as an empty slot for replacement
+                        const allMembers = allSubscriptions.flatMap((l: any) => l.members || []);
+                        const targetMember = allMembers.find((m: any) => m.slot_id === replaceSlotId);
+                        return targetMember ? [{ ...targetMember, user_id: undefined }] : [];
+                    })()}
+                    adminId={currentUser!._id}
+                    groupIds={[]}
+                    onClose={() => setReplaceSlotId(null)}
+                    onAssigned={() => setReplaceSlotId(null)}
+                />
+            )}
+
+            {/* Add Member Modal (opens directly for a listing) */}
+            {showAddMemberForGroup && (() => {
+                const listing = allSubscriptions.find((l: any) => l._id === showAddMemberForGroup);
+                if (!listing) return null;
+                const allSlots = listing.members || [];
+                const emptyOnes = allSlots.filter((m: any) => !m.user_id);
+                return (
+                    <MarketplaceAssignModal
+                        listingId={listing._id}
+                        listingName={listing.subscription_name || listing.platform_name}
+                        groupSlots={allSlots}
+                        emptySlots={emptyOnes}
+                        adminId={currentUser!._id}
+                        groupIds={listing.group_ids || []}
+                        onClose={() => setShowAddMemberForGroup(null)}
+                        onAssigned={() => setShowAddMemberForGroup(null)}
+                    />
+                );
+            })()}
 
             {/* User Details Modal (HUB) */}
             <AnimatePresence>

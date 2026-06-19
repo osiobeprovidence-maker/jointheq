@@ -24,50 +24,54 @@ function getPaystackSecretKey() {
     );
 }
 
+async function getDueSubscriptionsHandler(ctx: any, userId: Id<"users">) {
+    const now = Date.now();
+    const cutoff = now + RENEWAL_WINDOW_DAYS * DAY_MS;
+
+    const slots = await ctx.db
+        .query("subscription_slots")
+        .withIndex("by_user", (q) => q.eq("user_id", userId))
+        .filter((q) => q.eq(q.field("status"), "filled"))
+        .collect();
+
+    const due = [];
+    for (const slot of slots) {
+        const dueAt = dateToMs(slot.renewal_date);
+        if (!dueAt || dueAt > cutoff) continue;
+
+        const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
+        const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
+        const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
+
+        let catalog = null;
+        if (account?.platform_catalog_id) {
+            catalog = await ctx.db.get(account.platform_catalog_id);
+        } else if (group?.subscription_catalog_id) {
+            catalog = await ctx.db.get(group.subscription_catalog_id);
+        }
+
+        due.push({
+            _id: slot._id,
+            slot_name: slotType?.name ?? slot.profile_name ?? "Slot",
+            service_name: account?.platform ?? catalog?.name ?? group?.account_email ?? "Subscription",
+            amount: slotType?.price ?? 0,
+            renewal_date: slot.renewal_date,
+            due_at: dueAt,
+            days_overdue: Math.max(0, Math.floor((now - dueAt) / DAY_MS)),
+            auto_renew: slot.auto_renew ?? false,
+        });
+    }
+
+    due.sort((a, b) => a.due_at - b.due_at);
+    return due;
+}
+
 // ── Queries ──
 
 export const getDueSubscriptions = query({
     args: { user_id: v.id("users") },
     handler: async (ctx, args) => {
-        const now = Date.now();
-        const cutoff = now + RENEWAL_WINDOW_DAYS * DAY_MS;
-
-        const slots = await ctx.db
-            .query("subscription_slots")
-            .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
-            .filter((q) => q.eq(q.field("status"), "filled"))
-            .collect();
-
-        const due = [];
-        for (const slot of slots) {
-            const dueAt = dateToMs(slot.renewal_date);
-            if (!dueAt || dueAt > cutoff) continue;
-
-            const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
-            const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
-            const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
-
-            let catalog = null;
-            if (account?.platform_catalog_id) {
-                catalog = await ctx.db.get(account.platform_catalog_id);
-            } else if (group?.subscription_catalog_id) {
-                catalog = await ctx.db.get(group.subscription_catalog_id);
-            }
-
-            due.push({
-                _id: slot._id,
-                slot_name: slotType?.name ?? slot.profile_name ?? "Slot",
-                service_name: account?.platform ?? catalog?.name ?? group?.account_email ?? "Subscription",
-                amount: slotType?.price ?? 0,
-                renewal_date: slot.renewal_date,
-                due_at: dueAt,
-                days_overdue: Math.max(0, Math.floor((now - dueAt) / DAY_MS)),
-                auto_renew: slot.auto_renew ?? false,
-            });
-        }
-
-        due.sort((a, b) => a.due_at - b.due_at);
-        return due;
+        return getDueSubscriptionsHandler(ctx, args.user_id);
     },
 });
 
@@ -110,7 +114,7 @@ export const getUserBillingDashboard = query({
             }
         }
 
-        const dueSlots = await getDueSubscriptions(ctx, args);
+        const dueSlots = await getDueSubscriptionsHandler(ctx, args.user_id);
 
         return {
             pendingInvoices: invoicesWithItems.filter((i) => i.status === "pending"),
@@ -162,7 +166,7 @@ export const getUserInvoices = query({
 export const createInvoiceFromDueSubscriptions = mutation({
     args: { user_id: v.id("users") },
     handler: async (ctx, args) => {
-        const dueSlots = await getDueSubscriptions(ctx, args);
+        const dueSlots = await getDueSubscriptionsHandler(ctx, args.user_id);
         if (dueSlots.length === 0) {
             throw new Error("No due subscriptions found.");
         }
