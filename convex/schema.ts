@@ -1270,5 +1270,42 @@ export default defineSchema({
     }).index("by_event", ["event_type", "created_at"])
         .index("by_entity", ["entity_type", "entity_id"])
         .index("by_user", ["user_id"]),
+
+    // PILLAR X: Billing / Invoicing
+    invoices: defineTable({
+        user_id: v.id("users"),
+        total_amount: v.number(),
+        status: v.string(),               // "pending" | "paid" | "failed" | "cancelled"
+        paystack_reference: v.optional(v.string()),
+        paystack_access_code: v.optional(v.string()),
+        created_at: v.number(),
+        paid_at: v.optional(v.number()),
+        metadata: v.optional(v.any()),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_reference", ["paystack_reference"]),
+
+    invoice_items: defineTable({
+        invoice_id: v.id("invoices"),
+        slot_id: v.id("subscription_slots"),
+        service_name: v.string(),
+        slot_name: v.optional(v.string()),
+        amount: v.number(),
+        renewal_date: v.optional(v.string()),
+    }).index("by_invoice", ["invoice_id"])
+        .index("by_slot", ["slot_id"]),
+
+    payments_ledger: defineTable({
+        user_id: v.id("users"),
+        invoice_id: v.id("invoices"),
+        amount: v.number(),
+        provider: v.string(),             // "paystack"
+        status: v.string(),               // "success" | "failed"
+        reference: v.optional(v.string()),
+        raw_response: v.optional(v.any()),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_invoice", ["invoice_id"])
+        .index("by_reference", ["reference"]),
 });
 
