@@ -13,6 +13,9 @@
     "workbox:inject": "node workbox-inject.cjs"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@google/genai": "^1.29.0",
     "@google/generative-ai": "^0.24.1",
     "@tailwindcss/vite": "^4.1.14",
@@ -48,11 +51,11 @@
     "@types/node": "^22.14.0",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
+    "rimraf": "^5.0.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "workbox-build": "^6.5.4",
-    "rimraf": "^5.0.0"
+    "workbox-build": "^6.5.4"
   }
 }

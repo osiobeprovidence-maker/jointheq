@@ -65,24 +65,29 @@ import {
     History,
     Target,
     Download,
-    MoreVertical
+    MoreVertical,
+    GripVertical,
+    Gift
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import SupportChatAdmin from "../components/chat/SupportChatAdmin";
 import { adminMenuItems, adminMenuSections } from "../components/admin/AdminShell";
 import { QueueRequestManager } from "../components/queues/QueueRequestManager";
 import { MarketplaceAssignModal } from "../components/admin/MarketplaceAssignModal";
 import { MarketplaceMemberMenu } from "../components/admin/MarketplaceMemberMenu";
+import { SortableItem, SortableGroupContainer, GroupSortSelect } from "../components/admin/MarketplaceSortableList";
+import type { GroupSortMode } from "../components/admin/MarketplaceSortableList";
+import { ReferralCampaignsAdmin } from "../components/admin/ReferralCampaignsAdmin";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Types ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs";
-const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs"]);
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs" | "referral_campaigns";
+const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs", "referral_campaigns"]);
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Helpers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const fmt = fmtCurrency;
@@ -400,6 +405,7 @@ export default function AdminPanel() {
     const reorderMarketplaceListingMut = useMutation(api.subscriptions.reorderMarketplaceListing);
     const moveMarketplaceServiceToTopMut = useMutation(api.subscriptions.moveMarketplaceServiceToTop);
     const adminBulkUpdateMarketplaceStatusMut = useMutation(api.subscriptions.adminBulkUpdateMarketplaceStatus);
+    const reorderMarketplaceGroupsMut = useMutation(api.subscriptions.reorderMarketplaceGroups);
     const adminUpdateSubscriptionRenewalDateMut = useMutation(api.subscriptions.adminUpdateSubscriptionRenewalDate);
     const adminUpdateSlotRenewalDateMut = useMutation(api.subscriptions.adminUpdateSlotRenewalDate);
     const setPlatformSetting = useMutation(api.admin.updatePlatformSetting);
@@ -477,6 +483,17 @@ export default function AdminPanel() {
             return next;
         });
     }, [reminderTemplates.length]);
+
+    const [serviceGroupSortModes, setServiceGroupSortModes] = useState<Record<string, GroupSortMode>>(() => {
+        try {
+            const saved = localStorage.getItem("marketplace_group_sort_modes");
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
+
+    useEffect(() => {
+        localStorage.setItem("marketplace_group_sort_modes", JSON.stringify(serviceGroupSortModes));
+    }, [serviceGroupSortModes]);
 
     const marketplaceInventory = useMemo(() => {
         const query = marketplaceSearch.trim().toLowerCase();
@@ -564,10 +581,29 @@ export default function AdminPanel() {
             groupsMap.set(item.service.name, existing);
         }
 
-        const groups = [...groupsMap.values()].map(group => ({
-            ...group,
-            items: group.items.sort(compareListings),
-        })).sort((a, b) => {
+        const groups = [...groupsMap.values()].map(group => {
+            const groupSortMode = serviceGroupSortModes[group.name] || "manual";
+            let sortedItems: typeof visible;
+            if (groupSortMode === "manual") {
+                sortedItems = [...group.items].sort((a, b) =>
+                    (a.listing.display_order ?? a.listing.created_at ?? a.listing._creationTime) -
+                    (b.listing.display_order ?? b.listing.created_at ?? b.listing._creationTime)
+                );
+            } else if (groupSortMode === "renewal") {
+                sortedItems = [...group.items].sort((a, b) =>
+                    a.renewalAt - b.renewalAt || a.planName.localeCompare(b.planName)
+                );
+            } else if (groupSortMode === "capacity") {
+                sortedItems = [...group.items].sort((a, b) =>
+                    (b.listing.total_slots || 0) - (a.listing.total_slots || 0) || a.planName.localeCompare(b.planName)
+                );
+            } else {
+                sortedItems = [...group.items].sort((a, b) =>
+                    b.emptySlots - a.emptySlots || a.planName.localeCompare(b.planName)
+                );
+            }
+            return { ...group, items: sortedItems };
+        }).sort((a, b) => {
             if (marketplaceSort === "members") return b.memberCount - a.memberCount || a.name.localeCompare(b.name);
             if (marketplaceSort === "expiring") return a.nextRenewal - b.nextRenewal || a.name.localeCompare(b.name);
             if (marketplaceSort === "recent") return Number(b.items[0]?.listing.created_at || 0) - Number(a.items[0]?.listing.created_at || 0);
@@ -893,6 +929,24 @@ export default function AdminPanel() {
         } catch (error: any) {
             toast.error(error.message || "Failed to update marketplace order");
         }
+    };
+
+    const handleGroupDragEnd = (serviceGroupName: string, items: any[], oldIndex: number, newIndex: number) => {
+        if (!currentUser?._id) return;
+        const newItems = [...items];
+        const [moved] = newItems.splice(oldIndex, 1);
+        newItems.splice(newIndex, 0, moved);
+        const marketplaceIds = newItems.map(item => item.listing._id as Id<"marketplace">);
+        const subscriptionCatalogId = items[0]?.listing?.subscription_catalog_id;
+        if (!subscriptionCatalogId || marketplaceIds.length === 0) return;
+
+        reorderMarketplaceGroupsMut({
+            adminId: currentUser._id,
+            subscriptionCatalogId,
+            marketplaceIds,
+        }).catch((e: any) => {
+            toast.error(e.message || "Failed to reorder");
+        });
     };
 
     const handleMoveMarketplaceServiceToTop = async (serviceName: string) => {
@@ -2092,6 +2146,10 @@ export default function AdminPanel() {
                                                         </span>
                                                     </button>
                                                     <div className="flex flex-wrap items-center gap-2">
+                                                        <GroupSortSelect
+                                                            value={serviceGroupSortModes[serviceGroup.name] || "manual"}
+                                                            onChange={(mode) => setServiceGroupSortModes(prev => ({ ...prev, [serviceGroup.name]: mode }))}
+                                                        />
                                                         <button
                                                             type="button"
                                                             onClick={() => handleMoveMarketplaceServiceToTop(serviceGroup.name)}
@@ -2110,13 +2168,18 @@ export default function AdminPanel() {
                                                 </div>
                                                 {!collapsedMarketplaceServices[serviceGroup.name] && (
                                                     <div className="space-y-3 bg-zinc-50/70 p-3">
-                                        {serviceGroup.items.map(({ listing: group, planName, service, memberCount, emptySlots }, index: number) => {
-                                            const isExpanded = expandedGroup === group._id;
-                                            const members = Array.isArray(group.members) ? group.members : [];
-                                            const memberPreview = members.slice(0, 50);
-                                            const hiddenMemberCount = Math.max(0, members.length - memberPreview.length);
-                                            const displayOwner = (group.plan_owner || "Unknown").trim().replace(/^@+/, "") || "Unknown";
-                                            return (
+                                        {(() => {
+                                            const groupSortMode = serviceGroupSortModes[serviceGroup.name] || "manual";
+                                            const isManualMode = groupSortMode === "manual";
+                                            const items = serviceGroup.items;
+                                            const renderListing = (item: typeof items[number], idx: number) => {
+                                                const { listing: group, planName, service, memberCount, emptySlots } = item;
+                                                const isExpanded = expandedGroup === group._id;
+                                                const members = Array.isArray(group.members) ? group.members : [];
+                                                const memberPreview = members.slice(0, 50);
+                                                const hiddenMemberCount = Math.max(0, members.length - memberPreview.length);
+                                                const displayOwner = (group.plan_owner || "Unknown").trim().replace(/^@+/, "") || "Unknown";
+                                                return (
                                                 <div key={group._id} className="overflow-hidden rounded-2xl border border-black/5 bg-white transition hover:border-zinc-200 hover:shadow-lg hover:shadow-black/[0.04]">
                                                     {/* Card header ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â clickable to expand */}
                                                     <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center">
@@ -2166,12 +2229,13 @@ export default function AdminPanel() {
                                                                 <ChevronDown size={17} className={`text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                                                             </div>
                                                         </button>
+                                                        {!isManualMode && (
                                                         <div className="flex items-center gap-1.5 self-end rounded-2xl bg-zinc-50 p-1.5 xl:self-auto">
                                                             <span className="px-2 text-[9px] font-black uppercase tracking-widest text-gray-400">Order</span>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleMoveMarketplaceListing(group._id, "up")}
-                                                                disabled={index === 0}
+                                                                disabled={idx === 0}
                                                                 title="Move listing up in marketplace"
                                                                 className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
                                                             >
@@ -2180,13 +2244,14 @@ export default function AdminPanel() {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleMoveMarketplaceListing(group._id, "down")}
-                                                                disabled={index === serviceGroup.items.length - 1}
+                                                                disabled={idx === items.length - 1}
                                                                 title="Move listing down in marketplace"
                                                                 className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-300 disabled:shadow-none"
                                                             >
                                                                 <ArrowDown size={15} />
                                                             </button>
                                                         </div>
+                                                        )}
                                                     </div>
 
                                                     {/* Expanded slot management panel */}
@@ -2440,7 +2505,26 @@ export default function AdminPanel() {
                                                     </AnimatePresence>
                                                 </div>
                                             );
-                                        })}
+                                        };
+                                        const itemIds = items.map((item: any) => item.listing._id);
+                                        if (isManualMode) {
+                                            return (
+                                                <SortableGroupContainer
+                                                    items={itemIds}
+                                                    isDraggable={true}
+                                                    onDragStart={() => {}}
+                                                    onDragEnd={(oldIdx: number, newIdx: number) => handleGroupDragEnd(serviceGroup.name, items, oldIdx, newIdx)}
+                                                >
+                                                    {items.map((item: any, idx: number) => (
+                                                        <SortableItem key={item.listing._id} id={item.listing._id} isDraggable={true}>
+                                                            {renderListing(item, idx)}
+                                                        </SortableItem>
+                                                    ))}
+                                                </SortableGroupContainer>
+                                            );
+                                        }
+                                        return items.map((item: any, idx: number) => renderListing(item, idx));
+                                    })()}
                                                     </div>
                                                 )}
                                             </section>
@@ -3264,7 +3348,13 @@ export default function AdminPanel() {
                             </motion.div>
                         )}
 
-                        {/* ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â PAYMENTS REVIEW ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â */}
+                        {activeTab === "referral_campaigns" && (
+                            <motion.div key="referral_campaigns" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
+                                <ReferralCampaignsAdmin />
+                            </motion.div>
+                        )}
+
+                        {/* Ãƒâ€šÃ‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¢ PAYMENTS REVIEW Ãƒâ€šÃ‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¢ */}
                         {activeTab === "review_payments" && (
                             <motion.div key="review_payments" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-8">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

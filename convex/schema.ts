@@ -745,7 +745,8 @@ export default defineSchema({
         .index("by_status", ["status"])
         .index("by_owner", ["owner_user_id"])
         .index("by_request_id", ["request_id"])
-        .index("by_account_email", ["account_email"]),
+        .index("by_account_email", ["account_email"])
+        .index("by_subscription_displayOrder", ["subscription_catalog_id", "display_order"]),
 
     reputation: defineTable({
         user_id: v.id("users"),
@@ -1307,5 +1308,61 @@ export default defineSchema({
     }).index("by_user", ["user_id"])
         .index("by_invoice", ["invoice_id"])
         .index("by_reference", ["reference"]),
+
+    referral_campaigns: defineTable({
+        name: v.string(),
+        description: v.string(),
+        banner_url: v.optional(v.string()),
+        target_subscription: v.optional(v.string()),
+        target_referral_count: v.number(),
+        reward_name: v.string(),
+        reward_description: v.optional(v.string()),
+        reward_image: v.optional(v.string()),
+        start_date: v.number(),
+        end_date: v.number(),
+        is_active: v.boolean(),
+        created_by: v.id("users"),
+        created_at: v.number(),
+        updated_at: v.number(),
+    }).index("by_active", ["is_active", "start_date"])
+        .index("by_date_range", ["start_date", "end_date"]),
+
+    referrals: defineTable({
+        campaign_id: v.optional(v.id("referral_campaigns")),
+        referrer_id: v.id("users"),
+        referred_user_id: v.optional(v.id("users")),
+        referred_email: v.optional(v.string()),
+        subscription_joined: v.optional(v.string()),
+        status: v.string(),
+        referral_link: v.string(),
+        created_at: v.number(),
+        completed_at: v.optional(v.number()),
+    }).index("by_referrer", ["referrer_id"])
+        .index("by_campaign", ["campaign_id"])
+        .index("by_status", ["status"])
+        .index("by_referrer_campaign", ["referrer_id", "campaign_id"])
+        .index("by_referred_user", ["referred_user_id"]),
+
+    referral_rewards: defineTable({
+        campaign_id: v.id("referral_campaigns"),
+        user_id: v.id("users"),
+        referral_count: v.number(),
+        reward_name: v.string(),
+        status: v.string(),
+        admin_note: v.optional(v.string()),
+        awarded_at: v.number(),
+        delivered_at: v.optional(v.number()),
+    }).index("by_user", ["user_id"])
+        .index("by_campaign", ["campaign_id"])
+        .index("by_status", ["status"]),
+
+    referral_badges: defineTable({
+        user_id: v.id("users"),
+        badge_type: v.string(),
+        badge_name: v.string(),
+        campaign_id: v.optional(v.id("referral_campaigns")),
+        awarded_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_type", ["badge_type"]),
 });
 

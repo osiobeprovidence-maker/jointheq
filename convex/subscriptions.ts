@@ -873,6 +873,11 @@ export const adminCreateListing = mutation({
         const totalSlots = args.slot_types.reduce((a, b) => a + b.capacity, 0);
         const slotPrice = args.slot_types[0]?.price ?? 0;
 
+        const existingForCatalog = await ctx.db.query("marketplace")
+            .withIndex("by_catalog", q => q.eq("subscription_catalog_id", catalogId))
+            .collect();
+        const maxOrder = existingForCatalog.reduce((max, m) => Math.max(max, m.display_order ?? 0), 0);
+
         await ctx.db.insert("marketplace", {
             subscription_catalog_id: catalogId,
             admin_creator_id: adminUser?._id,
@@ -893,6 +898,7 @@ export const adminCreateListing = mutation({
             admin_note: undefined,
             request_id: args.request_id,
 
+            display_order: maxOrder + 1,
             created_at: Date.now(),
             updated_at: Date.now(),
         });
@@ -981,8 +987,9 @@ export const adminDeleteGroup = mutation({
 /** Get full marketplace data for admin: uses new marketplace table */
 export const getAdminMarketplace = query({
     handler: async (ctx) => {
-        // Use the new marketplace table as the primary source
-        const listings = sortMarketplaceListings(await ctx.db.query("marketplace").collect());
+        // Fetch all marketplace entries sorted by display_order within each catalog
+        const listings = await ctx.db.query("marketplace").collect();
+        listings.sort((a, b) => (a.display_order ?? a.created_at ?? a._creationTime) - (b.display_order ?? b.created_at ?? b._creationTime));
 
         return await Promise.all(listings.map(async (listing) => {
             const catalog = listing.subscription_catalog_id ? await ctx.db.get(listing.subscription_catalog_id) : null;
@@ -1085,6 +1092,28 @@ export const reorderMarketplaceListing = mutation({
 
         return { success: true, moved: true };
     }
+});
+
+/** Reorder marketplace groups within a subscription catalog by setting display_order. */
+export const reorderMarketplaceGroups = mutation({
+    args: {
+        adminId: v.id("users"),
+        subscriptionCatalogId: v.id("subscription_catalog"),
+        marketplaceIds: v.array(v.id("marketplace")),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const updatedAt = Date.now();
+        for (let i = 0; i < args.marketplaceIds.length; i++) {
+            await ctx.db.patch(args.marketplaceIds[i], {
+                display_order: i + 1,
+                updated_at: updatedAt,
+            });
+        }
+        return { success: true };
+    },
 });
 
 /** Keep every listing for one subscription together at the top of the marketplace. */

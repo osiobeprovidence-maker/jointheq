@@ -15,6 +15,7 @@ import {
   Users,
   Wallet,
   X,
+  Gift,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -33,7 +34,8 @@ export type AdminMenuKey =
   | "queues"
   | "login_logs"
   | "migrations"
-  | "enhanced";
+  | "enhanced"
+  | "referral_campaigns";
 
 type AdminShellProps = {
   activeItem: AdminMenuKey;
@@ -65,6 +67,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { id: "notifications", label: "Notifications", sub: "Push Updates", path: "/admin?tab=notifications", icon: <Bell size={18} /> },
   { id: "queues", label: "Queues", sub: "Queue Requests", path: "/admin?tab=queues", icon: <Users size={18} /> },
   { id: "login_logs", label: "Login Logs", sub: "User Sign-in Activity", path: "/admin?tab=login_logs", icon: <Clock size={18} /> },
+  { id: "referral_campaigns", label: "Referral Campaigns", sub: "Marketing & Rewards", path: "/admin?tab=referral_campaigns", icon: <Gift size={18} /> },
 ];
 
 export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
@@ -74,6 +77,7 @@ export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Reviews", items: ["user_listings"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins", "login_logs"] },
   { label: "Engagement", items: ["notifications", "queues"] },
+  { label: "Marketing", items: ["referral_campaigns"] },
 ];
 
 const menuItemById = new Map(adminMenuItems.map((item) => [item.id, item]));

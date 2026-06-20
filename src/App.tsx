@@ -25,6 +25,9 @@ const OwnerEarningsPage = lazy(() => import("./pages/OwnerEarningsPage"));
 const AdminListingsPage = lazy(() => import("./pages/AdminListingsPage"));
 const GuestOnboardingPage = lazy(() => import("./pages/GuestOnboardingPage"));
 const QHubPage = lazy(() => import("./pages/QHubPage"));
+const CampaignPage = lazy(() => import("./pages/CampaignPage"));
+const ReferralsPage = lazy(() => import("./pages/ReferralsPage"));
+const RewardsPage = lazy(() => import("./pages/RewardsPage"));
 
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
@@ -129,7 +132,29 @@ export default function App() {
 
           <Route
             path="/campaigns/:campaignId"
-            element={<Navigate to="/dashboard" replace />}
+            element={
+              <ProtectedRoute>
+                <CampaignPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/referrals"
+            element={
+              <ProtectedRoute>
+                <ReferralsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/rewards"
+            element={
+              <ProtectedRoute>
+                <RewardsPage />
+              </ProtectedRoute>
+            }
           />
 
           <Route

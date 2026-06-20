@@ -41,6 +41,9 @@ import {
     DollarSign,
     Users as TeamIcon,
     Target,
+    Gift,
+    Share2,
+    Timer as TimerIcon,
     Edit,
     BadgeDollarSign,
     Bell,
@@ -49,7 +52,7 @@ import {
     CreditCard
 } from "lucide-react";
 import { useQuery, useMutation, useAction } from "convex/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
@@ -218,6 +221,7 @@ export default function DashboardPage() {
     const chatUsers = useQuery(api.users.list) || [];
     const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
     const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
+    const referralStats = useQuery(api.referrals.getUserReferralStats, currentUser ? { userId: currentUser._id } : "skip");
     const adminsList = useQuery(api.users.getAdmins) || [];
 
     // Sync local auth with Convex state
@@ -1151,6 +1155,53 @@ export default function DashboardPage() {
                             <StatCard title="Monthly Spend" value={`\u20A6${activeSlots.reduce((acc, s) => acc + s.price, 0).toLocaleString()}`} icon={<TrendingUp size={20} />} color="bg-purple-500" />
                             <StatCard title="Q Rank" value={currentUser?.q_rank || getRank(currentUser?.q_score || 0)} icon={<ShieldCheck size={20} />} color="bg-emerald-500" />
                         </div>
+
+                        {/* Referral Challenge Card */}
+                        {referralStats && referralStats.activeCampaign && (
+                            <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 rounded-3xl p-6 shadow-sm text-white">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div>
+                                        <div className="inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest mb-2">
+                                            <Gift size={12} /> Referral Challenge
+                                        </div>
+                                        <h3 className="text-lg font-black">{referralStats.activeCampaign.campaign.name}</h3>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-black">{referralStats.activeCampaign.campaign.reward_name}</div>
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-white/50">Reward</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-bold text-white/70">Progress: {referralStats.activeCampaign.completed} / {referralStats.activeCampaign.campaign.target_referral_count} Referrals</span>
+                                    <span className="text-sm font-black text-white">{Math.round((referralStats.activeCampaign.completed / referralStats.activeCampaign.campaign.target_referral_count) * 100)}%</span>
+                                </div>
+                                <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden mb-4">
+                                    <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(100, Math.round((referralStats.activeCampaign.completed / referralStats.activeCampaign.campaign.target_referral_count) * 100))}%` }} />
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-white/60 mb-4">
+                                    {referralStats.activeCampaign.rank && (
+                                        <span className="flex items-center gap-1"><Trophy size={14} className="text-amber-400" /> Current Rank: #{referralStats.activeCampaign.rank}</span>
+                                    )}
+                                    <span className="flex items-center gap-1">
+                                        <TimerIcon size={14} className="text-amber-400" /> {Math.max(0, Math.ceil((referralStats.activeCampaign.campaign.end_date - Date.now()) / 86400000))} Days Remaining
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <Link to={`/campaigns/${referralStats.activeCampaign.campaign._id}`}
+                                        className="inline-flex items-center gap-1.5 h-10 px-5 rounded-2xl bg-white text-zinc-900 text-xs font-black hover:bg-zinc-100 transition-colors">
+                                        <Share2 size={14} /> Share Referral Link
+                                    </Link>
+                                    <Link to={`/campaigns/${referralStats.activeCampaign.campaign._id}`}
+                                        className="inline-flex items-center gap-1.5 h-10 px-5 rounded-2xl bg-white/10 text-white text-xs font-black hover:bg-white/20 transition-colors">
+                                        <Trophy size={14} /> View Leaderboard
+                                    </Link>
+                                    <Link to="/rewards"
+                                        className="inline-flex items-center gap-1.5 h-10 px-5 rounded-2xl bg-white/10 text-white text-xs font-black hover:bg-white/20 transition-colors">
+                                        <Gift size={14} /> My Rewards
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
 
                         <section>
                             <div className="flex items-center justify-between mb-6">
