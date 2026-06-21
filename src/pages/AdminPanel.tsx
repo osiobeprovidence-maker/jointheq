@@ -67,7 +67,8 @@ import {
     Download,
     MoreVertical,
     GripVertical,
-    Gift
+    Gift,
+    Filter,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -208,6 +209,19 @@ function SectionHeader({ title, sub, action }: { title: string; sub?: string; ac
     );
 }
 
+function getRelativeTime(timestamp: number) {
+    const diff = Date.now() - timestamp;
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(timestamp).toLocaleDateString();
+}
+
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Main Component ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 export default function AdminPanel() {
     const navigate = useNavigate();
@@ -261,7 +275,10 @@ export default function AdminPanel() {
 
     // Selected User state
     const [selectedUser, setSelectedUser] = useState<any>(null);
-    const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "management" | "logs">("overview");
+    const [userDetailTab, setUserDetailTab] = useState<"overview" | "financials" | "management" | "logs" | "activity">("overview");
+    const [activitySearch, setActivitySearch] = useState("");
+    const [activityCategory, setActivityCategory] = useState("");
+    const [activityStatus, setActivityStatus] = useState("");
     const [slotDateDrafts, setSlotDateDrafts] = useState<Record<string, string>>({});
     const [savingSlotDateId, setSavingSlotDateId] = useState<string | null>(null);
 
@@ -345,6 +362,18 @@ export default function AdminPanel() {
 
     // User Logs Query
     const userAdminLogs = useQuery(api.admin.getUserAdminLogs, selectedUser ? { userId: selectedUser._id } : "skip") || [];
+    const userActivities = useQuery(api.activities.getUserActivities, selectedUser ? { userId: selectedUser._id } : "skip") || { activities: [], hasMore: false, cursor: null };
+    const activitySummary = useQuery(api.activities.getUserActivitySummary, selectedUser ? { userId: selectedUser._id } : "skip");
+    const displayActivities = useMemo(() => {
+        let list = userActivities.activities || [];
+        if (activityCategory) list = list.filter((a: any) => a.category === activityCategory);
+        if (activityStatus) list = list.filter((a: any) => a.status === activityStatus);
+        if (activitySearch) {
+            const q = activitySearch.toLowerCase();
+            list = list.filter((a: any) => a.action.toLowerCase().includes(q) || (a.description && a.description.toLowerCase().includes(q)));
+        }
+        return list;
+    }, [userActivities, activityCategory, activityStatus, activitySearch]);
     const loginLogs = useQuery(api.admin.getLoginLogs, {}) || [];
     const adjustBalanceMut = useMutation(api.admin.adjustUserBalance);
     const adjustBootsMut = useMutation(api.admin.adjustUserBoots);
@@ -2410,7 +2439,102 @@ export default function AdminPanel() {
                                                                                                 <>
                                                                                                     <div className="w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">
                                                                                                         {m.user_name?.[0] || "?"}
-                                                                                                    </div>
+                                {userDetailTab === 'activity' && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+                                        {activitySummary && (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                                                {[
+                                                    { label: "Total Transactions", value: activitySummary.totalTransactions, icon: <Activity size={14} />, color: "bg-zinc-900" },
+                                                    { label: "Wallet Funding", value: fmtCurrencyShort(activitySummary.totalWalletFunding), icon: <TrendingUp size={14} />, color: "bg-emerald-500" },
+                                                    { label: "Purchases", value: activitySummary.totalPurchases, icon: <ShoppingBag size={14} />, color: "bg-blue-500" },
+                                                    { label: "Failed Payments", value: activitySummary.failedPayments, icon: <AlertCircle size={14} />, color: "bg-red-500" },
+                                                    { label: "Active Subs", value: activitySummary.activeSubscriptions, icon: <Repeat size={14} />, color: "bg-purple-500" },
+                                                    { label: "Last Activity", value: activitySummary.lastActivityDate ? new Date(activitySummary.lastActivityDate).toLocaleDateString() : "N/A", icon: <Clock size={14} />, color: "bg-amber-500" },
+                                                ].map((card, i) => (
+                                                    <div key={i} className="bg-white p-4 rounded-2xl border border-black/5">
+                                                        <div className="flex items-center gap-2 mb-1.5">
+                                                            <div className={`w-6 h-6 rounded-lg ${card.color} flex items-center justify-center text-white`}>{card.icon}</div>
+                                                        </div>
+                                                        <div className="text-lg font-black">{card.value}</div>
+                                                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{card.label}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <div className="relative flex-1 min-w-[200px] max-w-xs">
+                                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                                                <input
+                                                    placeholder="Search activities..."
+                                                    value={activitySearch}
+                                                    onChange={e => setActivitySearch(e.target.value)}
+                                                    className="w-full h-9 pl-9 pr-4 rounded-xl border border-black/10 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-black/20"
+                                                />
+                                            </div>
+                                            <div className="relative">
+                                                <select value={activityCategory} onChange={e => setActivityCategory(e.target.value)}
+                                                    className="h-9 pl-3 pr-8 rounded-xl border border-black/10 text-[10px] font-black uppercase tracking-wider bg-white appearance-none cursor-pointer">
+                                                    <option value="">All Categories</option>
+                                                    {["wallet", "payment", "subscription", "referral", "account", "support"].map(c => (
+                                                        <option key={c} value={c}>{c}</option>
+                                                    ))}
+                                                </select>
+                                                <Filter size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400" />
+                                            </div>
+                                            <div className="relative">
+                                                <select value={activityStatus} onChange={e => setActivityStatus(e.target.value)}
+                                                    className="h-9 pl-3 pr-8 rounded-xl border border-black/10 text-[10px] font-black uppercase tracking-wider bg-white appearance-none cursor-pointer">
+                                                    <option value="">All Statuses</option>
+                                                    {["success", "pending", "failed"].map(s => (
+                                                        <option key={s} value={s}>{s}</option>
+                                                    ))}
+                                                </select>
+                                                <Filter size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {displayActivities.length === 0 && (
+                                                <div className="bg-white border border-black/5 rounded-[2rem] p-12 text-center">
+                                                    <Activity size={40} className="mx-auto mb-3 text-zinc-300" />
+                                                    <p className="font-bold text-zinc-500">No activity found</p>
+                                                </div>
+                                            )}
+                                            {displayActivities.map((a: any) => (
+                                                <div key={a._id} className="bg-white border border-black/5 rounded-2xl p-4 flex items-start gap-3 hover:border-black/10 transition-colors">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                                                        a.status === "success" ? "bg-emerald-100 text-emerald-600" :
+                                                        a.status === "failed" ? "bg-red-100 text-red-600" :
+                                                        "bg-amber-100 text-amber-600"
+                                                    }`}>
+                                                        {a.status === "success" ? <CheckCircle2 size={16} /> :
+                                                         a.status === "failed" ? <AlertCircle size={16} /> :
+                                                         <Clock size={16} />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className="text-xs font-black">{a.action}</span>
+                                                            <span className="text-[10px] font-semibold text-zinc-400 whitespace-nowrap">
+                                                                {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                            </span>
+                                                        </div>
+                                                        {a.description && <div className="text-xs text-zinc-500 mt-0.5">{a.description}</div>}
+                                                        <div className="flex items-center gap-2 mt-1.5">
+                                                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{a.category}</span>
+                                                            {a.amount != null && (
+                                                                <span className="text-[10px] font-black text-zinc-600">₦{a.amount.toLocaleString()}</span>
+                                                            )}
+                                                            <span className="text-[10px] text-zinc-300">{getRelativeTime(a.created_at)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                </div>
                                                                                                     <span className="text-sm font-bold truncate">{m.user_name}</span>
                                                                                                 </>
                                                                                             ) : (
@@ -4545,7 +4669,7 @@ export default function AdminPanel() {
 
                             {/* Hub Navigation */}
                             <div className="flex border-b border-black/5 px-6 bg-white overflow-x-auto no-scrollbar">
-                                {(['overview', 'financials', 'management', 'logs'] as const).map(tab => (
+                                {(['overview', 'financials', 'management', 'logs', 'activity'] as const).map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => setUserDetailTab(tab)}

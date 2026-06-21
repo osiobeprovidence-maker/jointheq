@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { createNotification } from "./notificationHelpers";
+import { createUserActivityLog } from "./activityHelpers";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RENEWAL_WINDOW_DAYS = 7;
@@ -227,6 +228,19 @@ export const cancelInvoice = mutation({
             throw new Error("Only pending invoices can be cancelled.");
         }
         await ctx.db.patch(args.invoice_id, { status: "cancelled" });
+
+        try {
+            await createUserActivityLog(ctx, {
+                userId: invoice.user_id,
+                category: "payment",
+                action: "Payment Failed",
+                status: "failed",
+                amount: invoice.total_amount,
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
+
         return { success: true };
     },
 });
@@ -307,6 +321,18 @@ export const markInvoicePaid = internalMutation({
             type: "subscription",
         });
 
+        try {
+            await createUserActivityLog(ctx, {
+                userId: invoice.user_id,
+                category: "payment",
+                action: "Payment Completed",
+                status: "success",
+                amount: invoice.total_amount,
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
+
         return { success: true, itemsProcessed: items.length };
     },
 });
@@ -366,6 +392,19 @@ export const initiatePaystackPayment = action({
             reference: data.reference,
             access_code: data.access_code,
         });
+
+        try {
+            await createUserActivityLog(ctx, {
+                userId: invoice.user_id,
+                category: "payment",
+                action: "Payment Initiated",
+                description: "Paystack payment for invoice",
+                status: "pending",
+                amount: invoice.total_amount,
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
 
         return {
             authorization_url: data.authorization_url,

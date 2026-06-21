@@ -4,6 +4,7 @@ import { awardReputation } from "./reputation";
 import { api } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { createNotification, createNotificationForAllUsers } from "./notificationHelpers";
+import { createUserActivityLog } from "./activityHelpers";
 
 const normalizeOwnerName = (owner?: string) => {
     const cleaned = (owner || "").trim().replace(/^@+/, "");
@@ -333,6 +334,20 @@ export const toggleAutoRenew = mutation({
     args: { id: v.any(), auto_renew: v.boolean() },
     handler: async (ctx, args) => {
         await ctx.db.patch(args.id, { auto_renew: args.auto_renew });
+
+        try {
+            const doc = await ctx.db.get(args.id);
+            if (doc && (doc as any).user_id) {
+                await createUserActivityLog(ctx, {
+                    userId: (doc as any).user_id,
+                    category: "subscription",
+                    action: `Auto-renew ${args.auto_renew ? "enabled" : "disabled"}`,
+                    status: "success",
+                });
+            }
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
     },
 });
 
@@ -388,6 +403,18 @@ export const renewSlot = mutation({
             message: `${slotType.name} was renewed for N${price.toLocaleString()}.`,
             type: "subscription",
         });
+
+        try {
+            await createUserActivityLog(ctx, {
+                userId: slot.user_id,
+                category: "subscription",
+                action: "Subscription renewed",
+                status: "success",
+                amount: price,
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
 
         return { success: true };
     },
@@ -596,6 +623,18 @@ export const joinSlot = mutation({
             });
         }
 
+        try {
+            await createUserActivityLog(ctx, {
+                userId: args.user_id,
+                category: "subscription",
+                action: "Subscription purchased",
+                status: "success",
+                amount: total_price,
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
+
         return { success: true };
     },
 });
@@ -630,6 +669,16 @@ export const leaveSlot = mutation({
                     message: "Your subscription leave request is scheduled for review at the end of the billing cycle.",
                     type: "subscription",
                 });
+                try {
+                    await createUserActivityLog(ctx, {
+                        userId: (slot as any).user_id,
+                        category: "subscription",
+                        action: "User left group",
+                        status: "success",
+                    });
+                } catch (e) {
+                    console.error("Failed to log activity:", e);
+                }
                 return { success: true, type: "slot", message: "Removal scheduled for end of cycle" };
             }
         } catch (e) { }
@@ -648,6 +697,16 @@ export const leaveSlot = mutation({
                     message: "Your migrated subscription leave request has been received.",
                     type: "subscription",
                 });
+                try {
+                    await createUserActivityLog(ctx, {
+                        userId: (migration as any).user_id,
+                        category: "subscription",
+                        action: "User left group",
+                        status: "success",
+                    });
+                } catch (e) {
+                    console.error("Failed to log activity:", e);
+                }
                 return { success: true, type: "migration" };
             }
         } catch (e) { }

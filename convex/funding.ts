@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { createNotification } from "./notificationHelpers";
+import { createUserActivityLog } from "./activityHelpers";
 
 const FUNDING_FEE = 20;
 const MIN_FUNDING_AMOUNT = 1000;
@@ -79,6 +80,8 @@ export const submitManualFunding = mutation({
       message: `We received your wallet funding request for N${args.base_amount.toLocaleString()}. Admin review is now pending.`,
       type: "funding",
     });
+
+    try { createUserActivityLog(ctx, { userId: args.user_id, category: "wallet", action: "Wallet Funding Initiated", description: `Manual bank transfer funding requested - ₦${args.base_amount}`, status: "pending", amount: args.base_amount }); } catch (e) { console.error("Failed to log activity:", e); }
 
     return requestId;
   },
@@ -214,6 +217,8 @@ export const approveFunding = mutation({
       type: "payment",
     });
 
+    try { createUserActivityLog(ctx, { userId: request.user_id, category: "wallet", action: "Wallet Funded", description: `Manual funding of ₦${request.base_amount} approved by admin`, status: "success", amount: request.base_amount }); } catch (e) { console.error("Failed to log activity:", e); }
+
     return { success: true };
   },
 });
@@ -255,6 +260,8 @@ export const rejectFunding = mutation({
           : "Your wallet funding request was rejected. Please check the transfer details and try again.",
       type: "alert",
     });
+
+    try { createUserActivityLog(ctx, { userId: request.user_id, category: "wallet", action: "Wallet Funding Failed", description: `Manual funding of ₦${request.base_amount} rejected`, status: "failed", amount: request.base_amount }); } catch (e) { console.error("Failed to log activity:", e); }
 
     return { success: true };
   },

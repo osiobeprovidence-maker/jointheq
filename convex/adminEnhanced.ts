@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { createUserActivityLog } from "./activityHelpers";
 
 // ─── ADMIN LOGGING HELPER ─────────────────────────────────────────────────────
 
@@ -136,6 +137,18 @@ export const adminAssignUserToSlot = mutation({
             args.reason
         );
 
+        try {
+            await createUserActivityLog(ctx, {
+                userId: args.userId,
+                category: "subscription",
+                action: "Slot assigned",
+                description: `Admin assigned to ${slotType.name}`,
+                status: "success",
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
+
         return { success: true, slotId: targetSlot._id };
     }
 });
@@ -228,6 +241,17 @@ export const adminAssignUserToExactSlot = mutation({
             args.reason || "Manual assignment via Subscription Manager"
         );
 
+        try {
+            await createUserActivityLog(ctx, {
+                userId: args.userId,
+                category: "subscription",
+                action: "Slot assigned",
+                status: "success",
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
+
         return { success: true, slotId: args.slotId };
     }
 });
@@ -268,6 +292,17 @@ export const adminRemoveUserFromSlot = mutation({
             `Removed user ${user?.full_name} from slot`,
             args.reason
         );
+
+        try {
+            await createUserActivityLog(ctx, {
+                userId: slot.user_id,
+                category: "subscription",
+                action: "Slot removed",
+                status: "success",
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
 
         return { success: true };
     }
@@ -326,6 +361,18 @@ export const adminOverridePayment = mutation({
             args.reason,
             { originalAmount, overrideAmount: args.overrideAmount }
         );
+
+        try {
+            await createUserActivityLog(ctx, {
+                userId: slot.user_id,
+                category: "payment",
+                action: "Payment Override",
+                status: args.newStatus === "paid" ? "success" : "failed",
+                amount: args.overrideAmount,
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
 
         return { success: true };
     }
@@ -512,6 +559,17 @@ export const adminMoveUserToGroup = mutation({
             args.reason
         );
 
+        try {
+            await createUserActivityLog(ctx, {
+                userId: args.userId,
+                category: "subscription",
+                action: "User moved to group",
+                status: "success",
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
+
         return { success: true };
     }
 });
@@ -692,6 +750,17 @@ export const adminReplaceUserInSlot = mutation({
             `Replaced user with ${newUser.full_name}`,
             args.reason || "Manual replacement"
         );
+
+        try {
+            await createUserActivityLog(ctx, {
+                userId: args.newUserId,
+                category: "subscription",
+                action: "Slot replaced",
+                status: "success",
+            });
+        } catch (e) {
+            console.error("Failed to log activity:", e);
+        }
 
         return { success: true, previousUserId };
     },

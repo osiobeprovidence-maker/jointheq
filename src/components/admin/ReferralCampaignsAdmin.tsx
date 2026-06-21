@@ -11,6 +11,7 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { auth } from "../../lib/auth";
 import toast from "react-hot-toast";
+import { CampaignImageUpload } from "./CampaignImageUpload";
 
 type Tab = "campaigns" | "tracking" | "rewards" | "analytics";
 
@@ -185,6 +186,10 @@ function CampaignForm({ initial, onSave, onCancel }: {
   const [endDate, setEndDate] = useState(initial?.end_date ? new Date(initial.end_date).toISOString().slice(0, 10) : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const generateUploadUrl = useMutation(api.referrals.generateCampaignUploadUrl);
+  const resolveUploadUrl = useMutation(api.referrals.resolveUploadUrl);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,9 +221,15 @@ function CampaignForm({ initial, onSave, onCancel }: {
             className="mt-1 w-full min-h-[80px] p-4 rounded-xl border border-black/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black/20 resize-none" />
         </div>
         <div className="sm:col-span-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Banner Image URL</label>
-          <input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="https://..."
-            className="mt-1 w-full h-11 px-4 rounded-xl border border-black/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black/20" />
+          <CampaignImageUpload
+            label="Banner Image"
+            currentUrl={initial?.banner_url}
+            onUpload={(url) => { setBannerUrl(url); setUploadingImage(false); }}
+            onRemove={() => { setBannerUrl(""); }}
+            onUploadStart={() => setUploadingImage(true)}
+            generateUploadUrl={() => generateUploadUrl()}
+            resolveUploadUrl={(args) => resolveUploadUrl(args)}
+          />
         </div>
         <div>
           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Reward Name *</label>
@@ -236,9 +247,15 @@ function CampaignForm({ initial, onSave, onCancel }: {
             className="mt-1 w-full h-11 px-4 rounded-xl border border-black/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black/20" />
         </div>
         <div className="sm:col-span-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Reward Image URL</label>
-          <input value={rewardImage} onChange={e => setRewardImage(e.target.value)} placeholder="https://..."
-            className="mt-1 w-full h-11 px-4 rounded-xl border border-black/10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black/20" />
+          <CampaignImageUpload
+            label="Reward Image"
+            currentUrl={initial?.reward_image}
+            onUpload={(url) => { setRewardImage(url); setUploadingImage(false); }}
+            onRemove={() => { setRewardImage(""); }}
+            onUploadStart={() => setUploadingImage(true)}
+            generateUploadUrl={() => generateUploadUrl()}
+            resolveUploadUrl={(args) => resolveUploadUrl(args)}
+          />
         </div>
         <div>
           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Target Subscription (optional)</label>
@@ -266,9 +283,9 @@ function CampaignForm({ initial, onSave, onCancel }: {
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel}
           className="h-10 px-5 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-black hover:bg-zinc-200 transition-colors">Cancel</button>
-        <button type="submit" disabled={saving}
+        <button type="submit" disabled={saving || uploadingImage}
           className="h-10 px-5 rounded-xl bg-zinc-900 text-white text-xs font-black hover:bg-zinc-800 transition-colors disabled:opacity-50">
-          {saving ? "Saving..." : initial ? "Update Campaign" : "Create Campaign"}
+          {uploadingImage ? "Uploading image..." : saving ? "Saving..." : initial ? "Update Campaign" : "Create Campaign"}
         </button>
       </div>
     </form>

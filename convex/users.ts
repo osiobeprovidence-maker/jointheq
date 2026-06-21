@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { awardReputation } from "./reputation";
+import { createUserActivityLog } from "./activityHelpers";
 import bcrypt from "bcryptjs";
 
 const MAX_SIGN_IN_HISTORY = 10;
@@ -313,6 +314,8 @@ export const createUser = mutation({
             updated_at: Date.now(),
         });
 
+        try { createUserActivityLog(ctx, { userId, category: "account", action: "Account created", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+
         return userId;
     },
 });
@@ -371,6 +374,8 @@ export const verifyUser = mutation({
             verification_token_expires: undefined,
             verification_deadline: undefined,
         });
+
+        try { createUserActivityLog(ctx, { userId: user._id, category: "account", action: "Email verified", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return { success: true, userId: user._id, alreadyVerified: false };
     },
@@ -516,6 +521,8 @@ export const resetPassword = mutation({
             lockout_until: undefined,
         });
 
+        try { createUserActivityLog(ctx, { userId: user._id, category: "account", action: "Password changed", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+
         return { success: true };
     },
 });
@@ -543,6 +550,9 @@ export const updatePhone = mutation({
         }
 
         await ctx.db.patch(args.id, { phone: normalizedPhone });
+
+        try { createUserActivityLog(ctx, { userId: args.id, category: "account", action: "Phone verified", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+
         return await ctx.db.get(args.id);
     },
 });
@@ -684,6 +694,8 @@ export const login = mutation({
         const updatedUser = await ctx.db.get(user._id);
 
         await logLogin(user._id, true);
+
+        try { createUserActivityLog(ctx, { userId: user._id, category: "account", action: "Login", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
         // Return user with verification status info
         return {
@@ -920,6 +932,9 @@ export const updateProfile = mutation({
     handler: async (ctx, args) => {
         const { userId, ...patch } = args;
         await ctx.db.patch(userId, patch);
+
+        try { createUserActivityLog(ctx, { userId: args.userId, category: "account", action: "Profile updated", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+
         return { success: true };
     },
 });
@@ -1265,6 +1280,8 @@ export const creditWalletAndSaveCard = internalMutation({
             description: `Paystack Funding: ${args.reference}`,
             created_at: Date.now(),
         });
+
+        try { createUserActivityLog(ctx, { userId: args.userId, category: "wallet", action: "Wallet Funded", description: `Wallet funded via Paystack - ₦${args.amount}`, status: "success", amount: args.amount }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return { success: true };
     },

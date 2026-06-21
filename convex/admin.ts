@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { createNotification } from "./notificationHelpers";
+import { createUserActivityLog } from "./activityHelpers";
 
 const normalizeSupportContacts = (settingsMap: Record<string, any>) => {
     const rawContacts = Array.isArray(settingsMap.whatsapp_support_contacts)
@@ -256,6 +257,8 @@ export const suspendUser = mutation({
         const executor = await ctx.db.get(args.executorId);
         if (!executor?.is_admin) throw new Error("Unauthorized");
         await ctx.db.patch(args.userId, { is_suspended: true });
+
+        try { createUserActivityLog(ctx, { userId: args.userId, category: "account", action: "Account suspended", status: "failed" }); } catch (e) { console.error("Failed to log activity:", e); }
     }
 });
 
@@ -265,6 +268,8 @@ export const unsuspendUser = mutation({
         const executor = await ctx.db.get(args.executorId);
         if (!executor?.is_admin) throw new Error("Unauthorized");
         await ctx.db.patch(args.userId, { is_suspended: false });
+
+        try { createUserActivityLog(ctx, { userId: args.userId, category: "account", action: "Account restored", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
     }
 });
 
@@ -316,12 +321,16 @@ export const createTicket = mutation({
         subject: v.string(),
     },
     handler: async (ctx, args) => {
-        return await ctx.db.insert("support_tickets", {
+        const ticketId = await ctx.db.insert("support_tickets", {
             ...args,
             status: "open",
             created_at: Date.now(),
             updated_at: Date.now(),
         });
+
+        try { createUserActivityLog(ctx, { userId: args.user_id, category: "support", action: "Support ticket created", description: args.subject, status: "pending" }); } catch (e) { console.error("Failed to log activity:", e); }
+
+        return ticketId;
     }
 });
 
@@ -797,6 +806,8 @@ export const adjustUserBalance = mutation({
             created_at: Date.now(),
         });
 
+        try { createUserActivityLog(ctx, { userId: args.userId, category: "wallet", action: "Balance Adjustment", description: `Admin ${args.type === "add" ? "added" : "removed"} ₦${normalizedAmount} - ${args.reason}`, status: "success", amount: args.type === "add" ? normalizedAmount : -normalizedAmount }); } catch (e) { console.error("Failed to log activity:", e); }
+
         return { success: true, newBalance };
     }
 });
@@ -853,6 +864,8 @@ export const adjustUserBoots = mutation({
             reason: args.reason,
             created_at: Date.now(),
         });
+
+        try { createUserActivityLog(ctx, { userId: args.userId, category: "wallet", action: "BOOTS Adjustment", description: `Admin ${args.type === "add" ? "added" : "removed"} ${normalizedAmount} BOOTS - ${args.reason}`, status: "success", amount: normalizedAmount }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return { success: true, newBoots };
     }

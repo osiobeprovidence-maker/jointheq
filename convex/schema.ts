@@ -1364,5 +1364,18 @@ export default defineSchema({
         awarded_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_type", ["badge_type"]),
+
+    user_activities: defineTable({
+        user_id: v.id("users"),
+        category: v.string(),
+        action: v.string(),
+        description: v.optional(v.string()),
+        status: v.optional(v.string()),
+        amount: v.optional(v.number()),
+        metadata: v.optional(v.any()),
+        created_at: v.number(),
+    }).index("by_user", ["user_id"])
+        .index("by_user_created", ["user_id", "created_at"])
+        .index("by_category", ["user_id", "category"]),
 });
 

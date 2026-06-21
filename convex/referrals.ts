@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { createNotification } from "./notificationHelpers";
+import { createUserActivityLog } from "./activityHelpers";
 
 const BADGE_TYPES = ["first_referral", "top_10_referrer", "referral_master", "campaign_winner"] as const;
 
@@ -338,6 +339,8 @@ export const recordReferralSignup = mutation({
             type: "promotion",
         });
 
+        try { createUserActivityLog(ctx, { userId: args.referrerId, category: "referral", action: "Referral signup", description: "New referral signup recorded", status: "pending" }); } catch (e) { console.error("Failed to log activity:", e); }
+
         return { success: true, referralId: id };
     },
 });
@@ -423,6 +426,8 @@ export const completeReferral = mutation({
                 await awardBadgeIfNeeded(ctx, referral.referrer_id, undefined, "referral_master", "Referral Master");
             }
         }
+
+        try { createUserActivityLog(ctx, { userId: referral.referrer_id, category: "referral", action: "Referral completed", description: `Referred user joined ${args.subscriptionJoined}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return { success: true };
     },
@@ -512,6 +517,8 @@ export const approveReward = mutation({
             type: "promotion",
         });
 
+        try { createUserActivityLog(ctx, { userId: reward.user_id, category: "referral", action: "Referral reward earned", description: `Reward approved: ${reward.reward_name}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+
         return { success: true };
     },
 });
@@ -531,6 +538,8 @@ export const rejectReward = mutation({
             message: `Your reward "${reward.reward_name}" could not be approved at this time. ${args.note ? `Reason: ${args.note}` : "Please contact support for more information."}`,
             type: "promotion",
         });
+
+        try { createUserActivityLog(ctx, { userId: reward.user_id, category: "referral", action: "Referral reward rejected", description: `Reward rejected: ${reward.reward_name}`, status: "failed" }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return { success: true };
     },
@@ -555,6 +564,8 @@ export const deliverReward = mutation({
             message: `Your reward "${reward.reward_name}" has been delivered! Check your account to enjoy it.`,
             type: "promotion",
         });
+
+        try { createUserActivityLog(ctx, { userId: reward.user_id, category: "referral", action: "Referral payout", description: `Reward delivered: ${reward.reward_name}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return { success: true };
     },
@@ -627,5 +638,20 @@ export const resetLeaderboard = mutation({
         }
 
         return { success: true, resetCount: referrals.filter(r => r.status === "pending").length };
+    },
+});
+
+export const generateCampaignUploadUrl = mutation({
+    handler: async (ctx) => {
+        return await ctx.storage.generateUploadUrl();
+    },
+});
+
+export const resolveUploadUrl = mutation({
+    args: { storageId: v.string() },
+    handler: async (ctx, args) => {
+        const url = await ctx.storage.getUrl(args.storageId as Id<"_storage">);
+        if (!url) throw new Error("Failed to resolve upload URL");
+        return url;
     },
 });
