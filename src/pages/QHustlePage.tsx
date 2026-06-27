@@ -43,6 +43,33 @@ interface QHustleSettings {
   minWithdrawal: number;
 }
 
+function StatCard({ label, value, icon, color }: {
+  label: string;
+  value: React.ReactNode;
+  icon: React.ReactNode;
+  color: string;
+}) {
+  return (
+    <div className="bg-white rounded-3xl p-4 sm:p-6 border border-black/5 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative">
+      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full opacity-5 -mr-8 -mt-8 ${color}`} />
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-4 ${color} bg-opacity-10`}>
+        <div className={color.replace("bg-", "text-")}>{icon}</div>
+      </div>
+      <div className="text-xl sm:text-2xl font-black mb-1 text-zinc-900">{value}</div>
+      <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</div>
+    </div>
+  );
+}
+
+function SectionHeader({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div className="mb-4 sm:mb-6">
+      <h2 className="text-lg sm:text-xl font-black text-zinc-900">{title}</h2>
+      {sub && <p className="text-[10px] sm:text-xs text-gray-400 mt-1">{sub}</p>}
+    </div>
+  );
+}
+
 interface AgentFormData {
   fullName: string;
   phone: string;
@@ -332,39 +359,40 @@ export default function QHustlePage() {
 
   return (
     <div className="min-h-screen bg-[#f4f5f8]">
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-black text-zinc-500 hover:text-zinc-900 transition-colors">
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        <Link to="/dashboard" className="inline-flex items-center gap-2 text-xs font-black text-gray-400 hover:text-zinc-900 transition-colors">
           <ChevronLeft size={16} /> Back to Dashboard
         </Link>
 
-        <div className="flex items-center gap-3">
-          <TrendingUp size={24} className="text-zinc-900" />
-          <h1 className="text-xl font-black text-zinc-900">Q Hustle</h1>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shadow-sm">
+              <TrendingUp size={22} />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-zinc-900">Q Hustle</h1>
+              <p className="text-xs sm:text-sm text-gray-400 font-bold">Referral and user acquisition program for members who bring new users into Q.</p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {[
-            { label: "Total Referrals", value: stats.total, icon: <Users size={16} />, color: "bg-zinc-900 text-white" },
-            { label: "Approved", value: stats.approved, icon: <CheckCircle2 size={16} />, color: "bg-emerald-500 text-white" },
-            { label: "Pending", value: stats.pending, icon: <Clock size={16} />, color: "bg-amber-500 text-white" },
-            { label: "Total Earnings", value: formatMoney(stats.totalEarnings), icon: <Wallet size={16} />, color: "bg-zinc-900 text-white" },
-            { label: "Available", value: formatMoney(stats.availableBalance), icon: <Banknote size={16} />, color: "bg-blue-600 text-white" },
-            { label: "Min. Withdrawal", value: formatMoney(settings.minWithdrawal), icon: <AlertCircle size={16} />, color: "bg-purple-600 text-white" },
+            { label: "Total Referrals", value: stats.total, icon: <Users size={16} />, color: "bg-zinc-900" },
+            { label: "Approved Referrals", value: stats.approved, icon: <CheckCircle2 size={16} />, color: "bg-emerald-500" },
+            { label: "Pending Referrals", value: stats.pending, icon: <Clock size={16} />, color: "bg-amber-500" },
+            { label: "Total Earnings", value: formatMoney(stats.totalEarnings), icon: <Wallet size={16} />, color: "bg-blue-600" },
+            { label: "Available Balance", value: formatMoney(stats.availableBalance), icon: <Banknote size={16} />, color: "bg-purple-600" },
+            { label: "Minimum Withdrawal", value: formatMoney(settings.minWithdrawal), icon: <AlertCircle size={16} />, color: "bg-zinc-900" },
           ].map(s => (
-            <motion.div key={s.label} whileHover={{ scale: 1.02 }} className={`rounded-2xl p-4 ${s.color}`}>
-              <div className="flex items-center gap-2 mb-1">
-                {s.icon}
-                <div className="text-[10px] font-black uppercase tracking-widest opacity-70">{s.label}</div>
-              </div>
-              <div className="text-2xl font-black">{s.value}</div>
+            <motion.div key={s.label} whileHover={{ y: -2 }} transition={{ duration: 0.18 }}>
+              <StatCard label={s.label} value={s.value} icon={s.icon} color={s.color} />
             </motion.div>
           ))}
         </div>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-4">
-          <h2 className="text-sm font-black text-zinc-900 flex items-center gap-2">
-            <Award size={18} className="text-amber-500" /> Your Referral Link
-          </h2>
+        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+          <SectionHeader title="Your Referral Link" sub="Copy your link or share the registration form from any device." />
           <div className="flex items-center gap-2 bg-zinc-50 rounded-2xl p-3 border border-black/5">
             <code className="flex-1 text-xs sm:text-sm font-bold text-zinc-700 truncate">{referralLink}</code>
             <button
@@ -465,18 +493,16 @@ export default function QHustlePage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-4">
-          <h2 className="text-sm font-black text-zinc-900 flex items-center gap-2">
-            <Wallet size={18} className="text-blue-500" /> Withdraw Earnings
-          </h2>
+        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+          <SectionHeader title="Withdraw Earnings" sub="Withdrawals stay locked until your balance reaches ₦3,000." />
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-blue-50 rounded-2xl p-4 text-center">
-              <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Available Balance</div>
-              <div className="text-2xl font-black text-blue-700">{formatMoney(stats.availableBalance)}</div>
+            <div className="bg-zinc-50 rounded-2xl p-4 text-center border border-black/5">
+              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Current Balance</div>
+              <div className="text-2xl font-black text-zinc-900">{formatMoney(stats.availableBalance)}</div>
             </div>
-            <div className="bg-purple-50 rounded-2xl p-4 text-center">
-              <div className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-1">Minimum</div>
-              <div className="text-2xl font-black text-purple-700">{formatMoney(settings.minWithdrawal)}</div>
+            <div className="bg-zinc-50 rounded-2xl p-4 text-center border border-black/5">
+              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Minimum</div>
+              <div className="text-2xl font-black text-zinc-900">{formatMoney(settings.minWithdrawal)}</div>
             </div>
           </div>
           <button
@@ -484,7 +510,7 @@ export default function QHustlePage() {
             disabled={!hasMinWithdrawal}
             className={`w-full h-12 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
               hasMinWithdrawal
-                ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-[0_4px_14px_rgba(16,185,129,0.3)]"
+                ? "bg-zinc-900 text-white hover:bg-zinc-800 shadow-sm"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
           >
@@ -524,10 +550,8 @@ export default function QHustlePage() {
           )}
         </div>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-4">
-          <h2 className="text-sm font-black text-zinc-900 flex items-center gap-2">
-            <UserPlus size={18} className="text-zinc-900" /> Your Referrals ({data.referrals.length})
-          </h2>
+        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+          <SectionHeader title={`Your Referrals (${data.referrals.length})`} sub="Approved, pending, and rejected signups are shown here with their payout status." />
           {data.referrals.length === 0 ? (
             <div className="text-center py-8">
               <Users size={40} className="mx-auto text-gray-300 mb-3" />
