@@ -1384,6 +1384,7 @@ export default defineSchema({
         referred_name: v.string(),
         referred_phone: v.string(),
         referred_email: v.optional(v.string()),
+        registration_source: v.optional(v.string()),
         status: v.string(), // "pending" | "approved" | "rejected"
         earnings: v.number(),
         created_at: v.number(),

@@ -197,6 +197,7 @@ export const createUser = mutation({
         referral_code: v.optional(v.string()),
         referred_by_code: v.optional(v.string()),
         interested_package: v.optional(v.string()),
+        registration_source: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const providedEmail = args.email?.trim().toLowerCase() || "";
@@ -370,6 +371,7 @@ export const createUser = mutation({
                 referred_name: args.full_name,
                 referred_phone: normalizedPhone || "",
                 referred_email: hasEmail ? normalizedEmail : undefined,
+                registration_source: args.registration_source || "referral_link",
                 status: "pending",
                 earnings: 0,
                 created_at: Date.now(),

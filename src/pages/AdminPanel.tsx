@@ -5314,14 +5314,14 @@ function QHustleAdmin() {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="border-b border-black/5">
-                                    {["Name", "Phone", "Status", "Earnings", "Date", "Actions"].map(h => (
+                                    {["Name", "Phone", "Source", "Status", "Earnings", "Date", "Actions"].map(h => (
                                         <th key={h} className="p-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{h}</th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredRefs.length === 0 ? (
-                                    <tr><td colSpan={6} className="p-8 text-center text-sm text-gray-400 font-bold">No referrals found</td></tr>
+                                    <tr><td colSpan={7} className="p-8 text-center text-sm text-gray-400 font-bold">No referrals found</td></tr>
                                 ) : filteredRefs.map(r => (
                                     <tr key={r.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 transition-colors">
                                         <td className="p-3">
@@ -5333,6 +5333,7 @@ function QHustleAdmin() {
                                             </div>
                                         </td>
                                         <td className="p-3 text-sm font-bold text-zinc-700">{r.referredPhone}</td>
+                                        <td className="p-3 text-xs font-black text-zinc-500">{r.source || "referral_link"}</td>
                                         <td className="p-3">
                                             <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black ${
                                                 r.status === "approved" ? "bg-emerald-50 text-emerald-700" :

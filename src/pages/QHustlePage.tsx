@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
+import { useAction, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import {
   Users, Wallet, Copy, Share2, CheckCircle2,
   Clock, XCircle, Loader2, ChevronLeft, TrendingUp, UserPlus,
-  Banknote, AlertCircle, Award, CopyCheck, Settings
+  Banknote, AlertCircle, Award, CopyCheck, Settings, User, Lock
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
@@ -16,9 +18,11 @@ interface ReferralEntry {
   id: string;
   referredName: string;
   referredPhone: string;
+  referredEmail?: string;
   status: "pending" | "approved" | "rejected";
   date: number;
   earnings: number;
+  source?: string;
 }
 
 interface WithdrawalEntry {
@@ -37,6 +41,15 @@ interface QHustleData {
 interface QHustleSettings {
   payoutAmount: number;
   minWithdrawal: number;
+}
+
+interface AgentFormData {
+  fullName: string;
+  phone: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  interestedPackage: string;
 }
 
 const DEFAULT_SETTINGS: QHustleSettings = {
@@ -94,11 +107,24 @@ function formatMoney(amount: number) {
 export default function QHustlePage() {
   const user = auth.getCurrentUser();
   const userId = user?._id || "mock_user";
+  const createUser = useMutation(api.users.createUser);
+  const sendVerificationEmail = useAction(api.actions.sendVerificationEmail);
 
   const [data, setData] = useState<QHustleData>(() => getHustleData(userId));
   const [settings, setSettings] = useState<QHustleSettings>(getSettings);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [agentSubmitting, setAgentSubmitting] = useState(false);
+  const [agentSuccess, setAgentSuccess] = useState(false);
+  const [agentErrors, setAgentErrors] = useState<Record<string, string>>({});
+  const [agentForm, setAgentForm] = useState<AgentFormData>({
+    fullName: "",
+    phone: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    interestedPackage: "",
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400);
@@ -123,6 +149,8 @@ export default function QHustlePage() {
 
   const referralCode = user?.referral_code || user?._id?.slice(-6) || "QHUSTLE";
   const referralLink = `${window.location.origin}/register/${referralCode}`;
+  const canUseAgentTools = Boolean(user);
+  const agentReferralCode = user?.referral_code || user?._id?.slice(-6) || "";
 
   const stats = useMemo(() => {
     const total = data.referrals.length;
@@ -142,6 +170,110 @@ export default function QHustlePage() {
   }, [data, settings]);
 
   const hasMinWithdrawal = stats.availableBalance >= settings.minWithdrawal;
+
+  const updateAgentField = useCallback((field: keyof AgentFormData, value: string) => {
+    setAgentForm(prev => ({ ...prev, [field]: value }));
+    if (agentErrors[field]) {
+      setAgentErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  }, [agentErrors]);
+
+  const validateAgentForm = useCallback(() => {
+    const errs: Record<string, string> = {};
+    if (!agentForm.fullName.trim()) errs.fullName = "Full name is required";
+    if (!agentForm.phone.trim()) errs.phone = "Phone number is required";
+    else if (!/^[\d\s\+\-\(\)]{7,15}$/.test(agentForm.phone.trim())) errs.phone = "Enter a valid phone number";
+    if (agentForm.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(agentForm.email.trim())) errs.email = "Enter a valid email";
+    if (!agentForm.password) errs.password = "Password is required";
+    else if (agentForm.password.length < 6) errs.password = "Password must be at least 6 characters";
+    if (agentForm.password !== agentForm.confirmPassword) errs.confirmPassword = "Passwords do not match";
+    if (!agentForm.interestedPackage) errs.interestedPackage = "Select a package";
+    setAgentErrors(errs);
+    return Object.keys(errs).length === 0;
+  }, [agentForm]);
+
+  const handleAgentRegistration = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canUseAgentTools) {
+      toast.error("Please log in to register users for Q Hustle.");
+      return;
+    }
+    if (!validateAgentForm()) return;
+
+    setAgentSubmitting(true);
+    try {
+      const email = agentForm.email.trim().toLowerCase();
+      const phone = agentForm.phone.trim();
+      const token = email ? Math.random().toString(36).substring(2) + Date.now().toString(36) : undefined;
+      const expires = email ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : undefined;
+      const usernameBase = agentForm.fullName
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "")
+        .slice(0, 16) || `user${phone.slice(-4)}`;
+      const username = `${usernameBase}${Math.floor(100 + Math.random() * 900)}`;
+
+      await createUser({
+        email: email || undefined,
+        phone,
+        full_name: agentForm.fullName.trim(),
+        username,
+        password_hash: agentForm.password,
+        verification_token: token,
+        verification_token_expires: expires,
+        referred_by_code: agentReferralCode || undefined,
+        interested_package: agentForm.interestedPackage,
+        registration_source: "agent_registration",
+      });
+
+      if (email && token) {
+        try {
+          await sendVerificationEmail({
+            email,
+            name: agentForm.fullName.trim(),
+            token,
+            baseUrl: window.location.origin,
+          });
+        } catch (emailError) {
+          console.warn("Verification email could not be sent", emailError);
+        }
+      }
+
+      const updated: QHustleData = {
+        ...data,
+        referrals: [
+          {
+            id: `agent_${Date.now()}`,
+            referredName: agentForm.fullName.trim(),
+            referredPhone: phone,
+            referredEmail: email || undefined,
+            status: "pending",
+            date: Date.now(),
+            earnings: 0,
+            source: "agent_registration",
+          },
+          ...data.referrals,
+        ],
+      };
+
+      saveHustleData(userId, updated);
+      setData(updated);
+      setAgentForm({
+        fullName: "",
+        phone: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        interestedPackage: "",
+      });
+      setAgentSuccess(true);
+      toast.success("User registered for Q Hustle!");
+      setTimeout(() => setAgentSuccess(false), 3000);
+    } catch (error: any) {
+      toast.error(error?.message || "Could not register user");
+    } finally {
+      setAgentSubmitting(false);
+    }
+  }, [agentForm, agentReferralCode, canUseAgentTools, createUser, data, sendVerificationEmail, userId, validateAgentForm]);
 
   const handleCopyLink = useCallback(() => {
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -243,15 +375,94 @@ export default function QHustlePage() {
               {copied ? "Copied!" : "Copy"}
             </button>
           </div>
-          <p className="text-xs font-bold text-zinc-500">
-            You earn <span className="text-emerald-600">{formatMoney(settings.payoutAmount)}</span> for each person who signs up and verifies through your link
-          </p>
           <button
             onClick={handleShare}
             className="w-full h-11 rounded-2xl bg-zinc-900 text-white text-xs font-black hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
           >
             <Share2 size={16} /> Share Registration Form
           </button>
+          {canUseAgentTools && (
+            <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black text-zinc-900">Agent Registration</p>
+                  <p className="text-[10px] font-bold text-zinc-500">Register users directly and attach them to your Q Hustle link.</p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-black text-zinc-600 border border-black/5">
+                  <User size={12} /> Ready
+                </span>
+              </div>
+              <form onSubmit={handleAgentRegistration} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Full Name *</label>
+                    <input value={agentForm.fullName} onChange={e => updateAgentField("fullName", e.target.value)} placeholder="Full name"
+                      className={`w-full h-11 rounded-2xl border ${agentErrors.fullName ? "border-red-300 bg-red-50" : "border-black/5 bg-white"} px-4 text-sm font-bold outline-none focus:border-zinc-900`} />
+                    {agentErrors.fullName && <p className="text-[10px] font-bold text-red-500">{agentErrors.fullName}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Phone *</label>
+                    <input value={agentForm.phone} onChange={e => updateAgentField("phone", e.target.value)} placeholder="08012345678"
+                      className={`w-full h-11 rounded-2xl border ${agentErrors.phone ? "border-red-300 bg-red-50" : "border-black/5 bg-white"} px-4 text-sm font-bold outline-none focus:border-zinc-900`} />
+                    {agentErrors.phone && <p className="text-[10px] font-bold text-red-500">{agentErrors.phone}</p>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Email <span className="text-zinc-300">(optional)</span></label>
+                    <input value={agentForm.email} onChange={e => updateAgentField("email", e.target.value)} placeholder="Email address"
+                      className={`w-full h-11 rounded-2xl border ${agentErrors.email ? "border-red-300 bg-red-50" : "border-black/5 bg-white"} px-4 text-sm font-bold outline-none focus:border-zinc-900`} />
+                    {agentErrors.email && <p className="text-[10px] font-bold text-red-500">{agentErrors.email}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Package *</label>
+                    <select value={agentForm.interestedPackage} onChange={e => updateAgentField("interestedPackage", e.target.value)}
+                      className={`w-full h-11 rounded-2xl border ${agentErrors.interestedPackage ? "border-red-300 bg-red-50" : "border-black/5 bg-white"} px-4 text-sm font-bold outline-none focus:border-zinc-900`}>
+                      <option value="">Select package</option>
+                      {["Netflix", "Spotify", "ChatGPT", "Canva", "CapCut", "Others"].map(pkg => (
+                        <option key={pkg} value={pkg}>{pkg}</option>
+                      ))}
+                    </select>
+                    {agentErrors.interestedPackage && <p className="text-[10px] font-bold text-red-500">{agentErrors.interestedPackage}</p>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Password *</label>
+                    <div className="relative">
+                      <input type="password" value={agentForm.password} onChange={e => updateAgentField("password", e.target.value)} placeholder="Create password"
+                        className={`w-full h-11 rounded-2xl border ${agentErrors.password ? "border-red-300 bg-red-50" : "border-black/5 bg-white"} px-4 pr-10 text-sm font-bold outline-none focus:border-zinc-900`} />
+                      <Lock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300" />
+                    </div>
+                    {agentErrors.password && <p className="text-[10px] font-bold text-red-500">{agentErrors.password}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Confirm Password *</label>
+                    <div className="relative">
+                      <input type="password" value={agentForm.confirmPassword} onChange={e => updateAgentField("confirmPassword", e.target.value)} placeholder="Confirm password"
+                        className={`w-full h-11 rounded-2xl border ${agentErrors.confirmPassword ? "border-red-300 bg-red-50" : "border-black/5 bg-white"} px-4 pr-10 text-sm font-bold outline-none focus:border-zinc-900`} />
+                      <Lock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300" />
+                    </div>
+                    {agentErrors.confirmPassword && <p className="text-[10px] font-bold text-red-500">{agentErrors.confirmPassword}</p>}
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={agentSubmitting}
+                  className="w-full h-11 rounded-2xl bg-emerald-500 text-white text-xs font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {agentSubmitting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                  {agentSubmitting ? "Registering..." : "Register User"}
+                </button>
+                {agentSuccess && (
+                  <p className="text-[10px] font-black text-emerald-600 text-center">User added and linked to your Q Hustle network.</p>
+                )}
+              </form>
+            </div>
+          )}
+          <p className="text-xs font-bold text-zinc-500">
+            You earn <span className="text-emerald-600">{formatMoney(settings.payoutAmount)}</span> for each person who signs up and verifies through your link
+          </p>
         </div>
 
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-4">

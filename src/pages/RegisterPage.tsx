@@ -87,6 +87,7 @@ export default function RegisterPage() {
                 verification_token: token,
                 verification_token_expires: expires,
                 referred_by_code: refCode?.trim().toUpperCase() || undefined,
+                registration_source: refCode ? "public_referral_link" : "public_signup",
             });
 
             if (email && token) {
