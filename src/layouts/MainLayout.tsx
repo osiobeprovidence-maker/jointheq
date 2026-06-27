@@ -18,6 +18,7 @@ import {
     ChevronRight,
     Settings,
     GraduationCap,
+    TrendingUp,
 } from "lucide-react";
 
 import { useQuery } from "convex/react";
@@ -57,9 +58,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
         { id: 'qhub', label: 'Q Hub', icon: <GraduationCap size={20} /> },
+        { id: 'qhustle', label: 'Q Hustle', icon: <TrendingUp size={20} /> },
         { id: 'queues', label: 'Queues', icon: <Users size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
-
         { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
         { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
         { id: 'history', label: 'History', icon: <Clock size={20} /> },
@@ -72,6 +73,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const handleNavItemClick = (itemId: string) => {
         if (itemId === 'qhub') {
             navigate('/q-hub');
+            return;
+        }
+        if (itemId === 'qhustle') {
+            navigate('/q-hustle');
             return;
         }
         setActiveTab(itemId);

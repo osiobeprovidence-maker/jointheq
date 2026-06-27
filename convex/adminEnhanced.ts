@@ -664,10 +664,12 @@ export const searchAllUsers = query({
         const allUsers = await ctx.db.query("users").collect();
         const limit = args.limit ?? 20;
 
+        const phoneDigits = query.replace(/\D/g, '');
         const results = allUsers.filter(u =>
             (u.full_name?.toLowerCase().includes(query) ||
              u.email?.toLowerCase().includes(query) ||
-             u.username?.toLowerCase().includes(query)) &&
+             u.username?.toLowerCase().includes(query) ||
+             (phoneDigits.length > 0 && u.phone?.replace(/\D/g, '').includes(phoneDigits))) &&
             !u.is_admin
         ).slice(0, limit);
 

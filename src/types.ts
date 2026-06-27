@@ -40,6 +40,12 @@ export interface User {
   role?: string;
   admin_role?: string;
   is_verified: boolean;
+  email_verified?: boolean;
+  phone_verified?: boolean;
+  email_verification_status?: string;
+  phone_verification_status?: string;
+  primary_login_method?: "email" | "phone";
+  interested_package?: string;
   created_at: number;
   last_sign_in_at?: number;
   last_sign_in_provider?: string;

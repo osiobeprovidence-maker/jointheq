@@ -1,6 +1,6 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Users, Zap, CheckCircle2, Mail, Lock, User as UserIcon, Phone, XCircle, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -38,7 +38,6 @@ export default function LandingPage() {
   const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
 
-  const user = useQuery(api.users.getByEmail, formData.email ? { email: formData.email } : "skip");
   const resetTokenStatus = useQuery(
     api.users.validatePasswordResetToken,
     resetToken ? { token: resetToken } : "skip",
@@ -118,33 +117,45 @@ export default function LandingPage() {
     setSuccess('');
 
     try {
-      const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const usernameBase = (formData.name || formData.email.split('@')[0])
+      const email = formData.email.trim().toLowerCase();
+      const phone = formData.phone.trim();
+      if (!email && !phone) {
+        throw new Error('Enter an email address or phone number');
+      }
+
+      const token = email ? Math.random().toString(36).substring(2) + Date.now().toString(36) : undefined;
+      const expires = email ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : undefined;
+      const usernameBase = (formData.name || email.split('@')[0] || phone.slice(-6))
         .toLowerCase()
         .replace(/[^a-z0-9_]/g, "")
         .slice(0, 20);
       const username = `${usernameBase || "user"}${Math.floor(100 + Math.random() * 900)}`;
 
       await createUser({
-        email: formData.email,
+        email: email || undefined,
         full_name: formData.name,
         username,
-        phone: formData.phone,
+        phone: phone || undefined,
         password_hash: formData.password,
         verification_token: token,
         verification_token_expires: expires,
         referred_by_code: referredByCode?.toUpperCase() || undefined
       });
 
-      await sendEmail({
-        email: formData.email,
-        name: formData.name,
-        token,
-        baseUrl: window.location.origin
-      });
+      if (email && token) {
+        await sendEmail({
+          email,
+          name: formData.name,
+          token,
+          baseUrl: window.location.origin
+        });
+      }
 
-      setSuccess('Account created! Please check your email to verify.');
+      setSuccess(
+        email
+          ? 'Account created! Please check your email to verify.'
+          : 'Account created! You can now log in with your phone number.'
+      );
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {
@@ -835,26 +846,26 @@ export default function LandingPage() {
                       <div className="w-full border-t border-black/10"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-black/50">Or log in with email</span>
+                      <span className="px-2 bg-white text-black/50">Or log in with email or phone</span>
                     </div>
                   </div>
                 </div>
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold mb-2">Email Address</label>
+                    <label className="block text-sm font-bold mb-2">Email or Phone Number</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
-                        <Mail size={20} />
+                        <Smartphone size={20} />
                       </div>
                       <input
-                        type="email"
+                        type="text"
                         name="email"
                         required
                         value={formData.email}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                        placeholder="you@example.com"
+                        placeholder="email@example.com or 08012345678"
                       />
                     </div>
                   </div>
@@ -1117,7 +1128,7 @@ export default function LandingPage() {
                       <div className="w-full border-t border-black/10"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-black/50">Or create account with email</span>
+                      <span className="px-2 bg-white text-black/50">Or create account with email or phone</span>
                     </div>
                   </div>
                 </div>
@@ -1141,7 +1152,7 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-2">Email Address</label>
+                    <label className="block text-sm font-bold mb-2">Email Address <span className="text-black/40">(optional)</span></label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Mail size={20} />
@@ -1149,7 +1160,6 @@ export default function LandingPage() {
                       <input
                         type="email"
                         name="email"
-                        required
                         value={formData.email}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
@@ -1158,7 +1168,7 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-2">Phone Number</label>
+                    <label className="block text-sm font-bold mb-2">Phone Number <span className="text-black/40">(optional)</span></label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-black/40">
                         <Phone size={20} />
@@ -1166,14 +1176,14 @@ export default function LandingPage() {
                       <input
                         type="tel"
                         name="phone"
-                        required
                         value={formData.phone}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="0801 234 5678"
                       />
                     </div>
                   </div>
+                  <p className="text-xs font-semibold text-black/45">Provide at least an email address or a phone number.</p>
                   <div>
                     <label className="block text-sm font-bold mb-2">Password</label>
                     <div className="relative">
@@ -1184,6 +1194,7 @@ export default function LandingPage() {
                         type="password"
                         name="password"
                         required
+                        minLength={6}
                         value={formData.password}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-3 bg-[#F5F5F4] border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
@@ -1196,7 +1207,7 @@ export default function LandingPage() {
                     disabled={isLoading || !!success}
                     className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:scale-[1.02] transition-transform mt-6 disabled:opacity-50"
                   >
-                    {isLoading ? 'Creating Circle...' : success ? 'Check Email' : 'Create Account'}
+                    {isLoading ? 'Creating Account...' : success ? 'Account Created' : 'Create Account'}
                   </button>
                 </form>
 

@@ -133,7 +133,7 @@ export const getActiveSubscriptions = query({
                     validSlotTypes.map(async (st) => {
                         const slotsForThisType = allSlots.filter(s => s.slot_type_id === st._id);
                         const totalCapacity = slotsForThisType.length;
-                        const currentMembers = slotsForThisType.filter(s => s.status === "filled").length;
+                        const currentMembers = slotsForThisType.filter(s => s.status === "filled" || s.status === "closing").length;
                         const openSlots = slotsForThisType.filter(s => s.status === "open").length;
 
                         return {
@@ -1081,6 +1081,10 @@ export const getAdminMarketplace = query({
             const slotTypes = (await Promise.all(slotTypeIds.map((slotTypeId) => ctx.db.get(slotTypeId))))
                 .filter((slotType): slotType is NonNullable<typeof slotType> => !!slotType);
 
+            // Compute slot counts from source-of-truth instead of stale denormalized fields
+            const computedFilled = allSlots.filter(s => s.status === "filled" || s.status === "closing").length;
+            const computedAvailable = allSlots.filter(s => s.status === "open").length;
+
             const members = await Promise.all(allSlots.map(async (s) => {
                 const u: Doc<"users"> | null = s.user_id
                     ? await ctx.db.get(s.user_id as Id<"users">)
@@ -1100,6 +1104,8 @@ export const getAdminMarketplace = query({
 
             return {
                 ...listing,
+                filled_slots: computedFilled,
+                available_slots: computedAvailable,
                 subscription_name: catalog?.name ?? "Unknown",
                 platform_description: catalog?.description,
                 platform_logo: catalog?.logo_url,

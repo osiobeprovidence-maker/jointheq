@@ -9,6 +9,8 @@
  */
 
 import type * as actions from "../actions.js";
+import type * as activities from "../activities.js";
+import type * as activityHelpers from "../activityHelpers.js";
 import type * as admin from "../admin.js";
 import type * as adminEnhanced from "../adminEnhanced.js";
 import type * as adminWorkforce from "../adminWorkforce.js";
@@ -61,6 +63,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   actions: typeof actions;
+  activities: typeof activities;
+  activityHelpers: typeof activityHelpers;
   admin: typeof admin;
   adminEnhanced: typeof adminEnhanced;
   adminWorkforce: typeof adminWorkforce;

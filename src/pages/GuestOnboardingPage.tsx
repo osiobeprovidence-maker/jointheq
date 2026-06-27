@@ -63,35 +63,43 @@ export default function GuestOnboardingPage() {
     setIsLoading(true);
 
     try {
-      const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const usernameBase = buildUsernameSeed(formData.name || formData.email.split("@")[0] || "guest");
+      const email = formData.email.trim().toLowerCase();
+      const phone = formData.phone.trim();
+      if (!email && !phone) {
+        throw new Error("Enter an email address or phone number");
+      }
+
+      const token = email ? Math.random().toString(36).substring(2) + Date.now().toString(36) : undefined;
+      const expires = email ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : undefined;
+      const usernameBase = buildUsernameSeed(formData.name || email.split("@")[0] || phone.slice(-6) || "guest");
       const username = `${usernameBase || "guest"}${Math.floor(100 + Math.random() * 900)}`;
 
       await createUser({
-        email: formData.email,
+        email: email || undefined,
         full_name: formData.name,
         username,
-        phone: formData.phone,
+        phone: phone || undefined,
         password_hash: formData.password,
         verification_token: token,
         verification_token_expires: expires,
         referred_by_code: referredByCode?.toUpperCase() || undefined,
       });
 
-      try {
-        await sendVerificationEmail({
-          email: formData.email,
-          name: formData.name,
-          token,
-          baseUrl: window.location.origin,
-        });
-      } catch (emailError) {
-        console.warn("Verification email could not be sent during guest onboarding", emailError);
+      if (email && token) {
+        try {
+          await sendVerificationEmail({
+            email,
+            name: formData.name,
+            token,
+            baseUrl: window.location.origin,
+          });
+        } catch (emailError) {
+          console.warn("Verification email could not be sent during guest onboarding", emailError);
+        }
       }
 
       const loginResult = await login({
-        identifier: formData.email,
+        identifier: email || phone,
         password: formData.password,
       });
 
@@ -228,20 +236,23 @@ export default function GuestOnboardingPage() {
                   />
                   <Field
                     icon={<Mail size={18} />}
-                    label="Email Address"
+                    label="Email Address (optional)"
                     value={formData.email}
                     onChange={(value) => setFormData((current) => ({ ...current, email: value }))}
                     placeholder="john@example.com"
                     type="email"
+                    required={false}
                   />
                   <Field
                     icon={<Phone size={18} />}
-                    label="Phone Number"
+                    label="Phone Number (optional)"
                     value={formData.phone}
                     onChange={(value) => setFormData((current) => ({ ...current, phone: value }))}
                     placeholder="+234 800 000 0000"
                     type="tel"
+                    required={false}
                   />
+                  <p className="px-1 text-xs font-bold text-zinc-400">Provide at least an email address or phone number.</p>
                   <Field
                     icon={<Lock size={18} />}
                     label="Password"
@@ -345,6 +356,7 @@ function Field({
   onChange,
   placeholder,
   type,
+  required = true,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -352,6 +364,7 @@ function Field({
   onChange: (value: string) => void;
   placeholder: string;
   type: string;
+  required?: boolean;
 }) {
   return (
     <label className="block">
@@ -360,7 +373,7 @@ function Field({
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-zinc-400">{icon}</div>
         <input
           type={type}
-          required
+          required={required}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}

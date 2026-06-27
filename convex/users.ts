@@ -6,6 +6,27 @@ import { createUserActivityLog } from "./activityHelpers";
 import bcrypt from "bcryptjs";
 
 const MAX_SIGN_IN_HISTORY = 10;
+const PHONE_ONLY_EMAIL_DOMAIN = "users.jointheq.local";
+
+function normalizePhoneNumber(value: string | undefined) {
+    const digits = value?.replace(/\D/g, "") || "";
+    if (!digits) return "";
+    if (digits.length === 11 && digits.startsWith("0")) return `234${digits.slice(1)}`;
+    if (digits.length === 10 && /^[789]/.test(digits)) return `234${digits}`;
+    return digits;
+}
+
+function isSamePhone(left: string | undefined, right: string) {
+    return normalizePhoneNumber(left) === right;
+}
+
+function isPhoneOnlyEmail(email: string | undefined) {
+    return Boolean(email?.endsWith(`@${PHONE_ONLY_EMAIL_DOMAIN}`));
+}
+
+function isValidPhoneNumber(phone: string) {
+    return phone.length >= 10 && phone.length <= 15;
+}
 
 async function generateUniqueQic(ctx: any) {
     for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -166,24 +187,42 @@ export const getInvitedUsers = query({
 
 export const createUser = mutation({
     args: {
-        email: v.string(),
+        email: v.optional(v.string()),
         full_name: v.string(),
         username: v.string(),
         phone: v.optional(v.string()),
         password_hash: v.string(),
-        verification_token: v.string(),
-        verification_token_expires: v.string(),
+        verification_token: v.optional(v.string()),
+        verification_token_expires: v.optional(v.string()),
         referral_code: v.optional(v.string()),
         referred_by_code: v.optional(v.string()),
+        interested_package: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const normalizedEmail = args.email.trim().toLowerCase();
-        const normalizedPhone = args.phone?.trim();
+        const providedEmail = args.email?.trim().toLowerCase() || "";
+        const normalizedPhone = normalizePhoneNumber(args.phone);
         const normalizedReferredByCode = args.referred_by_code?.trim().toUpperCase();
+
+        if (!providedEmail && !normalizedPhone) {
+            throw new Error("Enter an email address or phone number");
+        }
+        if (providedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(providedEmail)) {
+            throw new Error("Enter a valid email address");
+        }
+        if (normalizedPhone && !isValidPhoneNumber(normalizedPhone)) {
+            throw new Error("Enter a valid phone number");
+        }
+        if (args.password_hash.length < 6) {
+            throw new Error("Password must be at least 6 characters");
+        }
+
+        const normalizedEmail = providedEmail || `phone-${normalizedPhone}@${PHONE_ONLY_EMAIL_DOMAIN}`;
+        const hasEmail = Boolean(providedEmail);
 
         const referralBase = (
             args.full_name.split(" ")[0] ||
-            normalizedEmail.split("@")[0] ||
+            providedEmail.split("@")[0] ||
+            normalizedPhone.slice(-6) ||
             "USER"
         )
             .toUpperCase()
@@ -207,10 +246,14 @@ export const createUser = mutation({
 
         // Check for duplicate phone if provided
         if (normalizedPhone) {
-            const existingPhone = await ctx.db
+            let existingPhone = await ctx.db
                 .query("users")
                 .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
                 .unique();
+            if (!existingPhone) {
+                const users = await ctx.db.query("users").collect();
+                existingPhone = users.find((user) => isSamePhone(user.phone, normalizedPhone)) ?? null;
+            }
             if (existingPhone) {
                 throw new Error("Phone number already registered");
             }
@@ -300,7 +343,13 @@ export const createUser = mutation({
             is_admin: false,
             role: "user",
             is_verified: false,
-            verification_deadline: Date.now() + 3 * 24 * 60 * 60 * 1000,
+            email_verified: false,
+            phone_verified: false,
+            email_verification_status: hasEmail ? "pending" : "not_applicable",
+            phone_verification_status: normalizedPhone ? "pending" : "not_applicable",
+            primary_login_method: hasEmail ? "email" : "phone",
+            interested_package: args.interested_package,
+            verification_deadline: hasEmail ? Date.now() + 3 * 24 * 60 * 60 * 1000 : undefined,
             created_at: Date.now(),
             sign_in_history: [],
         });
@@ -347,6 +396,8 @@ export const verifyUser = mutation({
         if (user.is_verified) {
             // Clear any leftover token fields and return success
             await ctx.db.patch(user._id, {
+                email_verified: true,
+                email_verification_status: "verified",
                 verification_token: undefined,
                 verification_token_expires: undefined,
                 verification_deadline: undefined,
@@ -370,6 +421,8 @@ export const verifyUser = mutation({
         // All checks passed — verify the user
         await ctx.db.patch(user._id, {
             is_verified: true,
+            email_verified: true,
+            email_verification_status: "verified",
             verification_token: undefined,
             verification_token_expires: undefined,
             verification_deadline: undefined,
@@ -410,6 +463,7 @@ export const requestVerificationEmail = mutation({
             verification_token: token,
             verification_token_expires: expires,
             verification_deadline: Date.now() + 3 * 24 * 60 * 60 * 1000,
+            email_verification_status: "pending",
         });
 
         return {
@@ -535,23 +589,35 @@ export const updatePhone = mutation({
             throw new Error("User not found");
         }
 
-        const normalizedPhone = args.phone.trim();
+        const normalizedPhone = normalizePhoneNumber(args.phone);
         if (!normalizedPhone) {
             throw new Error("Phone number is required");
         }
+        if (!isValidPhoneNumber(normalizedPhone)) {
+            throw new Error("Enter a valid phone number");
+        }
 
-        const existingPhone = await ctx.db
+        let existingPhone = await ctx.db
             .query("users")
             .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
             .unique();
+
+        if (!existingPhone) {
+            const users = await ctx.db.query("users").collect();
+            existingPhone = users.find((candidate) => isSamePhone(candidate.phone, normalizedPhone)) ?? null;
+        }
 
         if (existingPhone && existingPhone._id !== args.id) {
             throw new Error("Phone number already registered");
         }
 
-        await ctx.db.patch(args.id, { phone: normalizedPhone });
+        await ctx.db.patch(args.id, {
+            phone: normalizedPhone,
+            phone_verified: false,
+            phone_verification_status: "pending",
+        });
 
-        try { createUserActivityLog(ctx, { userId: args.id, category: "account", action: "Phone verified", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+        try { createUserActivityLog(ctx, { userId: args.id, category: "account", action: "Phone saved", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return await ctx.db.get(args.id);
     },
@@ -572,18 +638,38 @@ export const login = mutation({
             });
         };
 
-        // Try to find by email first
-        let user = await ctx.db
-            .query("users")
-            .withIndex("by_email", (q) => q.eq("email", args.identifier.toLowerCase()))
-            .unique();
+        const identifier = args.identifier.trim();
+        const normalizedIdentifier = identifier.toLowerCase();
+
+        // Try to find by email first.
+        let user = normalizedIdentifier.includes("@")
+            ? await ctx.db
+                .query("users")
+                .withIndex("by_email", (q) => q.eq("email", normalizedIdentifier))
+                .unique()
+            : null;
 
         // If not found, try by username
         if (!user) {
             user = await ctx.db
                 .query("users")
-                .withIndex("by_username", (q) => q.eq("username", args.identifier.toLowerCase()))
+                .withIndex("by_username", (q) => q.eq("username", normalizedIdentifier))
                 .unique();
+        }
+
+        // If still not found, try by phone (strip non-digits for matching)
+        if (!user) {
+            const phoneDigits = normalizePhoneNumber(identifier);
+            if (phoneDigits) {
+                user = await ctx.db
+                    .query("users")
+                    .withIndex("by_phone", (q) => q.eq("phone", phoneDigits))
+                    .unique();
+                if (!user) {
+                    const allUsers = await ctx.db.query("users").collect();
+                    user = allUsers.find((candidate) => isSamePhone(candidate.phone, phoneDigits)) ?? null;
+                }
+            }
         }
 
         if (!user) return { success: false, error: "Invalid credentials" };
@@ -702,6 +788,7 @@ export const login = mutation({
             success: true,
             user: updatedUser ?? { ...user, ...updateData },
             isVerified: user.is_verified,
+            verificationMethod: isPhoneOnlyEmail(user.email) ? "phone" : "email",
             verificationDeadline: user.verification_deadline,
             daysRemaining: user.verification_deadline ?
                 Math.max(0, Math.ceil((user.verification_deadline - now) / (24 * 60 * 60 * 1000))) :
@@ -1039,6 +1126,9 @@ export const socialLogin = mutation({
                 failed_login_attempts: 0,
                 lockout_until: undefined,
                 is_verified: true, // Social logins are verified by definition
+                email_verified: true,
+                email_verification_status: "verified",
+                primary_login_method: "email",
                 ...buildSignInTrackingPatch(user, args.provider, now),
             };
             
@@ -1133,6 +1223,11 @@ export const socialLogin = mutation({
             is_admin: false,
             role: "user",
             is_verified: true, // Social login means verified email
+            email_verified: true,
+            email_verification_status: "verified",
+            phone_verified: false,
+            phone_verification_status: "not_applicable",
+            primary_login_method: "email",
             created_at: Date.now(),
             last_sign_in_at: Date.now(),
             last_sign_in_provider: normalizeSignInProvider(args.provider),

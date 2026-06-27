@@ -69,6 +69,11 @@ import {
     GripVertical,
     Gift,
     Filter,
+    Banknote,
+    Award,
+    Percent,
+    Copy,
+    Settings,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -87,8 +92,8 @@ import { ReferralCampaignsAdmin } from "../components/admin/ReferralCampaignsAdm
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Types ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs" | "referral_campaigns";
-const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs", "referral_campaigns"]);
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs" | "referral_campaigns" | "qhustle";
+const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs", "referral_campaigns", "qhustle"]);
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Helpers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const fmt = fmtCurrency;
@@ -1245,10 +1250,12 @@ export default function AdminPanel() {
         ))
     );
 
+    const phoneSearch = searchQuery.replace(/\D/g, '');
     const filteredUsers = allUsers.filter(u =>
     (u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.username?.toLowerCase().includes(searchQuery.toLowerCase()))
+        u.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (phoneSearch.length > 0 && u.phone?.replace(/\D/g, '').includes(phoneSearch)))
     );
 
     return (
@@ -4123,6 +4130,8 @@ export default function AdminPanel() {
                                 <QueueRequestManager />
                             </motion.div>
                         )}
+
+                        {activeTab === "qhustle" && <QHustleAdmin />}
                     </AnimatePresence>
 
                 </div>
@@ -5083,5 +5092,409 @@ export default function AdminPanel() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+function QHustleAdmin() {
+    const QHUSTLE_STORAGE_KEY = "q_hustle_data";
+    const QHUSTLE_SETTINGS_KEY = "q_hustle_settings";
+    const QHUSTLE_USERS_KEY = "q_hustle_registered_users";
+
+    const getSettings = (): { payoutAmount: number; minWithdrawal: number } => {
+        try { return JSON.parse(localStorage.getItem(QHUSTLE_SETTINGS_KEY) || '{"payoutAmount":150,"minWithdrawal":3000}'); }
+        catch { return { payoutAmount: 150, minWithdrawal: 3000 }; }
+    };
+
+    const getAllReferrals = () => {
+        try {
+            const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
+            const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+            const result: any[] = [];
+            for (const userId of Object.keys(all)) {
+                const userData = all[userId];
+                for (const ref of userData.referrals || []) {
+                    result.push({ ...ref, referrerId: userId, referrerName: userId === "mock_user" ? "Demo User" : userId });
+                }
+            }
+            return result.sort((a, b) => b.date - a.date);
+        } catch { return []; }
+    };
+
+    const getAllWithdrawals = () => {
+        try {
+            const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
+            const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+            const result: any[] = [];
+            for (const userId of Object.keys(all)) {
+                const userData = all[userId];
+                for (const wd of userData.withdrawals || []) {
+                    result.push({ ...wd, userId });
+                }
+            }
+            return result.sort((a, b) => b.date - a.date);
+        } catch { return []; }
+    };
+
+    const getTopPerformers = () => {
+        try {
+            const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
+            const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+            return Object.entries(all)
+                .map(([userId, data]: [string, any]) => ({
+                    userId,
+                    total: (data.referrals || []).length,
+                    approved: (data.referrals || []).filter((r: any) => r.status === "approved").length,
+                    earnings: (data.referrals || []).filter((r: any) => r.status === "approved").reduce((s: number, r: any) => s + (r.earnings || 0), 0),
+                }))
+                .sort((a, b) => b.approved - a.approved)
+                .slice(0, 10);
+        } catch { return []; }
+    };
+
+    const [settings, setSettings] = useState(getSettings);
+    const [refs, setRefs] = useState(getAllReferrals);
+    const [wds, setWds] = useState(getAllWithdrawals);
+    const [performers, setPerformers] = useState(getTopPerformers);
+    const [tab, setTab] = useState<"referrals" | "withdrawals" | "performers" | "settings">("referrals");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [payoutInput, setPayoutInput] = useState(String(settings.payoutAmount));
+    const [minWInput, setMinWInput] = useState(String(settings.minWithdrawal));
+    const [saved, setSaved] = useState(false);
+
+    const refresh = () => {
+        setRefs(getAllReferrals());
+        setWds(getAllWithdrawals());
+        setPerformers(getTopPerformers());
+        setSettings(getSettings());
+    };
+
+    const handleApprove = (refId: string) => {
+        try {
+            const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
+            const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+            for (const userId of Object.keys(all)) {
+                const ref = all[userId].referrals?.find((r: any) => r.id === refId);
+                if (ref) {
+                    ref.status = "approved";
+                    ref.earnings = settings.payoutAmount;
+                    localStorage.setItem(QHUSTLE_STORAGE_KEY, JSON.stringify(all));
+                    toast.success("Referral approved");
+                    refresh();
+                    return;
+                }
+            }
+        } catch {}
+    };
+
+    const handleReject = (refId: string) => {
+        try {
+            const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
+            const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+            for (const userId of Object.keys(all)) {
+                const ref = all[userId].referrals?.find((r: any) => r.id === refId);
+                if (ref) {
+                    ref.status = "rejected";
+                    ref.earnings = 0;
+                    localStorage.setItem(QHUSTLE_STORAGE_KEY, JSON.stringify(all));
+                    toast.success("Referral rejected");
+                    refresh();
+                    return;
+                }
+            }
+        } catch {}
+    };
+
+    const handleApproveWithdrawal = (wdId: string) => {
+        try {
+            const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
+            const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+            for (const userId of Object.keys(all)) {
+                const wd = all[userId].withdrawals?.find((w: any) => w.id === wdId);
+                if (wd) {
+                    wd.status = "approved";
+                    localStorage.setItem(QHUSTLE_STORAGE_KEY, JSON.stringify(all));
+                    toast.success("Withdrawal approved");
+                    refresh();
+                    return;
+                }
+            }
+        } catch {}
+    };
+
+    const handleRejectWithdrawal = (wdId: string) => {
+        try {
+            const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
+            const all: Record<string, any> = raw ? JSON.parse(raw) : {};
+            for (const userId of Object.keys(all)) {
+                const wd = all[userId].withdrawals?.find((w: any) => w.id === wdId);
+                if (wd) {
+                    wd.status = "rejected";
+                    localStorage.setItem(QHUSTLE_STORAGE_KEY, JSON.stringify(all));
+                    toast.success("Withdrawal rejected");
+                    refresh();
+                    return;
+                }
+            }
+        } catch {}
+    };
+
+    const handleSaveSettings = () => {
+        const payout = parseInt(payoutInput);
+        const minW = parseInt(minWInput);
+        if (isNaN(payout) || payout < 50) { toast.error("Payout must be at least ₦50"); return; }
+        if (isNaN(minW) || minW < 1000) { toast.error("Minimum withdrawal must be at least ₦1,000"); return; }
+        localStorage.setItem(QHUSTLE_SETTINGS_KEY, JSON.stringify({ payoutAmount: payout, minWithdrawal: minW }));
+        setSettings({ payoutAmount: payout, minWithdrawal: minW });
+        setSaved(true);
+        toast.success("Settings saved!");
+        setTimeout(() => setSaved(false), 2000);
+    };
+
+    const filteredRefs = refs.filter(r => {
+        if (statusFilter !== "all" && r.status !== statusFilter) return false;
+        if (searchTerm && !r.referredName?.toLowerCase().includes(searchTerm.toLowerCase()) && !r.referredPhone?.includes(searchTerm)) return false;
+        return true;
+    });
+
+    const pendingWds = wds.filter(w => w.status === "pending");
+    const totalEarnings = refs.filter(r => r.status === "approved").reduce((s, r) => s + (r.earnings || 0), 0);
+
+    return (
+        <motion.div key="qhustle" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <SectionHeader title="Q Hustle Admin" sub={`${refs.length} referrals · ₦${totalEarnings.toLocaleString()} total earnings · ${pendingWds.length} pending withdrawals`} />
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                    { label: "Total Referrals", value: refs.length, icon: <Users size={14} />, color: "bg-zinc-900 text-white" },
+                    { label: "Pending Withdrawals", value: pendingWds.length, icon: <Clock size={14} />, color: "bg-amber-500 text-white" },
+                    { label: "Total Earnings", value: `₦${totalEarnings.toLocaleString()}`, icon: <DollarSign size={14} />, color: "bg-emerald-500 text-white" },
+                    { label: "Payout / Referral", value: `₦${settings.payoutAmount}`, icon: <Percent size={14} />, color: "bg-purple-600 text-white" },
+                ].map(s => (
+                    <div key={s.label} className={`rounded-2xl p-4 ${s.color}`}>
+                        <div className="flex items-center gap-1.5 mb-1">
+                            {s.icon}
+                            <div className="text-[9px] font-black uppercase tracking-widest opacity-70">{s.label}</div>
+                        </div>
+                        <div className="text-xl font-black">{s.value}</div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-2">
+                {[
+                    { id: "referrals" as const, label: "All Referrals", count: refs.length },
+                    { id: "withdrawals" as const, label: "Withdrawals", count: pendingWds.length },
+                    { id: "performers" as const, label: "Top Performers", count: performers.length },
+                    { id: "settings" as const, label: "Settings" },
+                ].map(t => (
+                    <button key={t.id} onClick={() => setTab(t.id)}
+                        className={`h-9 px-4 rounded-xl text-[10px] font-black transition-all ${
+                            tab === t.id ? "bg-zinc-900 text-white shadow-[0_4px_12px_rgba(0,0,0,0.2)]" : "bg-white text-zinc-600 border border-black/5 hover:bg-zinc-50"
+                        }`}>
+                        {t.label}{t.count !== undefined ? ` (${t.count})` : ""}
+                    </button>
+                ))}
+            </div>
+
+            {/* Referrals Tab */}
+            {tab === "referrals" && (
+                <div className="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden">
+                    <div className="p-4 border-b border-black/5 flex flex-wrap gap-3">
+                        <label className="relative flex-1 min-w-[200px]">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search by name or phone..."
+                                className="w-full h-9 rounded-xl border border-black/5 bg-zinc-50 pl-8 pr-3 text-xs font-bold outline-none focus:border-zinc-900" />
+                        </label>
+                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                            className="h-9 rounded-xl border border-black/5 bg-white px-3 text-[10px] font-bold outline-none focus:border-zinc-900">
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-black/5">
+                                    {["Name", "Phone", "Status", "Earnings", "Date", "Actions"].map(h => (
+                                        <th key={h} className="p-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredRefs.length === 0 ? (
+                                    <tr><td colSpan={6} className="p-8 text-center text-sm text-gray-400 font-bold">No referrals found</td></tr>
+                                ) : filteredRefs.map(r => (
+                                    <tr key={r.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 transition-colors">
+                                        <td className="p-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 rounded-full bg-zinc-200 flex items-center justify-center text-[10px] font-black shrink-0">
+                                                    {r.referredName?.[0] || "?"}
+                                                </div>
+                                                <span className="text-sm font-bold text-zinc-900">{r.referredName}</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-sm font-bold text-zinc-700">{r.referredPhone}</td>
+                                        <td className="p-3">
+                                            <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black ${
+                                                r.status === "approved" ? "bg-emerald-50 text-emerald-700" :
+                                                r.status === "pending" ? "bg-amber-50 text-amber-700" :
+                                                "bg-red-50 text-red-600"
+                                            }`}>
+                                                {r.status === "approved" ? <CheckCircle2 size={12} /> :
+                                                 r.status === "pending" ? <Clock size={12} /> :
+                                                 <X size={12} />}
+                                                {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 text-sm font-black text-zinc-900">{r.earnings > 0 ? `₦${r.earnings}` : "—"}</td>
+                                        <td className="p-3 text-xs font-bold text-gray-400">{new Date(r.date).toLocaleDateString()}</td>
+                                        <td className="p-3">
+                                            {r.status === "pending" && (
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => handleApprove(r.id)}
+                                                        className="h-7 px-3 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black hover:bg-emerald-100 transition-all">
+                                                        Approve
+                                                    </button>
+                                                    <button onClick={() => handleReject(r.id)}
+                                                        className="h-7 px-3 rounded-lg bg-red-50 text-red-600 text-[10px] font-black hover:bg-red-100 transition-all">
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Withdrawals Tab */}
+            {tab === "withdrawals" && (
+                <div className="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-black/5">
+                                    {["Amount", "Status", "Date", "Actions"].map(h => (
+                                        <th key={h} className="p-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {wds.length === 0 ? (
+                                    <tr><td colSpan={4} className="p-8 text-center text-sm text-gray-400 font-bold">No withdrawals yet</td></tr>
+                                ) : wds.map(w => (
+                                    <tr key={w.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 transition-colors">
+                                        <td className="p-3 text-sm font-black text-zinc-900">₦{w.amount.toLocaleString()}</td>
+                                        <td className="p-3">
+                                            <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black ${
+                                                w.status === "approved" ? "bg-emerald-50 text-emerald-700" :
+                                                w.status === "pending" ? "bg-amber-50 text-amber-700" :
+                                                "bg-red-50 text-red-600"
+                                            }`}>
+                                                {w.status === "approved" ? <CheckCircle2 size={12} /> :
+                                                 w.status === "pending" ? <Clock size={12} /> :
+                                                 <X size={12} />}
+                                                {w.status.charAt(0).toUpperCase() + w.status.slice(1)}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 text-xs font-bold text-gray-400">{new Date(w.date).toLocaleDateString()}</td>
+                                        <td className="p-3">
+                                            {w.status === "pending" && (
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => handleApproveWithdrawal(w.id)}
+                                                        className="h-7 px-3 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black hover:bg-emerald-100 transition-all">
+                                                        Approve
+                                                    </button>
+                                                    <button onClick={() => handleRejectWithdrawal(w.id)}
+                                                        className="h-7 px-3 rounded-lg bg-red-50 text-red-600 text-[10px] font-black hover:bg-red-100 transition-all">
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Top Performers Tab */}
+            {tab === "performers" && (
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Trophy size={18} className="text-amber-500" />
+                        <h3 className="text-sm font-black text-zinc-900">Top Referrers</h3>
+                    </div>
+                    {performers.length === 0 ? (
+                        <p className="text-sm font-bold text-gray-400 text-center py-8">No data yet</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {performers.map((p, i) => (
+                                <div key={p.userId} className="flex items-center justify-between bg-zinc-50 rounded-2xl p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${
+                                            i === 0 ? "bg-amber-100 text-amber-700" :
+                                            i === 1 ? "bg-gray-200 text-gray-600" :
+                                            i === 2 ? "bg-orange-100 text-orange-700" :
+                                            "bg-zinc-200 text-zinc-600"
+                                        }`}>
+                                            #{i + 1}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-black text-zinc-900">{p.userId === "mock_user" ? "Demo User" : `User ${p.userId.slice(-6)}`}</div>
+                                            <div className="text-[10px] font-bold text-gray-400">{p.approved} approved · ₦{p.earnings.toLocaleString()} earned</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-lg font-black text-zinc-900">{p.total}</div>
+                                        <div className="text-[10px] font-bold text-gray-400">referrals</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Settings Tab */}
+            {tab === "settings" && (
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-5">
+                    <h3 className="text-sm font-black text-zinc-900 flex items-center gap-2">
+                        <Settings size={18} /> Referral Settings
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Payout per Referral (₦)</label>
+                            <input value={payoutInput} onChange={e => setPayoutInput(e.target.value)}
+                                type="number" min="50"
+                                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900" />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Minimum Withdrawal (₦)</label>
+                            <input value={minWInput} onChange={e => setMinWInput(e.target.value)}
+                                type="number" min="1000"
+                                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={handleSaveSettings}
+                            className="h-11 px-6 rounded-2xl bg-zinc-900 text-white text-xs font-black hover:bg-zinc-800 transition-all">
+                            {saved ? "Saved!" : "Save Settings"}
+                        </button>
+                        {saved && <span className="text-[10px] font-black text-emerald-500 flex items-center gap-1"><CheckCircle2 size={14} /> Updated</span>}
+                    </div>
+                </div>
+            )}
+        </motion.div>
     );
 }

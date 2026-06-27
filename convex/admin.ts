@@ -620,6 +620,8 @@ export const approveLeaveRequest = mutation({
                     renewal_date: undefined,
                     allocation: undefined,
                 });
+
+                await updateMarketplaceCountsForSlot(ctx, slot, -1);
             }
         } else if (args.type === "migration") {
             const migration = await ctx.db.get(args.id) as any;
