@@ -50,13 +50,14 @@ function StatCard({ label, value, icon, color }: {
   color: string;
 }) {
   return (
-    <div className="bg-white rounded-3xl p-4 sm:p-6 border border-black/5 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative">
-      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full opacity-5 -mr-8 -mt-8 ${color}`} />
-      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-4 ${color} bg-opacity-10`}>
-        <div className={color.replace("bg-", "text-")}>{icon}</div>
+    <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-4 sm:p-6 rounded-3xl">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`w-10 h-10 ${color} text-white rounded-full flex items-center justify-center`}>
+          {icon}
+        </div>
       </div>
-      <div className="text-xl sm:text-2xl font-black mb-1 text-zinc-900">{value}</div>
-      <div className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</div>
+      <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-50 mb-1">{label}</div>
+      <div className="text-xl sm:text-2xl font-bold">{value}</div>
     </div>
   );
 }
@@ -376,7 +377,7 @@ export default function QHustlePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             { label: "Total Referrals", value: stats.total, icon: <Users size={16} />, color: "bg-zinc-900" },
             { label: "Approved Referrals", value: stats.approved, icon: <CheckCircle2 size={16} />, color: "bg-emerald-500" },
