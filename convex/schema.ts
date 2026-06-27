@@ -1371,6 +1371,44 @@ export default defineSchema({
     }).index("by_user", ["user_id"])
         .index("by_type", ["badge_type"]),
 
+    q_hustle_settings: defineTable({
+        setting_key: v.string(),
+        payout_amount: v.number(),
+        updated_at: v.number(),
+        updated_by: v.optional(v.id("users")),
+    }).index("by_setting_key", ["setting_key"]),
+
+    q_hustle_referrals: defineTable({
+        referrer_id: v.id("users"),
+        referred_user_id: v.optional(v.id("users")),
+        referred_name: v.string(),
+        referred_phone: v.string(),
+        referred_email: v.optional(v.string()),
+        status: v.string(), // "pending" | "approved" | "rejected"
+        earnings: v.number(),
+        created_at: v.number(),
+        updated_at: v.optional(v.number()),
+        approved_at: v.optional(v.number()),
+        approved_by: v.optional(v.id("users")),
+        rejection_reason: v.optional(v.string()),
+    }).index("by_referrer", ["referrer_id"])
+        .index("by_status", ["status"])
+        .index("by_referred_user", ["referred_user_id"])
+        .index("by_created_at", ["created_at"])
+        .index("by_referrer_status", ["referrer_id", "status"]),
+
+    q_hustle_withdrawals: defineTable({
+        user_id: v.id("users"),
+        amount: v.number(),
+        status: v.string(), // "pending" | "approved" | "rejected"
+        requested_at: v.number(),
+        processed_at: v.optional(v.number()),
+        processed_by: v.optional(v.id("users")),
+        admin_note: v.optional(v.string()),
+    }).index("by_user", ["user_id"])
+        .index("by_status", ["status"])
+        .index("by_requested_at", ["requested_at"]),
+
     user_activities: defineTable({
         user_id: v.id("users"),
         category: v.string(),

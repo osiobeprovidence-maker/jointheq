@@ -21,8 +21,6 @@ interface FormData {
     interestedPackage: string;
 }
 
-const QHUSTLE_STORAGE_KEY = "q_hustle_data";
-const QHUSTLE_USERS_KEY = "q_hustle_registered_users";
 export default function RegisterPage() {
     const { refCode } = useParams();
     const navigate = useNavigate();
@@ -89,7 +87,6 @@ export default function RegisterPage() {
                 verification_token: token,
                 verification_token_expires: expires,
                 referred_by_code: refCode?.trim().toUpperCase() || undefined,
-                interested_package: form.interestedPackage,
             });
 
             if (email && token) {
@@ -116,36 +113,7 @@ export default function RegisterPage() {
 
             const newUser = loginResult.user;
 
-            const registered = JSON.parse(localStorage.getItem(QHUSTLE_USERS_KEY) || "[]");
-            registered.push({ ...newUser, interestedPackage: form.interestedPackage, refCode: refCode || null });
-            localStorage.setItem(QHUSTLE_USERS_KEY, JSON.stringify(registered));
-
-            auth.login(newUser);
-
-            if (refCode) {
-                try {
-                    const raw = localStorage.getItem(QHUSTLE_STORAGE_KEY);
-                    const all: Record<string, any> = raw ? JSON.parse(raw) : {};
-                    const referrerData = Object.values(all).find((d: any) => {
-                        const users = JSON.parse(localStorage.getItem(QHUSTLE_USERS_KEY) || "[]");
-                        const referrer = users.find((u: any) => u.referral_code === refCode || u._id === refCode);
-                        return d.userId === referrer?._id;
-                    }) as any;
-
-                    if (referrerData) {
-                        referrerData.referrals.push({
-                            id: `ref_${Date.now()}`,
-                            referredName: newUser.full_name,
-                            referredPhone: newUser.phone || phone,
-                            status: "pending",
-                            date: Date.now(),
-                            earnings: 0,
-                        });
-                        all[referrerData.userId] = referrerData;
-                        localStorage.setItem(QHUSTLE_STORAGE_KEY, JSON.stringify(all));
-                    }
-                } catch {}
-            }
+            auth.login({ ...newUser, interested_package: form.interestedPackage });
 
             setStep("success");
             toast.success("Account created successfully!");

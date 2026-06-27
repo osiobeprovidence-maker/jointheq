@@ -363,6 +363,19 @@ export const createUser = mutation({
             updated_at: Date.now(),
         });
 
+        if (referredById) {
+            await ctx.db.insert("q_hustle_referrals", {
+                referrer_id: referredById,
+                referred_user_id: userId,
+                referred_name: args.full_name,
+                referred_phone: normalizedPhone || "",
+                referred_email: hasEmail ? normalizedEmail : undefined,
+                status: "pending",
+                earnings: 0,
+                created_at: Date.now(),
+            });
+        }
+
         try { createUserActivityLog(ctx, { userId, category: "account", action: "Account created", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
         return userId;

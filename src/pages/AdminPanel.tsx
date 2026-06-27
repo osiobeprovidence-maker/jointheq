@@ -5159,7 +5159,6 @@ function QHustleAdmin() {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [payoutInput, setPayoutInput] = useState(String(settings.payoutAmount));
-    const [minWInput, setMinWInput] = useState(String(settings.minWithdrawal));
     const [saved, setSaved] = useState(false);
 
     const refresh = () => {
@@ -5241,11 +5240,9 @@ function QHustleAdmin() {
 
     const handleSaveSettings = () => {
         const payout = parseInt(payoutInput);
-        const minW = parseInt(minWInput);
         if (isNaN(payout) || payout < 50) { toast.error("Payout must be at least ₦50"); return; }
-        if (isNaN(minW) || minW < 1000) { toast.error("Minimum withdrawal must be at least ₦1,000"); return; }
-        localStorage.setItem(QHUSTLE_SETTINGS_KEY, JSON.stringify({ payoutAmount: payout, minWithdrawal: minW }));
-        setSettings({ payoutAmount: payout, minWithdrawal: minW });
+        localStorage.setItem(QHUSTLE_SETTINGS_KEY, JSON.stringify({ payoutAmount: payout, minWithdrawal: 3000 }));
+        setSettings({ payoutAmount: payout, minWithdrawal: 3000 });
         setSaved(true);
         toast.success("Settings saved!");
         setTimeout(() => setSaved(false), 2000);
@@ -5264,7 +5261,6 @@ function QHustleAdmin() {
         <motion.div key="qhustle" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <SectionHeader title="Q Hustle Admin" sub={`${refs.length} referrals · ₦${totalEarnings.toLocaleString()} total earnings · ${pendingWds.length} pending withdrawals`} />
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                     { label: "Total Referrals", value: refs.length, icon: <Users size={14} />, color: "bg-zinc-900 text-white" },
@@ -5282,7 +5278,6 @@ function QHustleAdmin() {
                 ))}
             </div>
 
-            {/* Tabs */}
             <div className="flex flex-wrap gap-2">
                 {[
                     { id: "referrals" as const, label: "All Referrals", count: refs.length },
@@ -5299,7 +5294,6 @@ function QHustleAdmin() {
                 ))}
             </div>
 
-            {/* Referrals Tab */}
             {tab === "referrals" && (
                 <div className="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden">
                     <div className="p-4 border-b border-black/5 flex flex-wrap gap-3">
@@ -5375,7 +5369,6 @@ function QHustleAdmin() {
                 </div>
             )}
 
-            {/* Withdrawals Tab */}
             {tab === "withdrawals" && (
                 <div className="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden">
                     <div className="overflow-x-auto">
@@ -5428,7 +5421,6 @@ function QHustleAdmin() {
                 </div>
             )}
 
-            {/* Top Performers Tab */}
             {tab === "performers" && (
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-4">
                     <div className="flex items-center gap-2">
@@ -5466,7 +5458,6 @@ function QHustleAdmin() {
                 </div>
             )}
 
-            {/* Settings Tab */}
             {tab === "settings" && (
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-5">
                     <h3 className="text-sm font-black text-zinc-900 flex items-center gap-2">
@@ -5481,8 +5472,7 @@ function QHustleAdmin() {
                         </div>
                         <div>
                             <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Minimum Withdrawal (₦)</label>
-                            <input value={minWInput} onChange={e => setMinWInput(e.target.value)}
-                                type="number" min="1000"
+                            <input value={3000} readOnly
                                 className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900" />
                         </div>
                     </div>
