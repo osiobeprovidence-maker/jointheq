@@ -28,7 +28,6 @@ const QHubPage = lazy(() => import("./pages/QHubPage"));
 const CampaignPage = lazy(() => import("./pages/CampaignPage"));
 const ReferralsPage = lazy(() => import("./pages/ReferralsPage"));
 const RewardsPage = lazy(() => import("./pages/RewardsPage"));
-const QHustlePage = lazy(() => import("./pages/QHustlePage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
@@ -155,15 +154,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <RewardsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/q-hustle"
-            element={
-              <ProtectedRoute>
-                <QHustlePage />
               </ProtectedRoute>
             }
           />

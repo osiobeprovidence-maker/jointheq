@@ -76,7 +76,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
             return;
         }
         if (itemId === 'qhustle') {
-            navigate('/q-hustle');
+            setActiveTab('qhustle');
             return;
         }
         setActiveTab(itemId);

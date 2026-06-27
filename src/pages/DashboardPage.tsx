@@ -63,6 +63,7 @@ import toast from "react-hot-toast";
 import SupportChatUser from "../components/chat/SupportChatUser";
 import { getUserFacingErrorMessage } from "../lib/errors";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
+import QHustleTab from "../components/dashboard/QHustleTab";
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import CampusJoinCard from "../components/campus/CampusJoinCard";
@@ -170,7 +171,7 @@ export default function DashboardPage() {
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
     ];
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'qhustle' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [enableAutoDebit, setEnableAutoDebit] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -195,6 +196,7 @@ export default function DashboardPage() {
         const allowedTabs = new Set([
             "dashboard",
             "marketplace",
+            "qhustle",
             "wallet",
             "referrals",
             "history",
@@ -1379,6 +1381,10 @@ export default function DashboardPage() {
                     <motion.div key="queues" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                         <QueueHub userId={currentUser._id as any} />
                     </motion.div>
+                )}
+
+                {activeTab === 'qhustle' && currentUser && (
+                    <QHustleTab user={currentUser as any} />
                 )}
 
                 {activeTab === 'wallet' && (

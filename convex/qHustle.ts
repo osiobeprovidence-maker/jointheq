@@ -58,6 +58,7 @@ async function getUserWithdrawals(ctx: any, userId: Id<"users">) {
 function buildStats(referrals: any[], withdrawals: any[]) {
   const approvedReferrals = referrals.filter((ref) => ref.status === "approved");
   const pendingReferrals = referrals.filter((ref) => ref.status === "pending");
+  const rejectedReferrals = referrals.filter((ref) => ref.status === "rejected");
   const approvedWithdrawals = withdrawals.filter((wd) => wd.status === "approved");
   const pendingWithdrawals = withdrawals.filter((wd) => wd.status === "pending");
 
@@ -69,6 +70,7 @@ function buildStats(referrals: any[], withdrawals: any[]) {
     totalReferrals: referrals.length,
     approvedReferrals: approvedReferrals.length,
     pendingReferrals: pendingReferrals.length,
+    rejectedReferrals: rejectedReferrals.length,
     totalEarnings,
     availableBalance: totalEarnings - totalWithdrawn - pendingWithdrawalAmount,
   };
@@ -119,8 +121,33 @@ export const getUserDashboard = query({
       referrals,
       withdrawals,
       stats,
+      minimumWithdrawal: MIN_WITHDRAWAL_AMOUNT,
       referralLink: `/register/${user.referral_code}`,
     };
+  },
+});
+
+export const getUserReferralsPaginated = query({
+  args: {
+    userId: v.id("users"),
+    page: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const page = args.page ?? 1;
+    const limit = Math.min(args.limit ?? 20, 100);
+    const skip = (page - 1) * limit;
+
+    const referrals = await ctx.db
+      .query("q_hustle_referrals")
+      .withIndex("by_referrer", (q: any) => q.eq("referrer_id", args.userId))
+      .order("desc")
+      .collect();
+
+    const total = referrals.length;
+    const paged = referrals.slice(skip, skip + limit);
+
+    return { referrals: paged, total, page, limit };
   },
 });
 
