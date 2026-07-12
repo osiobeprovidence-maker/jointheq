@@ -29,6 +29,7 @@ const CampaignPage = lazy(() => import("./pages/CampaignPage"));
 const ReferralsPage = lazy(() => import("./pages/ReferralsPage"));
 const RewardsPage = lazy(() => import("./pages/RewardsPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const RafflePage = lazy(() => import("./pages/RafflePage"));
 
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
@@ -63,6 +64,7 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/r/:refCode" element={<ReferralRedirect />} />
+          <Route path="/raffle" element={<RafflePage />} />
           <Route path="/guest-onboarding" element={<GuestOnboardingPage />} />
           <Route path="/console" element={<ConsoleLogin />} />
           {/* Protected Routes */}

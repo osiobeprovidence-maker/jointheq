@@ -1384,7 +1384,9 @@ export default function DashboardPage() {
                 )}
 
                 {activeTab === 'qhustle' && currentUser && (
-                    <QHustleTab user={currentUser as any} />
+                    <motion.div key="qhustle" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                        <QHustleTab user={currentUser as any} />
+                    </motion.div>
                 )}
 
                 {activeTab === 'wallet' && (

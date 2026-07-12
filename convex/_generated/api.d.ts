@@ -1,4 +1,4 @@
-/* eslint-disable */
+﻿/* eslint-disable */
 /**
  * Generated `api` utility.
  *
@@ -40,6 +40,7 @@ import type * as promotions from "../promotions.js";
 import type * as push from "../push.js";
 import type * as pushActions from "../pushActions.js";
 import type * as qHustle from "../qHustle.js";
+import type * as raffle from "../raffle.js";
 import type * as qhub from "../qhub.js";
 import type * as quests from "../quests.js";
 import type * as queues from "../queues.js";
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   push: typeof push;
   pushActions: typeof pushActions;
   qHustle: typeof qHustle;
+  raffle: typeof raffle;
   qhub: typeof qhub;
   quests: typeof quests;
   queues: typeof queues;

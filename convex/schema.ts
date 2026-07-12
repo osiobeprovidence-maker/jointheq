@@ -1422,5 +1422,59 @@ export default defineSchema({
     }).index("by_user", ["user_id"])
         .index("by_user_created", ["user_id", "created_at"])
         .index("by_category", ["user_id", "category"]),
+
+    raffles: defineTable({
+        title: v.string(),
+        slug: v.string(),
+        banner: v.optional(v.string()),
+        description: v.string(),
+        prizeAmount: v.number(),
+        drawDate: v.number(),
+        status: v.string(),
+        eligibilityType: v.string(),
+        referralReward: v.number(),
+        createdBy: v.id("users"),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+        winnerAnnounced: v.optional(v.boolean()),
+    }).index("by_slug", ["slug"])
+        .index("by_status", ["status"]),
+
+    raffle_entries: defineTable({
+        raffleId: v.id("raffles"),
+        userId: v.id("users"),
+        raffleNumber: v.string(),
+        ticketCount: v.number(),
+        enteredAt: v.number(),
+        referralSource: v.optional(v.string()),
+    }).index("by_raffle_user", ["raffleId", "userId"])
+        .index("by_raffle", ["raffleId"])
+        .index("by_user", ["userId"]),
+
+    raffle_referrals: defineTable({
+        raffleId: v.id("raffles"),
+        inviterId: v.id("users"),
+        inviteeName: v.string(),
+        inviteeEmail: v.optional(v.string()),
+        inviteePhone: v.optional(v.string()),
+        inviteeUserId: v.optional(v.id("users")),
+        status: v.string(),
+        rewardGranted: v.boolean(),
+        rewardTickets: v.number(),
+        createdAt: v.number(),
+        completedAt: v.optional(v.number()),
+    }).index("by_inviter", ["inviterId"])
+        .index("by_raffle", ["raffleId"])
+        .index("by_invitee_email", ["inviteeEmail"])
+        .index("by_invitee_phone", ["inviteePhone"]),
+
+    raffle_winners: defineTable({
+        raffleId: v.id("raffles"),
+        userId: v.id("users"),
+        prize: v.number(),
+        position: v.number(),
+        announcedAt: v.number(),
+    }).index("by_raffle", ["raffleId"])
+        .index("by_user", ["userId"]),
 });
 
