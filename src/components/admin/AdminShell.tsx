@@ -17,6 +17,7 @@ import {
   X,
   Gift,
   TrendingUp,
+  Award,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -37,7 +38,8 @@ export type AdminMenuKey =
   | "migrations"
   | "enhanced"
   | "referral_campaigns"
-  | "qhustle";
+  | "qhustle"
+  | "raffle";
 
 type AdminShellProps = {
   activeItem: AdminMenuKey;
@@ -71,6 +73,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { id: "login_logs", label: "Login Logs", sub: "User Sign-in Activity", path: "/admin?tab=login_logs", icon: <Clock size={18} /> },
   { id: "referral_campaigns", label: "Referral Campaigns", sub: "Marketing & Rewards", path: "/admin?tab=referral_campaigns", icon: <Gift size={18} /> },
   { id: "qhustle", label: "Q Hustle", sub: "Referral & Earnings", path: "/admin?tab=qhustle", icon: <TrendingUp size={18} /> },
+  { id: "raffle", label: "Raffle", sub: "Spotify Giveaways", path: "/admin?tab=raffle", icon: <Award size={18} /> },
 ];
 
 export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
@@ -80,7 +83,7 @@ export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Reviews", items: ["user_listings"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins", "login_logs"] },
   { label: "Engagement", items: ["notifications", "queues"] },
-  { label: "Marketing", items: ["referral_campaigns", "qhustle"] },
+  { label: "Marketing", items: ["referral_campaigns", "qhustle", "raffle"] },
 ];
 
 const menuItemById = new Map(adminMenuItems.map((item) => [item.id, item]));
