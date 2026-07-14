@@ -9,7 +9,9 @@ import {
   ChevronDown, X, Award, ExternalLink, LogIn, UserPlus,
   MessageCircle, Instagram, Twitter, Download, QrCode,
   RefreshCw, AlertCircle, Info, Star, ListOrdered,
-  Shield, BarChart3, Crown, Medal
+  Shield, BarChart3, Crown, Medal, Globe, Smartphone,
+  Youtube, Link2, ThumbsUp, CheckCircle, Target, Zap,
+  Menu
 } from "lucide-react";
 import { auth } from "../lib/auth";
 import toast from "react-hot-toast";
@@ -383,6 +385,8 @@ export default function RafflePage() {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
+  const [showNav, setShowNav] = useState(false);
 
   const convexUserId = (currentUser?._id || "") as Id<"users">;
 
@@ -431,6 +435,16 @@ export default function RafflePage() {
   );
 
   const autoEnterMutation = useMutation(api.raffle.autoEnterForSpotifyPurchase);
+
+  const bonusTasksQuery = useQuery(
+    api.raffle.getBonusTasks,
+    raffleId ? { raffleId } : "skip"
+  );
+  const userBonusCompletionsQuery = useQuery(
+    api.raffle.getUserBonusCompletions,
+    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
+  );
+  const completeBonusTaskMutation = useMutation(api.raffle.completeBonusTask);
 
   useEffect(() => {
     if (raffleQuery !== undefined) {
@@ -519,6 +533,31 @@ export default function RafflePage() {
     }
     if (urls[platform]) window.open(urls[platform], "_blank");
   }, [referralLink, raffle]);
+
+  const handleCompleteTask = useCallback(async (taskId: string) => {
+    if (!raffleId || !currentUser || completingTaskId) return;
+    setCompletingTaskId(taskId);
+    try {
+      const result = await completeBonusTaskMutation({
+        raffleId,
+        taskId: taskId as any,
+        userId: convexUserId,
+      });
+      toast.success(`🎉 You earned +${result.ticketsAwarded} raffle tickets!`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to complete task");
+    } finally {
+      setCompletingTaskId(null);
+    }
+  }, [raffleId, currentUser, convexUserId, completeBonusTaskMutation, completingTaskId]);
+
+  const completionMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (userBonusCompletionsQuery || []).forEach((c: any) => {
+      map.set(c.taskId, c);
+    });
+    return map;
+  }, [userBonusCompletionsQuery]);
 
   if (loading) {
     return (
@@ -775,8 +814,38 @@ export default function RafflePage() {
         </section>
       )}
 
+      {/* ===== SECTION NAVIGATION ===== */}
+      {raffle && (
+        <div className="sticky top-0 z-40 bg-[#191414]/90 backdrop-blur-xl border-b border-white/5 overflow-x-auto">
+          <div className="max-w-6xl mx-auto px-4 flex items-center gap-0.5 py-2">
+            {(() => {
+              const items = [
+                { id: "stats", label: "Overview", icon: <BarChart3 size={12} /> },
+                { id: "how-it-works", label: "How It Works", icon: <Info size={12} /> },
+                { id: "leaderboard", label: "Leaderboard", icon: <Users size={12} /> },
+                { id: "prize-section", label: "Prizes", icon: <Award size={12} /> },
+                { id: "winners-section", label: "Winners", icon: <Crown size={12} /> },
+              ];
+              if (isAlreadyEntered || isCompleted) {
+                items.push({ id: "earn-more-tickets", label: "Earn More Tickets", icon: <Zap size={12} /> });
+              }
+              return items;
+            })().map((section) => (
+              <button key={section.id} onClick={() => {
+                const el = document.getElementById(section.id);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+                className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white/10"
+                style={{ color: raffleAccent }}>
+                {section.icon} {section.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ===== CAMPAIGN STATISTICS ===== */}
-      <section className="py-12 px-4">
+      <section id="stats" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -968,6 +1037,169 @@ export default function RafflePage() {
                 <StarRating level={chanceLevel} />
               </div>
             </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== EARN MORE TICKETS ===== */}
+      {isAlreadyEntered && (
+        <section id="earn-more-tickets" className="py-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="text-center mb-10">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: `${raffleAccent}20` }}>
+                  <Zap size={28} style={{ color: raffleAccent }} />
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black mb-2">
+                  Earn More <span style={{ color: raffleAccent }}>Tickets</span>
+                </h2>
+                <p className="text-white/50 text-sm max-w-md mx-auto">
+                  Complete simple tasks to earn bonus raffle tickets and increase your chances of winning.
+                </p>
+              </div>
+
+              {/* Ticket Summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                {[
+                  { label: "Base Tickets", value: userTickets?.initialEntry ?? 1, icon: <Ticket size={14} />, color: raffleAccent },
+                  { label: "Referral Tickets", value: userTickets?.referralBonus ?? 0, icon: <Users size={14} />, color: "#f59e0b" },
+                  { label: "Bonus Task Tickets", value: userTickets?.bonusTaskTickets ?? 0, icon: <Zap size={14} />, color: "#8b5cf6" },
+                  { label: "Total Tickets", value: totalTickets, icon: <Award size={14} />, color: raffleAccent },
+                ].map((s) => (
+                  <div key={s.label} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-1" style={{ color: s.color }}>
+                      {s.icon}
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black">{s.value}</div>
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress Card */}
+              {bonusTasksQuery && bonusTasksQuery.length > 0 && (
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-5 mb-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-black flex items-center gap-2">
+                        <Target size={16} style={{ color: raffleAccent }} /> Bonus Challenges
+                      </h3>
+                      {(() => {
+                        const completedCount = (bonusTasksQuery || []).filter((t: any) => completionMap.has(t._id)).length;
+                        const totalCount = bonusTasksQuery.length;
+                        const totalPotential = bonusTasksQuery.reduce((sum: number, t: any) => sum + t.rewardTickets, 0);
+                        const earnedBonus = userTickets?.bonusTaskTickets ?? 0;
+                        const remaining = totalPotential - earnedBonus;
+                        const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+                        return (
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4 mt-2 flex-wrap">
+                              <span className="text-xs text-white/60">Completed: <strong className="text-white font-black">{completedCount}</strong> / {totalCount}</span>
+                              <span className="text-xs text-white/60">Bonus Earned: <strong className="text-white font-black" style={{ color: raffleAccent }}>+{earnedBonus}</strong></span>
+                              {remaining > 0 && (
+                                <span className="text-xs text-white/60">Potential Remaining: <strong className="text-white font-black">+{remaining}</strong></span>
+                              )}
+                            </div>
+                            <div className="w-full h-1.5 bg-white/10 rounded-full mt-2 overflow-hidden">
+                              <motion.div
+                                className="h-full rounded-full"
+                                style={{ backgroundColor: raffleAccent }}
+                                initial={{ width: 0 }}
+                                whileInView={{ width: `${progress}%` }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Task Cards */}
+              {!bonusTasksQuery ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 size={24} className="animate-spin" style={{ color: raffleAccent }} />
+                </div>
+              ) : bonusTasksQuery.length === 0 ? (
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8 text-center">
+                  <Zap size={32} className="mx-auto text-white/20 mb-3" />
+                  <p className="text-white/40 text-sm font-bold">There are no bonus ticket challenges available right now. Check back soon!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {bonusTasksQuery.map((task: any) => {
+                    const completion = completionMap.get(task._id);
+                    const isCompleted = !!completion;
+                    const isLoading = completingTaskId === task._id;
+                    return (
+                      <motion.div key={task._id} layout
+                        className={`rounded-2xl p-5 border transition-all ${isCompleted ? "border-emerald-500/30 bg-emerald-500/5" : "bg-white/5 backdrop-blur-md border-white/10 hover:border-white/20"}`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isCompleted ? "bg-emerald-500/20" : "bg-white/10"}`}
+                            style={!isCompleted ? { color: raffleAccent } : { color: "#10b981" }}>
+                            {isCompleted ? <CheckCircle size={18} /> : PLATFORM_ICONS[task.platform] || <Zap size={18} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-sm font-black truncate">{task.name}</h4>
+                              {isCompleted && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-black shrink-0">Completed</span>
+                              )}
+                            </div>
+                            {task.description && <p className="text-xs text-white/50 mt-0.5">{task.description}</p>}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-xs font-black" style={{ color: raffleAccent }}>+{task.rewardTickets} ticket{task.rewardTickets !== 1 ? "s" : ""}</span>
+                              <span className="text-[9px] text-white/30 font-medium">{task.platform}</span>
+                            </div>
+                          </div>
+                        </div>
+                        {!isCompleted && (
+                          <button onClick={() => handleCompleteTask(task._id)} disabled={isLoading}
+                            className="w-full h-9 rounded-xl bg-white/10 text-white text-[10px] font-black hover:bg-white/20 transition-all flex items-center justify-center gap-1.5 mt-4 disabled:opacity-50">
+                            {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                            {isLoading ? "Completing..." : "Complete Task"}
+                          </button>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Not joined message */}
+      {currentUser && !isAlreadyEntered && !isCompleted && raffle && (
+        <section className="py-16 px-4">
+          <div className="max-w-md mx-auto text-center">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8">
+              <Zap size={32} className="mx-auto text-white/20 mb-3" />
+              <h3 className="text-lg font-black mb-1">Earn More Tickets</h3>
+              <p className="text-white/50 text-sm mb-4">Join the raffle first to unlock bonus ticket challenges.</p>
+              {needsSubscription ? (
+                <button onClick={() => setShowPurchaseModal(true)}
+                  className="h-11 px-6 rounded-xl text-white text-xs font-black inline-flex items-center gap-2"
+                  style={{ backgroundColor: raffleAccent }}>
+                  <Music size={16} /> Join Raffle
+                </button>
+              ) : needsAuth ? (
+                <button onClick={() => setShowLogin(true)}
+                  className="h-11 px-6 rounded-xl text-white text-xs font-black inline-flex items-center gap-2"
+                  style={{ backgroundColor: raffleAccent }}>
+                  <LogIn size={16} /> Log In to Join
+                </button>
+              ) : null}
+            </div>
           </div>
         </section>
       )}
@@ -1260,7 +1492,7 @@ export default function RafflePage() {
 
       {/* ===== WINNER ANNOUNCEMENT ===== */}
       {isWinnerAnnounced && winnersQuery && winnersQuery.length > 0 && (
-        <section className="py-16 px-4">
+        <section id="winners-section" className="py-16 px-4">
           <div className="max-w-3xl mx-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -1298,7 +1530,7 @@ export default function RafflePage() {
       )}
 
       {/* ===== PRIZE SECTION ===== */}
-      <section className="py-16 px-4">
+      <section id="prize-section" className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1527,3 +1759,17 @@ export default function RafflePage() {
     </div>
   );
 }
+
+const PLATFORM_ICONS: Record<string, React.ReactNode> = {
+  X: <Twitter size={16} />,
+  Instagram: <Instagram size={16} />,
+  TikTok: <Music size={16} />,
+  Facebook: <Users size={16} />,
+  YouTube: <Youtube size={16} />,
+  WhatsApp: <MessageCircle size={16} />,
+  Telegram: <SendIcon size={16} />,
+  Discord: <Smartphone size={16} />,
+  Spotify: <Music size={16} />,
+  Website: <Globe size={16} />,
+  Custom: <Link2 size={16} />,
+};
