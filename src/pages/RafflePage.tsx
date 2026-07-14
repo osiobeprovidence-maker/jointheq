@@ -20,12 +20,11 @@ import { SpotifyPurchaseModal } from "../components/raffle/SpotifyPurchaseModal"
 
 const SPOTIFY_GREEN = "#1DB954";
 const SPOTIFY_DARK = "#191414";
-const DRAW_DATE = new Date("2026-07-18T23:59:59+01:00");
 const BASE_URL = "https://jointheq.sbs";
 
-function getTimeRemaining() {
+function getTimeRemaining(targetDate: number) {
   const now = Date.now();
-  const diff = DRAW_DATE.getTime() - now;
+  const diff = targetDate - now;
   if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
   return {
     days: Math.floor(diff / (1000 * 60 * 60 * 24)),
@@ -150,14 +149,16 @@ function Confetti({ active }: { active: boolean }) {
   );
 }
 
-function CountdownTimer({ expired, showWinner }: { expired: boolean; showWinner?: boolean }) {
-  const [remaining, setRemaining] = useState(getTimeRemaining);
+function CountdownTimer({ targetDate, expired, showWinner, raffle }: { targetDate?: number; expired: boolean; showWinner?: boolean; raffle?: any }) {
+  const [remaining, setRemaining] = useState(() => getTimeRemaining(targetDate || Date.now() + 86400000));
 
   useEffect(() => {
     if (expired) return;
-    const interval = setInterval(() => setRemaining(getTimeRemaining()), 1000);
+    const tick = () => setRemaining(getTimeRemaining(targetDate || Date.now() + 86400000));
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [expired]);
+  }, [expired, targetDate]);
 
   if (showWinner) {
     return (
@@ -171,15 +172,25 @@ function CountdownTimer({ expired, showWinner }: { expired: boolean; showWinner?
   }
 
   if (expired) {
+    if (raffle?.frequency && raffle.frequency !== "one_time" && raffle.nextDrawDate && raffle.nextDrawDate > Date.now()) {
+      return <CountdownTimer targetDate={raffle.nextDrawDate} expired={false} raffle={raffle} />;
+    }
     return (
       <div className="flex flex-col items-center gap-2">
         <div className="w-16 h-16 rounded-full bg-[#1DB954]/20 flex items-center justify-center">
           <Sparkles size={32} className="text-[#1DB954]" />
         </div>
-        <p className="text-[#1DB954] font-black text-lg">Winner Being Selected</p>
+        <p className="text-[#1DB954] font-black text-lg">Draw In Progress</p>
       </div>
     );
   }
+
+  const targetDateObj = targetDate ? new Date(targetDate) : new Date();
+  const drawLabel = raffle?.frequency === "weekly"
+    ? ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][targetDateObj.getDay()]
+    : raffle?.frequency === "monthly"
+    ? `${targetDateObj.getDate()} ${targetDateObj.toLocaleString('default', { month: 'short' })}`
+    : "Draw";
 
   const units = [
     { label: "Days", value: remaining.days },
@@ -189,6 +200,16 @@ function CountdownTimer({ expired, showWinner }: { expired: boolean; showWinner?
   ];
 
   return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="text-center mb-1">
+        <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">
+          {raffle?.frequency && raffle.frequency !== "one_time" ? `Next Draw` : `Draw`}
+        </p>
+        <p className="text-sm font-black text-white mt-0.5">
+          {drawLabel}
+          {raffle?.drawTime && ` at ${raffle.drawTime}`}
+        </p>
+      </div>
     <div className="flex gap-3 sm:gap-4">
       {units.map((u) => (
         <div key={u.label} className="text-center">
@@ -202,6 +223,7 @@ function CountdownTimer({ expired, showWinner }: { expired: boolean; showWinner?
           </span>
         </div>
       ))}
+    </div>
     </div>
   );
 }
@@ -629,7 +651,7 @@ export default function RafflePage() {
               <div className="relative">
                 <VinylRecord size={160} />
                 <div className="absolute -bottom-4 -right-4 bg-[#1DB954] text-white text-xs font-black px-4 py-2 rounded-full shadow-lg shadow-[#1DB954]/30">
-                  ₦5,000 Prize
+                  ₦{(raffle?.prizeAmount || 5000).toLocaleString()} Prize
                 </div>
               </div>
             </motion.div>
@@ -642,7 +664,9 @@ export default function RafflePage() {
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             <AudioWave />
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Draw Date: 18 July 2026</p>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">
+              {raffle?.frequency && raffle.frequency !== "one_time" ? "Recurring Draw" : `Draw: ${raffle?.drawDate ? new Date(raffle.drawDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBA'}`}
+            </p>
             <AudioWave />
           </motion.div>
 
@@ -652,7 +676,7 @@ export default function RafflePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
           >
-            <CountdownTimer expired={raffleExpired && !isWinnerAnnounced} showWinner={isWinnerAnnounced} />
+            <CountdownTimer targetDate={raffle?.nextDrawDate || raffle?.drawDate} expired={raffleExpired && !isWinnerAnnounced} showWinner={isWinnerAnnounced} raffle={raffle} />
           </motion.div>
         </div>
       </section>

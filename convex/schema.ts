@@ -1442,8 +1442,57 @@ export default defineSchema({
         createdAt: v.number(),
         updatedAt: v.number(),
         winnerAnnounced: v.optional(v.boolean()),
+        // New scheduling fields
+        frequency: v.optional(v.union(v.literal("weekly"), v.literal("monthly"), v.literal("one_time"))),
+        drawDay: v.optional(v.number()),
+        drawTime: v.optional(v.string()),
+        startDate: v.optional(v.number()),
+        endDate: v.optional(v.number()),
+        lastDrawDate: v.optional(v.number()),
+        nextDrawDate: v.optional(v.number()),
+        // Automation fields
+        autoDraw: v.optional(v.boolean()),
+        autoPublish: v.optional(v.boolean()),
+        autoNotify: v.optional(v.boolean()),
+        autoGenerateNext: v.optional(v.boolean()),
+        autoLockEntries: v.optional(v.boolean()),
+        // Prize configuration
+        numberOfWinners: v.optional(v.number()),
+        prizeBreakdown: v.optional(v.array(v.object({
+            position: v.number(),
+            label: v.string(),
+            amount: v.number(),
+        }))),
+        // Eligibility rules
+        eligiblePlans: v.optional(v.array(v.string())),
+        minSubscriptionAge: v.optional(v.number()),
+        minReferrals: v.optional(v.number()),
+        region: v.optional(v.string()),
+        // Draw round tracking
+        drawRound: v.optional(v.number()),
+        // Referral settings
+        referralEnabled: v.optional(v.boolean()),
+        maxReferralTickets: v.optional(v.number()),
+        maxReferralsPerUser: v.optional(v.number()),
+        referralCampaignStart: v.optional(v.number()),
+        referralCampaignEnd: v.optional(v.number()),
+        // Eligibility rules
+        eligibilityRules: v.optional(v.array(v.object({
+            field: v.string(),
+            operator: v.string(),
+            value: v.string(),
+        }))),
+        // Notification settings
+        notificationSettings: v.optional(v.object({
+            onEntry: v.boolean(),
+            onReferral: v.boolean(),
+            onWinnerAnnounce: v.boolean(),
+            onDrawReminder: v.boolean(),
+            onPrizeClaimed: v.boolean(),
+        })),
     }).index("by_slug", ["slug"])
-        .index("by_status", ["status"]),
+        .index("by_status", ["status"])
+        .index("by_nextDrawDate", ["nextDrawDate"]),
 
     raffle_entries: defineTable({
         raffleId: v.id("raffles"),
@@ -1452,9 +1501,11 @@ export default defineSchema({
         ticketCount: v.number(),
         enteredAt: v.number(),
         referralSource: v.optional(v.string()),
+        drawRound: v.optional(v.number()),
     }).index("by_raffle_user", ["raffleId", "userId"])
         .index("by_raffle", ["raffleId"])
-        .index("by_user", ["userId"]),
+        .index("by_user", ["userId"])
+        .index("by_raffle_round", ["raffleId", "drawRound"]),
 
     raffle_referrals: defineTable({
         raffleId: v.id("raffles"),
@@ -1479,7 +1530,9 @@ export default defineSchema({
         prize: v.number(),
         position: v.number(),
         announcedAt: v.number(),
+        drawRound: v.optional(v.number()),
     }).index("by_raffle", ["raffleId"])
-        .index("by_user", ["userId"]),
+        .index("by_user", ["userId"])
+        .index("by_raffle_round", ["raffleId", "drawRound"]),
 });
 
