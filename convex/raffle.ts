@@ -20,11 +20,11 @@ async function hasActiveSpotifySubscription(ctx: any, userId: Id<"users">): Prom
     if (slot.status !== "filled" && slot.status !== "closing") continue;
     const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
     const platformName = (account as any)?.platform || (account as any)?.name || "";
-    if (platformName.toLowerCase() === "spotify") return true;
+    if (platformName.toLowerCase().includes("spotify")) return true;
     const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
     if (group) {
       const catalog = group.subscription_catalog_id ? await ctx.db.get(group.subscription_catalog_id) : null;
-      if (catalog && (catalog as any).name?.toLowerCase() === "spotify") return true;
+      if (catalog && (catalog as any).name?.toLowerCase().includes("spotify")) return true;
     }
   }
 
@@ -34,7 +34,7 @@ async function hasActiveSpotifySubscription(ctx: any, userId: Id<"users">): Prom
     .collect();
 
   for (const m of migrated) {
-    if ((m as any).platform?.toLowerCase() === "spotify" && (m as any).status === "active") return true;
+    if ((m as any).platform?.toLowerCase().includes("spotify") && (m as any).status === "active") return true;
   }
 
   return false;

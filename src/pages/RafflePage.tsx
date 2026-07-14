@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import type { User } from "../types";
 import { RaffleHeader } from "../components/raffle/RaffleHeader";
 import { SpotifyPurchaseModal } from "../components/raffle/SpotifyPurchaseModal";
+import { useSubscriptionStatus } from "../hooks/useSubscription";
 
 const SPOTIFY_GREEN = "#1DB954";
 const SPOTIFY_DARK = "#191414";
@@ -437,6 +438,8 @@ export default function RafflePage() {
 
   const autoEnterMutation = useMutation(api.raffle.autoEnterForSpotifyPurchase);
 
+  const { hasActive: hasSpotifySubscription, isLoading: loadingSubscription } = useSubscriptionStatus(convexUserId, "spotify");
+
   const bonusTasksQuery = useQuery(
     api.raffle.getBonusTasks,
     raffleId ? { raffleId } : "skip"
@@ -756,11 +759,15 @@ export default function RafflePage() {
                     >
                       <CheckCircle2 size={16} /> You're Entered
                     </button>
+                  ) : queryEligibility === undefined && currentUser ? (
+                    <div className="h-12 px-8 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 text-white/40 text-xs font-black flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin" /> Checking eligibility...
+                    </div>
                   ) : isEligible && !autoEnterAttempted ? (
                     <div className="h-12 px-8 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-black flex items-center gap-2">
                       <Loader2 size={16} className="animate-spin" /> Auto-Entering...
                     </div>
-                  ) : needsSubscription ? (
+                  ) : needsSubscription && !hasSpotifySubscription ? (
                     <button
                       onClick={() => setShowPurchaseModal(true)}
                       className="h-12 px-8 rounded-2xl text-white text-xs font-black transition-all flex items-center gap-2 shadow-lg"
@@ -770,7 +777,7 @@ export default function RafflePage() {
                     </button>
                   ) : (
                     <div className="flex items-center gap-2 text-amber-400 text-sm font-bold">
-                      <AlertCircle size={16} /> Verification Pending
+                      <AlertCircle size={16} /> Enter Raffle
                     </div>
                   )}
                   <button
@@ -1383,7 +1390,11 @@ export default function RafflePage() {
               <Zap size={32} className="mx-auto text-white/20 mb-3" />
               <h3 className="text-lg font-black mb-1">Earn More Tickets</h3>
               <p className="text-white/50 text-sm mb-4">Join the raffle first to unlock bonus ticket challenges.</p>
-              {needsSubscription ? (
+              {loadingSubscription && queryEligibility === undefined ? (
+                <div className="h-11 px-6 rounded-xl bg-white/10 text-white/40 text-xs font-black inline-flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" /> Checking...
+                </div>
+              ) : needsSubscription && !hasSpotifySubscription ? (
                 <button onClick={() => setShowPurchaseModal(true)}
                   className="h-11 px-6 rounded-xl text-white text-xs font-black inline-flex items-center gap-2"
                   style={{ backgroundColor: raffleAccent }}>

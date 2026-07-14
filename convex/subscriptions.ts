@@ -1836,3 +1836,70 @@ export const adminUpdateFullListing = mutation({
         return { success: true };
     }
 });
+
+export const getUserSubscriptionStatus = query({
+    args: {
+        userId: v.id("users"),
+        platform: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const slots = await ctx.db
+            .query("subscription_slots")
+            .withIndex("by_user", (q: any) => q.eq("user_id", args.userId))
+            .collect();
+
+        const activeSlots = [];
+        for (const slot of slots) {
+            if (slot.status !== "filled" && slot.status !== "closing") continue;
+            const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
+            const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
+            const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
+            const catalog = group?.subscription_catalog_id ? await ctx.db.get(group.subscription_catalog_id) : null;
+
+            let platform = (account as any)?.platform || (account as any)?.name || (catalog as any)?.name || "";
+            let slotName = (slotType as any)?.name || "";
+            let subName = (account as any)?.platform || (account as any)?.name || "";
+
+            if (args.platform && !platform.toLowerCase().includes(args.platform.toLowerCase())) continue;
+
+            activeSlots.push({
+                _id: slot._id,
+                slot_name: slotName,
+                sub_name: subName,
+                platform,
+                status: slot.status,
+                renewal_date: slot.renewal_date,
+                auto_renew: slot.auto_renew ?? false,
+                removal_scheduled_at: slot.removal_scheduled_at,
+                allocation: slot.allocation,
+            });
+        }
+
+        const migrated = await ctx.db
+            .query("migrated_subscriptions")
+            .withIndex("by_user", (q: any) => q.eq("user_id", args.userId))
+            .collect();
+
+        for (const m of migrated) {
+            if ((m as any).status !== "active") continue;
+            if (args.platform && !(m as any).platform?.toLowerCase().includes(args.platform.toLowerCase())) continue;
+            activeSlots.push({
+                _id: m._id,
+                slot_name: (m as any).profile_name || "",
+                sub_name: (m as any).platform || "",
+                platform: (m as any).platform || "",
+                status: m.status,
+                renewal_date: (m as any).last_payment_date,
+                auto_renew: false,
+                removal_scheduled_at: undefined,
+                allocation: (m as any).assigned_group || "",
+            });
+        }
+
+        return {
+            hasActiveSubscription: activeSlots.length > 0,
+            activeSlots,
+            totalActive: activeSlots.length,
+        };
+    },
+});

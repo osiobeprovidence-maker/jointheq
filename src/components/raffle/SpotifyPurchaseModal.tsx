@@ -59,6 +59,10 @@ export function SpotifyPurchaseModal({
   const [referralLink, setReferralLink] = useState("");
 
   const subscriptions = useQuery(api.subscriptions.getActiveSubscriptions) || [];
+  const userStatus = useQuery(
+    api.subscriptions.getUserSubscriptionStatus,
+    currentUser ? { userId: currentUser._id as Id<"users">, platform: "spotify" } : "skip"
+  );
   const joinSlotMutation = useMutation(api.subscriptions.joinSlot);
   const verifyWalletFundingAction = useAction(api.paystack.verifyWalletFunding);
 
@@ -299,6 +303,24 @@ export function SpotifyPurchaseModal({
                           Log In
                         </button>
                       </div>
+                    </div>
+                  ) : userStatus === undefined ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 size={24} className="animate-spin text-white/30" />
+                    </div>
+                  ) : userStatus.hasActiveSubscription ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 size={28} className="text-emerald-400" />
+                      </div>
+                      <h3 className="text-lg font-black mb-2">Spotify Already Active</h3>
+                      <p className="text-white/50 text-sm mb-4">You already have an active Spotify subscription. No need to purchase another one!</p>
+                      <button
+                        onClick={onClose}
+                        className="h-11 px-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xs font-black hover:bg-white/20"
+                      >
+                        Close
+                      </button>
                     </div>
                   ) : spotifySlots.length === 0 ? (
                     <div className="text-center py-12">
