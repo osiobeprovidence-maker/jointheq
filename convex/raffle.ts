@@ -1629,6 +1629,7 @@ export const getRaffleBonusStats = query({
     return { totalBonusTickets, uniqueUsers, totalCompletions: completions.length };
   },
 });
+export const getRaffleDashboardStats = query({
   args: {},
   handler: async (ctx) => {
     const allRaffles = await ctx.db.query("raffles").order("desc").collect();
