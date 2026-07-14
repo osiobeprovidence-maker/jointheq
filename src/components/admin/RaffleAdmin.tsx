@@ -801,6 +801,11 @@ function RaffleDetail({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold truncate">{task.name}</span>
+                        {task.type === "daily" ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-600 font-black">Daily</span>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-600 font-black">Permanent</span>
+                        )}
                         {task.isActive ? (
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-600 font-black">Active</span>
                         ) : (
@@ -811,6 +816,9 @@ function RaffleDetail({
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-black text-emerald-600">+{task.rewardTickets} tickets</span>
                         <span className="text-[9px] text-zinc-400">{task.verificationMethod.replace(/_/g, ' ')}</span>
+                        {task.type === "daily" && task.activeDate && (
+                          <span className="text-[9px] text-violet-400">{new Date(task.activeDate).toLocaleDateString()}</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1732,6 +1740,8 @@ function BonusTaskEditor({ task, onSave, onClose }: {
   const [rewardTickets, setRewardTickets] = useState(String(task?.rewardTickets || ""));
   const [verificationMethod, setVerificationMethod] = useState(task?.verificationMethod || "button_click");
   const [destinationUrl, setDestinationUrl] = useState(task?.destinationUrl || "");
+  const [type, setType] = useState(task?.type || "permanent");
+  const [activeDate, setActiveDate] = useState(task?.activeDate ? new Date(task.activeDate).toISOString().split("T")[0] : "");
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -1748,8 +1758,10 @@ function BonusTaskEditor({ task, onSave, onClose }: {
       rewardTickets: Number(rewardTickets),
       verificationMethod,
       destinationUrl: destinationUrl.trim() || undefined,
+      type,
+      activeDate: type === "daily" && activeDate ? new Date(activeDate).getTime() : undefined,
     });
-  }, [name, description, platform, icon, rewardTickets, verificationMethod, destinationUrl, onSave]);
+  }, [name, description, platform, icon, rewardTickets, verificationMethod, destinationUrl, type, activeDate, onSave]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1813,6 +1825,24 @@ function BonusTaskEditor({ task, onSave, onClose }: {
             <input value={destinationUrl} onChange={e => setDestinationUrl(e.target.value)}
               placeholder="https://x.com/jointheq"
               className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Type</label>
+              <select value={type} onChange={e => setType(e.target.value)}
+                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1">
+                <option value="permanent">Permanent</option>
+                <option value="daily">Daily</option>
+              </select>
+            </div>
+            {type === "daily" && (
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Schedule Date</label>
+                <input value={activeDate} onChange={e => setActiveDate(e.target.value)}
+                  type="date"
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+              </div>
+            )}
           </div>
 
           <button type="submit"

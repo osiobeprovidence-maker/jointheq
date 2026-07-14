@@ -1457,6 +1457,8 @@ export const createBonusTask = mutation({
     rewardTickets: v.number(),
     verificationMethod: v.string(),
     destinationUrl: v.optional(v.string()),
+    type: v.optional(v.string()),
+    activeDate: v.optional(v.number()),
     createdBy: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -1476,6 +1478,8 @@ export const createBonusTask = mutation({
       rewardTickets: args.rewardTickets,
       verificationMethod: args.verificationMethod,
       destinationUrl: args.destinationUrl,
+      type: args.type || "permanent",
+      activeDate: args.activeDate,
       isActive: true,
       displayOrder: maxOrder + 1,
       createdBy: args.createdBy,
@@ -1499,6 +1503,8 @@ export const updateBonusTask = mutation({
     destinationUrl: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
     displayOrder: v.optional(v.number()),
+    type: v.optional(v.string()),
+    activeDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { taskId, ...fields } = args;
@@ -1532,14 +1538,19 @@ export const getBonusTasks = query({
   args: {
     raffleId: v.id("raffles"),
     includeInactive: v.optional(v.boolean()),
+    type: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let tasks = await ctx.db
       .query("bonus_tasks")
-      .withIndex("by_raffle", (q: any) => q.eq("raffleId", args.raffleId))
+      .withIndex(args.type ? "by_raffle_type" : "by_raffle", (q: any) =>
+        args.type ? q.eq("raffleId", args.raffleId).eq("type", args.type) : q.eq("raffleId", args.raffleId)
+      )
       .collect();
 
-    if (!args.includeInactive) {
+    if (!args.type && !args.includeInactive) {
+      tasks = tasks.filter(t => t.isActive);
+    } else if (args.type && !args.includeInactive) {
       tasks = tasks.filter(t => t.isActive);
     }
 
@@ -1600,6 +1611,111 @@ export const completeBonusTask = mutation({
           category: "raffle",
           action: "Bonus task completed",
           description: `Completed "${task.name}" (+${task.rewardTickets} tickets)`,
+          status: "success",
+          amount: task.rewardTickets,
+          metadata: { taskId: args.taskId, raffleId: args.raffleId, platform: task.platform },
+        });
+      } catch (e) {
+        console.error("Failed to log bonus task activity:", e);
+      }
+    }
+
+    return { success: true, ticketsAwarded: task.rewardTickets };
+  },
+});
+
+export const recordBonusTaskVisit = mutation({
+  args: {
+    raffleId: v.id("raffles"),
+    taskId: v.id("bonus_tasks"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+    if (!task.isActive) throw new Error("Task is not active");
+
+    const existing = await ctx.db
+      .query("user_bonus_completions")
+      .withIndex("by_user_task", (q: any) =>
+        q.eq("userId", args.userId).eq("taskId", args.taskId)
+      )
+      .unique();
+
+    if (existing && existing.status === "verified") throw new Error("Task already completed");
+    if (existing && existing.status === "completed") throw new Error("Task already completed");
+
+    const now = Date.now();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        verificationStep: "visited",
+        visitRecordedAt: now,
+        verificationStartedAt: existing.verificationStartedAt || now,
+      });
+      return { success: true, destinationUrl: task.destinationUrl };
+    }
+
+    await ctx.db.insert("user_bonus_completions", {
+      raffleId: args.raffleId,
+      taskId: args.taskId,
+      userId: args.userId,
+      status: "pending",
+      ticketsAwarded: 0,
+      completedAt: now,
+      verificationStep: "visited",
+      verificationStartedAt: now,
+      visitRecordedAt: now,
+    });
+
+    return { success: true, destinationUrl: task.destinationUrl };
+  },
+});
+
+export const verifyBonusTask = mutation({
+  args: {
+    raffleId: v.id("raffles"),
+    taskId: v.id("bonus_tasks"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+    if (!task.isActive) throw new Error("Task is not active");
+
+    const completion = await ctx.db
+      .query("user_bonus_completions")
+      .withIndex("by_user_task", (q: any) =>
+        q.eq("userId", args.userId).eq("taskId", args.taskId)
+      )
+      .unique();
+
+    if (!completion) throw new Error("Task visit not recorded. Please start the task first.");
+    if (completion.status === "verified" || completion.status === "completed") throw new Error("Task already completed");
+    if (completion.verificationStep !== "visited") throw new Error("Please visit the page first, then verify.");
+
+    const elapsed = Date.now() - (completion.visitRecordedAt || completion.verificationStartedAt || 0);
+    const requiredWait = 15000;
+    if (elapsed < requiredWait) {
+      throw new Error(`Please wait ${Math.ceil((requiredWait - elapsed) / 1000)} more seconds before verifying.`);
+    }
+
+    await ctx.db.patch(completion._id, {
+      status: "verified",
+      ticketsAwarded: task.rewardTickets,
+      verificationStep: "verified",
+      verifiedAt: Date.now(),
+      completedAt: Date.now(),
+    });
+
+    const user = await ctx.db.get(args.userId);
+    if (user) {
+      try {
+        await createUserActivityLog(ctx, {
+          userId: args.userId,
+          category: "raffle",
+          action: "Bonus task verified",
+          description: `Verified "${task.name}" (+${task.rewardTickets} tickets)`,
           status: "success",
           amount: task.rewardTickets,
           metadata: { taskId: args.taskId, raffleId: args.raffleId, platform: task.platform },

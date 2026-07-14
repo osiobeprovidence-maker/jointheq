@@ -386,6 +386,7 @@ export default function RafflePage() {
   const [showRegister, setShowRegister] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
+  const [verifyingStates, setVerifyingStates] = useState<Record<string, { step: string; timerEnd: number }>>({});
   const [showNav, setShowNav] = useState(false);
 
   const convexUserId = (currentUser?._id || "") as Id<"users">;
@@ -445,6 +446,8 @@ export default function RafflePage() {
     raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
   );
   const completeBonusTaskMutation = useMutation(api.raffle.completeBonusTask);
+  const recordBonusTaskVisitMutation = useMutation(api.raffle.recordBonusTaskVisit);
+  const verifyBonusTaskMutation = useMutation(api.raffle.verifyBonusTask);
 
   useEffect(() => {
     if (raffleQuery !== undefined) {
@@ -534,22 +537,73 @@ export default function RafflePage() {
     if (urls[platform]) window.open(urls[platform], "_blank");
   }, [referralLink, raffle]);
 
-  const handleCompleteTask = useCallback(async (taskId: string) => {
+  const handleRecordVisit = useCallback(async (taskId: string, destinationUrl?: string) => {
     if (!raffleId || !currentUser || completingTaskId) return;
     setCompletingTaskId(taskId);
     try {
-      const result = await completeBonusTaskMutation({
+      await recordBonusTaskVisitMutation({
         raffleId,
         taskId: taskId as any,
         userId: convexUserId,
       });
-      toast.success(`🎉 You earned +${result.ticketsAwarded} raffle tickets!`);
+
+      if (destinationUrl) {
+        window.open(destinationUrl, "_blank", "noopener,noreferrer");
+      }
+
+      const timerDuration = 25000;
+      setVerifyingStates(prev => ({
+        ...prev,
+        [taskId]: { step: "waiting", timerEnd: Date.now() + timerDuration },
+      }));
     } catch (err: any) {
-      toast.error(err?.message || "Failed to complete task");
+      toast.error(err?.message || "Failed to start task");
     } finally {
       setCompletingTaskId(null);
     }
-  }, [raffleId, currentUser, convexUserId, completeBonusTaskMutation, completingTaskId]);
+  }, [raffleId, currentUser, convexUserId, recordBonusTaskVisitMutation, completingTaskId]);
+
+  const handleVerifyTask = useCallback(async (taskId: string) => {
+    if (!raffleId || !currentUser || completingTaskId) return;
+    setCompletingTaskId(taskId);
+    try {
+      const result = await verifyBonusTaskMutation({
+        raffleId,
+        taskId: taskId as any,
+        userId: convexUserId,
+      });
+      toast.success(`You earned +${result.ticketsAwarded} raffle tickets!`);
+      setVerifyingStates(prev => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to verify task");
+    } finally {
+      setCompletingTaskId(null);
+    }
+  }, [raffleId, currentUser, convexUserId, verifyBonusTaskMutation, completingTaskId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setVerifyingStates(prev => {
+        const next: Record<string, { step: string; timerEnd: number }> = {};
+        let changed = false;
+        for (const [taskId, state] of Object.entries(prev)) {
+          if (state.step === "waiting" && now >= state.timerEnd) {
+            next[taskId] = { ...state, step: "verify" };
+            changed = true;
+          } else {
+            next[taskId] = state;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const completionMap = useMemo(() => {
     const map = new Map<string, any>();
@@ -558,6 +612,39 @@ export default function RafflePage() {
     });
     return map;
   }, [userBonusCompletionsQuery]);
+
+  const permanentTasks = useMemo(() =>
+    (bonusTasksQuery || []).filter((t: any) => t.type !== "daily"),
+    [bonusTasksQuery]
+  );
+
+  const dailyTasks = useMemo(() =>
+    (bonusTasksQuery || []).filter((t: any) => t.type === "daily"),
+    [bonusTasksQuery]
+  );
+
+  const getNextDailyReset = useCallback(() => {
+    const now = new Date();
+    const nextReset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+    return nextReset.getTime();
+  }, []);
+
+  const [dailyResetCountdown, setDailyResetCountdown] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const now = Date.now();
+      const nextReset = getNextDailyReset();
+      const diff = Math.max(0, nextReset - now);
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      setDailyResetCountdown(`${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [getNextDailyReset]);
 
   if (loading) {
     return (
@@ -1082,7 +1169,7 @@ export default function RafflePage() {
               </div>
 
               {/* Progress Card */}
-              {bonusTasksQuery && bonusTasksQuery.length > 0 && (
+              {(permanentTasks.length > 0 || dailyTasks.length > 0) && (
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-5 mb-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
@@ -1090,9 +1177,13 @@ export default function RafflePage() {
                         <Target size={16} style={{ color: raffleAccent }} /> Bonus Challenges
                       </h3>
                       {(() => {
-                        const completedCount = (bonusTasksQuery || []).filter((t: any) => completionMap.has(t._id)).length;
-                        const totalCount = bonusTasksQuery.length;
-                        const totalPotential = bonusTasksQuery.reduce((sum: number, t: any) => sum + t.rewardTickets, 0);
+                        const allTasks = [...permanentTasks, ...dailyTasks];
+                        const completedCount = allTasks.filter((t: any) => {
+                          const c = completionMap.get(t._id);
+                          return c && (c.status === "verified" || c.status === "completed");
+                        }).length;
+                        const totalCount = allTasks.length;
+                        const totalPotential = allTasks.reduce((sum: number, t: any) => sum + t.rewardTickets, 0);
                         const earnedBonus = userTickets?.bonusTaskTickets ?? 0;
                         const remaining = totalPotential - earnedBonus;
                         const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -1134,44 +1225,150 @@ export default function RafflePage() {
                   <p className="text-white/40 text-sm font-bold">There are no bonus ticket challenges available right now. Check back soon!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {bonusTasksQuery.map((task: any) => {
-                    const completion = completionMap.get(task._id);
-                    const isCompleted = !!completion;
-                    const isLoading = completingTaskId === task._id;
-                    return (
-                      <motion.div key={task._id} layout
-                        className={`rounded-2xl p-5 border transition-all ${isCompleted ? "border-emerald-500/30 bg-emerald-500/5" : "bg-white/5 backdrop-blur-md border-white/10 hover:border-white/20"}`}>
-                        <div className="flex items-start gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isCompleted ? "bg-emerald-500/20" : "bg-white/10"}`}
-                            style={!isCompleted ? { color: raffleAccent } : { color: "#10b981" }}>
-                            {isCompleted ? <CheckCircle size={18} /> : PLATFORM_ICONS[task.platform] || <Zap size={18} />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <h4 className="text-sm font-black truncate">{task.name}</h4>
-                              {isCompleted && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-black shrink-0">Completed</span>
+                <>
+                  {/* Permanent Challenges */}
+                  {permanentTasks.length > 0 && (
+                    <div className="mb-8">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <h3 className="text-sm font-black uppercase tracking-widest text-white/60">Permanent Challenges</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {permanentTasks.map((task: any) => {
+                          const completion = completionMap.get(task._id);
+                          const isVerified = completion && (completion.status === "verified" || completion.status === "completed");
+                          const vState = verifyingStates[task._id];
+                          const isLoading = completingTaskId === task._id;
+                          const countdown = vState && vState.step === "waiting" ? Math.max(0, Math.ceil((vState.timerEnd - Date.now()) / 1000)) : 0;
+                          return (
+                            <motion.div key={task._id} layout
+                              className={`rounded-2xl p-5 border transition-all ${isVerified ? "border-emerald-500/30 bg-emerald-500/5" : vState?.step === "verify" ? "border-violet-500/30 bg-violet-500/10" : "bg-white/5 backdrop-blur-md border-white/10 hover:border-white/20"}`}>
+                              <div className="flex items-start gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isVerified ? "bg-emerald-500/20" : "bg-white/10"}`}
+                                  style={!isVerified ? { color: raffleAccent } : { color: "#10b981" }}>
+                                  {isVerified ? <CheckCircle size={18} /> : PLATFORM_ICONS[task.platform] || <Zap size={18} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <h4 className="text-sm font-black truncate">{task.name}</h4>
+                                    {isVerified && (
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-black shrink-0">Completed</span>
+                                    )}
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-black shrink-0">Permanent</span>
+                                  </div>
+                                  {task.description && <p className="text-xs text-white/50 mt-0.5">{task.description}</p>}
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-xs font-black" style={{ color: raffleAccent }}>+{task.rewardTickets} ticket{task.rewardTickets !== 1 ? "s" : ""}</span>
+                                    <span className="text-[9px] text-white/30 font-medium">{task.platform}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              {!isVerified && (
+                                <div className="mt-4">
+                                  {!vState ? (
+                                    <button onClick={() => handleRecordVisit(task._id, task.destinationUrl)} disabled={isLoading}
+                                      className="w-full h-9 rounded-xl bg-white/10 text-white text-[10px] font-black hover:bg-white/20 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                      {isLoading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                                      {isLoading ? "Starting..." : "Complete Task"}
+                                    </button>
+                                  ) : vState.step === "waiting" ? (
+                                    <button disabled
+                                      className="w-full h-9 rounded-xl bg-white/5 text-white/50 text-[10px] font-black flex items-center justify-center gap-1.5 cursor-not-allowed">
+                                      <Loader2 size={12} className="animate-spin" />
+                                      Wait {countdown}s
+                                    </button>
+                                  ) : vState.step === "verify" ? (
+                                    <button onClick={() => handleVerifyTask(task._id)} disabled={isLoading}
+                                      className="w-full h-9 rounded-xl bg-violet-500/30 text-violet-300 text-[10px] font-black hover:bg-violet-500/40 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                      {isLoading ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                                      {isLoading ? "Verifying..." : "Verify Task"}
+                                    </button>
+                                  ) : null}
+                                </div>
                               )}
-                            </div>
-                            {task.description && <p className="text-xs text-white/50 mt-0.5">{task.description}</p>}
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-xs font-black" style={{ color: raffleAccent }}>+{task.rewardTickets} ticket{task.rewardTickets !== 1 ? "s" : ""}</span>
-                              <span className="text-[9px] text-white/30 font-medium">{task.platform}</span>
-                            </div>
-                          </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Daily Challenges */}
+                  {dailyTasks.length > 0 && (
+                    <div className="mb-8">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                          <h3 className="text-sm font-black uppercase tracking-widest text-white/60">Daily Challenges</h3>
                         </div>
-                        {!isCompleted && (
-                          <button onClick={() => handleCompleteTask(task._id)} disabled={isLoading}
-                            className="w-full h-9 rounded-xl bg-white/10 text-white text-[10px] font-black hover:bg-white/20 transition-all flex items-center justify-center gap-1.5 mt-4 disabled:opacity-50">
-                            {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-                            {isLoading ? "Completing..." : "Complete Task"}
-                          </button>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-white/40 font-bold">
+                          <Clock size={12} />
+                          Resets in <span className="text-white font-black">{dailyResetCountdown}</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {dailyTasks.map((task: any) => {
+                          const completion = completionMap.get(task._id);
+                          const todayStart = new Date();
+                          todayStart.setUTCHours(0, 0, 0, 0);
+                          const completedToday = completion && completion.completedAt >= todayStart.getTime();
+                          const isVerified = completion && (completion.status === "verified" || completion.status === "completed") && completedToday;
+                          const vState = verifyingStates[task._id];
+                          const isLoading = completingTaskId === task._id;
+                          const countdown = vState && vState.step === "waiting" ? Math.max(0, Math.ceil((vState.timerEnd - Date.now()) / 1000)) : 0;
+                          return (
+                            <motion.div key={task._id} layout
+                              className={`rounded-2xl p-5 border transition-all ${isVerified ? "border-emerald-500/30 bg-emerald-500/5" : vState?.step === "verify" ? "border-violet-500/30 bg-violet-500/10" : "bg-white/5 backdrop-blur-md border-white/10 hover:border-white/20"}`}>
+                              <div className="flex items-start gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isVerified ? "bg-emerald-500/20" : "bg-white/10"}`}
+                                  style={!isVerified ? { color: raffleAccent } : { color: "#10b981" }}>
+                                  {isVerified ? <CheckCircle size={18} /> : <RefreshCw size={16} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <h4 className="text-sm font-black truncate">{task.name}</h4>
+                                    {isVerified && (
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-black shrink-0">Completed</span>
+                                    )}
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-300 font-black shrink-0">Daily</span>
+                                  </div>
+                                  {task.description && <p className="text-xs text-white/50 mt-0.5">{task.description}</p>}
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-xs font-black" style={{ color: raffleAccent }}>+{task.rewardTickets} ticket{task.rewardTickets !== 1 ? "s" : ""}</span>
+                                    <span className="text-[9px] text-white/30 font-medium">{task.platform}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              {!isVerified && (
+                                <div className="mt-4">
+                                  {!vState ? (
+                                    <button onClick={() => handleRecordVisit(task._id, task.destinationUrl)} disabled={isLoading}
+                                      className="w-full h-9 rounded-xl bg-white/10 text-white text-[10px] font-black hover:bg-white/20 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                      {isLoading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
+                                      {isLoading ? "Starting..." : "Complete Task"}
+                                    </button>
+                                  ) : vState.step === "waiting" ? (
+                                    <button disabled
+                                      className="w-full h-9 rounded-xl bg-white/5 text-white/50 text-[10px] font-black flex items-center justify-center gap-1.5 cursor-not-allowed">
+                                      <Loader2 size={12} className="animate-spin" />
+                                      Wait {countdown}s
+                                    </button>
+                                  ) : vState.step === "verify" ? (
+                                    <button onClick={() => handleVerifyTask(task._id)} disabled={isLoading}
+                                      className="w-full h-9 rounded-xl bg-violet-500/30 text-violet-300 text-[10px] font-black hover:bg-violet-500/40 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                      {isLoading ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                                      {isLoading ? "Verifying..." : "Verify Task"}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           </div>

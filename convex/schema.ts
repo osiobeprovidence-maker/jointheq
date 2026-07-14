@@ -1535,11 +1535,14 @@ export default defineSchema({
         destinationUrl: v.optional(v.string()),
         isActive: v.boolean(),
         displayOrder: v.number(),
+        type: v.optional(v.string()), // "permanent" | "daily"
+        activeDate: v.optional(v.number()), // timestamp for daily tasks
         createdBy: v.id("users"),
         createdAt: v.number(),
         updatedAt: v.number(),
     }).index("by_raffle", ["raffleId"])
-        .index("by_raffle_active_order", ["raffleId", "isActive", "displayOrder"]),
+        .index("by_raffle_active_order", ["raffleId", "isActive", "displayOrder"])
+        .index("by_raffle_type", ["raffleId", "type"]),
 
     user_bonus_completions: defineTable({
         raffleId: v.id("raffles"),
@@ -1548,6 +1551,10 @@ export default defineSchema({
         status: v.string(),
         ticketsAwarded: v.number(),
         completedAt: v.number(),
+        verificationStep: v.optional(v.string()), // "pending_visit" | "visited" | "verified"
+        verificationStartedAt: v.optional(v.number()),
+        visitRecordedAt: v.optional(v.number()),
+        verifiedAt: v.optional(v.number()),
     }).index("by_user_task", ["userId", "taskId"])
         .index("by_user_raffle", ["userId", "raffleId"])
         .index("by_raffle", ["raffleId"])
