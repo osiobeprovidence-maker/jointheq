@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
+import { createUserActivityLog } from "./activityHelpers";
 
 function generateRaffleNumber(raffleSlug: string, drawDate: Date, sequence: number): string {
   const prefix = raffleSlug.slice(0, 2).toUpperCase();
@@ -274,6 +275,8 @@ export const enterRaffle = mutation({
       enteredAt: Date.now(),
     });
 
+    try { await createUserActivityLog(ctx, { userId: args.userId, category: "raffle", action: "Raffle entered", description: `Entered "${raffle.title}" — Ticket #${raffleNumber}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+
     return {
       success: true,
       raffleNumber,
@@ -400,6 +403,8 @@ export const completeReferral = mutation({
         ticketCount: entry.ticketCount + raffle.referralReward,
       });
     }
+
+    try { await createUserActivityLog(ctx, { userId: referral.inviterId, category: "raffle", action: "Referral completed", description: `Referral "${referral.inviteeName}" joined — earned ${raffle.referralReward} bonus ${raffle.referralReward === 1 ? "ticket" : "tickets"}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
     return { success: true, rewardTickets: raffle.referralReward };
   },
@@ -640,6 +645,8 @@ export const insertWinner = mutation({
       position: args.position,
       announcedAt: Date.now(),
     });
+
+    try { await createUserActivityLog(ctx, { userId: args.userId, category: "raffle", action: "Raffle won", description: `Won position #${args.position} — ₦${args.prize.toLocaleString()} prize`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
   },
 });
 
@@ -833,6 +840,8 @@ export const autoEnterForSpotifyPurchase = mutation({
       ticketCount: 1,
       enteredAt: Date.now(),
     });
+
+    try { await createUserActivityLog(ctx, { userId: args.userId, category: "raffle", action: "Auto-entered raffle", description: `Auto-entered "${raffle.title}" via Spotify purchase — Ticket #${raffleNumber}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
 
     const userReferrals = await ctx.db
       .query("raffle_referrals")

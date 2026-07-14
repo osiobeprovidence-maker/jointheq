@@ -6,7 +6,7 @@ export async function createUserActivityLog(
   ctx: any,
   args: {
     userId: Id<"users">;
-    category: "wallet" | "payment" | "subscription" | "referral" | "account" | "support";
+    category: "wallet" | "payment" | "subscription" | "referral" | "account" | "support" | "raffle" | "rewards" | "admin";
     action: string;
     description?: string;
     status?: "success" | "pending" | "failed";

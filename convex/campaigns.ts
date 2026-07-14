@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { createUserActivityLog } from "./activityHelpers";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // QUERIES
@@ -489,6 +490,7 @@ export const participate = mutation({
                                 description: `Referral bonus from: ${campaign.name}`,
                                 created_at: Date.now(),
                             });
+                            try { await createUserActivityLog(ctx, { userId: effectiveReferrerId, category: "rewards", action: "Referral BOOTS earned", description: `Earned ${actualBoots} BOOTS from "${campaign.name}" referral`, status: "success", amount: actualBoots }); } catch (e) { console.error("Failed to log activity:", e); }
                         }
                     }
                 }

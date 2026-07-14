@@ -509,6 +509,7 @@ export const joinSlot = mutation({
                 description: `Joined ${st.name} (Boots)`,
                 created_at: Date.now(),
             });
+            try { await createUserActivityLog(ctx, { userId: user._id, category: "rewards", action: "BOOTS spent on subscription", description: `Used ${boots_to_use} BOOTS to join "${st.name}"`, status: "success", amount: -boots_to_use }); } catch (e) { console.error("Failed to log activity:", e); }
         }
 
         // Fill the pre-existing slot
