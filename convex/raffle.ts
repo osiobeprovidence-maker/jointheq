@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query, action, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 
@@ -488,8 +488,13 @@ export const createRaffle = mutation({
     title: v.string(),
     slug: v.string(),
     banner: v.optional(v.string()),
+    accentColor: v.optional(v.string()),
     description: v.string(),
     prizeAmount: v.number(),
+    prizes: v.optional(v.array(v.object({
+      amount: v.number(),
+      label: v.string(),
+    }))),
     drawDate: v.number(),
     eligibilityType: v.string(),
     referralReward: v.number(),
@@ -512,8 +517,10 @@ export const createRaffle = mutation({
       title: args.title,
       slug: args.slug,
       banner: args.banner,
+      accentColor: args.accentColor,
       description: args.description,
       prizeAmount: args.prizeAmount,
+      prizes: args.prizes,
       drawDate: args.drawDate,
       status: "draft",
       eligibilityType: args.eligibilityType,
@@ -534,8 +541,13 @@ export const updateRaffle = mutation({
     title: v.optional(v.string()),
     slug: v.optional(v.string()),
     banner: v.optional(v.string()),
+    accentColor: v.optional(v.string()),
     description: v.optional(v.string()),
     prizeAmount: v.optional(v.number()),
+    prizes: v.optional(v.array(v.object({
+      amount: v.number(),
+      label: v.string(),
+    }))),
     drawDate: v.optional(v.number()),
     status: v.optional(v.string()),
     eligibilityType: v.optional(v.string()),
@@ -551,8 +563,10 @@ export const updateRaffle = mutation({
     if (args.title !== undefined) updates.title = args.title;
     if (args.slug !== undefined) updates.slug = args.slug;
     if (args.banner !== undefined) updates.banner = args.banner;
+    if (args.accentColor !== undefined) updates.accentColor = args.accentColor;
     if (args.description !== undefined) updates.description = args.description;
     if (args.prizeAmount !== undefined) updates.prizeAmount = args.prizeAmount;
+    if (args.prizes !== undefined) updates.prizes = args.prizes;
     if (args.drawDate !== undefined) updates.drawDate = args.drawDate;
     if (args.status !== undefined) updates.status = args.status;
     if (args.eligibilityType !== undefined) updates.eligibilityType = args.eligibilityType;
@@ -639,5 +653,263 @@ export const updateRaffleStatus = mutation({
       status: args.status,
       updatedAt: Date.now(),
     });
+  },
+});
+
+export const getRaffleStats = query({
+  args: { raffleId: v.id("raffles") },
+  handler: async (ctx, args) => {
+    const raffle = await ctx.db.get(args.raffleId);
+    if (!raffle) return null;
+
+    const entries = await ctx.db
+      .query("raffle_entries")
+      .withIndex("by_raffle", (q: any) => q.eq("raffleId", args.raffleId))
+      .collect();
+
+    const referrals = await ctx.db
+      .query("raffle_referrals")
+      .withIndex("by_raffle", (q: any) => q.eq("raffleId", args.raffleId))
+      .collect();
+
+    const totalParticipants = entries.length;
+    const totalTickets = entries.reduce((sum, e) => sum + e.ticketCount, 0);
+    const completedReferrals = referrals.filter((r: any) => r.status === "completed");
+    const totalReferrals = completedReferrals.length;
+    const daysRemaining = Math.max(0, Math.ceil((raffle.drawDate - Date.now()) / (1000 * 60 * 60 * 24)));
+
+    return {
+      totalParticipants,
+      totalTickets,
+      totalReferrals,
+      prizeAmount: raffle.prizeAmount,
+      drawDate: raffle.drawDate,
+      daysRemaining,
+      status: raffle.status,
+      winnerAnnounced: raffle.winnerAnnounced || false,
+    };
+  },
+});
+
+export const getLeaderboard = query({
+  args: { raffleId: v.id("raffles"), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const maxResults = args.limit || 10;
+    const entries = await ctx.db
+      .query("raffle_entries")
+      .withIndex("by_raffle", (q: any) => q.eq("raffleId", args.raffleId))
+      .collect();
+
+    const sorted = entries.sort((a, b) => b.ticketCount - a.ticketCount);
+    const top = sorted.slice(0, maxResults);
+
+    const leaderboard = await Promise.all(
+      top.map(async (entry, index) => {
+        const user = await ctx.db.get(entry.userId);
+        return {
+          rank: index + 1,
+          userId: entry.userId,
+          username: user?.username || user?.full_name || "Anonymous",
+          ticketCount: entry.ticketCount,
+          raffleNumber: entry.raffleNumber,
+        };
+      })
+    );
+
+    return leaderboard;
+  },
+});
+
+export const getTicketHistory = query({
+  args: { raffleId: v.id("raffles"), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const entry = await ctx.db
+      .query("raffle_entries")
+      .withIndex("by_raffle_user", (q: any) =>
+        q.eq("raffleId", args.raffleId).eq("userId", args.userId)
+      )
+      .unique();
+
+    if (!entry) return [];
+
+    const history: { type: string; label: string; tickets: number; date: number }[] = [];
+
+    history.push({
+      type: "purchase",
+      label: "Spotify Purchase",
+      tickets: 1,
+      date: entry.enteredAt,
+    });
+
+    const referrals = await ctx.db
+      .query("raffle_referrals")
+      .withIndex("by_inviter", (q: any) => q.eq("inviterId", args.userId))
+      .filter((q: any) => q.eq(q.field("raffleId"), args.raffleId))
+      .order("desc")
+      .collect();
+
+    for (const ref of referrals) {
+      if (ref.rewardGranted && ref.status === "completed") {
+        history.push({
+          type: "referral",
+          label: `Referral: ${ref.inviteeName}`,
+          tickets: ref.rewardTickets,
+          date: ref.completedAt || ref.createdAt,
+        });
+      }
+    }
+
+    return history.sort((a, b) => b.date - a.date);
+  },
+});
+
+export const getRaffleWinnersWithUsers = query({
+  args: { raffleId: v.id("raffles") },
+  handler: async (ctx, args) => {
+    const winners = await ctx.db
+      .query("raffle_winners")
+      .withIndex("by_raffle", (q: any) => q.eq("raffleId", args.raffleId))
+      .order("asc")
+      .collect();
+
+    return await Promise.all(
+      winners.map(async (w) => {
+        const user = await ctx.db.get(w.userId);
+        return {
+          ...w,
+          user: user ? {
+            _id: user._id,
+            full_name: user.full_name,
+            username: user.username,
+            profile_image_url: user.profile_image_url,
+          } : null,
+        };
+      })
+    );
+  },
+});
+
+export const autoEnterForSpotifyPurchase = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const raffles = await ctx.db
+      .query("raffles")
+      .withIndex("by_status", (q: any) => q.eq("status", "published"))
+      .order("desc")
+      .collect();
+
+    if (raffles.length === 0) return { entered: false, reason: "no_active_raffle" };
+
+    const raffle = raffles[0];
+
+    if (raffle.drawDate < Date.now()) return { entered: false, reason: "draw_passed" };
+
+    const existingEntry = await ctx.db
+      .query("raffle_entries")
+      .withIndex("by_raffle_user", (q: any) =>
+        q.eq("raffleId", raffle._id).eq("userId", args.userId)
+      )
+      .unique();
+
+    if (existingEntry) return { entered: false, reason: "already_entered" };
+
+    const allEntries = await ctx.db
+      .query("raffle_entries")
+      .withIndex("by_raffle", (q: any) => q.eq("raffleId", raffle._id))
+      .collect();
+
+    const entryNum = allEntries.length + 1;
+    const drawDate = new Date(raffle.drawDate);
+    const prefix = raffle.slug.slice(0, 2).toUpperCase();
+    const dateStr = `${drawDate.getFullYear()}${String(drawDate.getMonth() + 1).padStart(2, "0")}${String(drawDate.getDate()).padStart(2, "0")}`;
+    const raffleNumber = `${prefix}-${dateStr}-${String(entryNum).padStart(5, "0")}`;
+
+    await ctx.db.insert("raffle_entries", {
+      raffleId: raffle._id,
+      userId: args.userId,
+      raffleNumber,
+      ticketCount: 1,
+      enteredAt: Date.now(),
+    });
+
+    const userReferrals = await ctx.db
+      .query("raffle_referrals")
+      .withIndex("by_inviter", (q: any) => q.eq("inviterId", args.userId))
+      .filter((q: any) =>
+        q.and(
+          q.eq(q.field("raffleId"), raffle._id),
+          q.eq(q.field("status"), "pending")
+        )
+      )
+      .collect();
+
+    for (const ref of userReferrals) {
+      await ctx.db.patch(ref._id, {
+        status: "completed",
+        rewardGranted: true,
+        completedAt: Date.now(),
+      });
+    }
+
+    return { entered: true, raffleNumber };
+  },
+});
+
+export const processRaffleReferralOnPurchase = internalMutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user || !user.referred_by) return { processed: false, reason: "no_referrer" };
+
+    const raffles = await ctx.db
+      .query("raffles")
+      .withIndex("by_status", (q: any) => q.eq("status", "published"))
+      .order("desc")
+      .collect();
+
+    if (raffles.length === 0) return { processed: false, reason: "no_active_raffle" };
+    const raffle = raffles[0];
+
+    const pendingReferrals = await ctx.db
+      .query("raffle_referrals")
+      .withIndex("by_inviter", (q: any) => q.eq("inviterId", user.referred_by))
+      .filter((q: any) =>
+        q.and(
+          q.eq(q.field("raffleId"), raffle._id),
+          q.eq(q.field("inviteeUserId"), args.userId),
+          q.eq(q.field("status"), "pending")
+        )
+      )
+      .collect();
+
+    if (pendingReferrals.length === 0) return { processed: false, reason: "no_pending_referral" };
+
+    for (const ref of pendingReferrals) {
+      await ctx.db.patch(ref._id, {
+        status: "completed",
+        inviteeUserId: args.userId,
+        rewardGranted: true,
+        completedAt: Date.now(),
+      });
+
+      const entry = await ctx.db
+        .query("raffle_entries")
+        .withIndex("by_raffle_user", (q: any) =>
+          q.eq("raffleId", raffle._id).eq("userId", ref.inviterId)
+        )
+        .unique();
+
+      if (entry) {
+        await ctx.db.patch(entry._id, {
+          ticketCount: entry.ticketCount + raffle.referralReward,
+        });
+      }
+    }
+
+    return { processed: true, count: pendingReferrals.length };
   },
 });

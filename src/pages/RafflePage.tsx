@@ -8,12 +8,14 @@ import {
   Loader2, Clock, ChevronRight, Sparkles, TrendingUp,
   ChevronDown, X, Award, ExternalLink, LogIn, UserPlus,
   MessageCircle, Instagram, Twitter, Download, QrCode,
-  RefreshCw, AlertCircle, Info
+  RefreshCw, AlertCircle, Info, Star, ListOrdered,
+  Shield, BarChart3, Crown, Medal
 } from "lucide-react";
 import { auth } from "../lib/auth";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import type { User } from "../types";
+import { RaffleHeader } from "../components/raffle/RaffleHeader";
 
 const SPOTIFY_GREEN = "#1DB954";
 const SPOTIFY_DARK = "#191414";
@@ -147,13 +149,36 @@ function Confetti({ active }: { active: boolean }) {
   );
 }
 
-function CountdownTimer() {
+function CountdownTimer({ expired, showWinner }: { expired: boolean; showWinner?: boolean }) {
   const [remaining, setRemaining] = useState(getTimeRemaining);
 
   useEffect(() => {
+    if (expired) return;
     const interval = setInterval(() => setRemaining(getTimeRemaining()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [expired]);
+
+  if (showWinner) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center">
+          <Crown size={32} className="text-yellow-400" />
+        </div>
+        <p className="text-yellow-400 font-black text-lg">Winner Announced</p>
+      </div>
+    );
+  }
+
+  if (expired) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-16 h-16 rounded-full bg-[#1DB954]/20 flex items-center justify-center">
+          <Sparkles size={32} className="text-[#1DB954]" />
+        </div>
+        <p className="text-[#1DB954] font-black text-lg">Winner Being Selected</p>
+      </div>
+    );
+  }
 
   const units = [
     { label: "Days", value: remaining.days },
@@ -258,125 +283,6 @@ function ReferralQrModal({ link, onClose }: { link: string; onClose: () => void 
   );
 }
 
-function InviteFriendModal({
-  raffleId,
-  userId,
-  onClose,
-  onInvited,
-}: {
-  raffleId: Id<"raffles">;
-  userId: Id<"users">;
-  onClose: () => void;
-  onInvited: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  const createReferral = useMutation(api.raffle.createReferral);
-
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = "Name is required";
-    if (!email.trim() && !phone.trim()) errs.email = "Email or phone is required";
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = "Invalid email";
-    if (phone.trim() && !/^[\d\s\+\-\(\)]{7,15}$/.test(phone.trim())) errs.phone = "Invalid phone";
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-
-    setSubmitting(true);
-    try {
-      await createReferral({
-        raffleId,
-        inviterId: userId,
-        inviteeName: name.trim(),
-        inviteeEmail: email.trim() || undefined,
-        inviteePhone: phone.trim() || undefined,
-      });
-      toast.success("Invitation sent!");
-      onInvited();
-      onClose();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to send invitation");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [name, email, phone, raffleId, userId, createReferral, onClose, onInvited]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-black">Invite a Friend</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
-            <X size={20} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-              Friend Name *
-            </label>
-            <input
-              value={name}
-              onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
-              placeholder="Enter friend's name"
-              className={`w-full h-11 rounded-2xl border ${errors.name ? "border-red-300 bg-red-50" : "border-black/5 bg-zinc-50"} px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1`}
-            />
-            {errors.name && <p className="text-[10px] font-bold text-red-500 mt-1">{errors.name}</p>}
-          </div>
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-              Email <span className="text-zinc-300">(required if no phone)</span>
-            </label>
-            <input
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: "" })); }}
-              placeholder="friend@email.com"
-              className={`w-full h-11 rounded-2xl border ${errors.email ? "border-red-300 bg-red-50" : "border-black/5 bg-zinc-50"} px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1`}
-            />
-            {errors.email && <p className="text-[10px] font-bold text-red-500 mt-1">{errors.email}</p>}
-          </div>
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-              Phone <span className="text-zinc-300">(required if no email)</span>
-            </label>
-            <input
-              value={phone}
-              onChange={(e) => { setPhone(e.target.value); if (errors.phone) setErrors((p) => ({ ...p, phone: "" })); }}
-              placeholder="08012345678"
-              className={`w-full h-11 rounded-2xl border ${errors.phone ? "border-red-300 bg-red-50" : "border-black/5 bg-zinc-50"} px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1`}
-            />
-            {errors.phone && <p className="text-[10px] font-bold text-red-500 mt-1">{errors.phone}</p>}
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full h-12 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            {submitting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
-            {submitting ? "Sending..." : "Send Invitation"}
-          </button>
-        </form>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 const FAQ_DATA = [
   {
     q: "Who can join?",
@@ -388,17 +294,50 @@ const FAQ_DATA = [
   },
   {
     q: "How do referrals work?",
-    a: "After entering the raffle, you get a unique referral link. When a friend you invite signs up, purchases Spotify, and their payment is verified, you earn +2 bonus raffle tickets.",
-  },
-  {
-    q: "Can I enter twice?",
-    a: "No, each user can only enter once. However, you can increase your ticket count by referring friends — each successful referral gives you +2 additional tickets.",
+    a: "After purchasing Spotify, you're automatically entered. Share your unique referral link — every friend who buys Spotify through your link earns you +1 additional raffle ticket.",
   },
   {
     q: "Can I transfer tickets?",
     a: "No, raffle tickets are non-transferable and tied to your account. They cannot be sold, traded, or transferred to another user.",
   },
+  {
+    q: "What if my subscription ends?",
+    a: "You must maintain an active Spotify subscription until the draw date. If your subscription is cancelled or refunded, your entry may be invalidated.",
+  },
 ];
+
+function StarRating({ level }: { level: number }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star
+          key={s}
+          size={16}
+          className={s <= level ? "text-yellow-400 fill-yellow-400" : "text-white/20"}
+        />
+      ))}
+    </div>
+  );
+}
+
+function XCircle({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  );
+}
+
+function SendIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
 
 export default function RafflePage() {
   const navigate = useNavigate();
@@ -408,33 +347,55 @@ export default function RafflePage() {
   const [userTickets, setUserTickets] = useState<any>(null);
   const [referrals, setReferrals] = useState<any[]>([]);
   const [eligibility, setEligibility] = useState<any>(null);
-  const [checkingEligibility, setCheckingEligibility] = useState(false);
-  const [entering, setEntering] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [entryResult, setEntryResult] = useState<any>(null);
-  const [showReferralModal, setShowReferralModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [autoEnterAttempted, setAutoEnterAttempted] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
 
   const raffleQuery = useQuery(api.raffle.getActiveRaffle);
   const convexUserId = (currentUser?._id || "") as Id<"users">;
+  const raffleId = raffleQuery?._id as Id<"raffles"> | undefined;
+
   const entryQuery = useQuery(
     api.raffle.getUserEntry,
-    raffleQuery && currentUser ? { raffleId: raffleQuery._id, userId: convexUserId } : "skip"
+    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
   );
   const ticketsQuery = useQuery(
     api.raffle.getUserTickets,
-    raffleQuery && currentUser ? { raffleId: raffleQuery._id, userId: convexUserId } : "skip"
+    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
   );
   const referralsQuery = useQuery(
     api.raffle.getUserReferrals,
-    raffleQuery && currentUser ? { raffleId: raffleQuery._id, userId: convexUserId } : "skip"
+    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
+  );
+  const statsQuery = useQuery(
+    api.raffle.getRaffleStats,
+    raffleId ? { raffleId } : "skip"
+  );
+  const leaderboardQuery = useQuery(
+    api.raffle.getLeaderboard,
+    raffleId ? { raffleId, limit: 10 } : "skip"
+  );
+  const ticketHistoryQuery = useQuery(
+    api.raffle.getTicketHistory,
+    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
+  );
+  const winnersQuery = useQuery(
+    api.raffle.getRaffleWinnersWithUsers,
+    raffleId ? { raffleId } : "skip"
+  );
+  const queryEligibility = useQuery(
+    api.raffle.checkEligibility,
+    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
   );
 
-  const raffleId = raffleQuery?._id as Id<"raffles"> | undefined;
+  const autoEnterMutation = useMutation(api.raffle.autoEnterForSpotifyPurchase);
 
   useEffect(() => {
     if (raffleQuery !== undefined) {
@@ -456,6 +417,10 @@ export default function RafflePage() {
   }, [referralsQuery]);
 
   useEffect(() => {
+    if (queryEligibility !== undefined) setEligibility(queryEligibility);
+  }, [queryEligibility]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       const u = auth.getCurrentUser();
       if (u?._id !== currentUser?._id) setCurrentUser(u);
@@ -463,54 +428,30 @@ export default function RafflePage() {
     return () => clearInterval(interval);
   }, [currentUser]);
 
-  const checkEligibilityFn = useCallback(async () => {
-    if (!raffleId || !currentUser) return;
-    setCheckingEligibility(true);
-    setEligibility(null);
-    try {
-      const { checkEligibility } = await import("convex/react");
-      toast.error("Direct query not supported");
-      setCheckingEligibility(false);
-      return;
-    } catch {
-      const result = await (await import("../../convex/_generated/api")).api.raffle.checkEligibility({
-        raffleId,
-        userId: convexUserId,
-      });
-      // Actually can't do this from client...
-    }
-    setCheckingEligibility(false);
-  }, [raffleId, currentUser, convexUserId]);
-
-  const queryEligibility = useQuery(
-    api.raffle.checkEligibility,
-    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
-  );
-
+  // Auto-enter raffle when user has Spotify but hasn't entered yet
   useEffect(() => {
-    if (queryEligibility !== undefined) setEligibility(queryEligibility);
-  }, [queryEligibility]);
-
-  const enterRaffleFn = useMutation(api.raffle.enterRaffle);
-
-  const handleEnterRaffle = useCallback(async () => {
-    if (!raffleId || !currentUser) return;
-    setEntering(true);
-    try {
-      const result = await enterRaffleFn({ raffleId, userId: convexUserId });
-      setEntryResult(result);
-      setShowCelebration(true);
-      toast.success("You're in the raffle!");
-    } catch (error: any) {
-      toast.error(error?.message || "Could not enter raffle");
-    } finally {
-      setEntering(false);
+    if (!raffleId || !currentUser || autoEnterAttempted) return;
+    if (eligibility === null || eligibility === undefined) return;
+    if (eligibility.eligible === true && !eligibility.reason?.includes("already")) {
+      setAutoEnterAttempted(true);
+      autoEnterMutation({ userId: convexUserId })
+        .then((result) => {
+          if (result.entered) {
+            setShowCelebration(true);
+            setEntryResult({ raffleNumber: result.raffleNumber, ticketCount: 1 });
+            toast.success("You're automatically entered in the raffle!");
+          }
+        })
+        .catch(() => {});
+    } else {
+      setAutoEnterAttempted(true);
     }
-  }, [raffleId, currentUser, convexUserId, enterRaffleFn]);
+  }, [raffleId, currentUser, eligibility, convexUserId, autoEnterMutation, autoEnterAttempted]);
 
   const referralLink = currentUser
-    ? `${BASE_URL}/register/${currentUser.referral_code}?ref=raffle`
+    ? `${BASE_URL}/raffle?ref=${currentUser.referral_code}`
     : "";
+  const referralCode = currentUser?.referral_code || "";
 
   const handleCopyReferralLink = useCallback(() => {
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -520,8 +461,16 @@ export default function RafflePage() {
     }).catch(() => toast.error("Failed to copy"));
   }, [referralLink]);
 
+  const handleCopyCode = useCallback(() => {
+    navigator.clipboard.writeText(referralCode).then(() => {
+      setCopiedCode(true);
+      toast.success("Referral code copied!");
+      setTimeout(() => setCopiedCode(false), 2000);
+    }).catch(() => toast.error("Failed to copy"));
+  }, [referralCode]);
+
   const handleShare = useCallback((platform: string) => {
-    const text = `🎵 I'm in the Spotify Raffle on Q! Join and win ₦5,000. Use my link: ${referralLink}`;
+    const text = `🎵 I'm in the Spotify Raffle on Q! Buy Spotify and you could win ₦5,000. Use my link: ${referralLink}`;
     const urls: Record<string, string> = {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(text)}`,
       telegram: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(text)}`,
@@ -562,10 +511,25 @@ export default function RafflePage() {
   const isAlreadyEntered = eligibility?.reason === "already_entered" || !!userEntry;
   const needsSubscription = eligibility?.reason === "no_spotify_subscription";
   const needsAuth = !currentUser;
+  const raffleExpired = (raffle.drawDate || 0) < Date.now();
+  const isCompleted = raffle.status === "completed";
+  const isWinnerAnnounced = raffle.winnerAnnounced;
+  const totalTickets = userTickets?.totalTickets || (isAlreadyEntered ? 1 : 0);
+  const completedReferrals = referrals.filter((r: any) => r.status === "completed");
+  const chanceLevel = Math.min(5, Math.ceil(totalTickets / 3) || 1);
 
   return (
     <div className="min-h-screen bg-[#191414] text-white">
       <Confetti active={showCelebration} />
+
+      <RaffleHeader
+        currentUser={currentUser}
+        onUserChange={(u) => setCurrentUser(u)}
+        showLogin={showLogin}
+        setShowLogin={setShowLogin}
+        showRegister={showRegister}
+        setShowRegister={setShowRegister}
+      />
 
       {/* ===== HERO ===== */}
       <section className="relative overflow-hidden bg-gradient-to-b from-black via-[#0d0d0d] to-[#191414]">
@@ -585,57 +549,51 @@ export default function RafflePage() {
                   <Music size={12} /> Spotify Premium Raffle
                 </div>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-4">
-                  Subscribe.
+                  Buy Spotify.
                   <br />
-                  <span className="text-[#1DB954]">Enter.</span>
+                  <span className="text-[#1DB954]">Invite Friends.</span>
                   <br />
-                  Win.
+                  Win <span className="text-[#1DB954]">₦5,000</span>.
                 </h1>
                 <p className="text-white/60 text-sm sm:text-base max-w-md mx-auto lg:mx-0 mb-6">
-                  Subscribe to Spotify Premium on Q and stand a chance to win from our{" "}
-                  <span className="text-[#1DB954] font-bold">₦5,000 prize pool</span>.
+                  Purchase Spotify Premium on Q to receive your first raffle ticket.
+                  Every successful referral earns you even more tickets, increasing
+                  your chances of winning ₦5,000 cash.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start">
                   {needsAuth ? (
                     <>
                       <button
-                        onClick={() => navigate("/")}
+                        onClick={() => setShowLogin(true)}
                         className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20"
                       >
                         <LogIn size={16} /> Log In
                       </button>
                       <button
-                        onClick={() => navigate("/")}
+                        onClick={() => setShowRegister(true)}
                         className="h-12 px-8 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-black hover:bg-white/20 transition-all flex items-center gap-2"
                       >
                         <UserPlus size={16} /> Create Account
                       </button>
                     </>
-                  ) : isAlreadyEntered ? (
+                  ) : isAlreadyEntered || isCompleted ? (
                     <button
-                      onClick={() => document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth" })}
+                      onClick={() => document.getElementById("my-tickets")?.scrollIntoView({ behavior: "smooth" })}
                       className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20"
                     >
-                      <Ticket size={16} /> View My Tickets
+                      <CheckCircle2 size={16} /> You're Entered
                     </button>
-                  ) : isEligible ? (
-                    <button
-                      onClick={handleEnterRaffle}
-                      disabled={entering}
-                      className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20 disabled:opacity-60"
-                    >
-                      {entering ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                      {entering ? "Entering..." : "Enter Raffle"}
-                    </button>
+                  ) : isEligible && !autoEnterAttempted ? (
+                    <div className="h-12 px-8 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-black flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin" /> Auto-Entering...
+                    </div>
                   ) : needsSubscription ? (
                     <button
-                      onClick={() => navigate("/dashboard?tab=marketplace")}
+                      onClick={() => window.location.href = "/dashboard?tab=marketplace"}
                       className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20"
                     >
-                      <Music size={16} /> Subscribe to Spotify
+                      <Music size={16} /> Get Spotify Premium
                     </button>
-                  ) : eligibility?.reason === "draw_passed" ? (
-                    <div className="text-amber-400 text-sm font-bold">Draw date has passed</div>
                   ) : (
                     <div className="flex items-center gap-2 text-amber-400 text-sm font-bold">
                       <AlertCircle size={16} /> Verification Pending
@@ -683,204 +641,67 @@ export default function RafflePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
           >
-            <CountdownTimer />
+            <CountdownTimer expired={raffleExpired && !isWinnerAnnounced} showWinner={isWinnerAnnounced} />
           </motion.div>
         </div>
       </section>
 
-      {/* ===== AUTH GATE / ELIGIBILITY ===== */}
+      {/* ===== ALREADY ENTERED BANNER ===== */}
+      {isAlreadyEntered && !raffleExpired && (
+        <section className="py-6 px-4">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-[#1DB954]/10 via-[#1DB954]/5 to-transparent border border-[#1DB954]/20 rounded-3xl p-4 sm:p-6 flex items-center gap-4"
+            >
+              <div className="w-12 h-12 rounded-full bg-[#1DB954]/20 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={24} className="text-[#1DB954]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-sm sm:text-base">You already qualify for this raffle.</p>
+                <p className="text-white/60 text-xs mt-0.5">Share your referral link to earn more tickets and increase your chances.</p>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== CAMPAIGN STATISTICS ===== */}
       <section className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          {needsAuth ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8 sm:p-12 text-center max-w-lg mx-auto"
-            >
-              <div className="w-16 h-16 rounded-full bg-[#1DB954]/10 flex items-center justify-center mx-auto mb-4">
-                <Music size={28} className="text-[#1DB954]" />
-              </div>
-              <h2 className="text-xl font-black mb-2">You're almost there!</h2>
-              <p className="text-white/60 text-sm mb-6">
-                Log in or create an account to join the Spotify Raffle.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={() => navigate("/")}
-                  className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2"
-                >
-                  <LogIn size={16} /> Log In
-                </button>
-                <button
-                  onClick={() => navigate("/")}
-                  className="h-12 px-8 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-black hover:bg-white/20 transition-all flex items-center gap-2"
-                >
-                  <UserPlus size={16} /> Create Account
-                </button>
-              </div>
-            </motion.div>
-          ) : eligibility === null && queryEligibility === undefined ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-8"
-            >
-              <Loader2 size={32} className="animate-spin text-[#1DB954] mx-auto mb-3" />
-              <p className="text-white/60 text-sm font-bold">Checking your eligibility...</p>
-            </motion.div>
-          ) : isAlreadyEntered ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-[#1DB954]/10 to-transparent border border-[#1DB954]/20 rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-[#1DB954]/20 flex items-center justify-center">
-                  <CheckCircle2 size={24} className="text-[#1DB954]" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black">You're already in!</h2>
-                  <p className="text-white/60 text-sm">Good luck! Share your referral link to earn more tickets.</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Raffle No.</div>
-                  <div className="text-sm font-black text-[#1DB954] break-all">{userEntry?.raffleNumber || "—"}</div>
-                </div>
-                <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Tickets</div>
-                  <div className="text-2xl font-black">{userTickets?.totalTickets || userEntry?.ticketCount || 1}</div>
-                </div>
-                <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Prize Pool</div>
-                  <div className="text-lg font-black">₦{raffle.prizeAmount.toLocaleString()}</div>
-                </div>
-                <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Draw</div>
-                  <div className="text-lg font-black">18 July</div>
-                </div>
-              </div>
-
-              <div className="border-t border-white/10 pt-6">
-                <h3 className="text-sm font-black mb-4 flex items-center gap-2">
-                  <Share2 size={16} className="text-[#1DB954]" /> Invite Friends & Earn Tickets
-                </h3>
-                <div className="bg-white/5 rounded-2xl p-3 border border-white/10 mb-3">
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs text-white/70 truncate">{referralLink}</code>
-                    <button
-                      onClick={handleCopyReferralLink}
-                      className="shrink-0 h-8 px-3 rounded-lg bg-[#1DB954] text-white text-[10px] font-black hover:bg-[#169c46] flex items-center gap-1"
-                    >
-                      {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
-                      {copied ? "Copied" : "Copy"}
-                    </button>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
+              Campaign <span className="text-[#1DB954]">Statistics</span>
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              {[
+                { label: "Prize Amount", value: `₦${(statsQuery?.prizeAmount || raffle.prizeAmount || 5000).toLocaleString()}`, icon: <Award size={18} /> },
+                { label: "Draw Date", value: new Date(statsQuery?.drawDate || raffle.drawDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }), icon: <Clock size={18} /> },
+                { label: "Participants", value: statsQuery?.totalParticipants ?? raffle.totalEntrants ?? 0, icon: <Users size={18} /> },
+                { label: "Total Tickets", value: statsQuery?.totalTickets ?? raffle.totalTickets ?? 0, icon: <Ticket size={18} /> },
+                { label: "Days Remaining", value: statsQuery?.daysRemaining ?? 0, icon: <TrendingUp size={18} /> },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
+                  <div className="flex items-center justify-center gap-1.5 text-[#1DB954] mb-1">
+                    {stat.icon}
                   </div>
+                  <div className="text-xl sm:text-2xl font-black">{typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}</div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">{stat.label}</div>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <button onClick={() => handleShare("whatsapp")} className="h-9 px-4 rounded-xl bg-[#25D366]/20 text-[#25D366] text-[10px] font-black hover:bg-[#25D366]/30 flex items-center gap-1.5">
-                    <MessageCircle size={14} /> WhatsApp
-                  </button>
-                  <button onClick={() => handleShare("telegram")} className="h-9 px-4 rounded-xl bg-[#0088cc]/20 text-[#0088cc] text-[10px] font-black hover:bg-[#0088cc]/30 flex items-center gap-1.5">
-                    <SendIcon /> Telegram
-                  </button>
-                  <button onClick={() => handleShare("twitter")} className="h-9 px-4 rounded-xl bg-white/10 text-white text-[10px] font-black hover:bg-white/20 flex items-center gap-1.5">
-                    <Twitter size={14} /> X
-                  </button>
-                  <button onClick={() => setShowQrModal(true)} className="h-9 px-4 rounded-xl bg-white/10 text-white text-[10px] font-black hover:bg-white/20 flex items-center gap-1.5">
-                    <QrCode size={14} /> QR Code
-                  </button>
-                </div>
-                <button
-                  onClick={() => setShowInviteModal(true)}
-                  className="w-full h-11 rounded-2xl bg-[#1DB954]/20 border border-[#1DB954]/30 text-[#1DB954] text-xs font-black hover:bg-[#1DB954]/30 transition-all flex items-center justify-center gap-2"
-                >
-                  <UserPlus size={16} /> Invite a Friend
-                </button>
-              </div>
-            </motion.div>
-          ) : isEligible ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-[#1DB954]/10 to-transparent border border-[#1DB954]/20 rounded-3xl p-8 sm:p-12 text-center max-w-lg mx-auto"
-            >
-              <div className="w-16 h-16 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 size={32} className="text-[#1DB954]" />
-              </div>
-              <h2 className="text-2xl font-black mb-2">You're eligible!</h2>
-              <div className="grid grid-cols-3 gap-3 my-6">
-                <div className="bg-white/5 rounded-2xl p-4">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Prize Pool</div>
-                  <div className="text-xl font-black text-[#1DB954]">₦{raffle.prizeAmount.toLocaleString()}</div>
-                </div>
-                <div className="bg-white/5 rounded-2xl p-4">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Tickets</div>
-                  <div className="text-xl font-black">1</div>
-                </div>
-                <div className="bg-white/5 rounded-2xl p-4">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Draw</div>
-                  <div className="text-xl font-black">18 July</div>
-                </div>
-              </div>
-              <button
-                onClick={handleEnterRaffle}
-                disabled={entering}
-                className="h-12 px-10 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 mx-auto shadow-lg shadow-[#1DB954]/20 disabled:opacity-60"
-              >
-                {entering ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {entering ? "Entering..." : "Enter Raffle"}
-              </button>
-            </motion.div>
-          ) : needsSubscription ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 rounded-3xl p-8 sm:p-12 text-center max-w-lg mx-auto"
-            >
-              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-                <Music size={28} className="text-amber-400" />
-              </div>
-              <h2 className="text-xl font-black mb-2">Spotify Subscription Required</h2>
-              <p className="text-white/60 text-sm mb-6">
-                You need an active Spotify Premium subscription on Q to participate in this raffle.
-              </p>
-              <button
-                onClick={() => navigate("/dashboard?tab=marketplace")}
-                className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 mx-auto shadow-lg shadow-[#1DB954]/20"
-              >
-                <Music size={16} /> Subscribe to Spotify
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 rounded-3xl p-8 sm:p-12 text-center max-w-lg mx-auto"
-            >
-              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-                <Clock size={28} className="text-amber-400" />
-              </div>
-              <h2 className="text-xl font-black mb-2">Verification Pending</h2>
-              <p className="text-white/60 text-sm mb-6">
-                Your Spotify subscription is still being verified. Once confirmed, you'll automatically become eligible.
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="h-12 px-8 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-black hover:bg-white/20 transition-all flex items-center gap-2 mx-auto"
-              >
-                <RefreshCw size={16} /> Refresh Status
-              </button>
-            </motion.div>
-          )}
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* ===== MY TICKETS ===== */}
-      {isAlreadyEntered && (
-        <section id="tickets" className="py-12 px-4">
+      {/* ===== MY TICKETS + REFERRAL ===== */}
+      {(isAlreadyEntered || isCompleted) && (
+        <section id="my-tickets" className="py-12 px-4">
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -890,40 +711,179 @@ export default function RafflePage() {
               <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
                 My <span className="text-[#1DB954]">Tickets</span>
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 text-center">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Initial Entry</div>
-                  <motion.div
-                    className="text-3xl font-black"
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                  >
-                    {userTickets?.initialEntry || 1}
-                  </motion.div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Ticket Stats */}
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 text-center">
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Spotify Purchase</div>
+                    <div className="flex items-center justify-center gap-2">
+                      <CheckCircle2 size={20} className="text-[#1DB954]" />
+                      <motion.div
+                        className="text-3xl font-black"
+                        initial={{ scale: 0 }}
+                        whileInView={{ scale: 1 }}
+                        viewport={{ once: true }}
+                      >
+                        1
+                      </motion.div>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-[#1DB954]/10 rounded-full -mr-8 -mt-8" />
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Successful Referrals</div>
+                    <motion.div
+                      className="text-3xl font-black text-[#1DB954]"
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                    >
+                      {completedReferrals.length}
+                    </motion.div>
+                  </div>
+                  <div className="bg-gradient-to-br from-[#1DB954]/20 to-transparent border border-[#1DB954]/30 rounded-3xl p-6 text-center">
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Total Tickets</div>
+                    <motion.div
+                      className="text-4xl font-black text-[#1DB954]"
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                    >
+                      {totalTickets}
+                    </motion.div>
+                  </div>
                 </div>
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 text-center relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-[#1DB954]/10 rounded-full -mr-8 -mt-8" />
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Referral Bonus</div>
-                  <motion.div
-                    className="text-3xl font-black text-[#1DB954]"
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                  >
-                    +{userTickets?.referralBonus || 0}
-                  </motion.div>
+
+                {/* Referral Card */}
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6">
+                  <h3 className="text-sm font-black mb-1 flex items-center gap-2">
+                    <Share2 size={16} className="text-[#1DB954]" /> Invite Friends
+                  </h3>
+                  <p className="text-white/50 text-xs mb-4">
+                    Earn one additional ticket every time someone buys Spotify using your referral.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs text-white/70 truncate">{referralLink}</code>
+                        <button
+                          onClick={handleCopyReferralLink}
+                          className="shrink-0 h-8 px-3 rounded-lg bg-[#1DB954] text-white text-[10px] font-black hover:bg-[#169c46] flex items-center gap-1"
+                        >
+                          {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                          {copied ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-3 border border-white/10 flex items-center justify-between">
+                      <span className="text-xs text-white/60 font-bold">Your Code: <span className="text-white font-black">{referralCode}</span></span>
+                      <button
+                        onClick={handleCopyCode}
+                        className="shrink-0 h-7 px-2.5 rounded-lg bg-white/10 text-white text-[10px] font-black hover:bg-white/20 flex items-center gap-1"
+                      >
+                        {copiedCode ? <CheckCircle2 size={10} /> : <Copy size={10} />}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => handleShare("whatsapp")} className="flex-1 h-9 rounded-xl bg-[#25D366]/20 text-[#25D366] text-[10px] font-black hover:bg-[#25D366]/30 flex items-center justify-center gap-1.5">
+                        <MessageCircle size={14} /> WhatsApp
+                      </button>
+                      <button onClick={() => handleShare("telegram")} className="flex-1 h-9 rounded-xl bg-[#0088cc]/20 text-[#0088cc] text-[10px] font-black hover:bg-[#0088cc]/30 flex items-center justify-center gap-1.5">
+                        <SendIcon size={14} /> Telegram
+                      </button>
+                      <button onClick={() => setShowQrModal(true)} className="h-9 w-9 rounded-xl bg-white/10 text-white hover:bg-white/20 flex items-center justify-center">
+                        <QrCode size={14} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-gradient-to-br from-[#1DB954]/20 to-transparent border border-[#1DB954]/30 rounded-3xl p-6 text-center">
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Total Tickets</div>
-                  <motion.div
-                    className="text-4xl font-black text-[#1DB954]"
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                  >
-                    {userTickets?.totalTickets || 1}
-                  </motion.div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== USER PROGRESS ===== */}
+      {(isAlreadyEntered || isCompleted) && (
+        <section className="py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6"
+            >
+              <h3 className="text-base font-black mb-4">Your Progress</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-1">
+                    <CheckCircle2 size={18} className="text-[#1DB954]" />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Spotify Purchased</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-1">
+                    <CheckCircle2 size={18} className="text-[#1DB954]" />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Entered Raffle</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-1">
+                    <span className="text-amber-400 font-black text-sm">{completedReferrals.length}</span>
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Referrals</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-1">
+                    <span className="text-purple-400 font-black text-sm">{totalTickets}</span>
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Total Tickets</p>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                <span className="text-xs font-bold text-white/60">Chance Level</span>
+                <StarRating level={chanceLevel} />
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== TICKET HISTORY ===== */}
+      {(isAlreadyEntered || isCompleted) && ticketHistoryQuery && ticketHistoryQuery.length > 0 && (
+        <section className="py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6"
+            >
+              <h3 className="text-base font-black mb-4">Ticket History</h3>
+              <div className="space-y-2">
+                {ticketHistoryQuery.map((item: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        item.type === "purchase" ? "bg-[#1DB954]/20" : "bg-amber-500/20"
+                      }`}>
+                        {item.type === "purchase" ? (
+                          <Music size={14} className="text-[#1DB954]" />
+                        ) : (
+                          <Users size={14} className="text-amber-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">{item.label}</p>
+                        <p className="text-[10px] text-white/40">{new Date(item.date).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <span className="text-[#1DB954] font-black">+{item.tickets}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between bg-gradient-to-r from-[#1DB954]/10 to-transparent rounded-xl px-4 py-3 border border-[#1DB954]/20">
+                  <span className="text-sm font-black">Total</span>
+                  <span className="text-[#1DB954] font-black text-lg">{totalTickets} Ticket{totalTickets !== 1 ? "s" : ""}</span>
                 </div>
               </div>
             </motion.div>
@@ -932,8 +892,8 @@ export default function RafflePage() {
       )}
 
       {/* ===== REFERRAL HISTORY ===== */}
-      {isAlreadyEntered && referrals.length > 0 && (
-        <section className="py-12 px-4">
+      {referrals.length > 0 && (
+        <section className="py-8 px-4">
           <div className="max-w-4xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -968,7 +928,7 @@ export default function RafflePage() {
                           </span>
                         </td>
                         <td className="p-4 text-sm font-black">
-                          {r.rewardGranted ? `+${r.rewardTickets} tickets` : "—"}
+                          {r.rewardGranted ? `+${r.rewardTickets} tickets` : "\u2014"}
                         </td>
                         <td className="p-4 text-xs text-white/40">
                           {new Date(r.createdAt).toLocaleDateString()}
@@ -983,6 +943,56 @@ export default function RafflePage() {
         </section>
       )}
 
+      {/* ===== LEADERBOARD ===== */}
+      <section className="py-16 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
+              Top <span className="text-[#1DB954]">Referrers</span>
+            </h2>
+            {!leaderboardQuery ? (
+              <div className="flex justify-center py-8">
+                <Loader2 size={24} className="animate-spin text-[#1DB954]" />
+              </div>
+            ) : leaderboardQuery.length === 0 ? (
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8 text-center">
+                <Users size={32} className="mx-auto text-white/20 mb-3" />
+                <p className="text-white/40 text-sm font-bold">No entrants yet. Be the first!</p>
+              </div>
+            ) : (
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden">
+                <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
+                  {leaderboardQuery.map((entry: any) => (
+                    <div key={entry.userId} className="flex items-center gap-4 px-4 sm:px-6 py-4 hover:bg-white/5 transition-colors">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+                        entry.rank === 1 ? "bg-yellow-500/20 text-yellow-400" :
+                        entry.rank === 2 ? "bg-gray-400/20 text-gray-300" :
+                        entry.rank === 3 ? "bg-amber-700/20 text-amber-600" :
+                        "bg-white/10 text-white/50"
+                      }`}>
+                        {entry.rank <= 3 ? ["", "🥇", "🥈", "🥉"][entry.rank] : `#${entry.rank}`}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black truncate">@{entry.username}</p>
+                        <p className="text-[10px] text-white/40">{entry.raffleNumber}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-[#1DB954]">{entry.ticketCount}</p>
+                        <p className="text-[10px] text-white/40">Tickets</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </section>
+
       {/* ===== HOW IT WORKS ===== */}
       <section id="how-it-works" className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
@@ -995,53 +1005,130 @@ export default function RafflePage() {
             <h2 className="text-2xl sm:text-3xl font-black mb-2">
               How It <span className="text-[#1DB954]">Works</span>
             </h2>
-            <p className="text-white/60 text-sm">Three simple steps to win big.</p>
+            <p className="text-white/60 text-sm">Four simple steps to win big.</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                step: "01",
-                title: "Subscribe to Spotify",
-                desc: "Get a Spotify Premium subscription on Q through our marketplace.",
-                icon: <Music size={32} />,
-              },
-              {
-                step: "02",
-                title: "Enter the Raffle",
-                desc: "Once your subscription is verified, enter the raffle with one ticket.",
-                icon: <Ticket size={32} />,
-              },
-              {
-                step: "03",
-                title: "Invite Friends",
-                desc: "Every successful referral gives you +2 tickets. More tickets = higher chances!",
-                icon: <Users size={32} />,
-              },
-            ].map((s) => (
-              <motion.div
-                key={s.step}
-                whileHover={{ y: -4 }}
-                className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 sm:p-8 text-center"
-              >
-                <div className="w-16 h-16 rounded-full bg-[#1DB954]/10 flex items-center justify-center mx-auto mb-4">
-                  <div className="text-[#1DB954]">{s.icon}</div>
-                </div>
-                <div className="text-[10px] font-black text-[#1DB954] uppercase tracking-widest mb-2">{s.step}</div>
-                <h3 className="text-lg font-black mb-2">{s.title}</h3>
-                <p className="text-white/60 text-sm">{s.desc}</p>
-              </motion.div>
-            ))}
+          <div className="relative">
+            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/5 -translate-x-1/2" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                {
+                  step: "01",
+                  title: "Buy Spotify Premium",
+                  desc: "Purchase Spotify Premium on Q through our marketplace. You'll automatically receive your first raffle ticket.",
+                  icon: <Music size={28} />,
+                },
+                {
+                  step: "02",
+                  title: "Auto-Enter the Raffle",
+                  desc: "Once your subscription is verified, you're automatically entered. No manual entry required.",
+                  icon: <CheckCircle2 size={28} />,
+                },
+                {
+                  step: "03",
+                  title: "Invite Friends",
+                  desc: "Share your unique referral link. Every friend who buys Spotify through your link earns you +1 additional ticket.",
+                  icon: <Users size={28} />,
+                },
+                {
+                  step: "04",
+                  title: "Win Big",
+                  desc: "More tickets = higher chances of winning ₦5,000 cash. The winner is drawn on 18 July 2026.",
+                  icon: <Award size={28} />,
+                },
+              ].map((s, i) => (
+                <motion.div
+                  key={s.step}
+                  whileHover={{ y: -4 }}
+                  className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 sm:p-8 text-center md:text-left md:flex md:items-start md:gap-4"
+                >
+                  <div className="w-14 h-14 rounded-full bg-[#1DB954]/10 flex items-center justify-center mx-auto md:mx-0 mb-4 md:mb-0 shrink-0">
+                    <div className="text-[#1DB954]">{s.icon}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black text-[#1DB954] uppercase tracking-widest mb-1">{s.step}</div>
+                    <h3 className="text-lg font-black mb-2">{s.title}</h3>
+                    <p className="text-white/60 text-sm">{s.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-8 text-center bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 max-w-md mx-auto">
-            <p className="text-white/80 text-sm font-bold">
-              Every successful referral gives you <span className="text-[#1DB954]">+2 Tickets</span>.
+          <div className="mt-8 text-center bg-gradient-to-r from-[#1DB954]/10 to-transparent border border-[#1DB954]/20 rounded-3xl p-6 max-w-lg mx-auto">
+            <p className="text-white/90 text-sm font-bold">
+              Every successful referral gives you <span className="text-[#1DB954]">+1 Ticket</span>.
             </p>
-            <p className="text-white/40 text-xs mt-1">More tickets increase your winning chances.</p>
+            <p className="text-white/40 text-xs mt-1">More tickets = higher chance of winning ₦5,000.</p>
           </div>
         </div>
       </section>
+
+      {/* ===== ELIGIBILITY CARD ===== */}
+      <section className="py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6"
+          >
+            <h3 className="text-base font-black mb-4 flex items-center gap-2">
+              <Info size={18} className="text-[#1DB954]" /> Requirements & Eligibility
+            </h3>
+            <ul className="space-y-3">
+              {[
+                "Must purchase Spotify Premium through Q to enter.",
+                "Referrals only count after successful payment by the referred friend.",
+                "Fake or duplicate accounts are removed from the raffle.",
+                "Winner must have an active Spotify subscription when the raffle ends.",
+                "Self-referrals and fraudulent entries are strictly prohibited.",
+              ].map((req, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm">
+                  <div className="w-5 h-5 rounded-full bg-[#1DB954]/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#1DB954]" />
+                  </div>
+                  <span className="text-white/70">{req}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ===== WINNER ANNOUNCEMENT ===== */}
+      {isWinnerAnnounced && winnersQuery && winnersQuery.length > 0 && (
+        <section className="py-16 px-4">
+          <div className="max-w-3xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="bg-gradient-to-br from-yellow-500/10 via-[#1DB954]/5 to-transparent border border-yellow-500/20 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+              <div className="relative z-10">
+                <Crown size={48} className="mx-auto text-yellow-400 mb-4" />
+                <h2 className="text-2xl sm:text-3xl font-black mb-2">Winner Announced!</h2>
+                <p className="text-white/60 text-sm mb-6">Congratulations to our lucky winner!</p>
+                {winnersQuery.map((w: any) => (
+                  <div key={w._id} className="bg-white/10 backdrop-blur-md rounded-3xl p-6 max-w-sm mx-auto">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center mx-auto mb-3 text-2xl font-black text-white">
+                      {w.position}
+                    </div>
+                    <p className="text-xl font-black">{w.user?.full_name || w.user?.username || "Winner"}</p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <Award size={16} className="text-yellow-400" />
+                      <span className="text-lg font-black text-yellow-400">₦{w.prize.toLocaleString()}</span>
+                    </div>
+                    <p className="text-white/40 text-xs mt-2">Drawn on {new Date(w.announcedAt).toLocaleDateString()}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ===== PRIZE SECTION ===== */}
       <section className="py-16 px-4">
@@ -1059,13 +1146,22 @@ export default function RafflePage() {
               </div>
               <h2 className="text-2xl sm:text-3xl font-black mb-2">Prize Pool</h2>
               <div className="text-5xl sm:text-6xl font-black text-[#1DB954] my-4">
-                ₦{raffle.prizeAmount.toLocaleString()}
+                ₦{(statsQuery?.prizeAmount || raffle.prizeAmount || 5000).toLocaleString()}
               </div>
               <p className="text-white/60 text-sm">Cash prize for the winner</p>
+              {raffle.prizes && raffle.prizes.length > 0 && (
+                <div className="mt-6 max-w-sm mx-auto space-y-2">
+                  {raffle.prizes.map((p: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-2.5">
+                      <span className="text-sm font-bold">{p.label}</span>
+                      <span className="text-[#1DB954] font-black">₦{p.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-white/60">
                 <Clock size={14} /> Winner announced 18 July 2026
               </div>
-              <p className="text-white/40 text-xs mt-4">Every raffle ticket counts as one entry.</p>
             </div>
           </motion.div>
         </div>
@@ -1156,7 +1252,8 @@ export default function RafflePage() {
       <section className="py-8 px-4 border-t border-white/5">
         <div className="max-w-6xl mx-auto text-center">
           <p className="text-white/30 text-xs font-bold uppercase tracking-widest">
-            {raffle.totalEntrants || 0} entrants · {raffle.totalTickets || 0} total tickets
+            {statsQuery?.totalParticipants ?? raffle.totalEntrants ?? 0} participants ·
+            {statsQuery?.totalTickets ?? raffle.totalTickets ?? 0} total tickets
           </p>
         </div>
       </section>
@@ -1165,17 +1262,6 @@ export default function RafflePage() {
       <AnimatePresence>
         {showQrModal && (
           <ReferralQrModal link={referralLink} onClose={() => setShowQrModal(false)} />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showInviteModal && raffleId && currentUser && (
-          <InviteFriendModal
-            raffleId={raffleId}
-            userId={convexUserId}
-            onClose={() => setShowInviteModal(false)}
-            onInvited={() => setShowInviteModal(false)}
-          />
         )}
       </AnimatePresence>
 
@@ -1216,10 +1302,10 @@ export default function RafflePage() {
               </div>
               <div className="flex flex-col gap-2">
                 <button
-                  onClick={() => { setShowCelebration(false); setShowInviteModal(true); }}
+                  onClick={() => { setShowCelebration(false); handleCopyReferralLink(); }}
                   className="w-full h-11 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] flex items-center justify-center gap-2"
                 >
-                  <Users size={16} /> Invite Friends
+                  <Share2 size={16} /> Share Referral Link
                 </button>
                 <button
                   onClick={() => { setShowCelebration(false); }}
@@ -1233,24 +1319,5 @@ export default function RafflePage() {
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function XCircle({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="15" y1="9" x2="9" y2="15" />
-      <line x1="9" y1="9" x2="15" y2="15" />
-    </svg>
-  );
-}
-
-function SendIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
   );
 }

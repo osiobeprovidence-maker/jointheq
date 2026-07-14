@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { awardReputation } from "./reputation";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { createNotification, createNotificationForAllUsers } from "./notificationHelpers";
 import { createUserActivityLog } from "./activityHelpers";
@@ -633,6 +633,22 @@ export const joinSlot = mutation({
             });
         } catch (e) {
             console.error("Failed to log activity:", e);
+        }
+
+        // Auto-enter raffle if this is a Spotify purchase
+        try {
+            const sub = await ctx.db.get(st.subscription_id as any);
+            const subName = (sub as any)?.name?.toLowerCase() || "";
+            if (subName.includes("spotify")) {
+                await ctx.scheduler.runAfter(0, internal.raffle.autoEnterForSpotifyPurchase, {
+                    userId: args.user_id,
+                });
+                await ctx.scheduler.runAfter(0, internal.raffle.processRaffleReferralOnPurchase, {
+                    userId: args.user_id,
+                });
+            }
+        } catch (e) {
+            console.error("Failed to process raffle auto-entry:", e);
         }
 
         return { success: true };

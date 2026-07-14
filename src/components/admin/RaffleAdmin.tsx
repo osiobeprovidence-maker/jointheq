@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Plus, Award, Ticket, Users, Gift, Sparkles,
   CheckCircle2, XCircle, Clock, Search, Edit3,
-  Trash2, Eye, Loader2, Copy, Share2, ChevronDown,
-  FileText, Music, Download, Ban, RefreshCw,
-  AlertCircle, X, ChevronRight
+  Eye, Loader2, Copy, ChevronDown,
+  Music, Ban, RefreshCw,
+  AlertCircle, X, ChevronRight, Palette, Image,
+  ListOrdered, DollarSign, BarChart3, Medal
 } from "lucide-react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -15,6 +16,13 @@ import toast from "react-hot-toast";
 
 type RaffleStatus = "draft" | "published" | "closed" | "completed";
 type Tab = "all" | "draft" | "published" | "closed" | "completed";
+
+const PRESET_COLORS = [
+  "#1DB954", "#191414", "#FF6B6B", "#4ECDC4", "#45B7D1",
+  "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
+  "#F1948A", "#82E0AA", "#F8C471", "#AED6F1", "#D7BDE2",
+  "#A3E4D7", "#FADBD8", "#D5F5E3", "#FCF3CF", "#D6EAF8",
+];
 
 function SectionHeader({ title, sub, action }: { title: string; sub?: string; action?: React.ReactNode }) {
   return (
@@ -66,6 +74,14 @@ export function RaffleAdmin() {
     api.raffle.getRaffleWinners,
     selectedRaffleId ? { raffleId: selectedRaffleId } : "skip"
   );
+  const stats = useQuery(
+    api.raffle.getRaffleStats,
+    selectedRaffleId ? { raffleId: selectedRaffleId } : "skip"
+  );
+  const leaderboard = useQuery(
+    api.raffle.getLeaderboard,
+    selectedRaffleId ? { raffleId: selectedRaffleId, limit: 5 } : "skip"
+  );
 
   const createRaffleFn = useMutation(api.raffle.createRaffle);
   const updateRaffleFn = useMutation(api.raffle.updateRaffle);
@@ -103,12 +119,12 @@ export function RaffleAdmin() {
 
   const handleUpdateStatus = useCallback(async (raffleId: Id<"raffles">, status: string) => {
     try {
-      await updateStatusFn({ raffleId, status });
+      await updateRaffleFn({ adminId, raffleId, status });
       toast.success(`Status changed to ${status}`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to update status");
     }
-  }, [updateStatusFn]);
+  }, [adminId, updateRaffleFn]);
 
   const handleCopyId = useCallback((id: string) => {
     navigator.clipboard.writeText(id);
@@ -197,11 +213,13 @@ export function RaffleAdmin() {
                       <RaffleStatusBadge status={raffle.status} />
                     </div>
                     <p className="text-xs text-zinc-500 font-medium truncate">/{raffle.slug}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500">
+                    <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500 flex-wrap">
                       <span className="flex items-center gap-1"><Award size={12} /> ₦{raffle.prizeAmount.toLocaleString()}</span>
-                      <span className="flex items-center gap-1"><Users size={12} /> {raffle.referralReward} tickets/ref</span>
+                      {raffle.prizes && raffle.prizes.length > 0 && (
+                        <span className="flex items-center gap-1"><ListOrdered size={12} /> {raffle.prizes.length} prize tiers</span>
+                      )}
+                      <span className="flex items-center gap-1"><Users size={12} /> +{raffle.referralReward} tickets/ref</span>
                       <span className="flex items-center gap-1"><Clock size={12} /> {new Date(raffle.drawDate).toLocaleDateString()}</span>
-                      <span className="flex items-center gap-1"><Ticket size={12} /> {raffle.eligibilityType}</span>
                     </div>
                   </div>
                   <ChevronRight size={18} className={`text-zinc-300 mt-1 transition-transform ${
@@ -219,6 +237,8 @@ export function RaffleAdmin() {
               raffle={selectedRaffle}
               entries={entries || []}
               winners={winners || []}
+              stats={stats || null}
+              leaderboard={leaderboard || []}
               adminId={adminId}
               onDrawWinner={() => handleDrawWinner(selectedRaffleId)}
               onPublishWinner={() => handlePublishWinner(selectedRaffleId)}
@@ -253,12 +273,14 @@ export function RaffleAdmin() {
 }
 
 function RaffleDetail({
-  raffle, entries, winners, adminId,
+  raffle, entries, winners, stats, leaderboard, adminId,
   onDrawWinner, onPublishWinner, onUpdateStatus, onCopyId, onClose,
 }: {
   raffle: any;
   entries: any[];
   winners: any[];
+  stats: any;
+  leaderboard: any[];
   adminId: Id<"users">;
   onDrawWinner: () => void;
   onPublishWinner: () => void;
@@ -269,6 +291,9 @@ function RaffleDetail({
   const totalTickets = entries.reduce((sum: number, e: any) => sum + e.ticketCount, 0);
   const isCompleted = raffle.status === "completed";
   const isPublished = raffle.status === "published";
+  const completedRefs = entries.filter((e: any) => e.referralSource).length;
+  const conversionRate = entries.length > 0 ? ((entries.length / Math.max(entries.length + completedRefs, 1)) * 100).toFixed(1) : "0";
+  const avgTicketsPerUser = entries.length > 0 ? (totalTickets / entries.length).toFixed(1) : "0";
 
   return (
     <motion.div
@@ -288,7 +313,7 @@ function RaffleDetail({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-zinc-50 rounded-2xl p-4">
-          <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Prize</div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Prize Pool</div>
           <div className="text-lg font-black">₦{raffle.prizeAmount.toLocaleString()}</div>
         </div>
         <div className="bg-zinc-50 rounded-2xl p-4">
@@ -305,11 +330,83 @@ function RaffleDetail({
         </div>
       </div>
 
+      {/* Live Analytics */}
+      <div className="border-t border-black/5 pt-5">
+        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-1.5">
+          <BarChart3 size={14} /> Live Analytics
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-zinc-50 rounded-xl px-3 py-2.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Participants</div>
+            <div className="text-base font-black">{stats?.totalParticipants ?? entries.length}</div>
+          </div>
+          <div className="bg-zinc-50 rounded-xl px-3 py-2.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Total Tickets</div>
+            <div className="text-base font-black">{stats?.totalTickets ?? totalTickets}</div>
+          </div>
+          <div className="bg-zinc-50 rounded-xl px-3 py-2.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Referrals</div>
+            <div className="text-base font-black">{stats?.totalReferrals ?? completedRefs}</div>
+          </div>
+          <div className="bg-zinc-50 rounded-xl px-3 py-2.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Avg Tickets/User</div>
+            <div className="text-base font-black">{avgTicketsPerUser}</div>
+          </div>
+          <div className="bg-zinc-50 rounded-xl px-3 py-2.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Days Remaining</div>
+            <div className="text-base font-black">{stats?.daysRemaining ?? "-"}</div>
+          </div>
+          <div className="bg-zinc-50 rounded-xl px-3 py-2.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Conversion</div>
+            <div className="text-base font-black">-</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top 5 Leaderboard */}
+      {leaderboard.length > 0 && (
+        <div className="border-t border-black/5 pt-5">
+          <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-1.5">
+            <Medal size={14} /> Top Referrers
+          </h4>
+          <div className="space-y-1">
+            {leaderboard.map((entry: any) => (
+              <div key={entry.userId} className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-zinc-50 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-zinc-400 w-4">#{entry.rank}</span>
+                  <span className="font-bold">@{entry.username}</span>
+                </div>
+                <span className="font-black text-emerald-600">{entry.ticketCount} tickets</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {raffle.prizes && raffle.prizes.length > 0 && (
+        <div className="bg-zinc-50 rounded-2xl p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">Prize Tiers</div>
+          <div className="space-y-2">
+            {raffle.prizes.map((p: any, i: number) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <span className="font-bold">{p.label}</span>
+                <span className="font-black text-emerald-600">₦{p.amount.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 flex-wrap">
         <RaffleStatusBadge status={raffle.status} />
         <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
           Referral Reward: +{raffle.referralReward} tickets
         </span>
+        {raffle.accentColor && (
+          <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+            <Palette size={12} /> <span className="w-3 h-3 rounded-full border" style={{ backgroundColor: raffle.accentColor }} />
+          </span>
+        )}
       </div>
 
       {raffle.description && (
@@ -319,40 +416,39 @@ function RaffleDetail({
       <div className="border-t border-black/5 pt-5 space-y-3">
         <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400">Actions</h4>
 
-        {isPublished && !isCompleted && (
-          <button onClick={onDrawWinner}
-            className="w-full h-11 rounded-2xl bg-amber-500 text-white text-xs font-black hover:bg-amber-600 transition-all flex items-center justify-center gap-2">
-            <Sparkles size={16} /> Draw Winner
-          </button>
-        )}
-
-        {isCompleted && !raffle.winnerAnnounced && (
-          <button onClick={onPublishWinner}
-            className="w-full h-11 rounded-2xl bg-emerald-500 text-white text-xs font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
-            <CheckCircle2 size={16} /> Publish Winner
-          </button>
-        )}
-
         <div className="flex gap-2">
           {raffle.status === "draft" && (
             <button onClick={() => onUpdateStatus("published")}
-              className="flex-1 h-10 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-black hover:bg-emerald-100 transition-all flex items-center justify-center gap-1.5">
-              <CheckCircle2 size={14} /> Publish
+              className="flex-1 h-11 rounded-2xl bg-emerald-500 text-white text-xs font-black hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 shadow-sm">
+              <CheckCircle2 size={16} /> Publish Raffle
+            </button>
+          )}
+          {isPublished && !isCompleted && (
+            <button onClick={onDrawWinner}
+              className="flex-1 h-11 rounded-2xl bg-amber-500 text-white text-xs font-black hover:bg-amber-600 transition-all flex items-center justify-center gap-2 shadow-sm">
+              <Sparkles size={16} /> Draw Winner
             </button>
           )}
           {raffle.status === "published" && (
             <button onClick={() => onUpdateStatus("closed")}
-              className="flex-1 h-10 rounded-xl bg-amber-50 text-amber-600 text-xs font-black hover:bg-amber-100 transition-all flex items-center justify-center gap-1.5">
-              <Ban size={14} /> Close
+              className="h-11 w-11 rounded-2xl bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all flex items-center justify-center">
+              <Ban size={16} />
             </button>
           )}
           {raffle.status === "closed" && (
             <button onClick={() => onUpdateStatus("published")}
-              className="flex-1 h-10 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-black hover:bg-emerald-100 transition-all flex items-center justify-center gap-1.5">
-              <CheckCircle2 size={14} /> Reopen
+              className="flex-1 h-11 rounded-2xl bg-emerald-50 text-emerald-600 text-xs font-black hover:bg-emerald-100 transition-all flex items-center justify-center gap-1.5">
+              <RefreshCw size={14} /> Reopen
             </button>
           )}
         </div>
+
+        {isCompleted && !raffle.winnerAnnounced && (
+          <button onClick={onPublishWinner}
+            className="w-full h-11 rounded-2xl bg-blue-500 text-white text-xs font-black hover:bg-blue-600 transition-all flex items-center justify-center gap-2 shadow-sm">
+            <CheckCircle2 size={16} /> Publish Winner
+          </button>
+        )}
 
         <button onClick={onCopyId}
           className="w-full h-10 rounded-xl border border-black/5 text-xs font-bold text-zinc-500 hover:bg-zinc-50 transition-all flex items-center justify-center gap-1.5">
@@ -364,7 +460,7 @@ function RaffleDetail({
         <div className="border-t border-black/5 pt-5">
           <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3">Winners</h4>
           <div className="space-y-2">
-            {winners.map((w: any, i: number) => (
+            {winners.map((w: any) => (
               <div key={w._id} className="bg-zinc-50 rounded-xl p-3 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-black text-xs">
                   #{w.position}
@@ -416,15 +512,32 @@ function CreateRaffleModal({
   const [drawDate, setDrawDate] = useState("");
   const [referralReward, setReferralReward] = useState("2");
   const [eligibilityType, setEligibilityType] = useState("spotify_subscription");
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [accentColor, setAccentColor] = useState("#1DB954");
+  const [prizes, setPrizes] = useState<{ amount: string; label: string }[]>([]);
+  const [publishAfterCreate, setPublishAfterCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const createRaffleFn = useMutation(api.raffle.createRaffle);
+  const updateStatusFn = useMutation(api.raffle.updateRaffleStatus);
 
   const handleSlugFromTitle = (val: string) => {
     setTitle(val);
     if (!slug || slug === title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")) {
       setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""));
     }
+  };
+
+  const addPrizeTier = () => {
+    setPrizes(prev => [...prev, { amount: "", label: "" }]);
+  };
+
+  const removePrizeTier = (i: number) => {
+    setPrizes(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  const updatePrize = (i: number, field: "amount" | "label", value: string) => {
+    setPrizes(prev => prev.map((p, idx) => idx === i ? { ...p, [field]: value } : p));
   };
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -435,24 +548,37 @@ function CreateRaffleModal({
     }
     setSubmitting(true);
     try {
+      const formattedPrizes = prizes
+        .filter(p => p.amount && p.label)
+        .map(p => ({ amount: Number(p.amount), label: p.label }));
+
       const result = await createRaffleFn({
         adminId,
         title: title.trim(),
         slug: slug.trim(),
+        banner: bannerUrl.trim() || undefined,
+        accentColor: accentColor || undefined,
         description: description.trim(),
         prizeAmount: Number(prizeAmount),
+        prizes: formattedPrizes.length > 0 ? formattedPrizes : undefined,
         drawDate: new Date(drawDate).getTime(),
         eligibilityType,
         referralReward: Number(referralReward) || 2,
       });
       toast.success("Raffle created!");
+
+      if (publishAfterCreate) {
+        await updateStatusFn({ raffleId: result.raffleId, status: "published" });
+        toast.success("Raffle published!");
+      }
+
       onCreated(result.raffleId);
     } catch (err: any) {
       toast.error(err?.message || "Failed to create raffle");
     } finally {
       setSubmitting(false);
     }
-  }, [title, slug, description, prizeAmount, drawDate, eligibilityType, referralReward, adminId, createRaffleFn, onCreated]);
+  }, [title, slug, bannerUrl, accentColor, description, prizeAmount, prizes, drawDate, eligibilityType, referralReward, publishAfterCreate, adminId, createRaffleFn, updateStatusFn, onCreated]);
 
   return (
     <motion.div
@@ -466,7 +592,7 @@ function CreateRaffleModal({
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
@@ -495,13 +621,13 @@ function CreateRaffleModal({
             <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Description</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
               placeholder="Win big with Spotify Premium..."
-              rows={3}
+              rows={2}
               className="w-full rounded-2xl border border-black/5 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900 mt-1 resize-none" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Prize Amount (₦) *</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Prize Pool (₦) *</label>
               <input value={prizeAmount} onChange={e => setPrizeAmount(e.target.value)}
                 type="number" min="1"
                 placeholder="5000"
@@ -512,6 +638,57 @@ function CreateRaffleModal({
               <input value={drawDate} onChange={e => setDrawDate(e.target.value)}
                 type="datetime-local"
                 className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Prize Tiers (optional)</label>
+              <button type="button" onClick={addPrizeTier}
+                className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+                <Plus size={12} /> Add Tier
+              </button>
+            </div>
+            <div className="space-y-2">
+              {prizes.map((p, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input value={p.label} onChange={e => updatePrize(i, "label", e.target.value)}
+                    placeholder="1st Prize"
+                    className="flex-1 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
+                  <input value={p.amount} onChange={e => updatePrize(i, "amount", e.target.value)}
+                    type="number" min="1" placeholder="Amount"
+                    className="w-28 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
+                  <button type="button" onClick={() => removePrizeTier(i)}
+                    className="h-10 w-10 rounded-xl hover:bg-red-50 text-red-400 hover:text-red-600 flex items-center justify-center">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Banner Image URL (optional)</label>
+            <div className="flex items-center gap-2 mt-1">
+              <input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)}
+                placeholder="https://example.com/banner.jpg"
+                className="flex-1 h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900" />
+              <Image size={18} className="text-zinc-300 shrink-0" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Accent Color</label>
+            <div className="flex items-center gap-3 mt-2">
+              <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)}
+                className="w-10 h-10 rounded-xl border border-black/5 cursor-pointer" />
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_COLORS.map(c => (
+                  <button key={c} type="button" onClick={() => setAccentColor(c)}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${accentColor === c ? "border-zinc-900 scale-110" : "border-transparent"}`}
+                    style={{ backgroundColor: c }} />
+                ))}
+              </div>
             </div>
           </div>
 
@@ -533,10 +710,19 @@ function CreateRaffleModal({
             </div>
           </div>
 
+          <label className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-50 cursor-pointer">
+            <input type="checkbox" checked={publishAfterCreate} onChange={e => setPublishAfterCreate(e.target.checked)}
+              className="w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900" />
+            <div>
+              <span className="text-sm font-bold">Publish immediately</span>
+              <p className="text-[10px] text-zinc-500 font-medium">Raffle will be visible to users after creation</p>
+            </div>
+          </label>
+
           <button type="submit" disabled={submitting}
             className="w-full h-12 rounded-2xl bg-zinc-900 text-white text-xs font-black hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
             {submitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {submitting ? "Creating..." : "Create Raffle"}
+            {submitting ? "Creating..." : publishAfterCreate ? "Create & Publish Raffle" : "Create Raffle"}
           </button>
         </form>
       </motion.div>

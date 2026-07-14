@@ -1427,8 +1427,13 @@ export default defineSchema({
         title: v.string(),
         slug: v.string(),
         banner: v.optional(v.string()),
+        accentColor: v.optional(v.string()),
         description: v.string(),
         prizeAmount: v.number(),
+        prizes: v.optional(v.array(v.object({
+            amount: v.number(),
+            label: v.string(),
+        }))),
         drawDate: v.number(),
         status: v.string(),
         eligibilityType: v.string(),
