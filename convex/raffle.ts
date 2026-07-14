@@ -164,7 +164,7 @@ export const getUserTickets = query({
       )
       .unique();
 
-    if (!entry) return { totalTickets: 0, initialEntry: 0, referralBonus: 0 };
+    if (!entry) return { totalTickets: 0, initialEntry: 0, referralBonus: 0, bonusTaskTickets: 0 };
 
     const referrals = await ctx.db
       .query("raffle_referrals")
@@ -175,10 +175,20 @@ export const getUserTickets = query({
     const completedReferrals = referrals.filter((r: any) => r.status === "completed");
     const referralBonus = completedReferrals.reduce((sum, r) => sum + (r.rewardTickets || 0), 0);
 
+    const bonusCompletions = await ctx.db
+      .query("user_bonus_completions")
+      .withIndex("by_user_raffle", (q: any) =>
+        q.eq("userId", args.userId).eq("raffleId", args.raffleId)
+      )
+      .collect();
+
+    const bonusTaskTickets = bonusCompletions.reduce((sum, c) => sum + c.ticketsAwarded, 0);
+
     return {
-      totalTickets: entry.ticketCount,
-      initialEntry: entry.ticketCount - referralBonus,
+      totalTickets: entry.ticketCount + referralBonus + bonusTaskTickets,
+      initialEntry: entry.ticketCount,
       referralBonus,
+      bonusTaskTickets,
     };
   },
 });
@@ -1433,7 +1443,192 @@ export const computeEligibilityRules = query({
   },
 });
 
-export const getRaffleDashboard = query({
+// ══════════════════════════════════════════════
+// BONUS TICKET TASKS
+// ══════════════════════════════════════════════
+
+export const createBonusTask = mutation({
+  args: {
+    raffleId: v.id("raffles"),
+    name: v.string(),
+    description: v.string(),
+    platform: v.string(),
+    icon: v.optional(v.string()),
+    rewardTickets: v.number(),
+    verificationMethod: v.string(),
+    destinationUrl: v.optional(v.string()),
+    createdBy: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const existingTasks = await ctx.db
+      .query("bonus_tasks")
+      .withIndex("by_raffle", (q: any) => q.eq("raffleId", args.raffleId))
+      .collect();
+
+    const maxOrder = existingTasks.reduce((max, t) => Math.max(max, t.displayOrder), -1);
+
+    const taskId = await ctx.db.insert("bonus_tasks", {
+      raffleId: args.raffleId,
+      name: args.name,
+      description: args.description,
+      platform: args.platform,
+      icon: args.icon,
+      rewardTickets: args.rewardTickets,
+      verificationMethod: args.verificationMethod,
+      destinationUrl: args.destinationUrl,
+      isActive: true,
+      displayOrder: maxOrder + 1,
+      createdBy: args.createdBy,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return taskId;
+  },
+});
+
+export const updateBonusTask = mutation({
+  args: {
+    taskId: v.id("bonus_tasks"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    platform: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    rewardTickets: v.optional(v.number()),
+    verificationMethod: v.optional(v.string()),
+    destinationUrl: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
+    displayOrder: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { taskId, ...fields } = args;
+    const patch: Record<string, any> = { updatedAt: Date.now() };
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined) patch[key] = value;
+    }
+    await ctx.db.patch(taskId, patch);
+  },
+});
+
+export const deleteBonusTask = mutation({
+  args: { taskId: v.id("bonus_tasks") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.taskId);
+  },
+});
+
+export const reorderBonusTasks = mutation({
+  args: {
+    taskIds: v.array(v.id("bonus_tasks")),
+  },
+  handler: async (ctx, args) => {
+    for (let i = 0; i < args.taskIds.length; i++) {
+      await ctx.db.patch(args.taskIds[i], { displayOrder: i, updatedAt: Date.now() });
+    }
+  },
+});
+
+export const getBonusTasks = query({
+  args: {
+    raffleId: v.id("raffles"),
+    includeInactive: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    let tasks = await ctx.db
+      .query("bonus_tasks")
+      .withIndex("by_raffle", (q: any) => q.eq("raffleId", args.raffleId))
+      .collect();
+
+    if (!args.includeInactive) {
+      tasks = tasks.filter(t => t.isActive);
+    }
+
+    tasks.sort((a, b) => a.displayOrder - b.displayOrder);
+    return tasks;
+  },
+});
+
+export const getUserBonusCompletions = query({
+  args: {
+    raffleId: v.id("raffles"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("user_bonus_completions")
+      .withIndex("by_user_raffle", (q: any) =>
+        q.eq("userId", args.userId).eq("raffleId", args.raffleId)
+      )
+      .collect();
+  },
+});
+
+export const completeBonusTask = mutation({
+  args: {
+    raffleId: v.id("raffles"),
+    taskId: v.id("bonus_tasks"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+    if (!task.isActive) throw new Error("Task is not active");
+
+    const existing = await ctx.db
+      .query("user_bonus_completions")
+      .withIndex("by_user_task", (q: any) =>
+        q.eq("userId", args.userId).eq("taskId", args.taskId)
+      )
+      .unique();
+
+    if (existing) throw new Error("Task already completed");
+
+    await ctx.db.insert("user_bonus_completions", {
+      raffleId: args.raffleId,
+      taskId: args.taskId,
+      userId: args.userId,
+      status: "completed",
+      ticketsAwarded: task.rewardTickets,
+      completedAt: Date.now(),
+    });
+
+    const user = await ctx.db.get(args.userId);
+    if (user) {
+      try {
+        await createUserActivityLog(ctx, {
+          userId: args.userId,
+          category: "raffle",
+          action: "Bonus task completed",
+          description: `Completed "${task.name}" (+${task.rewardTickets} tickets)`,
+          status: "success",
+          amount: task.rewardTickets,
+          metadata: { taskId: args.taskId, raffleId: args.raffleId, platform: task.platform },
+        });
+      } catch (e) {
+        console.error("Failed to log bonus task activity:", e);
+      }
+    }
+
+    return { success: true, ticketsAwarded: task.rewardTickets };
+  },
+});
+
+export const getRaffleBonusStats = query({
+  args: { raffleId: v.id("raffles") },
+  handler: async (ctx, args) => {
+    const completions = await ctx.db
+      .query("user_bonus_completions")
+      .withIndex("by_raffle", (q: any) =>
+        q.eq("raffleId", args.raffleId)
+      )
+      .collect();
+
+    const totalBonusTickets = completions.reduce((sum, c) => sum + c.ticketsAwarded, 0);
+    const uniqueUsers = new Set(completions.map(c => c.userId)).size;
+
+    return { totalBonusTickets, uniqueUsers, totalCompletions: completions.length };
+  },
+});
   args: {},
   handler: async (ctx) => {
     const allRaffles = await ctx.db.query("raffles").order("desc").collect();

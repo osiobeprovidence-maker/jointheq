@@ -9,7 +9,9 @@ import {
   ListOrdered, DollarSign, BarChart3, Medal,
   Upload, ImageIcon, ToggleLeft, ToggleRight,
   Calendar, Clock as ClockIcon, Sun, Repeat2,
-  HelpCircle
+  HelpCircle, Trash2, ExternalLink, Globe, MessageCircle,
+  Instagram, Twitter, Youtube, Smartphone, Link,
+  ThumbsUp, UserCheck, Activity
 } from "lucide-react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -365,6 +367,62 @@ function RaffleDetail({
   );
 
   const [showConfig, setShowConfig] = useState(false);
+  const [showBonusTasks, setShowBonusTasks] = useState(false);
+  const [showBonusTaskEditor, setShowBonusTaskEditor] = useState(false);
+  const [editingBonusTask, setEditingBonusTask] = useState<any>(null);
+
+  const bonusTasks = useQuery(
+    api.raffle.getBonusTasks,
+    raffle._id ? { raffleId: raffle._id, includeInactive: true } : "skip"
+  );
+  const bonusStats = useQuery(
+    api.raffle.getRaffleBonusStats,
+    raffle._id ? { raffleId: raffle._id } : "skip"
+  );
+  const createBonusTask = useMutation(api.raffle.createBonusTask);
+  const updateBonusTask = useMutation(api.raffle.updateBonusTask);
+  const deleteBonusTask = useMutation(api.raffle.deleteBonusTask);
+  const reorderBonusTasks = useMutation(api.raffle.reorderBonusTasks);
+
+  const handleCreateBonusTask = useCallback(async (data: any) => {
+    try {
+      await createBonusTask({ ...data, raffleId: raffle._id, createdBy: adminId });
+      toast.success("Bonus task created");
+      setShowBonusTaskEditor(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create bonus task");
+    }
+  }, [raffle._id, adminId, createBonusTask]);
+
+  const handleUpdateBonusTask = useCallback(async (taskId: any, data: any) => {
+    try {
+      await updateBonusTask({ taskId, ...data });
+      toast.success("Bonus task updated");
+      setEditingBonusTask(null);
+      setShowBonusTaskEditor(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update bonus task");
+    }
+  }, [updateBonusTask]);
+
+  const handleDeleteBonusTask = useCallback(async (taskId: any) => {
+    if (!confirm("Delete this bonus task? This cannot be undone.")) return;
+    try {
+      await deleteBonusTask({ taskId });
+      toast.success("Bonus task deleted");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete bonus task");
+    }
+  }, [deleteBonusTask]);
+
+  const handleToggleTaskActive = useCallback(async (task: any) => {
+    try {
+      await updateBonusTask({ taskId: task._id, isActive: !task.isActive });
+      toast.success(`Task ${task.isActive ? "disabled" : "enabled"}`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to toggle task");
+    }
+  }, [updateBonusTask]);
 
   return (
     <motion.div
@@ -706,6 +764,94 @@ function RaffleDetail({
           </div>
         )}
       </div>
+
+      {/* Bonus Tasks */}
+      <div className="border-t border-black/5 pt-5">
+        <button onClick={() => setShowBonusTasks(!showBonusTasks)}
+          className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5 w-full">
+          <Gift size={14} /> Bonus Tasks ({bonusTasks?.length ?? 0})
+          <ChevronRight size={14} className={`transition-transform ${showBonusTasks ? "rotate-90" : ""}`} />
+        </button>
+        {showBonusTasks && (
+          <div className="mt-3 space-y-3">
+            <div className="flex items-center justify-between">
+              {bonusStats && (
+                <span className="text-[10px] text-zinc-500 font-medium">
+                  {bonusStats.totalCompletions} completions &middot; {bonusStats.totalBonusTickets} bonus tickets awarded
+                </span>
+              )}
+              <button onClick={() => { setEditingBonusTask(null); setShowBonusTaskEditor(true); }}
+                className="inline-flex items-center gap-1 h-8 px-3 rounded-lg bg-zinc-900 text-white text-[10px] font-black hover:bg-zinc-800">
+                <Plus size={12} /> New Task
+              </button>
+            </div>
+            {!bonusTasks ? (
+              <div className="flex justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-zinc-300" />
+              </div>
+            ) : bonusTasks.length === 0 ? (
+              <p className="text-xs text-zinc-400 font-medium text-center py-4">No bonus tasks created yet</p>
+            ) : (
+              <div className="space-y-2">
+                {bonusTasks.map((task: any) => (
+                  <div key={task._id} className="bg-zinc-50 rounded-xl p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center shrink-0">
+                      {PLATFORM_ICONS[task.platform] || <Gift size={14} className="text-zinc-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold truncate">{task.name}</span>
+                        {task.isActive ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-600 font-black">Active</span>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-400 font-black">Disabled</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-zinc-500 truncate">{task.description}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-black text-emerald-600">+{task.rewardTickets} tickets</span>
+                        <span className="text-[9px] text-zinc-400">{task.verificationMethod.replace(/_/g, ' ')}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleToggleTaskActive(task)}
+                        className="w-7 h-7 rounded-lg hover:bg-white flex items-center justify-center text-zinc-400 hover:text-zinc-600"
+                        title={task.isActive ? "Disable" : "Enable"}>
+                        {task.isActive ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                      </button>
+                      <button onClick={() => { setEditingBonusTask(task); setShowBonusTaskEditor(true); }}
+                        className="w-7 h-7 rounded-lg hover:bg-white flex items-center justify-center text-zinc-400 hover:text-zinc-600">
+                        <Edit3 size={12} />
+                      </button>
+                      <button onClick={() => handleDeleteBonusTask(task._id)}
+                        className="w-7 h-7 rounded-lg hover:bg-white flex items-center justify-center text-red-400 hover:text-red-600">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bonus Task Editor Modal */}
+      <AnimatePresence>
+        {showBonusTaskEditor && (
+          <BonusTaskEditor
+            task={editingBonusTask}
+            onSave={(data: any) => {
+              if (editingBonusTask) {
+                handleUpdateBonusTask(editingBonusTask._id, data);
+              } else {
+                handleCreateBonusTask(data);
+              }
+            }}
+            onClose={() => { setShowBonusTaskEditor(false); setEditingBonusTask(null); }}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -1541,6 +1687,138 @@ function CreateRaffleModal({
             className="w-full h-12 rounded-2xl bg-zinc-900 text-white text-xs font-black hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
             {submitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
             {submitting ? "Creating..." : publishAfterCreate ? "Create & Publish Raffle" : "Create Raffle"}
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+const PLATFORM_ICONS: Record<string, React.ReactNode> = {
+  X: <Twitter size={14} />,
+  Instagram: <Instagram size={14} />,
+  TikTok: <Music size={14} />,
+  Facebook: <Users size={14} />,
+  YouTube: <Youtube size={14} />,
+  WhatsApp: <MessageCircle size={14} />,
+  Telegram: <SendIcon size={14} />,
+  Discord: <Smartphone size={14} />,
+  Spotify: <Music size={14} />,
+  Website: <Globe size={14} />,
+  Custom: <Link size={14} />,
+};
+
+const PLATFORMS = ["X", "Instagram", "TikTok", "Facebook", "YouTube", "WhatsApp", "Telegram", "Discord", "Spotify", "Website", "Custom"];
+const VERIFICATION_METHODS = ["button_click", "link_visit", "profile_completion", "referral_completion", "manual_approval", "admin_approval", "api"];
+
+function SendIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+function BonusTaskEditor({ task, onSave, onClose }: {
+  task: any;
+  onSave: (data: any) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(task?.name || "");
+  const [description, setDescription] = useState(task?.description || "");
+  const [platform, setPlatform] = useState(task?.platform || "X");
+  const [icon, setIcon] = useState(task?.icon || "");
+  const [rewardTickets, setRewardTickets] = useState(String(task?.rewardTickets || ""));
+  const [verificationMethod, setVerificationMethod] = useState(task?.verificationMethod || "button_click");
+  const [destinationUrl, setDestinationUrl] = useState(task?.destinationUrl || "");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !rewardTickets) {
+      setError("Name and reward tickets are required");
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      description: description.trim(),
+      platform,
+      icon: icon || undefined,
+      rewardTickets: Number(rewardTickets),
+      verificationMethod,
+      destinationUrl: destinationUrl.trim() || undefined,
+    });
+  }, [name, description, platform, icon, rewardTickets, verificationMethod, destinationUrl, onSave]);
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-black">{task ? "Edit Bonus Task" : "Create Bonus Task"}</h3>
+            <p className="text-xs text-zinc-500 font-medium">Configure a bonus ticket challenge</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-zinc-100"><X size={20} /></button>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 p-3 mb-4 rounded-2xl bg-red-50 text-red-600 text-xs font-bold">
+            <AlertCircle size={14} /> {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Task Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)}
+              placeholder="Follow us on X"
+              className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)}
+              placeholder="Follow our X account and earn bonus tickets"
+              rows={2}
+              className="w-full rounded-2xl border border-black/5 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900 mt-1 resize-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Platform</label>
+              <select value={platform} onChange={e => setPlatform(e.target.value)}
+                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1">
+                {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Reward Tickets *</label>
+              <input value={rewardTickets} onChange={e => setRewardTickets(e.target.value)} type="number" min="1"
+                placeholder="2"
+                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Verification Method</label>
+            <select value={verificationMethod} onChange={e => setVerificationMethod(e.target.value)}
+              className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1">
+              {VERIFICATION_METHODS.map(v => <option key={v} value={v}>{v.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Destination URL (optional)</label>
+            <input value={destinationUrl} onChange={e => setDestinationUrl(e.target.value)}
+              placeholder="https://x.com/jointheq"
+              className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+          </div>
+
+          <button type="submit"
+            className="w-full h-12 rounded-2xl bg-zinc-900 text-white text-xs font-black hover:bg-zinc-800 transition-all flex items-center justify-center gap-2">
+            <CheckCircle2 size={16} />
+            {task ? "Save Changes" : "Create Task"}
           </button>
         </form>
       </motion.div>

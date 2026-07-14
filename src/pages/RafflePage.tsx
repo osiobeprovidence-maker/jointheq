@@ -175,12 +175,14 @@ function CountdownTimer({ targetDate, expired, showWinner, raffle }: { targetDat
     if (raffle?.frequency && raffle.frequency !== "one_time" && raffle.nextDrawDate && raffle.nextDrawDate > Date.now()) {
       return <CountdownTimer targetDate={raffle.nextDrawDate} expired={false} raffle={raffle} />;
     }
+    const accent = raffle?.accentColor || SPOTIFY_GREEN;
     return (
       <div className="flex flex-col items-center gap-2">
-        <div className="w-16 h-16 rounded-full bg-[#1DB954]/20 flex items-center justify-center">
-          <Sparkles size={32} className="text-[#1DB954]" />
+        <div className="w-16 h-16 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: `${accent}20` }}>
+          <Sparkles size={32} style={{ color: accent }} />
         </div>
-        <p className="text-[#1DB954] font-black text-lg">Draw In Progress</p>
+        <p className="font-black text-lg" style={{ color: accent }}>Draw In Progress</p>
       </div>
     );
   }
@@ -309,7 +311,7 @@ function ReferralQrModal({ link, onClose }: { link: string; onClose: () => void 
 const FAQ_DATA = [
   {
     q: "Who can join?",
-    a: "Anyone with an active Spotify Premium subscription on Q can enter the raffle. You must have a verified account and an active subscription slot.",
+    a: "Anyone with an active subscription on Q can enter the raffle. You must have a verified account and meet the eligibility requirements.",
   },
   {
     q: "How are winners selected?",
@@ -317,7 +319,7 @@ const FAQ_DATA = [
   },
   {
     q: "How do referrals work?",
-    a: "After purchasing Spotify, you're automatically entered. Share your unique referral link — every friend who buys Spotify through your link earns you +1 additional raffle ticket.",
+    a: "After qualifying, you're automatically entered. Share your unique referral link — every friend who purchases through your link earns you an additional raffle ticket.",
   },
   {
     q: "Can I transfer tickets?",
@@ -325,7 +327,7 @@ const FAQ_DATA = [
   },
   {
     q: "What if my subscription ends?",
-    a: "You must maintain an active Spotify subscription until the draw date. If your subscription is cancelled or refunded, your entry may be invalidated.",
+    a: "You must maintain an active subscription until the draw date. If your subscription is cancelled or refunded, your entry may be invalidated.",
   },
 ];
 
@@ -481,6 +483,7 @@ export default function RafflePage() {
     }
   }, [raffleId, currentUser, eligibility, convexUserId, autoEnterMutation, autoEnterAttempted]);
 
+  const raffleAccent = raffle?.accentColor || SPOTIFY_GREEN;
   const referralLink = currentUser
     ? `${BASE_URL}/raffle?ref=${currentUser.referral_code}`
     : "";
@@ -503,7 +506,7 @@ export default function RafflePage() {
   }, [referralCode]);
 
   const handleShare = useCallback((platform: string) => {
-    const text = `🎵 I'm in the Spotify Raffle on Q! Buy Spotify and you could win ₦5,000. Use my link: ${referralLink}`;
+    const text = `🎵 I'm in the ${raffle?.title || "Raffle"} on Q! ${raffle?.description ? raffle.description.slice(0, 60) : "Join and you could win"} ₦${(raffle?.prizeAmount || 5000).toLocaleString()}. Use my link: ${referralLink}`;
     const urls: Record<string, string> = {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(text)}`,
       telegram: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(text)}`,
@@ -515,13 +518,13 @@ export default function RafflePage() {
       return;
     }
     if (urls[platform]) window.open(urls[platform], "_blank");
-  }, [referralLink]);
+  }, [referralLink, raffle]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#191414] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#1DB954]/30 border-t-[#1DB954] rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-16 h-16 border-4 rounded-full animate-spin mx-auto mb-4" style={{ borderColor: `${raffleAccent}30`, borderTopColor: raffleAccent }} />
           <p className="text-white/60 text-sm font-bold">Loading raffle...</p>
         </div>
       </div>
@@ -532,7 +535,7 @@ export default function RafflePage() {
     return (
       <div className="min-h-screen bg-[#191414] flex items-center justify-center">
         <div className="text-center max-w-md px-4">
-          <Music size={48} className="mx-auto text-[#1DB954] mb-4" />
+          <Music size={48} style={{ color: raffleAccent }} className="mb-4 mx-auto" />
           <h1 className="text-2xl font-black text-white mb-2">No Active Raffle</h1>
           <p className="text-white/60 text-sm">There's no active raffle right now. Check back later!</p>
         </div>
@@ -567,8 +570,14 @@ export default function RafflePage() {
       {/* ===== HERO ===== */}
       <section className="relative overflow-hidden bg-gradient-to-b from-black via-[#0d0d0d] to-[#191414]">
         <FloatingNotes />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#1DB954]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#1DB954]/5 rounded-full blur-3xl" />
+        <div
+          className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl"
+          style={{ backgroundColor: `${raffleAccent}08` }}
+        />
+        <div
+          className="absolute bottom-0 left-0 w-80 h-80 rounded-full blur-3xl"
+          style={{ backgroundColor: `${raffleAccent}08` }}
+        />
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 py-16 sm:py-24">
           <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
@@ -578,27 +587,31 @@ export default function RafflePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
               >
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1DB954]/10 border border-[#1DB954]/20 text-[10px] font-black uppercase tracking-widest text-[#1DB954] mb-4">
-                  <Music size={12} /> Spotify Premium Raffle
+                <div
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-4"
+                  style={{ backgroundColor: `${raffleAccent}15`, borderColor: `${raffleAccent}30`, color: raffleAccent }}
+                >
+                  <Music size={12} /> {raffle?.title || "Active Raffle"}
                 </div>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-4">
-                  Buy Spotify.
+                  {raffle?.heroTitle?.split("|")[0] || "Buy Spotify."}
                   <br />
-                  <span className="text-[#1DB954]">Invite Friends.</span>
+                  <span style={{ color: raffleAccent }}>{raffle?.heroTitle?.split("|")[1] || "Invite Friends."}</span>
                   <br />
-                  Win <span className="text-[#1DB954]">₦5,000</span>.
+                  Win <span style={{ color: raffleAccent }}>₦{(raffle?.prizeAmount || 5000).toLocaleString()}</span>.
                 </h1>
                 <p className="text-white/60 text-sm sm:text-base max-w-md mx-auto lg:mx-0 mb-6">
-                  Purchase Spotify Premium on Q to receive your first raffle ticket.
-                  Every successful referral earns you even more tickets, increasing
-                  your chances of winning ₦5,000 cash.
+                  {raffle?.description
+                    ? raffle.description
+                    : `Purchase Spotify Premium on Q to receive your first raffle ticket. Every successful referral earns you even more tickets, increasing your chances of winning ₦${(raffle?.prizeAmount || 5000).toLocaleString()} cash.`}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start">
                   {needsAuth ? (
                     <>
                       <button
                         onClick={() => setShowLogin(true)}
-                        className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20"
+                        className="h-12 px-8 rounded-2xl text-white text-xs font-black transition-all flex items-center gap-2 shadow-lg"
+                        style={{ backgroundColor: raffleAccent, boxShadow: `0 10px 15px -3px ${raffleAccent}30` }}
                       >
                         <LogIn size={16} /> Log In
                       </button>
@@ -612,7 +625,8 @@ export default function RafflePage() {
                   ) : isAlreadyEntered || isCompleted ? (
                     <button
                       onClick={() => document.getElementById("my-tickets")?.scrollIntoView({ behavior: "smooth" })}
-                      className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20"
+                      className="h-12 px-8 rounded-2xl text-white text-xs font-black transition-all flex items-center gap-2 shadow-lg"
+                      style={{ backgroundColor: raffleAccent, boxShadow: `0 10px 15px -3px ${raffleAccent}30` }}
                     >
                       <CheckCircle2 size={16} /> You're Entered
                     </button>
@@ -623,9 +637,10 @@ export default function RafflePage() {
                   ) : needsSubscription ? (
                     <button
                       onClick={() => setShowPurchaseModal(true)}
-                      className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20"
+                      className="h-12 px-8 rounded-2xl text-white text-xs font-black transition-all flex items-center gap-2 shadow-lg"
+                      style={{ backgroundColor: raffleAccent, boxShadow: `0 10px 15px -3px ${raffleAccent}30` }}
                     >
-                      <Music size={16} /> Get Spotify Premium
+                      <Music size={16} /> Get {raffle?.purchaseLabel || "Spotify Premium"}
                     </button>
                   ) : (
                     <div className="flex items-center gap-2 text-amber-400 text-sm font-bold">
@@ -650,7 +665,8 @@ export default function RafflePage() {
             >
               <div className="relative">
                 <VinylRecord size={160} />
-                <div className="absolute -bottom-4 -right-4 bg-[#1DB954] text-white text-xs font-black px-4 py-2 rounded-full shadow-lg shadow-[#1DB954]/30">
+                <div className="absolute -bottom-4 -right-4 text-white text-xs font-black px-4 py-2 rounded-full shadow-lg"
+                  style={{ backgroundColor: raffleAccent, boxShadow: `0 10px 15px -3px ${raffleAccent}40` }}>
                   ₦{(raffle?.prizeAmount || 5000).toLocaleString()} Prize
                 </div>
               </div>
@@ -663,11 +679,11 @@ export default function RafflePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <AudioWave />
+            <AudioWave color={raffleAccent} />
             <p className="text-white/40 text-xs font-bold uppercase tracking-widest">
               {raffle?.frequency && raffle.frequency !== "one_time" ? "Recurring Draw" : `Draw: ${raffle?.drawDate ? new Date(raffle.drawDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBA'}`}
             </p>
-            <AudioWave />
+            <AudioWave color={raffleAccent} />
           </motion.div>
 
           <motion.div
@@ -688,10 +704,14 @@ export default function RafflePage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-[#1DB954]/10 via-[#1DB954]/5 to-transparent border border-[#1DB954]/20 rounded-3xl p-4 sm:p-6 flex items-center gap-4"
+              className="border rounded-3xl p-4 sm:p-6 flex items-center gap-4"
+              style={{ backgroundColor: `${raffleAccent}10`, borderColor: `${raffleAccent}20` }}
             >
-              <div className="w-12 h-12 rounded-full bg-[#1DB954]/20 flex items-center justify-center shrink-0">
-                <CheckCircle2 size={24} className="text-[#1DB954]" />
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${raffleAccent}20` }}
+              >
+                <CheckCircle2 size={24} style={{ color: raffleAccent }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-black text-sm sm:text-base">You already qualify for this raffle.</p>
@@ -712,14 +732,14 @@ export default function RafflePage() {
               className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-5"
             >
               <h3 className="text-sm font-black mb-4 flex items-center gap-2">
-                <Music size={16} className="text-[#1DB954]" /> Spotify Status
+                <Music size={16} style={{ color: raffleAccent }} /> Spotify Status
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-white/5 rounded-xl p-3 text-center">
                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Status</p>
                   <div className="flex items-center justify-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#1DB954]" />
-                    <span className="text-sm font-black text-[#1DB954]">Active</span>
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: raffleAccent }} />
+                    <span className="text-sm font-black" style={{ color: raffleAccent }}>Active</span>
                   </div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-3 text-center">
@@ -745,9 +765,9 @@ export default function RafflePage() {
                     return <p className="text-[9px] text-white/40 mt-0.5">{daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining</p>;
                   })()}
                 </div>
-                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="bg-white/5 rounded-xl p-3 text-center">
                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Tickets</p>
-                  <p className="text-sm font-black text-[#1DB954]">{totalTickets}</p>
+                  <p className="text-sm font-black" style={{ color: raffleAccent }}>{totalTickets}</p>
                 </div>
               </div>
             </motion.div>
@@ -764,18 +784,18 @@ export default function RafflePage() {
             viewport={{ once: true }}
           >
             <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
-              Campaign <span className="text-[#1DB954]">Statistics</span>
+              Campaign <span style={{ color: raffleAccent }}>Statistics</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {[
                 { label: "Prize Amount", value: `₦${(statsQuery?.prizeAmount || raffle.prizeAmount || 5000).toLocaleString()}`, icon: <Award size={18} /> },
-                { label: "Draw Date", value: new Date(statsQuery?.drawDate || raffle.drawDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }), icon: <Clock size={18} /> },
+                { label: "Draw Date", value: raffle.drawDate ? new Date(raffle.drawDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "TBA", icon: <Clock size={18} /> },
                 { label: "Participants", value: statsQuery?.totalParticipants ?? raffle.totalEntrants ?? 0, icon: <Users size={18} /> },
                 { label: "Total Tickets", value: statsQuery?.totalTickets ?? raffle.totalTickets ?? 0, icon: <Ticket size={18} /> },
                 { label: "Days Remaining", value: statsQuery?.daysRemaining ?? 0, icon: <TrendingUp size={18} /> },
               ].map((stat) => (
                 <div key={stat.label} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
-                  <div className="flex items-center justify-center gap-1.5 text-[#1DB954] mb-1">
+                  <div className="flex items-center justify-center gap-1.5 mb-1" style={{ color: raffleAccent }}>
                     {stat.icon}
                   </div>
                   <div className="text-xl sm:text-2xl font-black">{typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}</div>
@@ -797,16 +817,16 @@ export default function RafflePage() {
               viewport={{ once: true }}
             >
               <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
-                My <span className="text-[#1DB954]">Tickets</span>
+                My <span style={{ color: raffleAccent }}>Tickets</span>
               </h2>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Ticket Stats */}
                 <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 text-center">
-                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Spotify Purchase</div>
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">{raffle?.purchaseLabel || "Spotify Purchase"}</div>
                     <div className="flex items-center justify-center gap-2">
-                      <CheckCircle2 size={20} className="text-[#1DB954]" />
+                      <CheckCircle2 size={20} style={{ color: raffleAccent }} />
                       <motion.div
                         className="text-3xl font-black"
                         initial={{ scale: 0 }}
@@ -818,10 +838,14 @@ export default function RafflePage() {
                     </div>
                   </div>
                   <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 text-center relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-[#1DB954]/10 rounded-full -mr-8 -mt-8" />
+                    <div
+                      className="absolute top-0 right-0 w-20 h-20 rounded-full -mr-8 -mt-8"
+                      style={{ backgroundColor: `${raffleAccent}10` }}
+                    />
                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Successful Referrals</div>
                     <motion.div
-                      className="text-3xl font-black text-[#1DB954]"
+                      className="text-3xl font-black"
+                      style={{ color: raffleAccent }}
                       initial={{ scale: 0 }}
                       whileInView={{ scale: 1 }}
                       viewport={{ once: true }}
@@ -829,10 +853,18 @@ export default function RafflePage() {
                       {completedReferrals.length}
                     </motion.div>
                   </div>
-                  <div className="bg-gradient-to-br from-[#1DB954]/20 to-transparent border border-[#1DB954]/30 rounded-3xl p-6 text-center">
+                  <div
+                    className="rounded-3xl p-6 text-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${raffleAccent}30, transparent)`,
+                      borderColor: `${raffleAccent}40`,
+                      borderWidth: 1,
+                    }}
+                  >
                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Total Tickets</div>
                     <motion.div
-                      className="text-4xl font-black text-[#1DB954]"
+                      className="text-4xl font-black"
+                      style={{ color: raffleAccent }}
                       initial={{ scale: 0 }}
                       whileInView={{ scale: 1 }}
                       viewport={{ once: true }}
@@ -845,10 +877,10 @@ export default function RafflePage() {
                 {/* Referral Card */}
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6">
                   <h3 className="text-sm font-black mb-1 flex items-center gap-2">
-                    <Share2 size={16} className="text-[#1DB954]" /> Invite Friends
+                    <Share2 size={16} style={{ color: raffleAccent }} /> Invite Friends
                   </h3>
                   <p className="text-white/50 text-xs mb-4">
-                    Earn one additional ticket every time someone buys Spotify using your referral.
+                    {raffle?.referralDescription || `Earn one additional ticket every time someone buys ${raffle?.purchaseLabel || "Spotify"} using your referral.`}
                   </p>
                   <div className="space-y-3">
                     <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
@@ -856,7 +888,8 @@ export default function RafflePage() {
                         <code className="flex-1 text-xs text-white/70 truncate">{referralLink}</code>
                         <button
                           onClick={handleCopyReferralLink}
-                          className="shrink-0 h-8 px-3 rounded-lg bg-[#1DB954] text-white text-[10px] font-black hover:bg-[#169c46] flex items-center gap-1"
+                          className="shrink-0 h-8 px-3 rounded-lg text-white text-[10px] font-black flex items-center gap-1"
+                          style={{ backgroundColor: raffleAccent }}
                         >
                           {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
                           {copied ? "Copied" : "Copy"}
@@ -903,15 +936,17 @@ export default function RafflePage() {
             >
               <h3 className="text-base font-black mb-4">Your Progress</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="w-10 h-10 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-1">
-                    <CheckCircle2 size={18} className="text-[#1DB954]" />
+                  <div className="text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-1"
+                    style={{ backgroundColor: `${raffleAccent}20` }}>
+                    <CheckCircle2 size={18} style={{ color: raffleAccent }} />
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Spotify Purchased</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/40">{raffle?.purchaseLabel || "Spotify"} Purchased</p>
                 </div>
                 <div className="text-center">
-                  <div className="w-10 h-10 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-1">
-                    <CheckCircle2 size={18} className="text-[#1DB954]" />
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-1"
+                    style={{ backgroundColor: `${raffleAccent}20` }}>
+                    <CheckCircle2 size={18} style={{ color: raffleAccent }} />
                   </div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Entered Raffle</p>
                 </div>
@@ -953,10 +988,11 @@ export default function RafflePage() {
                   <div key={i} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        item.type === "purchase" ? "bg-[#1DB954]/20" : "bg-amber-500/20"
-                      }`}>
+                        item.type === "purchase" ? "" : "bg-amber-500/20"
+                      }`}
+                        style={item.type === "purchase" ? { backgroundColor: `${raffleAccent}20` } : undefined}>
                         {item.type === "purchase" ? (
-                          <Music size={14} className="text-[#1DB954]" />
+                          <Music size={14} style={{ color: raffleAccent }} />
                         ) : (
                           <Users size={14} className="text-amber-400" />
                         )}
@@ -966,12 +1002,18 @@ export default function RafflePage() {
                         <p className="text-[10px] text-white/40">{new Date(item.date).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <span className="text-[#1DB954] font-black">+{item.tickets}</span>
+                    <span className="font-black" style={{ color: raffleAccent }}>+{item.tickets}</span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between bg-gradient-to-r from-[#1DB954]/10 to-transparent rounded-xl px-4 py-3 border border-[#1DB954]/20">
+                <div
+                  className="rounded-xl px-4 py-3 border flex items-center justify-between"
+                  style={{
+                    background: `linear-gradient(90deg, ${raffleAccent}10, transparent)`,
+                    borderColor: `${raffleAccent}20`,
+                  }}
+                >
                   <span className="text-sm font-black">Total</span>
-                  <span className="text-[#1DB954] font-black text-lg">{totalTickets} Ticket{totalTickets !== 1 ? "s" : ""}</span>
+                  <span className="font-black text-lg" style={{ color: raffleAccent }}>{totalTickets} Ticket{totalTickets !== 1 ? "s" : ""}</span>
                 </div>
               </div>
             </motion.div>
@@ -989,7 +1031,7 @@ export default function RafflePage() {
               viewport={{ once: true }}
             >
               <h2 className="text-xl sm:text-2xl font-black mb-6">
-                Referral <span className="text-[#1DB954]">History</span>
+                Referral <span style={{ color: raffleAccent }}>History</span>
               </h2>
               <div className="overflow-x-auto bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl">
                 <table className="w-full text-left">
@@ -1005,11 +1047,13 @@ export default function RafflePage() {
                       <tr key={r._id} className="border-b border-white/5 last:border-0">
                         <td className="p-4 text-sm font-bold">{r.inviteeName}</td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black ${
-                            r.status === "completed" ? "bg-[#1DB954]/20 text-[#1DB954]" :
-                            r.status === "pending" ? "bg-amber-500/20 text-amber-400" :
-                            "bg-red-500/20 text-red-400"
-                          }`}>
+                          <span
+                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black"
+                            style={{
+                              backgroundColor: r.status === "completed" ? `${raffleAccent}20` : r.status === "pending" ? "#f59e0b20" : "#ef444420",
+                              color: r.status === "completed" ? raffleAccent : r.status === "pending" ? "#f59e0b" : "#ef4444",
+                            }}
+                          >
                             {r.status === "completed" ? <CheckCircle2 size={12} /> :
                              r.status === "pending" ? <Clock size={12} /> : <XCircle size={12} />}
                             {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
@@ -1040,11 +1084,11 @@ export default function RafflePage() {
             viewport={{ once: true }}
           >
             <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
-              Top <span className="text-[#1DB954]">Referrers</span>
+              Top <span style={{ color: raffleAccent }}>Referrers</span>
             </h2>
             {!leaderboardQuery ? (
               <div className="flex justify-center py-8">
-                <Loader2 size={24} className="animate-spin text-[#1DB954]" />
+                <Loader2 size={24} style={{ color: raffleAccent }} />
               </div>
             ) : leaderboardQuery.length === 0 ? (
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8 text-center">
@@ -1069,7 +1113,7 @@ export default function RafflePage() {
                         <p className="text-[10px] text-white/40">{entry.raffleNumber}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-black text-[#1DB954]">{entry.ticketCount}</p>
+                        <p className="text-sm font-black" style={{ color: raffleAccent }}>{entry.ticketCount}</p>
                         <p className="text-[10px] text-white/40">Tickets</p>
                       </div>
                     </div>
@@ -1091,9 +1135,9 @@ export default function RafflePage() {
             className="text-center mb-12"
           >
             <h2 className="text-2xl sm:text-3xl font-black mb-2">
-              How It <span className="text-[#1DB954]">Works</span>
+              How It <span style={{ color: raffleAccent }}>Works</span>
             </h2>
-            <p className="text-white/60 text-sm">Four simple steps to win big.</p>
+            <p className="text-white/60 text-sm">{raffle?.howItWorksSubtitle || "Four simple steps to win big."}</p>
           </motion.div>
 
           <div className="relative">
@@ -1102,26 +1146,26 @@ export default function RafflePage() {
               {[
                 {
                   step: "01",
-                  title: "Buy Spotify Premium",
-                  desc: "Purchase Spotify Premium on Q through our marketplace. You'll automatically receive your first raffle ticket.",
+                  title: raffle?.step1Title || `Buy ${raffle?.purchaseLabel || "Spotify Premium"}`,
+                  desc: raffle?.step1Desc || `Purchase ${raffle?.purchaseLabel || "Spotify Premium"} on Q through our marketplace. You'll automatically receive your first raffle ticket.`,
                   icon: <Music size={28} />,
                 },
                 {
                   step: "02",
-                  title: "Auto-Enter the Raffle",
-                  desc: "Once your subscription is verified, you're automatically entered. No manual entry required.",
+                  title: raffle?.step2Title || "Auto-Enter the Raffle",
+                  desc: raffle?.step2Desc || "Once your subscription is verified, you're automatically entered. No manual entry required.",
                   icon: <CheckCircle2 size={28} />,
                 },
                 {
                   step: "03",
-                  title: "Invite Friends",
-                  desc: "Share your unique referral link. Every friend who buys Spotify through your link earns you +1 additional ticket.",
+                  title: raffle?.step3Title || "Invite Friends",
+                  desc: raffle?.step3Desc || `Share your unique referral link. Every friend who buys ${raffle?.purchaseLabel || "Spotify"} through your link earns you +${raffle?.referralReward || 1} additional ticket.`,
                   icon: <Users size={28} />,
                 },
                 {
                   step: "04",
-                  title: "Win Big",
-                  desc: "More tickets = higher chances of winning ₦5,000 cash. The winner is drawn on 18 July 2026.",
+                  title: raffle?.step4Title || "Win Big",
+                  desc: raffle?.step4Desc || `More tickets = higher chances of winning ₦${(raffle?.prizeAmount || 5000).toLocaleString()} cash.${raffle.drawDate ? ` The winner is drawn on ${new Date(raffle.drawDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.` : ''}`,
                   icon: <Award size={28} />,
                 },
               ].map((s, i) => (
@@ -1130,11 +1174,17 @@ export default function RafflePage() {
                   whileHover={{ y: -4 }}
                   className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 sm:p-8 text-center md:text-left md:flex md:items-start md:gap-4"
                 >
-                  <div className="w-14 h-14 rounded-full bg-[#1DB954]/10 flex items-center justify-center mx-auto md:mx-0 mb-4 md:mb-0 shrink-0">
-                    <div className="text-[#1DB954]">{s.icon}</div>
+                  <div
+                    className="w-14 h-14 rounded-full flex items-center justify-center mx-auto md:mx-0 mb-4 md:mb-0 shrink-0"
+                    style={{ backgroundColor: `${raffleAccent}10` }}
+                  >
+                    <div style={{ color: raffleAccent }}>{s.icon}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-black text-[#1DB954] uppercase tracking-widest mb-1">{s.step}</div>
+                    <div
+                      className="text-[10px] font-black uppercase tracking-widest mb-1"
+                      style={{ color: raffleAccent }}
+                    >{s.step}</div>
                     <h3 className="text-lg font-black mb-2">{s.title}</h3>
                     <p className="text-white/60 text-sm">{s.desc}</p>
                   </div>
@@ -1143,11 +1193,17 @@ export default function RafflePage() {
             </div>
           </div>
 
-          <div className="mt-8 text-center bg-gradient-to-r from-[#1DB954]/10 to-transparent border border-[#1DB954]/20 rounded-3xl p-6 max-w-lg mx-auto">
+          <div className="mt-8 text-center rounded-3xl p-6 max-w-lg mx-auto"
+            style={{
+              background: `linear-gradient(90deg, ${raffleAccent}10, transparent)`,
+              borderColor: `${raffleAccent}20`,
+              borderWidth: 1,
+            }}>
             <p className="text-white/90 text-sm font-bold">
-              Every successful referral gives you <span className="text-[#1DB954]">+1 Ticket</span>.
+              {raffle?.referralCtaText || `Every successful referral gives you `}
+              <span style={{ color: raffleAccent }}>+{raffle?.referralReward || 1} Ticket{raffle?.referralReward !== 1 ? "s" : ""}</span>.
             </p>
-            <p className="text-white/40 text-xs mt-1">More tickets = higher chance of winning ₦5,000.</p>
+            <p className="text-white/40 text-xs mt-1">{raffle?.referralCtaSubtext || `More tickets = higher chance of winning ₦${(raffle?.prizeAmount || 5000).toLocaleString()}.`}</p>
           </div>
         </div>
       </section>
@@ -1162,21 +1218,39 @@ export default function RafflePage() {
             className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6"
           >
             <h3 className="text-base font-black mb-4 flex items-center gap-2">
-              <Info size={18} className="text-[#1DB954]" /> Requirements & Eligibility
+              <Info size={18} style={{ color: raffleAccent }} /> Requirements & Eligibility
             </h3>
             <ul className="space-y-3">
-              {[
-                "Must purchase Spotify Premium through Q to enter.",
-                "Referrals only count after successful payment by the referred friend.",
-                "Fake or duplicate accounts are removed from the raffle.",
-                "Winner must have an active Spotify subscription when the raffle ends.",
-                "Self-referrals and fraudulent entries are strictly prohibited.",
-              ].map((req, i) => (
+              {(raffle?.eligibilityRules && raffle.eligibilityRules.length > 0
+                ? raffle.eligibilityRules.map((r: any) => {
+                    const labels: Record<string, string> = {
+                      has_spotify: `Must purchase ${raffle?.purchaseLabel || "Spotify Premium"} through Q to enter.`,
+                      min_subscription_age: `Referrals only count after successful payment by the referred friend.`,
+                      account_status: "Fake or duplicate accounts are removed from the raffle.",
+                      not_disqualified: "Winner must have an active subscription when the raffle ends.",
+                      country: "Self-referrals and fraudulent entries are strictly prohibited.",
+                    };
+                    return labels[r.field] || `${r.field}: ${r.operator} ${r.value}`;
+                  })
+                : [
+                    `Must purchase ${raffle?.purchaseLabel || "Spotify Premium"} through Q to enter.`,
+                    "Referrals only count after successful payment by the referred friend.",
+                    "Fake or duplicate accounts are removed from the raffle.",
+                    `Winner must have an active subscription when the raffle ends.`,
+                    "Self-referrals and fraudulent entries are strictly prohibited.",
+                  ]
+              ).map((req, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm">
-                  <div className="w-5 h-5 rounded-full bg-[#1DB954]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#1DB954]" />
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ backgroundColor: `${raffleAccent}10` }}
+                  >
+                    <div
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: raffleAccent }}
+                    />
                   </div>
-                  <span className="text-white/70">{req}</span>
+                  <span className="text-white/70">{typeof req === "string" ? req : ""}</span>
                 </li>
               ))}
             </ul>
@@ -1192,7 +1266,12 @@ export default function RafflePage() {
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              className="bg-gradient-to-br from-yellow-500/10 via-[#1DB954]/5 to-transparent border border-yellow-500/20 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden"
+              className="rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden"
+              style={{
+                background: `linear-gradient(135deg, ${raffleAccent}10, transparent)`,
+                borderColor: `${raffleAccent}20`,
+                borderWidth: 1,
+              }}
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
               <div className="relative z-10">
@@ -1225,15 +1304,26 @@ export default function RafflePage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-gradient-to-br from-[#1DB954]/10 via-black/50 to-black border border-[#1DB954]/20 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden"
+            className="rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${raffleAccent}10, rgba(0,0,0,0.5), #000)`,
+              borderColor: `${raffleAccent}20`,
+              borderWidth: 1,
+            }}
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#1DB954]/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+            <div
+              className="absolute top-0 right-0 w-64 h-64 rounded-full -mr-32 -mt-32 blur-3xl"
+              style={{ backgroundColor: `${raffleAccent}10` }}
+            />
             <div className="relative z-10">
-              <div className="w-16 h-16 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-4">
-                <Award size={28} className="text-[#1DB954]" />
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: `${raffleAccent}20` }}
+              >
+                <Award size={28} style={{ color: raffleAccent }} />
               </div>
               <h2 className="text-2xl sm:text-3xl font-black mb-2">Prize Pool</h2>
-              <div className="text-5xl sm:text-6xl font-black text-[#1DB954] my-4">
+              <div className="text-5xl sm:text-6xl font-black my-4" style={{ color: raffleAccent }}>
                 ₦{(statsQuery?.prizeAmount || raffle.prizeAmount || 5000).toLocaleString()}
               </div>
               <p className="text-white/60 text-sm">Cash prize for the winner</p>
@@ -1242,13 +1332,13 @@ export default function RafflePage() {
                   {raffle.prizes.map((p: any, i: number) => (
                     <div key={i} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-2.5">
                       <span className="text-sm font-bold">{p.label}</span>
-                      <span className="text-[#1DB954] font-black">₦{p.amount.toLocaleString()}</span>
+                      <span className="font-black" style={{ color: raffleAccent }}>₦{p.amount.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
               )}
               <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-white/60">
-                <Clock size={14} /> Winner announced 18 July 2026
+                <Clock size={14} /> {raffle?.drawDate ? `Winner announced ${new Date(raffle.drawDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}` : "Draw date TBA"}
               </div>
             </div>
           </motion.div>
@@ -1265,12 +1355,15 @@ export default function RafflePage() {
               viewport={{ once: true }}
             >
               <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
-                Previous <span className="text-[#1DB954]">Winners</span>
+                Previous <span style={{ color: raffleAccent }}>Winners</span>
               </h2>
               <div className="space-y-3">
                 {raffle.previousWinners.map((w: any) => (
                   <div key={w._id} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-[#1DB954]/20 flex items-center justify-center text-[#1DB954] font-black text-sm">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm"
+                      style={{ backgroundColor: `${raffleAccent}20`, color: raffleAccent }}
+                    >
                       #{w.position}
                     </div>
                     <div className="flex-1">
@@ -1278,7 +1371,7 @@ export default function RafflePage() {
                       <p className="text-[10px] text-white/40">{new Date(w.announcedAt).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[#1DB954] font-black">₦{w.prize.toLocaleString()}</p>
+                      <p className="font-black" style={{ color: raffleAccent }}>₦{w.prize.toLocaleString()}</p>
                       <p className="text-[10px] text-white/40">Prize</p>
                     </div>
                   </div>
@@ -1298,7 +1391,7 @@ export default function RafflePage() {
             viewport={{ once: true }}
           >
             <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center">
-              Frequently Asked <span className="text-[#1DB954]">Questions</span>
+              Frequently Asked <span style={{ color: raffleAccent }}>Questions</span>
             </h2>
             <div className="space-y-3">
               {FAQ_DATA.map((faq, i) => (
@@ -1385,17 +1478,23 @@ export default function RafflePage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-gradient-to-br from-[#1DB954]/20 to-black border border-[#1DB954]/30 rounded-3xl p-8 sm:p-12 max-w-md w-full text-center shadow-2xl"
+              className="rounded-3xl p-8 sm:p-12 max-w-md w-full text-center shadow-2xl"
+              style={{
+                background: `linear-gradient(135deg, ${raffleAccent}20, #000)`,
+                borderColor: `${raffleAccent}30`,
+                borderWidth: 1,
+              }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-20 h-20 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 size={40} className="text-[#1DB954]" />
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: `${raffleAccent}20` }}>
+                <CheckCircle2 size={40} style={{ color: raffleAccent }} />
               </div>
               <h2 className="text-2xl font-black mb-2">You're Entered!</h2>
               <div className="bg-white/5 rounded-2xl p-4 mb-6 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-white/60">Raffle Number</span>
-                  <span className="font-black text-[#1DB954]">{entryResult.raffleNumber}</span>
+                  <span className="font-black" style={{ color: raffleAccent }}>{entryResult.raffleNumber}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-white/60">Tickets</span>
@@ -1409,7 +1508,8 @@ export default function RafflePage() {
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => { setShowCelebration(false); handleCopyReferralLink(); }}
-                  className="w-full h-11 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] flex items-center justify-center gap-2"
+                  className="w-full h-11 rounded-2xl text-white text-xs font-black flex items-center justify-center gap-2"
+                  style={{ backgroundColor: raffleAccent }}
                 >
                   <Share2 size={16} /> Share Referral Link
                 </button>

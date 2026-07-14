@@ -1524,6 +1524,35 @@ export default defineSchema({
         .index("by_invitee_email", ["inviteeEmail"])
         .index("by_invitee_phone", ["inviteePhone"]),
 
+    bonus_tasks: defineTable({
+        raffleId: v.id("raffles"),
+        name: v.string(),
+        description: v.string(),
+        platform: v.string(),
+        icon: v.optional(v.string()),
+        rewardTickets: v.number(),
+        verificationMethod: v.string(),
+        destinationUrl: v.optional(v.string()),
+        isActive: v.boolean(),
+        displayOrder: v.number(),
+        createdBy: v.id("users"),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_raffle", ["raffleId"])
+        .index("by_raffle_active_order", ["raffleId", "isActive", "displayOrder"]),
+
+    user_bonus_completions: defineTable({
+        raffleId: v.id("raffles"),
+        taskId: v.id("bonus_tasks"),
+        userId: v.id("users"),
+        status: v.string(),
+        ticketsAwarded: v.number(),
+        completedAt: v.number(),
+    }).index("by_user_task", ["userId", "taskId"])
+        .index("by_user_raffle", ["userId", "raffleId"])
+        .index("by_raffle", ["raffleId"])
+        .index("by_task", ["taskId"]),
+
     raffle_winners: defineTable({
         raffleId: v.id("raffles"),
         userId: v.id("users"),
