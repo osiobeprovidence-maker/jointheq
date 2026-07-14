@@ -360,6 +360,8 @@ export default function RafflePage() {
   const [showRegister, setShowRegister] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
+  const convexUserId = (currentUser?._id || "") as Id<"users">;
+
   const userSlotsQuery = useQuery(
     api.subscriptions.getSlotsByUserId,
     convexUserId ? { user_id: convexUserId } : "skip"
@@ -369,7 +371,6 @@ export default function RafflePage() {
   );
 
   const raffleQuery = useQuery(api.raffle.getActiveRaffle);
-  const convexUserId = (currentUser?._id || "") as Id<"users">;
   const raffleId = raffleQuery?._id as Id<"raffles"> | undefined;
 
   const entryQuery = useQuery(
