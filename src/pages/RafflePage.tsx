@@ -705,10 +705,21 @@ export default function RafflePage() {
                 <div className="bg-white/5 rounded-xl p-3 text-center">
                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Renewal</p>
                   <p className="text-sm font-black">
-                    {activeSpotifySlot.renewal_date
-                      ? new Date(activeSpotifySlot.renewal_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-                      : "N/A"}
+                    {(() => {
+                      if (!activeSpotifySlot.renewal_date) return "N/A";
+                      const d = new Date(activeSpotifySlot.renewal_date);
+                      const now = Date.now();
+                      const daysLeft = Math.ceil((d.getTime() - now) / (1000 * 60 * 60 * 24));
+                      if (daysLeft <= 0) return <span className="text-red-400">Expired</span>;
+                      return <>{d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</>;
+                    })()}
                   </p>
+                  {(() => {
+                    if (!activeSpotifySlot.renewal_date) return null;
+                    const daysLeft = Math.ceil((new Date(activeSpotifySlot.renewal_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    if (daysLeft <= 0) return null;
+                    return <p className="text-[9px] text-white/40 mt-0.5">{daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining</p>;
+                  })()}
                 </div>
                 <div className="bg-white/5 rounded-xl p-3 text-center">
                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Tickets</p>
@@ -753,7 +764,7 @@ export default function RafflePage() {
       </section>
 
       {/* ===== MY TICKETS + REFERRAL ===== */}
-      {(isAlreadyEntered || isCompleted) && (
+      {currentUser && (
         <section id="my-tickets" className="py-12 px-4">
           <div className="max-w-6xl mx-auto">
             <motion.div
@@ -857,7 +868,7 @@ export default function RafflePage() {
       )}
 
       {/* ===== USER PROGRESS ===== */}
-      {(isAlreadyEntered || isCompleted) && (
+      {currentUser && (
         <section className="py-8 px-4">
           <div className="max-w-4xl mx-auto">
             <motion.div
@@ -903,7 +914,7 @@ export default function RafflePage() {
       )}
 
       {/* ===== TICKET HISTORY ===== */}
-      {(isAlreadyEntered || isCompleted) && ticketHistoryQuery && ticketHistoryQuery.length > 0 && (
+      {currentUser && ticketHistoryQuery && ticketHistoryQuery.length > 0 && (
         <section className="py-8 px-4">
           <div className="max-w-4xl mx-auto">
             <motion.div
