@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import type { User } from "../types";
 import { RaffleHeader } from "../components/raffle/RaffleHeader";
+import { SpotifyPurchaseModal } from "../components/raffle/SpotifyPurchaseModal";
 
 const SPOTIFY_GREEN = "#1DB954";
 const SPOTIFY_DARK = "#191414";
@@ -357,6 +358,15 @@ export default function RafflePage() {
   const [autoEnterAttempted, setAutoEnterAttempted] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+
+  const userSlotsQuery = useQuery(
+    api.subscriptions.getSlotsByUserId,
+    convexUserId ? { user_id: convexUserId } : "skip"
+  );
+  const activeSpotifySlot = (userSlotsQuery || []).find(
+    (s: any) => s.sub_name?.toLowerCase().includes("spotify") && (s.status === "filled" || s.status === "closing")
+  );
 
   const raffleQuery = useQuery(api.raffle.getActiveRaffle);
   const convexUserId = (currentUser?._id || "") as Id<"users">;
@@ -589,7 +599,7 @@ export default function RafflePage() {
                     </div>
                   ) : needsSubscription ? (
                     <button
-                      onClick={() => window.location.href = "/dashboard?tab=marketplace"}
+                      onClick={() => setShowPurchaseModal(true)}
                       className="h-12 px-8 rounded-2xl bg-[#1DB954] text-white text-xs font-black hover:bg-[#169c46] transition-all flex items-center gap-2 shadow-lg shadow-[#1DB954]/20"
                     >
                       <Music size={16} /> Get Spotify Premium
@@ -661,6 +671,48 @@ export default function RafflePage() {
               <div className="flex-1 min-w-0">
                 <p className="font-black text-sm sm:text-base">You already qualify for this raffle.</p>
                 <p className="text-white/60 text-xs mt-0.5">Share your referral link to earn more tickets and increase your chances.</p>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== SPOTIFY SUBSCRIPTION STATUS ===== */}
+      {currentUser && activeSpotifySlot && (
+        <section className="py-6 px-4">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-5"
+            >
+              <h3 className="text-sm font-black mb-4 flex items-center gap-2">
+                <Music size={16} className="text-[#1DB954]" /> Spotify Status
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Status</p>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-[#1DB954]" />
+                    <span className="text-sm font-black text-[#1DB954]">Active</span>
+                  </div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Plan</p>
+                  <p className="text-sm font-black">{activeSpotifySlot.slot_name || activeSpotifySlot.sub_name || "Spotify Premium"}</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Renewal</p>
+                  <p className="text-sm font-black">
+                    {activeSpotifySlot.renewal_date
+                      ? new Date(activeSpotifySlot.renewal_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+                      : "N/A"}
+                  </p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Tickets</p>
+                  <p className="text-sm font-black text-[#1DB954]">{totalTickets}</p>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -1257,6 +1309,24 @@ export default function RafflePage() {
           </p>
         </div>
       </section>
+
+      {/* ===== PURCHASE MODAL ===== */}
+      <SpotifyPurchaseModal
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        currentUser={currentUser}
+        onPurchaseComplete={() => {
+          setShowPurchaseModal(false);
+          setAutoEnterAttempted(false);
+        }}
+        onRequireAuth={(action) => {
+          setShowPurchaseModal(false);
+          setTimeout(() => {
+            if (action === "login") setShowLogin(true);
+            else setShowRegister(true);
+          }, 100);
+        }}
+      />
 
       {/* ===== MODALS ===== */}
       <AnimatePresence>
