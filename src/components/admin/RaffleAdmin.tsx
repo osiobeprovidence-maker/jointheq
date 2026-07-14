@@ -90,7 +90,7 @@ export function RaffleAdmin() {
     selectedRaffleId ? { raffleId: selectedRaffleId, limit: 5 } : "skip"
   );
 
-  const dashboard = useQuery(api.raffle.getRaffleDashboard);
+  const dashboard = useQuery(api.raffle.getRaffleDashboardStats);
 
   const createRaffleFn = useMutation(api.raffle.createRaffle);
   const updateRaffleFn = useMutation(api.raffle.updateRaffle);
