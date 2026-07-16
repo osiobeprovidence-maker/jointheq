@@ -443,7 +443,7 @@ export default function AdminRafflePage() {
     } finally {
       setSaving(false);
     }
-  }, [title, slug, bannerUrl, accentColor, description, prizeAmount, prizes, drawDate, status, frequency, drawDay, drawTime, startDate, endDate, referralReward, numWinners, autoDraw, autoPublish, autoNotify, autoGenerateNext, autoLockEntries, referralEnabled, maxReferralTickets, maxReferralsPerUser, eligibilityRules, notifOnEntry, notifOnReferral, notifOnWinner, notifOnReminder, notifOnClaimed, publishAfterCreate, raffle, raffleId, adminId, createRaffleFn, updateRaffleFn, updateStatusFn, isCreateMode, navigate]);
+  }, [title, slug, heroImageUrl, accentColor, description, prizeAmount, prizes, drawDate, status, frequency, drawDay, drawTime, startDate, endDate, referralReward, numWinners, autoDraw, autoPublish, autoNotify, autoGenerateNext, autoLockEntries, referralEnabled, maxReferralTickets, maxReferralsPerUser, eligibilityRules, notifOnEntry, notifOnReferral, notifOnWinner, notifOnReminder, notifOnClaimed, publishAfterCreate, raffle, raffleId, adminId, createRaffleFn, updateRaffleFn, updateStatusFn, isCreateMode, navigate]);
 
   // ─── Bonus Task handlers ───
   const handleCreateBonusTask = useCallback(async (data: any) => {
