@@ -11,6 +11,26 @@ export function validateImage(file: File): string | null {
   return null;
 }
 
+async function retryGenerateUploadUrl(
+  generateUploadUrl: () => Promise<string>,
+  maxRetries = 3,
+): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await generateUploadUrl();
+    } catch (err) {
+      lastError = err;
+      console.warn(`generateUploadUrl attempt ${attempt}/${maxRetries} failed:`, err);
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, attempt * 1000));
+      }
+    }
+  }
+  console.error("generateUploadUrl failed after", maxRetries, "attempts:", lastError);
+  throw new Error("Unable to prepare file upload. Image upload service is temporarily unavailable.");
+}
+
 export async function uploadCampaignImage(
   file: File,
   generateUploadUrl: () => Promise<string>,
@@ -20,16 +40,11 @@ export async function uploadCampaignImage(
   const validationError = validateImage(file);
   if (validationError) throw new Error(validationError);
 
-  let postUrl: string;
-  try {
-    postUrl = await generateUploadUrl();
-  } catch {
-    throw new Error("Unable to generate upload URL. Storage service unavailable.");
-  }
+  const postUrl = await retryGenerateUploadUrl(generateUploadUrl);
 
   return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.timeout = 30000;
+    xhr.timeout = 60000;
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -51,8 +66,8 @@ export async function uploadCampaignImage(
       }
     };
 
-    xhr.onerror = () => reject(new Error("Upload failed. Please check your connection."));
-    xhr.ontimeout = () => reject(new Error("File upload timed out. Please try again."));
+    xhr.onerror = () => reject(new Error("Network error while uploading image."));
+    xhr.ontimeout = () => reject(new Error("Upload failed. Please try again."));
 
     xhr.open("POST", postUrl);
     xhr.send(file);

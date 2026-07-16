@@ -75,6 +75,7 @@ function BannerUpload({ currentUrl, onUpload, onRemove }: { currentUrl?: string;
   const [error, setError] = useState<string | null>(null);
 
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
+  const resolveUploadUrl = useMutation(api.storage.resolveUploadUrl);
 
   const hasImage = preview || currentUrl;
 
@@ -86,10 +87,12 @@ function BannerUpload({ currentUrl, onUpload, onRemove }: { currentUrl?: string;
     setPreview(URL.createObjectURL(file));
     setUploading(true);
     try {
-      const url = await uploadCampaignImage(file, () => generateUploadUrl(), async ({ storageId }) => {
-        const result = await (await import("convex/react")).useQuery(api.storage.getUrl, { storageId: storageId as any });
-        return result || "";
-      }, setProgress);
+      const url = await uploadCampaignImage(
+        file,
+        () => generateUploadUrl(),
+        (args) => resolveUploadUrl(args),
+        setProgress,
+      );
       onUpload(url);
       setUploading(false);
     } catch (err) {
@@ -97,7 +100,7 @@ function BannerUpload({ currentUrl, onUpload, onRemove }: { currentUrl?: string;
       setPreview(null);
       setUploading(false);
     }
-  }, [generateUploadUrl, onUpload]);
+  }, [generateUploadUrl, resolveUploadUrl, onUpload]);
 
   return (
     <div className="space-y-2">
