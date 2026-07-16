@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Plus, Award, Ticket, Users, Gift, Sparkles,
   CheckCircle2, XCircle, Clock, Search, Edit3,
