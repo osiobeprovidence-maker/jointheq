@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   Plus, Award, Ticket, Users, Gift, Sparkles,
   CheckCircle2, XCircle, Clock, Search, Edit3,
@@ -19,6 +19,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { auth } from "../../lib/auth";
 import { uploadCampaignImage, validateImage } from "../../lib/storage";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 type RaffleStatus = "draft" | "published" | "closed" | "completed";
 type Tab = "all" | "draft" | "published" | "closed" | "completed";
@@ -59,14 +60,15 @@ function RaffleStatusBadge({ status }: { status: string }) {
 }
 
 export function RaffleAdmin() {
+  const navigate = useNavigate();
   const user = auth.getCurrentUser();
   const adminId = (user?._id || "") as Id<"users">;
 
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [selectedRaffleId, setSelectedRaffleId] = useState<Id<"raffles"> | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingRaffleId, setEditingRaffleId] = useState<Id<"raffles"> | null>(null);
+
+
 
   const allRaffles = useQuery(api.raffle.getAllRaffles);
   const selectedRaffle = useQuery(
@@ -155,7 +157,7 @@ export function RaffleAdmin() {
         sub="Create, manage, and draw winners for Spotify raffles"
         action={
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => navigate("/admin/raffle/new")}
             className="inline-flex items-center gap-1.5 h-10 px-5 rounded-xl bg-zinc-900 text-white text-xs font-black hover:bg-zinc-800 transition-all"
           >
             <Plus size={16} /> New Raffle
@@ -271,7 +273,7 @@ export function RaffleAdmin() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setEditingRaffleId(raffle._id); }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/raffle/edit/${raffle._id}`); }}
                       className="h-8 w-8 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-900 flex items-center justify-center transition-colors"
                       title="Edit raffle"
                     >
@@ -312,28 +314,6 @@ export function RaffleAdmin() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {showCreate && (
-          <CreateRaffleModal
-            adminId={adminId}
-            onClose={() => setShowCreate(false)}
-            onCreated={(id) => {
-              setShowCreate(false);
-              setSelectedRaffleId(id);
-            }}
-          />
-        )}
-        {editingRaffleId && (
-          <EditRaffleModal
-            key="edit"
-            raffleId={editingRaffleId}
-            adminId={adminId}
-            allRaffles={allRaffles || []}
-            onClose={() => setEditingRaffleId(null)}
-            onUpdated={() => setEditingRaffleId(null)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

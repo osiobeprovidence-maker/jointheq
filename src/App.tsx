@@ -30,6 +30,7 @@ const ReferralsPage = lazy(() => import("./pages/ReferralsPage"));
 const RewardsPage = lazy(() => import("./pages/RewardsPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const RafflePage = lazy(() => import("./pages/RafflePage"));
+const AdminRafflePage = lazy(() => import("./pages/AdminRafflePage"));
 
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
@@ -129,6 +130,23 @@ export default function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <AdminPaymentsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/raffle/new"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminRafflePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/raffle/edit/:raffleId"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminRafflePage />
               </ProtectedRoute>
             }
           />
