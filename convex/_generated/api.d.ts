@@ -48,6 +48,7 @@ import type * as referrals from "../referrals.js";
 import type * as reputation from "../reputation.js";
 import type * as slotTypeSanitizer from "../slotTypeSanitizer.js";
 import type * as slots_engine from "../slots_engine.js";
+import type * as storage from "../storage.js";
 import type * as subscriptionReminderActions from "../subscriptionReminderActions.js";
 import type * as subscriptionReminders from "../subscriptionReminders.js";
 import type * as subscriptions from "../subscriptions.js";
@@ -104,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   reputation: typeof reputation;
   slotTypeSanitizer: typeof slotTypeSanitizer;
   slots_engine: typeof slots_engine;
+  storage: typeof storage;
   subscriptionReminderActions: typeof subscriptionReminderActions;
   subscriptionReminders: typeof subscriptionReminders;
   subscriptions: typeof subscriptions;

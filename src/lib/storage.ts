@@ -20,10 +20,16 @@ export async function uploadCampaignImage(
   const validationError = validateImage(file);
   if (validationError) throw new Error(validationError);
 
-  const postUrl = await generateUploadUrl();
+  let postUrl: string;
+  try {
+    postUrl = await generateUploadUrl();
+  } catch {
+    throw new Error("Unable to generate upload URL. Storage service unavailable.");
+  }
 
   return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    xhr.timeout = 30000;
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -41,15 +47,14 @@ export async function uploadCampaignImage(
           reject(new Error("Failed to resolve upload URL"));
         }
       } else {
-        reject(new Error("Upload failed"));
+        reject(new Error("Upload failed with status " + xhr.status));
       }
     };
 
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.ontimeout = () => reject(new Error("Upload timed out"));
+    xhr.onerror = () => reject(new Error("Upload failed. Please check your connection."));
+    xhr.ontimeout = () => reject(new Error("File upload timed out. Please try again."));
 
     xhr.open("POST", postUrl);
-    xhr.setRequestHeader("Content-Type", file.type);
     xhr.send(file);
   });
 }
