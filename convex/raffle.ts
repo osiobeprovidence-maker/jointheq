@@ -154,6 +154,31 @@ export const getUserEntry = query({
   },
 });
 
+async function getSpotifyPurchaseInfo(ctx: any, userId: Id<"users">): Promise<{ spotifyPurchased: boolean; spotifyPurchaseCount: number }> {
+  const slots = await ctx.db
+    .query("subscription_slots")
+    .withIndex("by_user", (q: any) => q.eq("user_id", userId))
+    .collect();
+
+  let spotifyCount = 0;
+  for (const slot of slots) {
+    if (slot.status !== "filled" && slot.status !== "closing") continue;
+    const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
+    const platformName = (account as any)?.platform || (account as any)?.name || "";
+    if (platformName.toLowerCase().includes("spotify")) spotifyCount++;
+    const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
+    if (group) {
+      const catalog = group.subscription_catalog_id ? await ctx.db.get(group.subscription_catalog_id) : null;
+      if (catalog && (catalog as any).name?.toLowerCase().includes("spotify")) spotifyCount++;
+    }
+  }
+
+  return {
+    spotifyPurchased: spotifyCount > 0,
+    spotifyPurchaseCount: spotifyCount,
+  };
+}
+
 export const getUserTickets = query({
   args: { raffleId: v.id("raffles"), userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -164,7 +189,11 @@ export const getUserTickets = query({
       )
       .unique();
 
-    if (!entry) return { totalTickets: 0, initialEntry: 0, referralBonus: 0, bonusTaskTickets: 0 };
+    const spotifyInfo = await getSpotifyPurchaseInfo(ctx, args.userId);
+
+    if (!entry) {
+      return { totalTickets: 0, initialEntry: 0, referralBonus: 0, bonusTaskTickets: 0, ...spotifyInfo };
+    }
 
     const referrals = await ctx.db
       .query("raffle_referrals")
@@ -185,10 +214,11 @@ export const getUserTickets = query({
     const bonusTaskTickets = bonusCompletions.reduce((sum, c) => sum + c.ticketsAwarded, 0);
 
     return {
-      totalTickets: entry.ticketCount + referralBonus + bonusTaskTickets,
-      initialEntry: entry.ticketCount,
+      totalTickets: entry.ticketCount + bonusTaskTickets,
+      initialEntry: 1,
       referralBonus,
       bonusTaskTickets,
+      ...spotifyInfo,
     };
   },
 });

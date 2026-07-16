@@ -678,7 +678,7 @@ export default function RafflePage() {
   const raffleExpired = (raffle.drawDate || 0) < Date.now();
   const isCompleted = raffle.status === "completed";
   const isWinnerAnnounced = raffle.winnerAnnounced;
-  const totalTickets = userTickets?.totalTickets || (isAlreadyEntered ? 1 : 0);
+  const totalTickets = userTickets?.totalTickets ?? 0;
   const completedReferrals = referrals.filter((r: any) => r.status === "completed");
   const chanceLevel = Math.min(5, Math.ceil(totalTickets / 3) || 1);
 
@@ -1145,19 +1145,27 @@ export default function RafflePage() {
               viewport={{ once: true }}
               className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6"
             >
-              <h3 className="text-base font-black mb-4">Your Progress</h3>
+               <h3 className="text-base font-black mb-4">Your Progress</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="text-center">
+                <div className="text-center">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-1"
-                    style={{ backgroundColor: `${raffleAccent}20` }}>
-                    <CheckCircle2 size={18} style={{ color: raffleAccent }} />
+                    style={{ backgroundColor: userTickets?.spotifyPurchased ? `${raffleAccent}20` : "rgba(255,255,255,0.05)" }}>
+                    {userTickets?.spotifyPurchased ? (
+                      <CheckCircle2 size={18} style={{ color: raffleAccent }} />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-white/20" />
+                    )}
                   </div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-white/40">{raffle?.purchaseLabel || "Spotify"} Purchased</p>
                 </div>
                 <div className="text-center">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-1"
-                    style={{ backgroundColor: `${raffleAccent}20` }}>
-                    <CheckCircle2 size={18} style={{ color: raffleAccent }} />
+                    style={{ backgroundColor: totalTickets > 0 ? `${raffleAccent}20` : "rgba(255,255,255,0.05)" }}>
+                    {totalTickets > 0 ? (
+                      <CheckCircle2 size={18} style={{ color: raffleAccent }} />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-white/20" />
+                    )}
                   </div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Entered Raffle</p>
                 </div>
@@ -1208,7 +1216,7 @@ export default function RafflePage() {
               {/* Ticket Summary */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 {[
-                  { label: "Base Tickets", value: userTickets?.initialEntry ?? 1, icon: <Ticket size={14} />, color: raffleAccent },
+                  { label: "Base Tickets", value: userTickets?.initialEntry ?? 0, icon: <Ticket size={14} />, color: raffleAccent },
                   { label: "Referral Tickets", value: userTickets?.referralBonus ?? 0, icon: <Users size={14} />, color: "#f59e0b" },
                   { label: "Bonus Task Tickets", value: userTickets?.bonusTaskTickets ?? 0, icon: <Zap size={14} />, color: "#8b5cf6" },
                   { label: "Total Tickets", value: totalTickets, icon: <Award size={14} />, color: raffleAccent },
