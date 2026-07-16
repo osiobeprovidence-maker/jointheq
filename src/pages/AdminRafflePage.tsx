@@ -206,6 +206,7 @@ export default function AdminRafflePage() {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<RaffleStatus>("draft");
   const [heroImageUrl, setHeroImageUrl] = useState<string | undefined>();
+  const [logoUrl, setLogoUrl] = useState<string | undefined>();
   const [accentColor, setAccentColor] = useState("#1DB954");
 
   const [prizeAmount, setPrizeAmount] = useState("");
@@ -252,6 +253,7 @@ export default function AdminRafflePage() {
     setDescription(raffle.description || "");
     setStatus(raffle.status || "draft");
     setHeroImageUrl(raffle.banner);
+    setLogoUrl((raffle as any).logoUrl);
     setAccentColor(raffle.accentColor || "#1DB954");
     setPrizeAmount(String(raffle.prizeAmount || ""));
     setNumWinners(String(raffle.numberOfWinners || 1));
@@ -351,6 +353,7 @@ export default function AdminRafflePage() {
           title: title.trim(),
           slug: slug.trim(),
           banner: heroImageUrl,
+          logoUrl,
           accentColor,
           description: description.trim(),
           prizeAmount: Number(prizeAmount),
@@ -393,6 +396,7 @@ export default function AdminRafflePage() {
           title: title.trim(),
           slug: slug.trim(),
           banner: heroImageUrl,
+          logoUrl,
           accentColor,
           description: description.trim(),
           prizeAmount: Number(prizeAmount),
@@ -443,7 +447,7 @@ export default function AdminRafflePage() {
     } finally {
       setSaving(false);
     }
-  }, [title, slug, heroImageUrl, accentColor, description, prizeAmount, prizes, drawDate, status, frequency, drawDay, drawTime, startDate, endDate, referralReward, numWinners, autoDraw, autoPublish, autoNotify, autoGenerateNext, autoLockEntries, referralEnabled, maxReferralTickets, maxReferralsPerUser, eligibilityRules, notifOnEntry, notifOnReferral, notifOnWinner, notifOnReminder, notifOnClaimed, publishAfterCreate, raffle, raffleId, adminId, createRaffleFn, updateRaffleFn, updateStatusFn, isCreateMode, navigate]);
+  }, [title, slug, heroImageUrl, logoUrl, accentColor, description, prizeAmount, prizes, drawDate, status, frequency, drawDay, drawTime, startDate, endDate, referralReward, numWinners, autoDraw, autoPublish, autoNotify, autoGenerateNext, autoLockEntries, referralEnabled, maxReferralTickets, maxReferralsPerUser, eligibilityRules, notifOnEntry, notifOnReferral, notifOnWinner, notifOnReminder, notifOnClaimed, publishAfterCreate, raffle, raffleId, adminId, createRaffleFn, updateRaffleFn, updateStatusFn, isCreateMode, navigate]);
 
   // ─── Bonus Task handlers ───
   const handleCreateBonusTask = useCallback(async (data: any) => {
@@ -806,9 +810,14 @@ export default function AdminRafflePage() {
                           {maxReferralsPerUser && (
                             <div className="text-[10px] text-amber-600 font-bold flex items-center gap-1">👤 Max {maxReferralsPerUser} referrals per user</div>
                           )}
-                        </div>
-                      </div>
-                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700">Logo</label>
+                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Small brand logo displayed in the raffle header. PNG, JPG, SVG or WebP under 5 MB.</p>
+                    <BannerUpload currentUrl={logoUrl} onUpload={(url) => { setLogoUrl(url); markDirty(); }} onRemove={() => { setLogoUrl(undefined); markDirty(); }} />
+                  </div>
+                </div>
+              )}
                   </div>
 
                   {/* Bonus Tasks */}
@@ -1170,6 +1179,12 @@ export default function AdminRafflePage() {
                 <Eye size={12} /> Live Preview
               </p>
               <div className="bg-white border border-black/5 rounded-[2rem] overflow-hidden shadow-sm">
+                {logoUrl && (
+                  <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                    <img src={logoUrl} alt="Raffle Logo" className="h-6 w-auto object-contain" />
+                    <span className="text-[11px] font-bold text-zinc-400 truncate">{title || "Raffle Title"}</span>
+                  </div>
+                )}
                 {heroImageUrl ? (
                   <img src={heroImageUrl} alt="Campaign artwork" className="w-full h-28 object-contain bg-zinc-50" />
                 ) : (

@@ -693,6 +693,7 @@ export default function RafflePage() {
         setShowLogin={setShowLogin}
         showRegister={showRegister}
         setShowRegister={setShowRegister}
+        raffleLogoUrl={(raffle as any)?.logoUrl}
       />
 
       {/* ===== HERO ===== */}

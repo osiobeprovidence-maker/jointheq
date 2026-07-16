@@ -165,12 +165,21 @@ async function getSpotifyPurchaseInfo(ctx: any, userId: Id<"users">): Promise<{ 
     if (slot.status !== "filled" && slot.status !== "closing") continue;
     const account = slot.subscription_id ? await ctx.db.get(slot.subscription_id) : null;
     const platformName = (account as any)?.platform || (account as any)?.name || "";
-    if (platformName.toLowerCase().includes("spotify")) spotifyCount++;
+    if (platformName.toLowerCase().includes("spotify")) { spotifyCount++; continue; }
     const group = slot.group_id ? await ctx.db.get(slot.group_id) : null;
     if (group) {
       const catalog = group.subscription_catalog_id ? await ctx.db.get(group.subscription_catalog_id) : null;
-      if (catalog && (catalog as any).name?.toLowerCase().includes("spotify")) spotifyCount++;
+      if (catalog && (catalog as any).name?.toLowerCase().includes("spotify")) { spotifyCount++; continue; }
     }
+  }
+
+  const migrated = await ctx.db
+    .query("migrated_subscriptions")
+    .withIndex("by_user", (q: any) => q.eq("user_id", userId))
+    .collect();
+
+  for (const m of migrated) {
+    if ((m as any).platform?.toLowerCase().includes("spotify") && (m as any).status === "active") spotifyCount++;
   }
 
   return {
@@ -695,6 +704,7 @@ export const createRaffle = mutation({
     title: v.string(),
     slug: v.string(),
     banner: v.optional(v.string()),
+    logoUrl: v.optional(v.string()),
     accentColor: v.optional(v.string()),
     description: v.string(),
     prizeAmount: v.number(),
@@ -766,6 +776,7 @@ export const createRaffle = mutation({
       title: args.title.trim(),
       slug: uniqueSlug,
       banner: args.banner,
+      logoUrl: args.logoUrl,
       accentColor: args.accentColor,
       description: args.description.trim(),
       prizeAmount: args.prizeAmount,
@@ -825,6 +836,7 @@ export const updateRaffle = mutation({
     title: v.optional(v.string()),
     slug: v.optional(v.string()),
     banner: v.optional(v.string()),
+    logoUrl: v.optional(v.string()),
     accentColor: v.optional(v.string()),
     description: v.optional(v.string()),
     prizeAmount: v.optional(v.number()),
@@ -892,6 +904,7 @@ export const updateRaffle = mutation({
     if (args.title !== undefined) updates.title = args.title.trim();
     if (args.slug !== undefined) updates.slug = await ensureUniqueSlug(ctx, args.slug.trim().toLowerCase(), args.raffleId);
     if (args.banner !== undefined) updates.banner = args.banner;
+    if (args.logoUrl !== undefined) updates.logoUrl = args.logoUrl;
     if (args.accentColor !== undefined) updates.accentColor = args.accentColor;
     if (args.description !== undefined) updates.description = args.description.trim();
     if (args.prizeAmount !== undefined) updates.prizeAmount = args.prizeAmount;

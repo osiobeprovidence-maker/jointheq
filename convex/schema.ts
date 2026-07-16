@@ -1427,6 +1427,7 @@ export default defineSchema({
         title: v.string(),
         slug: v.string(),
         banner: v.optional(v.string()),
+        logoUrl: v.optional(v.string()),
         accentColor: v.optional(v.string()),
         description: v.string(),
         prizeAmount: v.number(),

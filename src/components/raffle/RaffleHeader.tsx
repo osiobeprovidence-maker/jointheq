@@ -19,9 +19,10 @@ interface RaffleHeaderProps {
   setShowLogin: (v: boolean) => void;
   showRegister: boolean;
   setShowRegister: (v: boolean) => void;
+  raffleLogoUrl?: string;
 }
 
-export function RaffleHeader({ currentUser, onUserChange, showLogin, setShowLogin, showRegister, setShowRegister }: RaffleHeaderProps) {
+export function RaffleHeader({ currentUser, onUserChange, showLogin, setShowLogin, showRegister, setShowRegister, raffleLogoUrl }: RaffleHeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -76,7 +77,11 @@ export function RaffleHeader({ currentUser, onUserChange, showLogin, setShowLogi
       <header className="sticky top-0 z-30 bg-[#0d0d0d]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <a href="/raffle" className="flex items-center gap-2.5 shrink-0">
-            <Logo className="w-7 h-7" />
+            {raffleLogoUrl ? (
+              <img src={raffleLogoUrl} alt="Raffle Logo" className="h-7 w-auto object-contain" />
+            ) : (
+              <Logo className="w-7 h-7" />
+            )}
             <span className="text-sm font-black text-white hidden sm:block">join<em className="text-[#1DB954] not-italic">the</em>Q</span>
           </a>
 
