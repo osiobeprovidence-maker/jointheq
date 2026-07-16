@@ -790,15 +790,44 @@ export default function RafflePage() {
             </div>
 
             <motion.div
-              className="flex-shrink-0"
+              className="flex-shrink-0 relative"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <div className="relative">
-                <VinylRecord size={160} />
-                <div className="absolute -bottom-4 -right-4 text-white text-xs font-black px-4 py-2 rounded-full shadow-lg"
-                  style={{ backgroundColor: raffleAccent, boxShadow: `0 10px 15px -3px ${raffleAccent}40` }}>
+              <div className="relative flex items-center justify-center">
+                {/* Glow behind mascot */}
+                <div
+                  className="absolute rounded-full blur-3xl"
+                  style={{
+                    width: "120%",
+                    height: "120%",
+                    backgroundColor: `${raffleAccent}20`,
+                  }}
+                />
+                <motion.img
+                  src="/q-3d.png"
+                  alt="Q Mascot"
+                  className="relative object-contain"
+                  style={{
+                    width: "clamp(220px, 35vw, 480px)",
+                    height: "auto",
+                    aspectRatio: "1/1",
+                  }}
+                  animate={{
+                    y: [0, -5, 0],
+                    rotate: [0, 1, 0],
+                  }}
+                  transition={{
+                    y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                    rotate: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                  }}
+                  loading="eager"
+                />
+                <div
+                  className="absolute -bottom-2 -right-2 sm:-bottom-4 sm:-right-4 text-white text-xs font-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg z-10"
+                  style={{ backgroundColor: raffleAccent, boxShadow: `0 10px 15px -3px ${raffleAccent}40` }}
+                >
                   ₦{(raffle?.prizeAmount || 5000).toLocaleString()} Prize
                 </div>
               </div>
