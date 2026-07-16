@@ -805,25 +805,45 @@ export default function RafflePage() {
                     backgroundColor: `${raffleAccent}20`,
                   }}
                 />
-                <motion.img
-                  src={raffle?.banner || "/q-3d.png"}
-                  alt="Q Mascot"
-                  className="relative object-contain"
-                  style={{
-                    width: "clamp(220px, 35vw, 480px)",
-                    height: "auto",
-                    aspectRatio: "1/1",
-                  }}
-                  animate={{
-                    y: [0, -5, 0],
-                    rotate: [0, 1, 0],
-                  }}
-                  transition={{
-                    y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                  }}
-                  loading="eager"
-                />
+                {raffle?.banner ? (
+                  <motion.img
+                    src={raffle.banner}
+                    alt="Campaign artwork"
+                    className="relative object-contain"
+                    style={{
+                      width: "clamp(220px, 35vw, 480px)",
+                      height: "auto",
+                      aspectRatio: "1/1",
+                    }}
+                    animate={{
+                      y: [0, -5, 0],
+                      rotate: [0, 1, 0],
+                    }}
+                    transition={{
+                      y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                      rotate: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                    }}
+                    loading="eager"
+                  />
+                ) : (
+                  <motion.div
+                    className="relative flex items-center justify-center"
+                    style={{
+                      width: "clamp(220px, 35vw, 480px)",
+                      aspectRatio: "1/1",
+                    }}
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
+                  >
+                    <svg width="60%" height="60%" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="10" y="40" width="100" height="65" rx="8" stroke={`${raffleAccent}60`} strokeWidth="3" fill={`${raffleAccent}08`} />
+                      <path d="M10 55h100" stroke={`${raffleAccent}60`} strokeWidth="3" />
+                      <path d="M40 30L60 40L80 30" stroke={`${raffleAccent}60`} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <circle cx="60" cy="65" r="8" stroke={`${raffleAccent}50`} strokeWidth="2.5" fill="none" />
+                      <circle cx="60" cy="85" r="8" stroke={`${raffleAccent}50`} strokeWidth="2.5" fill="none" />
+                    </svg>
+                  </motion.div>
+                )}
                 <div
                   className="absolute -bottom-2 -right-2 sm:-bottom-4 sm:-right-4 text-white text-xs font-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg z-10"
                   style={{ backgroundColor: raffleAccent, boxShadow: `0 10px 15px -3px ${raffleAccent}40` }}

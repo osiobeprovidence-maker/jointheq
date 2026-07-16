@@ -205,7 +205,7 @@ export default function AdminRafflePage() {
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<RaffleStatus>("draft");
-  const [bannerUrl, setBannerUrl] = useState<string | undefined>();
+  const [heroImageUrl, setHeroImageUrl] = useState<string | undefined>();
   const [accentColor, setAccentColor] = useState("#1DB954");
 
   const [prizeAmount, setPrizeAmount] = useState("");
@@ -251,7 +251,7 @@ export default function AdminRafflePage() {
     setSlug(raffle.slug || "");
     setDescription(raffle.description || "");
     setStatus(raffle.status || "draft");
-    setBannerUrl(raffle.banner);
+    setHeroImageUrl(raffle.banner);
     setAccentColor(raffle.accentColor || "#1DB954");
     setPrizeAmount(String(raffle.prizeAmount || ""));
     setNumWinners(String(raffle.numberOfWinners || 1));
@@ -350,7 +350,7 @@ export default function AdminRafflePage() {
           adminId,
           title: title.trim(),
           slug: slug.trim(),
-          banner: bannerUrl,
+          banner: heroImageUrl,
           accentColor,
           description: description.trim(),
           prizeAmount: Number(prizeAmount),
@@ -392,7 +392,7 @@ export default function AdminRafflePage() {
           raffleId: raffle._id,
           title: title.trim(),
           slug: slug.trim(),
-          banner: bannerUrl,
+          banner: heroImageUrl,
           accentColor,
           description: description.trim(),
           prizeAmount: Number(prizeAmount),
@@ -605,7 +605,7 @@ export default function AdminRafflePage() {
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2">
-                      <BannerUpload currentUrl={bannerUrl} onUpload={(url) => { setBannerUrl(url); markDirty(); }} onRemove={() => { setBannerUrl(undefined); markDirty(); }} />
+                      <BannerUpload currentUrl={heroImageUrl} onUpload={(url) => { setHeroImageUrl(url); markDirty(); }} onRemove={() => { setHeroImageUrl(undefined); markDirty(); }} />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-zinc-700">Accent Color</label>
@@ -1170,8 +1170,8 @@ export default function AdminRafflePage() {
                 <Eye size={12} /> Live Preview
               </p>
               <div className="bg-white border border-black/5 rounded-[2rem] overflow-hidden shadow-sm">
-                {bannerUrl ? (
-                  <img src={bannerUrl} alt="Banner" className="w-full h-28 object-cover" />
+                {heroImageUrl ? (
+                  <img src={heroImageUrl} alt="Campaign artwork" className="w-full h-28 object-contain bg-zinc-50" />
                 ) : (
                   <div className="w-full h-28 bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center">
                     <ImageIcon size={24} className="text-zinc-300" />
