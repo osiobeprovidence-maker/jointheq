@@ -1108,23 +1108,31 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* ===== BASIC INFORMATION ===== */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">Basic Information</h4>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Title</label>
+              <h4 className="text-sm font-black flex items-center gap-2">📋 Basic Information</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Set the name, URL slug, and description for your raffle campaign.
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-zinc-700">Title</label>
+              <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">The public name of your raffle campaign.</p>
               <input value={title} onChange={e => setTitle(e.target.value)}
-                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Slug</label>
+                <label className="text-xs font-bold text-zinc-700">Slug</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">The URL-friendly identifier for this raffle.</p>
                 <input value={slug} onChange={e => setSlug(e.target.value)}
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-mono font-bold outline-none focus:border-zinc-900 mt-1" />
-                <p className="text-[10px] text-zinc-400 mt-1">Leaving same slug keeps it unchanged</p>
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900" />
+                <p className="text-[10px] text-zinc-400 mt-1">Leaving the same slug will keep it unchanged.</p>
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Status</label>
+                <label className="text-xs font-bold text-zinc-700">Status</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Controls whether the raffle is visible to participants.</p>
                 <select value={status} onChange={e => setStatus(e.target.value)}
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1">
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900">
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                   <option value="closed">Closed</option>
@@ -1133,9 +1141,10 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Description</label>
+              <label className="text-xs font-bold text-zinc-700">Description</label>
+              <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">A short summary participants will see on the raffle page.</p>
               <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
-                className="w-full rounded-2xl border border-black/5 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900 mt-1 resize-none" />
+                className="w-full rounded-2xl border border-black/5 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900 resize-none" />
             </div>
           </div>
 
@@ -1145,8 +1154,9 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
               <BannerUpload currentUrl={bannerUrl} onUpload={setBannerUrl} onRemove={() => setBannerUrl(undefined)} />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Accent Color</label>
-              <div className="flex flex-col gap-1.5 mt-1">
+              <label className="text-xs font-bold text-zinc-700">Accent Color</label>
+              <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Theme color for your campaign visuals.</p>
+              <div className="flex flex-col gap-1.5">
                 <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)}
                   className="w-full h-10 rounded-xl border border-black/5 cursor-pointer" />
                 <div className="flex flex-wrap gap-1">
@@ -1162,7 +1172,12 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
 
           {/* ===== SCHEDULE ===== */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Calendar size={12} /> Schedule</h4>
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">📅 Schedule</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Set the draw frequency and timing for your raffle campaign.
+              </p>
+            </div>
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Draw Frequency</label>
               <div className="flex gap-2 mt-1">
@@ -1224,24 +1239,36 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
 
           {/* ===== PRIZE CONFIGURATION ===== */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Award size={12} /> Prize Configuration</h4>
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">🎁 Prize Configuration</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Configure how prize money will be distributed to winners. Set the total prize pool, choose the number of winners, or create custom prize tiers for different placements.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Prize Pool (₦)</label>
+                <label className="text-xs font-bold text-zinc-700">Total Prize Pool</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">The total amount that will be distributed across all winners in this raffle.</p>
                 <input value={prizeAmount} onChange={e => setPrizeAmount(e.target.value)} type="number" min="1"
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+                  placeholder="Enter total prize amount"
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Number of Winners</label>
+                <label className="text-xs font-bold text-zinc-700">Number of Winners</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Choose how many participants will receive a prize when the raffle ends.</p>
                 <input value={numWinners} onChange={e => setNumWinners(e.target.value)} type="number" min="1"
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+                  placeholder="Enter number of winners"
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Prize Tiers (optional)</label>
+                <div>
+                  <label className="text-xs font-bold text-zinc-700">Prize Tiers</label>
+                  <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Optionally create custom prize amounts for each winner instead of splitting the prize pool equally.</p>
+                </div>
                 <button type="button" onClick={addPrizeTier}
-                  className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+                  className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 shrink-0">
                   <Plus size={12} /> Add Tier
                 </button>
               </div>
@@ -1249,15 +1276,20 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
                 {prizes.map((p, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <input value={p.label} onChange={e => updatePrize(i, "label", e.target.value)}
-                      placeholder="1st Prize"
-                      className="flex-1 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
+                      placeholder={`${i === 0 ? "🥇 First Prize" : i === 1 ? "🥈 Second Prize" : i === 2 ? "🥉 Third Prize" : `${i + 1}th Prize`}`}
+                      className="flex-1 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
                     <input value={p.amount} onChange={e => updatePrize(i, "amount", e.target.value)}
                       type="number" min="1" placeholder="Amount"
-                      className="w-28 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
+                      className="w-28 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
                     <button type="button" onClick={() => removePrizeTier(i)}
                       className="h-10 w-10 rounded-xl hover:bg-red-50 text-red-400 hover:text-red-600 flex items-center justify-center"><X size={14} /></button>
                   </div>
                 ))}
+                {prizes.length === 0 && (
+                  <div className="bg-zinc-50 rounded-xl p-3 text-xs text-zinc-400 font-medium leading-relaxed">
+                    <span className="font-bold text-zinc-500">Example:</span> 🥇 First Prize → ₦20,000 · 🥈 Second Prize → ₦10,000 · 🥉 Third Prize → ₦5,000
+                  </div>
+                )}
               </div>
               {prizes.length > 0 && !prizePoolValid && (
                 <p className="text-[10px] font-bold text-red-500 mt-1">Tier total (₦{prizePoolTotal.toLocaleString()}) exceeds prize pool (₦{Number(prizeAmount).toLocaleString()})</p>
@@ -1267,33 +1299,57 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
 
           {/* ===== REFERRAL SETTINGS ===== */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Gift size={12} /> Referral Settings</h4>
-            <Toggle label="Enable Referrals" desc="Allow users to invite friends for bonus tickets" checked={referralEnabled} onChange={setReferralEnabled} />
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">👥 Referral Settings</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Reward users with bonus raffle tickets when they successfully invite friends to JoinTheQ.
+              </p>
+            </div>
+            <Toggle label="Enable Referrals" desc="Allow participants to earn bonus tickets through successful referrals." checked={referralEnabled} onChange={setReferralEnabled} />
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Tickets per Referral</label>
+                <label className="text-xs font-bold text-zinc-700">Tickets Per Referral</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Number of raffle tickets awarded for every successful referral.</p>
                 <input value={referralReward} onChange={e => setReferralReward(e.target.value)} type="number" min="1"
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" disabled={!referralEnabled} />
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300 disabled:opacity-50" disabled={!referralEnabled} />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Max Referral Tickets</label>
+                <label className="text-xs font-bold text-zinc-700">Maximum Referral Tickets</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Maximum number of bonus tickets a participant can earn from referrals. Leave empty for unlimited.</p>
                 <input value={maxReferralTickets} onChange={e => setMaxReferralTickets(e.target.value)} type="number" min="1" placeholder="Unlimited"
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" disabled={!referralEnabled} />
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300 disabled:opacity-50" disabled={!referralEnabled} />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Max Referrals/User</label>
+                <label className="text-xs font-bold text-zinc-700">Maximum Referrals Per User</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Limit the number of successful referrals counted for each participant. Leave empty for unlimited.</p>
                 <input value={maxReferralsPerUser} onChange={e => setMaxReferralsPerUser(e.target.value)} type="number" min="1" placeholder="Unlimited"
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" disabled={!referralEnabled} />
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300 disabled:opacity-50" disabled={!referralEnabled} />
               </div>
             </div>
             {referralEnabled && (
-              <div className="bg-zinc-50 rounded-2xl p-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Preview</p>
-                <div className="text-xs font-bold text-zinc-600 space-y-0.5">
-                  <div>Purchase Spotify = <span className="text-emerald-600">1 Ticket</span></div>
-                  <div>Refer Friend = <span className="text-emerald-600">+{referralReward} Tickets</span></div>
-                  {maxReferralTickets && <div>Max Referral Tickets = <span className="text-amber-600">{maxReferralTickets}</span></div>}
-                  {maxReferralsPerUser && <div>Max Referrals/User = <span className="text-amber-600">{maxReferralsPerUser}</span></div>}
+              <div className="bg-gradient-to-br from-zinc-50 to-zinc-100/50 rounded-2xl p-4 border border-black/5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">Ticket Summary</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">🎵</span>
+                    <span className="text-zinc-600">Purchase Eligible Subscription</span>
+                    <span className="ml-auto font-black text-emerald-600">+1 Ticket</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center shrink-0">👥</span>
+                    <span className="text-zinc-600">Successfully Refer a Friend</span>
+                    <span className="ml-auto font-black text-emerald-600">+{referralReward} Ticket{Number(referralReward) !== 1 ? "s" : ""}</span>
+                  </div>
+                  {maxReferralTickets && (
+                    <div className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                      <span>📊</span> Max {maxReferralTickets} referral tickets cap
+                    </div>
+                  )}
+                  {maxReferralsPerUser && (
+                    <div className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                      <span>👤</span> Max {maxReferralsPerUser} referrals per user
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1301,44 +1357,73 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
 
           {/* ===== ELIGIBILITY RULES ===== */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><CheckCircle2 size={12} /> Eligibility Rules</h4>
-            {eligibilityRules.map((rule, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <select value={rule.field} onChange={e => updateRule(i, "field", e.target.value)}
-                  className="flex-1 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900">
-                  <option value="has_spotify">Has Spotify Subscription</option>
-                  <option value="min_subscription_age">Min Subscription Age</option>
-                  <option value="account_status">Account Status</option>
-                  <option value="not_disqualified">Not Disqualified</option>
-                  <option value="country">Country / Region</option>
-                </select>
-                <select value={rule.operator} onChange={e => updateRule(i, "operator", e.target.value)}
-                  className="w-20 h-10 rounded-xl border border-black/5 bg-zinc-50 px-2 text-xs font-bold outline-none focus:border-zinc-900">
-                  <option value="eq">=</option>
-                  <option value="neq">≠</option>
-                  <option value="gte">≥</option>
-                  <option value="lt">&lt;</option>
-                </select>
-                {rule.field === "min_subscription_age" ? (
-                  <div className="flex items-center gap-1">
-                    <input value={rule.value} onChange={e => updateRule(i, "value", e.target.value)} type="number" min="1" placeholder="Days"
-                      className="w-20 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
-                    <span className="text-[10px] font-bold text-zinc-400">days</span>
-                  </div>
-                ) : rule.field === "country" ? (
-                  <input value={rule.value} onChange={e => updateRule(i, "value", e.target.value)} placeholder="e.g. NG"
-                    className="w-20 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
-                ) : (
-                  <select value={rule.value} onChange={e => updateRule(i, "value", e.target.value)}
-                    className="flex-1 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900">
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                  </select>
-                )}
-                <button type="button" onClick={() => removeRule(i)}
-                  className="h-10 w-10 rounded-xl hover:bg-red-50 text-red-400 hover:text-red-600 flex items-center justify-center"><X size={14} /></button>
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">✅ Eligibility Rules</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Only participants who meet all of the following conditions will be entered into the raffle.
+              </p>
+            </div>
+            {eligibilityRules.length > 0 && (
+              <div className="bg-emerald-50/50 rounded-2xl p-4 space-y-2 border border-emerald-100">
+                {eligibilityRules.map((rule, i) => {
+                  const statement = (() => {
+                    switch (rule.field) {
+                      case "has_spotify": return "Participant must have an active Spotify subscription.";
+                      case "min_subscription_age": return `Subscription must be at least ${rule.value} days old.`;
+                      case "account_status": return `Account status must be active.`;
+                      case "not_disqualified": return `Participant must not be disqualified.`;
+                      case "country": return `Country / region must be ${rule.value}.`;
+                      default: return `${rule.field} ${rule.operator} ${rule.value}`;
+                    }
+                  })();
+                  return (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <span className="text-emerald-600 shrink-0">✅</span>
+                      <span className="text-zinc-700 font-medium flex-1">{statement}</span>
+                      <button type="button" onClick={() => removeRule(i)}
+                        className="shrink-0 w-6 h-6 rounded-lg hover:bg-emerald-100 text-zinc-400 hover:text-red-500 flex items-center justify-center transition-colors"><X size={12} /></button>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
+            <div className="space-y-3">
+              {eligibilityRules.map((rule, i) => (
+                <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-zinc-50 border border-black/5">
+                  <select value={rule.field} onChange={e => updateRule(i, "field", e.target.value)}
+                    className="flex-1 h-9 rounded-lg border border-black/5 bg-white px-2.5 text-xs font-bold outline-none focus:border-zinc-900">
+                    <option value="has_spotify">Has Spotify Subscription</option>
+                    <option value="min_subscription_age">Min Subscription Age</option>
+                    <option value="account_status">Account Status</option>
+                    <option value="not_disqualified">Not Disqualified</option>
+                    <option value="country">Country / Region</option>
+                  </select>
+                  <select value={rule.operator} onChange={e => updateRule(i, "operator", e.target.value)}
+                    className="w-16 h-9 rounded-lg border border-black/5 bg-white px-1 text-xs font-bold outline-none focus:border-zinc-900">
+                    <option value="eq">=</option>
+                    <option value="neq">≠</option>
+                    <option value="gte">≥</option>
+                    <option value="lt">&lt;</option>
+                  </select>
+                  {rule.field === "min_subscription_age" ? (
+                    <div className="flex items-center gap-1">
+                      <input value={rule.value} onChange={e => updateRule(i, "value", e.target.value)} type="number" min="1" placeholder="Days"
+                        className="w-16 h-9 rounded-lg border border-black/5 bg-white px-2 text-xs font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
+                      <span className="text-[10px] font-bold text-zinc-400">days</span>
+                    </div>
+                  ) : rule.field === "country" ? (
+                    <input value={rule.value} onChange={e => updateRule(i, "value", e.target.value)} placeholder="e.g. NG"
+                      className="w-16 h-9 rounded-lg border border-black/5 bg-white px-2 text-xs font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
+                  ) : (
+                    <select value={rule.value} onChange={e => updateRule(i, "value", e.target.value)}
+                      className="flex-1 h-9 rounded-lg border border-black/5 bg-white px-2.5 text-xs font-bold outline-none focus:border-zinc-900">
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  )}
+                </div>
+              ))}
+            </div>
             <button type="button" onClick={addRule}
               className="w-full h-10 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-zinc-400 hover:text-zinc-600 hover:border-zinc-300 transition-all flex items-center justify-center gap-1">
               <Plus size={14} /> Add Rule
@@ -1347,24 +1432,34 @@ function EditRaffleModal({ raffleId, adminId, allRaffles, onClose, onUpdated }: 
 
           {/* ===== NOTIFICATIONS ===== */}
           <div className="space-y-3">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">Notifications</h4>
-            <Toggle label="On User Entry" desc="Notify user when they enter the raffle" checked={notifOnEntry} onChange={setNotifOnEntry} />
-            <Toggle label="On Referral Earned" desc="Notify user when a referral completes" checked={notifOnReferral} onChange={setNotifOnReferral} />
-            <Toggle label="On Winner Announce" desc="Notify winners when announced" checked={notifOnWinner} onChange={setNotifOnWinner} />
-            <Toggle label="On Draw Reminder" desc="Send reminder before draw" checked={notifOnReminder} onChange={setNotifOnReminder} />
-            <Toggle label="On Prize Claimed" desc="Notify when winner claims prize" checked={notifOnClaimed} onChange={setNotifOnClaimed} />
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">🔔 Notifications</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Configure the notifications participants receive before, during, and after the raffle.
+              </p>
+            </div>
+            <Toggle label="Ticket Earned" desc="Notify participants each time they earn a raffle ticket." checked={notifOnEntry} onChange={setNotifOnEntry} />
+            <Toggle label="Referral Successful" desc="Notify participants when someone joins through their referral link." checked={notifOnReferral} onChange={setNotifOnReferral} />
+            <Toggle label="Winner Announcement" desc="Notify all participants when the winner is officially announced." checked={notifOnWinner} onChange={setNotifOnWinner} />
+            <Toggle label="Reminder Before Draw" desc="Send a friendly reminder before the raffle draw takes place." checked={notifOnReminder} onChange={setNotifOnReminder} />
+            <Toggle label="Prize Distributed" desc="Notify winners when their prize has been successfully distributed." checked={notifOnClaimed} onChange={setNotifOnClaimed} />
           </div>
 
           {/* ===== AUTOMATION ===== */}
           <div className="space-y-3">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Repeat2 size={12} /> Automation</h4>
-            <Toggle label="Auto Draw Winner" desc="Select winner(s) when draw time arrives" checked={autoDraw} onChange={setAutoDraw} />
-            <Toggle label="Auto Publish Winners" desc="Announce winners publicly" checked={autoPublish} onChange={setAutoPublish} />
-            <Toggle label="Auto Notify Winners" desc="Send notifications to winners" checked={autoNotify} onChange={setAutoNotify} />
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">🤖 Automation</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Automate raffle events so everything runs on autopilot from drawing winners to sending notifications.
+              </p>
+            </div>
+            <Toggle label="Auto Draw Winner" desc="Select winner(s) automatically when draw time arrives." checked={autoDraw} onChange={setAutoDraw} />
+            <Toggle label="Auto Publish Winners" desc="Announce winners publicly without manual approval." checked={autoPublish} onChange={setAutoPublish} />
+            <Toggle label="Auto Notify Winners" desc="Send notifications to winners automatically." checked={autoNotify} onChange={setAutoNotify} />
             {frequency !== "one_time" && (
-              <Toggle label="Auto Generate Next Draw" desc="Schedule next round after draw completes" checked={autoGenerateNext} onChange={setAutoGenerateNext} />
+              <Toggle label="Auto Generate Next Draw" desc="Schedule the next round immediately after a draw completes." checked={autoGenerateNext} onChange={setAutoGenerateNext} />
             )}
-            <Toggle label="Lock Entries Before Draw" desc="Prevent new entries before draw time" checked={autoLockEntries} onChange={setAutoLockEntries} />
+            <Toggle label="Lock Entries Before Draw" desc="Prevent new entries once the draw time is reached." checked={autoLockEntries} onChange={setAutoLockEntries} />
           </div>
 
           <button type="submit" disabled={submitting}
@@ -1514,26 +1609,34 @@ function CreateRaffleModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Info size={12} /> Basic Information</h4>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Title *</label>
-              <input value={title} onChange={e => handleSlugFromTitle(e.target.value)}
-                placeholder="Spin the Beat"
-                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+              <h4 className="text-sm font-black flex items-center gap-2">📋 Basic Information</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Give your raffle a name, set its URL slug, and write a short description.
+              </p>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Slug *</label>
+              <label className="text-xs font-bold text-zinc-700">Title *</label>
+              <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">The public name of your raffle campaign.</p>
+              <input value={title} onChange={e => handleSlugFromTitle(e.target.value)}
+                placeholder="e.g. Spin the Beat"
+                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-zinc-700">Slug *</label>
+              <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">The URL-friendly identifier (auto-generated from title).</p>
               <input value={slug} onChange={e => setSlug(e.target.value)}
                 placeholder="spin-the-beat"
-                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-mono font-bold outline-none focus:border-zinc-900 mt-1" />
-              <p className="text-[10px] text-zinc-400 mt-1">If slug is taken, a unique version will be generated automatically.</p>
+                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
+              <p className="text-[10px] text-zinc-400 mt-1">If the slug is taken, a unique version will be generated automatically.</p>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Description</label>
+              <label className="text-xs font-bold text-zinc-700">Description</label>
+              <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">A short summary participants will see on the raffle page.</p>
               <textarea value={description} onChange={e => setDescription(e.target.value)}
                 placeholder="Win amazing prizes with Spotify Premium..."
                 rows={2}
-                className="w-full rounded-2xl border border-black/5 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900 mt-1 resize-none" />
+                className="w-full rounded-2xl border border-black/5 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900 resize-none placeholder:text-zinc-300" />
             </div>
           </div>
 
@@ -1560,10 +1663,16 @@ function CreateRaffleModal({
 
           {/* Schedule */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Calendar size={12} /> Schedule</h4>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Draw Frequency</label>
-              <div className="flex gap-2 mt-1">
+              <h4 className="text-sm font-black flex items-center gap-2">📅 Schedule</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Set the draw frequency and timing for your raffle campaign.
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-zinc-700">Draw Frequency</label>
+              <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">How often the raffle draw takes place.</p>
+              <div className="flex gap-2">
                 {(["one_time", "weekly", "monthly"] as const).map(f => (
                   <button key={f} type="button" onClick={() => setFrequency(f)}
                     className={`flex-1 h-10 rounded-xl text-xs font-black transition-all ${
@@ -1620,25 +1729,35 @@ function CreateRaffleModal({
 
           {/* Prize Configuration */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Award size={12} /> Prize Configuration</h4>
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">🎁 Prize Configuration</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Configure how prize money will be distributed to winners. Set the total prize pool, choose the number of winners, or create custom prize tiers for different placements.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Prize Pool (₦) *</label>
-                <input value={prizeAmount} onChange={e => setPrizeAmount(e.target.value)} type="number" min="1" placeholder="5000"
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+                <label className="text-xs font-bold text-zinc-700">Total Prize Pool *</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">The total amount that will be distributed across all winners in this raffle.</p>
+                <input value={prizeAmount} onChange={e => setPrizeAmount(e.target.value)} type="number" min="1" placeholder="Enter total prize amount"
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Number of Winners</label>
-                <input value={numWinners} onChange={e => setNumWinners(e.target.value)} type="number" min="1" placeholder="1"
-                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+                <label className="text-xs font-bold text-zinc-700">Number of Winners</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Choose how many participants will receive a prize when the raffle ends.</p>
+                <input value={numWinners} onChange={e => setNumWinners(e.target.value)} type="number" min="1" placeholder="Enter number of winners"
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Prize Tiers (optional)</label>
+                <div>
+                  <label className="text-xs font-bold text-zinc-700">Prize Tiers</label>
+                  <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Optionally create custom prize amounts for each winner instead of splitting the prize pool equally.</p>
+                </div>
                 <button type="button" onClick={addPrizeTier}
-                  className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+                  className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 shrink-0">
                   <Plus size={12} /> Add Tier
                 </button>
               </div>
@@ -1646,38 +1765,57 @@ function CreateRaffleModal({
                 {prizes.map((p, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <input value={p.label} onChange={e => updatePrize(i, "label", e.target.value)}
-                      placeholder="1st Prize"
-                      className="flex-1 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
+                      placeholder={`${i === 0 ? "🥇 First Prize" : i === 1 ? "🥈 Second Prize" : i === 2 ? "🥉 Third Prize" : `${i + 1}th Prize`}`}
+                      className="flex-1 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
                     <input value={p.amount} onChange={e => updatePrize(i, "amount", e.target.value)}
                       type="number" min="1" placeholder="Amount"
-                      className="w-28 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900" />
+                      className="w-28 h-10 rounded-xl border border-black/5 bg-zinc-50 px-3 text-xs font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
                     <button type="button" onClick={() => removePrizeTier(i)}
                       className="h-10 w-10 rounded-xl hover:bg-red-50 text-red-400 hover:text-red-600 flex items-center justify-center"><X size={14} /></button>
                   </div>
                 ))}
+                {prizes.length === 0 && (
+                  <div className="bg-zinc-50 rounded-xl p-3 text-xs text-zinc-400 font-medium leading-relaxed">
+                    <span className="font-bold text-zinc-500">Example:</span> 🥇 First Prize → ₦20,000 · 🥈 Second Prize → ₦10,000 · 🥉 Third Prize → ₦5,000
+                  </div>
+                )}
               </div>
-              <p className="text-[10px] text-zinc-400 mt-1">If not specified, prize pool is split proportionally among winners.</p>
+              <p className="text-[10px] text-zinc-400 mt-1">If no tiers are specified, the prize pool is split equally among all winners.</p>
             </div>
           </div>
 
           {/* Automation */}
           <div className="space-y-3">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Repeat2 size={12} /> Automation</h4>
-            <Toggle label="Automatically Draw Winner" desc="Select winner(s) when draw time arrives" checked={autoDraw} onChange={setAutoDraw} />
-            <Toggle label="Automatically Publish Winners" desc="Announce winners publicly" checked={autoPublish} onChange={setAutoPublish} />
-            <Toggle label="Automatically Notify Winners" desc="Send notifications to winners" checked={autoNotify} onChange={setAutoNotify} />
+            <div>
+              <h4 className="text-sm font-black flex items-center gap-2">🤖 Automation</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Automate raffle events so everything runs on autopilot from drawing winners to sending notifications.
+              </p>
+            </div>
+            <Toggle label="Auto Draw Winner" desc="Select winner(s) automatically when draw time arrives." checked={autoDraw} onChange={setAutoDraw} />
+            <Toggle label="Auto Publish Winners" desc="Announce winners publicly without manual approval." checked={autoPublish} onChange={setAutoPublish} />
+            <Toggle label="Auto Notify Winners" desc="Send notifications to winners automatically." checked={autoNotify} onChange={setAutoNotify} />
             {frequency !== "one_time" && (
-              <Toggle label="Automatically Generate Next Draw" desc="Schedule next round after draw completes" checked={autoGenerateNext} onChange={setAutoGenerateNext} />
+              <Toggle label="Auto Generate Next Draw" desc="Schedule the next round immediately after a draw completes." checked={autoGenerateNext} onChange={setAutoGenerateNext} />
             )}
-            <Toggle label="Lock Entries Before Draw" desc="Prevent new entries before draw time" checked={autoLockEntries} onChange={setAutoLockEntries} />
+            <Toggle label="Lock Entries Before Draw" desc="Prevent new entries once the draw time is reached." checked={autoLockEntries} onChange={setAutoLockEntries} />
           </div>
 
-          {/* Referral + Eligibility */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Referral */}
+          <div className="space-y-3">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Referral Reward (tickets)</label>
-              <input value={referralReward} onChange={e => setReferralReward(e.target.value)} type="number" min="1"
-                className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 mt-1" />
+              <h4 className="text-sm font-black flex items-center gap-2">👥 Referral Rewards</h4>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Reward users with bonus raffle tickets when they successfully invite friends.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-700">Tickets Per Referral</label>
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Number of raffle tickets awarded for every successful referral.</p>
+                <input value={referralReward} onChange={e => setReferralReward(e.target.value)} type="number" min="1"
+                  className="w-full h-11 rounded-2xl border border-black/5 bg-zinc-50 px-4 text-sm font-bold outline-none focus:border-zinc-900 placeholder:text-zinc-300" />
+              </div>
             </div>
           </div>
 

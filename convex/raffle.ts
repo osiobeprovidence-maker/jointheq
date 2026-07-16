@@ -414,7 +414,25 @@ export const completeReferral = mutation({
       });
     }
 
-    try { await createUserActivityLog(ctx, { userId: referral.inviterId, category: "raffle", action: "Referral completed", description: `Referral "${referral.inviteeName}" joined — earned ${raffle.referralReward} bonus ${raffle.referralReward === 1 ? "ticket" : "tickets"}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
+    try {
+      await createUserActivityLog(ctx, {
+        userId: referral.inviterId,
+        category: "raffle",
+        action: "Referral completed",
+        description: `Referral "${referral.inviteeName}" joined — earned ${raffle.referralReward} bonus ${raffle.referralReward === 1 ? "ticket" : "tickets"}`,
+        status: "success",
+        amount: raffle.referralReward,
+        metadata: {
+          raffleId: referral.raffleId,
+          referralId: args.referralId,
+          inviteeUserId: args.inviteeUserId,
+          ticketCount: raffle.referralReward,
+          source: "referral",
+        },
+      });
+    } catch (e) {
+      console.error("Failed to log activity:", e);
+    }
 
     return { success: true, rewardTickets: raffle.referralReward };
   },
@@ -1154,6 +1172,9 @@ export const autoEnterForSpotifyPurchase = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const hasSpotify = await hasActiveSpotifySubscription(ctx, args.userId);
+    if (!hasSpotify) return { entered: false, reason: "no_spotify_subscription" };
+
     const raffles = await ctx.db
       .query("raffles")
       .withIndex("by_status", (q: any) => q.eq("status", "published"))
@@ -1194,25 +1215,22 @@ export const autoEnterForSpotifyPurchase = mutation({
       enteredAt: Date.now(),
     });
 
-    try { await createUserActivityLog(ctx, { userId: args.userId, category: "raffle", action: "Auto-entered raffle", description: `Auto-entered "${raffle.title}" via Spotify purchase — Ticket #${raffleNumber}`, status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
-
-    const userReferrals = await ctx.db
-      .query("raffle_referrals")
-      .withIndex("by_inviter", (q: any) => q.eq("inviterId", args.userId))
-      .filter((q: any) =>
-        q.and(
-          q.eq(q.field("raffleId"), raffle._id),
-          q.eq(q.field("status"), "pending")
-        )
-      )
-      .collect();
-
-    for (const ref of userReferrals) {
-      await ctx.db.patch(ref._id, {
-        status: "completed",
-        rewardGranted: true,
-        completedAt: Date.now(),
+    try {
+      await createUserActivityLog(ctx, {
+        userId: args.userId,
+        category: "raffle",
+        action: "Auto-entered raffle",
+        description: `Auto-entered "${raffle.title}" via Spotify purchase — Ticket #${raffleNumber}`,
+        status: "success",
+        metadata: {
+          raffleId: raffle._id,
+          raffleNumber,
+          ticketCount: 1,
+          source: "purchase",
+        },
       });
+    } catch (e) {
+      console.error("Failed to log activity:", e);
     }
 
     return { entered: true, raffleNumber };
@@ -1250,7 +1268,11 @@ export const processRaffleReferralOnPurchase = internalMutation({
 
     if (pendingReferrals.length === 0) return { processed: false, reason: "no_pending_referral" };
 
+    let processedCount = 0;
+
     for (const ref of pendingReferrals) {
+      if (ref.status !== "pending" || ref.rewardGranted) continue;
+
       await ctx.db.patch(ref._id, {
         status: "completed",
         inviteeUserId: args.userId,
@@ -1270,9 +1292,32 @@ export const processRaffleReferralOnPurchase = internalMutation({
           ticketCount: entry.ticketCount + raffle.referralReward,
         });
       }
+
+      processedCount++;
+
+      try {
+        await createUserActivityLog(ctx, {
+          userId: ref.inviterId,
+          category: "raffle",
+          action: "Referral tickets awarded",
+          description: `Referral ${ref.inviteeName} completed purchase — awarded +${raffle.referralReward} ticket${raffle.referralReward !== 1 ? "s" : ""}`,
+          status: "success",
+          amount: raffle.referralReward,
+          metadata: {
+            raffleId: raffle._id,
+            referralId: ref._id,
+            inviteeUserId: args.userId,
+            inviterId: ref.inviterId,
+            ticketCount: raffle.referralReward,
+            source: "referral",
+          },
+        });
+      } catch (e) {
+        console.error("Failed to log referral activity:", e);
+      }
     }
 
-    return { processed: true, count: pendingReferrals.length };
+    return { processed: processedCount > 0, count: processedCount };
   },
 });
 
@@ -1574,11 +1619,13 @@ export const getUserBonusCompletions = query({
   },
 });
 
-export const completeBonusTask = mutation({
+export const completeBonusTask = internalMutation({
   args: {
     raffleId: v.id("raffles"),
     taskId: v.id("bonus_tasks"),
     userId: v.id("users"),
+    verificationMethod: v.optional(v.string()),
+    verifiedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.taskId);
@@ -1592,16 +1639,30 @@ export const completeBonusTask = mutation({
       )
       .unique();
 
-    if (existing) throw new Error("Task already completed");
+    if (existing && (existing.status === "verified" || existing.status === "completed")) {
+      throw new Error("Task already completed");
+    }
 
-    await ctx.db.insert("user_bonus_completions", {
-      raffleId: args.raffleId,
-      taskId: args.taskId,
-      userId: args.userId,
-      status: "completed",
-      ticketsAwarded: task.rewardTickets,
-      completedAt: Date.now(),
-    });
+    if (existing && existing.status === "pending") {
+      await ctx.db.patch(existing._id, {
+        status: "completed",
+        ticketsAwarded: task.rewardTickets,
+        completedAt: Date.now(),
+        verificationStep: "verified",
+        verifiedAt: args.verifiedAt || Date.now(),
+      });
+    } else {
+      await ctx.db.insert("user_bonus_completions", {
+        raffleId: args.raffleId,
+        taskId: args.taskId,
+        userId: args.userId,
+        status: "completed",
+        ticketsAwarded: task.rewardTickets,
+        completedAt: Date.now(),
+        verificationStep: "verified",
+        verifiedAt: args.verifiedAt || Date.now(),
+      });
+    }
 
     const user = await ctx.db.get(args.userId);
     if (user) {
@@ -1718,7 +1779,13 @@ export const verifyBonusTask = mutation({
           description: `Verified "${task.name}" (+${task.rewardTickets} tickets)`,
           status: "success",
           amount: task.rewardTickets,
-          metadata: { taskId: args.taskId, raffleId: args.raffleId, platform: task.platform },
+          metadata: {
+            taskId: args.taskId,
+            raffleId: args.raffleId,
+            platform: task.platform,
+            ticketCount: task.rewardTickets,
+            source: "bonus_task",
+          },
         });
       } catch (e) {
         console.error("Failed to log bonus task activity:", e);

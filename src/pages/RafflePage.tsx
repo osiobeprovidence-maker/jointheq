@@ -448,7 +448,6 @@ export default function RafflePage() {
     api.raffle.getUserBonusCompletions,
     raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
   );
-  const completeBonusTaskMutation = useMutation(api.raffle.completeBonusTask);
   const recordBonusTaskVisitMutation = useMutation(api.raffle.recordBonusTaskVisit);
   const verifyBonusTaskMutation = useMutation(api.raffle.verifyBonusTask);
 
@@ -1248,7 +1247,7 @@ export default function RafflePage() {
                           const isLoading = completingTaskId === task._id;
                           const countdown = vState && vState.step === "waiting" ? Math.max(0, Math.ceil((vState.timerEnd - Date.now()) / 1000)) : 0;
                           return (
-                            <motion.div key={task._id} layout
+                            <div key={task._id}
                               className={`rounded-2xl p-5 border transition-all ${isVerified ? "border-emerald-500/30 bg-emerald-500/5" : vState?.step === "verify" ? "border-violet-500/30 bg-violet-500/10" : "bg-white/5 backdrop-blur-md border-white/10 hover:border-white/20"}`}>
                               <div className="flex items-start gap-3">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isVerified ? "bg-emerald-500/20" : "bg-white/10"}`}
@@ -1293,7 +1292,7 @@ export default function RafflePage() {
                                   ) : null}
                                 </div>
                               )}
-                            </motion.div>
+                            </div>
                           );
                         })}
                       </div>
@@ -1324,7 +1323,7 @@ export default function RafflePage() {
                           const isLoading = completingTaskId === task._id;
                           const countdown = vState && vState.step === "waiting" ? Math.max(0, Math.ceil((vState.timerEnd - Date.now()) / 1000)) : 0;
                           return (
-                            <motion.div key={task._id} layout
+                            <div key={task._id}
                               className={`rounded-2xl p-5 border transition-all ${isVerified ? "border-emerald-500/30 bg-emerald-500/5" : vState?.step === "verify" ? "border-violet-500/30 bg-violet-500/10" : "bg-white/5 backdrop-blur-md border-white/10 hover:border-white/20"}`}>
                               <div className="flex items-start gap-3">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isVerified ? "bg-emerald-500/20" : "bg-white/10"}`}
@@ -1369,7 +1368,7 @@ export default function RafflePage() {
                                   ) : null}
                                 </div>
                               )}
-                            </motion.div>
+                              </div>
                           );
                         })}
                       </div>
