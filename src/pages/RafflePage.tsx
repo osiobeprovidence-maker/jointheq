@@ -806,7 +806,7 @@ export default function RafflePage() {
                   }}
                 />
                 <motion.img
-                  src="/q-3d.png"
+                  src={raffle?.banner || "/q-3d.png"}
                   alt="Q Mascot"
                   className="relative object-contain"
                   style={{
