@@ -85,6 +85,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const isAdminMode = location.pathname.startsWith('/admin');
     const unreadCount = useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id as Id<"users"> } : "skip") || 0;
 
+    const adminGroupIds = new Set(['wallet', 'referrals', 'notifications', 'qhub', 'profile', 'settings']);
+    const visibleGroups = navGroups.filter(g => !isAdminMode || adminGroupIds.has(g.id));
+
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
         if (score >= 600) return 'Pro';
@@ -145,7 +148,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                 </div>
 
                 <div className="space-y-1 flex-1 overflow-y-auto">
-                    {navGroups.map((group) => {
+                    {visibleGroups.map((group) => {
                         const groupActive = isChildActive(group, activeTab);
 
                         if (group.children.length === 0) {
@@ -214,6 +217,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                     })}
                 </div>
 
+                {!isAdminMode && (
                 <div className="pt-6 border-t border-black/5">
                     <div className="bg-[#F5F5F4] p-4 rounded-[2rem] mb-4">
                         <div className="flex items-center justify-between mb-2">
@@ -244,6 +248,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                         <span className="font-medium">Logout</span>
                     </button>
                 </div>
+                )}
             </nav>
 
             {/* Mobile/Desktop Top Header (Fixed) */}
