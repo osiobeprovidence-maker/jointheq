@@ -8,7 +8,9 @@ import { createServer } from "http";
 
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
-dotenv.config({ path: ".env.production", override: false });
+if (process.env.NODE_ENV === "production") {
+  dotenv.config({ path: ".env.production", override: true });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
