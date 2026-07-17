@@ -1571,5 +1571,143 @@ export default defineSchema({
     }).index("by_raffle", ["raffleId"])
         .index("by_user", ["userId"])
         .index("by_raffle_round", ["raffleId", "drawRound"]),
+
+    // ─── PARTNER PORTAL ───
+
+    partners: defineTable({
+        fullName: v.string(),
+        username: v.string(),
+        email: v.string(),
+        phone: v.optional(v.string()),
+        profileImageUrl: v.optional(v.string()),
+        partnerType: v.string(), // "creator" | "influencer" | "campus_ambassador" | "brand_partner" | "community_leader"
+        referralCode: v.string(),
+        commissionPerQualified: v.number(),
+        paymentSchedule: v.string(), // "weekly" | "monthly"
+        status: v.string(), // "active" | "paused" | "suspended"
+        notes: v.optional(v.string()),
+        passwordHash: v.string(),
+        partnerId: v.string(), // auto-generated e.g., "PTN-0001"
+        totalClicks: v.number(),
+        totalRegistrations: v.number(),
+        qualifiedReferrals: v.number(),
+        activeSubscribers: v.number(),
+        pendingEarnings: v.number(),
+        paidEarnings: v.number(),
+        totalEarnings: v.number(),
+        lastLoginAt: v.optional(v.number()),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+        createdBy: v.id("users"),
+    }).index("by_username", ["username"])
+        .index("by_email", ["email"])
+        .index("by_referral_code", ["referralCode"])
+        .index("by_status", ["status"])
+        .index("by_partner_id", ["partnerId"]),
+
+    partner_campaigns: defineTable({
+        partnerId: v.id("partners"),
+        campaignName: v.string(),
+        campaignSlug: v.string(),
+        description: v.optional(v.string()),
+        commission: v.number(),
+        startDate: v.optional(v.number()),
+        endDate: v.optional(v.number()),
+        status: v.string(), // "active" | "paused" | "ended"
+        createdAt: v.number(),
+        createdBy: v.id("users"),
+    }).index("by_partner", ["partnerId"])
+        .index("by_status", ["status"])
+        .index("by_partner_status", ["partnerId", "status"]),
+
+    partner_clicks: defineTable({
+        partnerId: v.id("partners"),
+        campaignSlug: v.string(),
+        referralCode: v.string(),
+        device: v.optional(v.string()),
+        browser: v.optional(v.string()),
+        ipAddress: v.optional(v.string()),
+        userAgent: v.optional(v.string()),
+        timestamp: v.number(),
+    }).index("by_partner", ["partnerId"])
+        .index("by_campaign", ["campaignSlug"])
+        .index("by_partner_campaign", ["partnerId", "campaignSlug"])
+        .index("by_timestamp", ["timestamp"]),
+
+    partner_referrals: defineTable({
+        partnerId: v.id("partners"),
+        campaignSlug: v.string(),
+        userId: v.id("users"),
+        userEmail: v.optional(v.string()),
+        qualified: v.boolean(),
+        qualifiedAt: v.optional(v.number()),
+        status: v.string(), // "registered" | "email_verified" | "phone_verified" | "subscribed" | "qualified" | "rejected"
+        commission: v.number(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_partner", ["partnerId"])
+        .index("by_user", ["userId"])
+        .index("by_campaign", ["campaignSlug"])
+        .index("by_partner_campaign", ["partnerId", "campaignSlug"])
+        .index("by_qualified", ["qualified"]),
+
+    partner_earnings: defineTable({
+        partnerId: v.id("partners"),
+        period: v.string(), // "2026-07"
+        qualifiedReferrals: v.number(),
+        commission: v.number(),
+        total: v.number(),
+        status: v.string(), // "pending" | "paid"
+        paidAt: v.optional(v.number()),
+        createdAt: v.number(),
+    }).index("by_partner", ["partnerId"])
+        .index("by_partner_period", ["partnerId", "period"])
+        .index("by_status", ["status"]),
+
+    partner_payments: defineTable({
+        partnerId: v.id("partners"),
+        amount: v.number(),
+        period: v.string(),
+        status: v.string(), // "pending" | "processing" | "paid" | "failed"
+        transactionReference: v.optional(v.string()),
+        paidAt: v.optional(v.number()),
+        receiptUrl: v.optional(v.string()),
+        notes: v.optional(v.string()),
+        createdAt: v.number(),
+        processedBy: v.optional(v.id("users")),
+    }).index("by_partner", ["partnerId"])
+        .index("by_status", ["status"])
+        .index("by_reference", ["transactionReference"]),
+
+    partner_announcements: defineTable({
+        title: v.string(),
+        body: v.string(),
+        priority: v.optional(v.string()), // "low" | "normal" | "high"
+        createdAt: v.number(),
+        createdBy: v.id("users"),
+    }).index("by_created_at", ["createdAt"]),
+
+    partner_marketing_assets: defineTable({
+        title: v.string(),
+        description: v.optional(v.string()),
+        type: v.string(), // "logo" | "flyer" | "social_image" | "video" | "caption" | "guide"
+        url: v.string(),
+        fileSize: v.optional(v.number()),
+        mimeType: v.optional(v.string()),
+        downloadable: v.boolean(),
+        createdAt: v.number(),
+        createdBy: v.id("users"),
+    }).index("by_type", ["type"])
+        .index("by_created_at", ["createdAt"]),
+
+    partner_qualification_rules: defineTable({
+        name: v.string(),
+        key: v.string(), // "account_created" | "email_verified" | "phone_verified" | "first_subscription" | "spotify_joined" | "payment_completed"
+        enabled: v.boolean(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+        updatedBy: v.optional(v.id("users")),
+    }).index("by_key", ["key"])
+        .index("by_enabled", ["enabled"]),
 });
 

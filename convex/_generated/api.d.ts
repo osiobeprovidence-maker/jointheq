@@ -35,6 +35,7 @@ import type * as migration from "../migration.js";
 import type * as migrations from "../migrations.js";
 import type * as notificationHelpers from "../notificationHelpers.js";
 import type * as notifications from "../notifications.js";
+import type * as partners from "../partners.js";
 import type * as paystack from "../paystack.js";
 import type * as promotions from "../promotions.js";
 import type * as push from "../push.js";
@@ -92,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   notificationHelpers: typeof notificationHelpers;
   notifications: typeof notifications;
+  partners: typeof partners;
   paystack: typeof paystack;
   promotions: typeof promotions;
   push: typeof push;

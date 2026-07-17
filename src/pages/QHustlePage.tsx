@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   Users, Wallet, Copy, Share2, CheckCircle2,
   Clock, XCircle, Loader2, ChevronLeft, TrendingUp, UserPlus,
-  Banknote, AlertCircle, Award, CopyCheck, Settings, User, Lock
+  Banknote, AlertCircle, CopyCheck, Settings, User, Lock,
+  Handshake, MousePointerClick, DollarSign, ExternalLink,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { auth } from "../lib/auth";
@@ -174,6 +175,14 @@ export default function QHustlePage() {
       setData(seeded);
     }
   }
+
+  const partner = useQuery(api.partners.getPartnerByEmail, user?.email ? { email: user.email } : "skip");
+  const partnerEarnings = useQuery(api.partners.getPartnerEarnings, partner?._id ? { partnerId: partner._id } : "skip");
+  const partnerPayments = useQuery(api.partners.getPartnerPayments, partner?._id ? { partnerId: partner._id } : "skip");
+  const partnerClicks = useQuery(api.partners.getPartnerClicks, partner?._id ? { partnerId: partner._id } : "skip");
+  const partnerReferrals = useQuery(api.partners.getPartnerReferrals, partner?._id ? { partnerId: partner._id } : "skip");
+  const announcements = useQuery(api.partners.getAnnouncements);
+  const marketingAssets = useQuery(api.partners.getMarketingAssets);
 
   const referralCode = user?.referral_code || user?._id?.slice(-6) || "QHUSTLE";
   const referralLink = `${window.location.origin}/register/${referralCode}`;
@@ -602,6 +611,125 @@ export default function QHustlePage() {
             </div>
           )}
         </div>
+
+        {partner && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { label: "Link Clicks", value: partnerClicks?.length || 0, icon: <MousePointerClick size={16} />, color: "bg-blue-600" },
+                { label: "Partner Refers", value: partnerReferrals?.length || 0, icon: <Users size={16} />, color: "bg-emerald-500" },
+                { label: "Commission", value: `${partner.commission}%`, icon: <TrendingUp size={16} />, color: "bg-purple-600" },
+                { label: "Earnings", value: `$${((partnerEarnings || []).reduce((s: number, e: any) => s + (e.amount || 0), 0)).toFixed(2)}`, icon: <DollarSign size={16} />, color: "bg-zinc-900" },
+                { label: "Paid Out", value: `$${((partnerPayments || []).filter((p: any) => p.status === "completed").reduce((s: number, p: any) => s + (p.amount || 0), 0)).toFixed(2)}`, icon: <Wallet size={16} />, color: "bg-emerald-600" },
+                { label: "Pending", value: `$${((partnerEarnings || []).filter((e: any) => e.status === "pending").reduce((s: number, e: any) => s + (e.amount || 0), 0)).toFixed(2)}`, icon: <Clock size={16} />, color: "bg-amber-500" },
+              ].map(s => (
+                <div key={s.label} className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm">
+                  <div className={`w-8 h-8 ${s.color} text-white rounded-xl flex items-center justify-center mb-2`}>{s.icon}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">{s.label}</div>
+                  <div className="text-lg font-black text-zinc-900">{s.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {partner.campaigns && partner.campaigns.length > 0 && (
+              <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+                <SectionHeader title="Campaign Links" sub="Your exclusive referral links for each campaign" />
+                <div className="space-y-3">
+                  {partner.campaigns.map((campaign: any) => {
+                    const campaignLink = `jointheq.sbs/${campaign.slug || campaign.name?.toLowerCase().replace(/\s+/g, "")}?ref=${partner.referralCode}`;
+                    return (
+                      <div key={campaign._id || campaign.slug} className="flex items-center justify-between bg-zinc-50 rounded-2xl px-4 py-3 border border-black/5">
+                        <div>
+                          <p className="text-xs font-bold text-gray-400">{campaign.name}</p>
+                          <p className="font-mono text-xs font-bold text-zinc-700">{campaignLink}</p>
+                        </div>
+                        <button onClick={() => { navigator.clipboard.writeText(campaignLink); toast.success("Copied!"); }} className="shrink-0 h-8 px-3 rounded-xl bg-zinc-900 text-white text-[10px] font-black hover:bg-zinc-800 transition-all flex items-center gap-1.5"><Copy size={12} /> Copy</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+                <SectionHeader title="Partner Earnings" sub="Commission from qualified referrals" />
+                <div className="space-y-2">
+                  {(!partnerEarnings || partnerEarnings.length === 0) && <p className="py-6 text-center text-sm font-bold text-gray-400">No partner earnings yet</p>}
+                  {partnerEarnings?.slice(0, 10).reverse().map((e: any) => (
+                    <div key={e._id} className="flex items-center justify-between bg-zinc-50 rounded-xl px-4 py-2.5 border border-black/5">
+                      <div>
+                        <p className="text-sm font-bold text-zinc-900">{e.description || "Referral commission"}</p>
+                        <p className="text-[10px] font-bold text-gray-400">{new Date(e._creationTime).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-emerald-600">+${(e.amount || 0).toFixed(2)}</p>
+                        <p className={`text-[10px] font-black ${e.status === "paid" ? "text-emerald-600" : "text-amber-600"}`}>{e.status}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+                <SectionHeader title="Payment History" sub="Payouts from the partner program" />
+                <div className="space-y-2">
+                  {(!partnerPayments || partnerPayments.length === 0) && <p className="py-6 text-center text-sm font-bold text-gray-400">No payments yet</p>}
+                  {partnerPayments?.slice(0, 10).reverse().map((p: any) => (
+                    <div key={p._id} className="flex items-center justify-between bg-zinc-50 rounded-xl px-4 py-2.5 border border-black/5">
+                      <div>
+                        <p className="text-sm font-bold text-zinc-900">{p.method || "Manual"}</p>
+                        <p className="text-[10px] font-bold text-gray-400">{new Date(p._creationTime).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-zinc-900">${(p.amount || 0).toFixed(2)}</p>
+                        <p className={`text-[10px] font-black ${p.status === "completed" ? "text-emerald-600" : "text-amber-600"}`}>{p.status}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {announcements && announcements.length > 0 && (
+              <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+                <SectionHeader title="Partner Announcements" sub="Latest updates for partners" />
+                <div className="space-y-3">
+                  {announcements.slice(0, 5).reverse().map((a: any) => (
+                    <div key={a._id} className="rounded-2xl bg-zinc-50 px-4 py-3 border border-black/5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-sm font-black text-zinc-900">{a.title}</h3>
+                        {a.priority === "high" && <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-black text-red-600">HIGH</span>}
+                      </div>
+                      {a.body && <p className="text-xs font-bold text-zinc-500">{a.body}</p>}
+                      <p className="mt-1.5 text-[10px] font-bold text-gray-400">{new Date(a._creationTime).toLocaleDateString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {marketingAssets && marketingAssets.length > 0 && (
+              <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-black/5 space-y-4">
+                <SectionHeader title="Marketing Assets" sub="Download banners and creatives for your campaigns" />
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {marketingAssets.map((asset: any) => (
+                    <a key={asset._id} href={asset.url} target="_blank" rel="noopener noreferrer" className="group relative aspect-video overflow-hidden rounded-2xl bg-zinc-50 border border-black/5">
+                      {asset.type === "image" ? (
+                        <img src={asset.url} alt={asset.label || "Asset"} className="h-full w-full object-cover transition group-hover:scale-105" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-gray-300"><ExternalLink size={24} /></div>
+                      )}
+                      <div className="absolute inset-0 flex items-end p-2 bg-gradient-to-t from-black/50 to-transparent opacity-0 transition group-hover:opacity-100">
+                        <span className="text-[10px] font-black text-white">{asset.label || "Asset"}</span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 space-y-4">
           <h2 className="text-sm font-black text-zinc-900 flex items-center gap-2">

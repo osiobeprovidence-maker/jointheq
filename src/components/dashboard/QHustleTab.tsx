@@ -9,7 +9,7 @@ import {
   Banknote, AlertCircle, Award, CopyCheck, User
 } from "lucide-react";
 import toast from "react-hot-toast";
-import type { User } from "../../types";
+import type { User as UserType } from "../../types";
 
 const BASE_URL = "https://jointheq.sbs";
 
@@ -23,7 +23,7 @@ interface AgentFormData {
 }
 
 interface QHustleTabProps {
-  user: User;
+  user: UserType;
 }
 
 export default function QHustleTab({ user }: QHustleTabProps) {
