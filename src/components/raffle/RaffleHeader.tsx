@@ -78,7 +78,12 @@ export function RaffleHeader({ currentUser, onUserChange, showLogin, setShowLogi
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <a href="/raffle" className="flex items-center gap-2.5 shrink-0">
             {raffleLogoUrl ? (
-              <img src={raffleLogoUrl} alt="Raffle Logo" className="h-7 w-auto object-contain" />
+              <motion.img
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                src={raffleLogoUrl} alt="Raffle Logo" className="h-7 w-auto object-contain" loading="lazy"
+              />
             ) : (
               <Logo className="w-7 h-7" />
             )}

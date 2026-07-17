@@ -1,4 +1,3 @@
-
 import React, { ReactNode, useState } from "react";
 import {
     LayoutDashboard,
@@ -16,9 +15,11 @@ import {
     Bell,
     User,
     ChevronRight,
+    ChevronDown,
     Settings,
     GraduationCap,
     TrendingUp,
+    Headphones,
 } from "lucide-react";
 
 import { useQuery } from "convex/react";
@@ -37,14 +38,52 @@ interface MainLayoutProps {
     qScore?: number;
 }
 
+type NavGroup = {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    children: { id: string; label: string }[];
+};
+
+const navGroups: NavGroup[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, children: [] },
+    { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} />, children: [
+        { id: 'marketplace', label: 'Marketplace' },
+        { id: 'queues', label: 'Queues' },
+    ]},
+    { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} />, children: [] },
+    { id: 'referrals', label: 'Referrals', icon: <Users size={20} />, children: [
+        { id: 'referrals', label: 'Referrals' },
+        { id: 'qhustle', label: 'Q Hustle' },
+    ]},
+    { id: 'notifications', label: 'Notifications', icon: <Bell size={20} />, children: [
+        { id: 'notifications', label: 'Notifications' },
+        { id: 'support', label: 'Support' },
+    ]},
+    { id: 'qhub', label: 'Qmunity', icon: <GraduationCap size={20} />, children: [
+        { id: 'qhub', label: 'Q Hub' },
+    ]},
+    { id: 'profile', label: 'Profile', icon: <UserIcon size={20} />, children: [
+        { id: 'profile', label: 'Profile' },
+        { id: 'history', label: 'History' },
+    ]},
+    { id: 'settings', label: 'Settings', icon: <Settings size={20} />, children: [] },
+];
+
+function isChildActive(group: NavGroup, activeTab: string): boolean {
+    return group.children.some(c => c.id === activeTab) || group.id === activeTab;
+}
+
 export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab, qScore: qScoreOverride }) => {
     const user = auth.getCurrentUser();
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
     const qScore = qScoreOverride ?? user?.q_score ?? 0;
     const isAdminMode = location.pathname.startsWith('/admin');
+    const unreadCount = useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id as Id<"users"> } : "skip") || 0;
 
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
@@ -54,20 +93,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         return 'Rookie';
     };
 
-    const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-        { id: 'marketplace', label: 'Marketplace', icon: <ShoppingBag size={20} /> },
-        { id: 'qhub', label: 'Q Hub', icon: <GraduationCap size={20} /> },
-        { id: 'qhustle', label: 'Q Hustle', icon: <TrendingUp size={20} /> },
-        { id: 'queues', label: 'Queues', icon: <Users size={20} /> },
-        { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
-        { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
-        { id: 'referrals', label: 'Referrals', icon: <Users size={20} /> },
-        { id: 'history', label: 'History', icon: <Clock size={20} /> },
-        { id: 'support', label: 'Support', icon: <MessageCircle size={20} /> },
-        { id: 'profile', label: 'Profile', icon: <UserIcon size={20} /> },
-    ];
-
     const adminNavItem = { id: 'admin', label: 'Admin', icon: <Lock size={20} /> };
 
     const handleNavItemClick = (itemId: string) => {
@@ -75,12 +100,35 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
             navigate('/q-hub');
             return;
         }
-        if (itemId === 'qhustle') {
-            setActiveTab('qhustle');
+        if (itemId === 'settings') {
+            setActiveTab('settings');
             return;
         }
         setActiveTab(itemId);
     };
+
+    const toggleGroup = (groupId: string) => {
+        setExpandedGroup(expandedGroup === groupId ? null : groupId);
+    };
+
+    const sidebarItem = (id: string, label: string, icon: React.ReactNode, active: boolean, onClick: () => void, indent = false) => (
+        <button
+            key={id}
+            onClick={onClick}
+            className={`flex items-center justify-between w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all group ${indent ? 'pl-10' : ''} ${active
+                ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                : 'text-gray-500 hover:bg-black/5 hover:text-black'
+            }`}
+        >
+            <div className="flex items-center gap-3">
+                {icon}
+                <span className="font-semibold">{label}</span>
+            </div>
+            {id === 'notifications' && (
+                <NotificationBadge unreadCount={unreadCount} />
+            )}
+        </button>
+    );
 
     return (
         <div className="min-h-screen bg-[#f4f5f8] text-[#1A1A1A] font-sans">
@@ -96,26 +144,74 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                     </div>
                 </div>
 
-                <div className="space-y-2 flex-1">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => handleNavItemClick(item.id)}
-                            className={`flex items-center justify-between w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all group ${activeTab === item.id
-                                ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
-                                : 'text-gray-500 hover:bg-black/5 hover:text-black'
-                                }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                {item.icon}
-                                <span className="font-semibold">{item.label}</span>
-                            </div>
-                            {item.id === 'notifications' && (
-                                <NotificationBadge unreadCount={useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id as Id<"users"> } : "skip") || 0} />
-                            )}
-                        </button>
-                    ))}
+                <div className="space-y-1 flex-1 overflow-y-auto">
+                    {navGroups.map((group) => {
+                        const groupActive = isChildActive(group, activeTab);
 
+                        if (group.children.length === 0) {
+                            return sidebarItem(group.id, group.label, group.icon, groupActive, () => handleNavItemClick(group.id));
+                        }
+
+                        const isExpanded = expandedGroup === group.id || groupActive;
+
+                        return (
+                            <div key={group.id} className="space-y-0.5">
+                                <button
+                                    onClick={() => {
+                                        if (group.children.length === 1 && group.children[0].id === group.id) {
+                                            handleNavItemClick(group.id);
+                                        } else {
+                                            toggleGroup(group.id);
+                                            if (groupActive) handleNavItemClick(group.children[0].id);
+                                        }
+                                    }}
+                                    className={`flex items-center justify-between w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all group ${groupActive && !isExpanded
+                                        ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                        : 'text-gray-500 hover:bg-black/5 hover:text-black'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {group.icon}
+                                        <span className="font-semibold">{group.label}</span>
+                                    </div>
+                                    {group.id === 'notifications' && (
+                                        <NotificationBadge unreadCount={unreadCount} />
+                                    )}
+                                    {group.children.length > 0 && (
+                                        <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'} text-gray-400`} />
+                                    )}
+                                </button>
+
+                                <AnimatePresence initial={false}>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.18 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="space-y-0.5 pl-4">
+                                                {group.children.map((child) => (
+                                                    <button
+                                                        key={child.id}
+                                                        onClick={() => handleNavItemClick(child.id)}
+                                                        className={`flex items-center gap-3 w-full p-2.5 pl-6 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === child.id
+                                                            ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                                            : 'text-gray-500 hover:bg-black/5 hover:text-black'
+                                                        }`}
+                                                    >
+                                                        <div className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />
+                                                        <span className="font-semibold text-sm">{child.label}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 <div className="pt-6 border-t border-black/5">
@@ -288,28 +384,71 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="lg:hidden fixed top-16 left-0 w-full bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.02)] p-4 z-40 space-y-2"
+                        className="lg:hidden fixed top-16 left-0 w-full bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.02)] p-4 z-40 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto"
                     >
-                        {navItems.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => { handleNavItemClick(item.id); setIsMobileMenuOpen(false); }}
-                                className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === item.id
-                                    ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
-                                    : 'text-gray-500 hover:bg-black/5 hover:text-black'
-                                    }`}
-                            >
-                                {item.icon}
-                                <span className="font-semibold">{item.label}</span>
-                            </button>
-                        ))}
+                        {navGroups.map((group) => {
+                            const groupActive = isChildActive(group, activeTab);
+
+                            if (group.children.length === 0) {
+                                return (
+                                    <button
+                                        key={group.id}
+                                        onClick={() => { handleNavItemClick(group.id); setIsMobileMenuOpen(false); }}
+                                        className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${groupActive
+                                            ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                            : 'text-gray-500 hover:bg-black/5 hover:text-black'
+                                        }`}
+                                    >
+                                        {group.icon}
+                                        <span className="font-semibold">{group.label}</span>
+                                    </button>
+                                );
+                            }
+
+                            const isExpanded = expandedGroup === group.id || groupActive;
+
+                            return (
+                                <div key={group.id}>
+                                    <button
+                                        onClick={() => toggleGroup(group.id)}
+                                        className={`flex items-center justify-between w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${groupActive
+                                            ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                            : 'text-gray-500 hover:bg-black/5 hover:text-black'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {group.icon}
+                                            <span className="font-semibold">{group.label}</span>
+                                        </div>
+                                        <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'} text-gray-400`} />
+                                    </button>
+                                    {isExpanded && (
+                                        <div className="pl-8 space-y-0.5 mt-0.5">
+                                            {group.children.map((child) => (
+                                                <button
+                                                    key={child.id}
+                                                    onClick={() => { handleNavItemClick(child.id); setIsMobileMenuOpen(false); }}
+                                                    className={`flex items-center gap-3 w-full p-2.5 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === child.id
+                                                        ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
+                                                        : 'text-gray-500 hover:bg-black/5 hover:text-black'
+                                                    }`}
+                                                >
+                                                    <div className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />
+                                                    <span className="font-semibold text-sm">{child.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                         {auth.isAdmin() && (
                             <button
                                 onClick={() => { setActiveTab(adminNavItem.id); setIsMobileMenuOpen(false); }}
                                 className={`flex items-center gap-3 w-full p-3 rounded-full scale-100 hover:scale-[1.02] transition-all ${activeTab === adminNavItem.id
                                     ? 'bg-zinc-900 text-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] shadow-lg shadow-black/10'
                                     : 'text-gray-500 hover:bg-black/5 hover:text-black'
-                                    }`}
+                                }`}
                             >
                                 {adminNavItem.icon}
                                 <span className="font-semibold">{adminNavItem.label}</span>
@@ -341,6 +480,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
         </div>
     );
 };
+
 function NotificationBadge({ unreadCount }: { unreadCount: number }) {
     if (unreadCount <= 0) return null;
     return (

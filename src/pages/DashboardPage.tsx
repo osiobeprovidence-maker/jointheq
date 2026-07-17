@@ -171,7 +171,7 @@ export default function DashboardPage() {
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
     ];
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'qhustle' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'qhustle' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications' | 'settings'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [enableAutoDebit, setEnableAutoDebit] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -2785,6 +2785,17 @@ export default function DashboardPage() {
                                         <p className="font-bold">No notifications yet.</p>
                                     </div>
                                 )}
+                            </div>
+                        </motion.div>
+                    )}
+                    {activeTab === 'settings' && (
+                        <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                            <header>
+                                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+                                <p className="text-gray-500 mt-1">Manage your account preferences and configuration.</p>
+                            </header>
+                            <div className="bg-white rounded-[3rem] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
+                                <p className="text-gray-500">Settings panel coming soon.</p>
                             </div>
                         </motion.div>
                     )}

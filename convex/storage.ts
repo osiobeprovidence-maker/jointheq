@@ -17,3 +17,10 @@ export const resolveUploadUrl = mutation({
     return url;
   },
 });
+
+export const deleteFile = mutation({
+  args: { storageId: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.storage.delete(args.storageId as Id<"_storage">);
+  },
+});

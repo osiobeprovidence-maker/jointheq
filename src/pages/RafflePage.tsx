@@ -389,6 +389,8 @@ export default function RafflePage() {
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [verifyingStates, setVerifyingStates] = useState<Record<string, { step: string; timerEnd: number }>>({});
   const [showNav, setShowNav] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("stats");
 
   const convexUserId = (currentUser?._id || "") as Id<"users">;
 
@@ -501,6 +503,16 @@ export default function RafflePage() {
       setAutoEnterAttempted(true);
     }
   }, [raffleId, currentUser, eligibility, convexUserId, autoEnterMutation, autoEnterAttempted]);
+
+  useEffect(() => {
+    const sectionIds = ["stats", "how-it-works", "leaderboard", "prize-section", "winners-section", "earn-more-tickets"];
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (visible.length > 0) setActiveSection(visible[0].target.id);
+    }, { rootMargin: "-80px 0px -60% 0px", threshold: [0, 0.25, 0.5] });
+    sectionIds.forEach(id => { const el = document.getElementById(id); if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, [raffle]);
 
   const raffleAccent = raffle?.accentColor || SPOTIFY_GREEN;
   const referralLink = currentUser
@@ -826,6 +838,20 @@ export default function RafflePage() {
                     }}
                     loading="eager"
                   />
+                ) : (raffle as any)?.logoUrl ? (
+                  <motion.img
+                    src={(raffle as any).logoUrl}
+                    alt="Raffle logo"
+                    className="relative object-contain"
+                    style={{
+                      width: "clamp(180px, 28vw, 380px)",
+                      height: "auto",
+                      aspectRatio: "1/1",
+                    }}
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
+                    loading="lazy"
+                  />
                 ) : (
                   <motion.div
                     className="relative flex items-center justify-center"
@@ -958,34 +984,75 @@ export default function RafflePage() {
       )}
 
       {/* ===== SECTION NAVIGATION ===== */}
-      {raffle && (
-        <div className="sticky top-0 z-40 bg-[#191414]/90 backdrop-blur-xl border-b border-white/5 overflow-x-auto">
-          <div className="max-w-6xl mx-auto px-4 flex items-center gap-0.5 py-2">
-            {(() => {
-              const items = [
-                { id: "stats", label: "Overview", icon: <BarChart3 size={12} /> },
-                { id: "how-it-works", label: "How It Works", icon: <Info size={12} /> },
-                { id: "leaderboard", label: "Leaderboard", icon: <Users size={12} /> },
-                { id: "prize-section", label: "Prizes", icon: <Award size={12} /> },
-                { id: "winners-section", label: "Winners", icon: <Crown size={12} /> },
-              ];
-              if (isAlreadyEntered || isCompleted) {
-                items.push({ id: "earn-more-tickets", label: "Earn More Tickets", icon: <Zap size={12} /> });
-              }
-              return items;
-            })().map((section) => (
-              <button key={section.id} onClick={() => {
-                const el = document.getElementById(section.id);
-                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-                className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white/10"
+      {raffle && (() => {
+        const navItems = [
+          { id: "stats", label: "Overview", icon: <BarChart3 size={12} /> },
+          { id: "how-it-works", label: "How It Works", icon: <Info size={12} /> },
+          { id: "leaderboard", label: "Leaderboard", icon: <Users size={12} /> },
+          { id: "prize-section", label: "Prizes", icon: <Award size={12} /> },
+          { id: "winners-section", label: "Winners", icon: <Crown size={12} /> },
+        ];
+        if (isAlreadyEntered || isCompleted) {
+          navItems.push({ id: "earn-more-tickets", label: "Earn More Tickets", icon: <Zap size={12} /> });
+        }
+        const activeLabel = navItems.find(i => i.id === activeSection)?.label || "Overview";
+        return (
+          <div className="sticky top-0 z-40 bg-[#191414]/90 backdrop-blur-xl border-b border-white/5">
+            {/* Desktop horizontal nav */}
+            <div className="hidden md:block max-w-6xl mx-auto px-4">
+              <div className="flex items-center gap-0.5 py-2">
+                {navItems.map((section) => (
+                  <button key={section.id} onClick={() => {
+                    const el = document.getElementById(section.id);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                    className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeSection === section.id ? "bg-white/15" : "hover:bg-white/10"}`}
+                    style={{ color: raffleAccent }}>
+                    {section.icon} {section.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Mobile dropdown */}
+            <div className="md:hidden px-4 py-2">
+              <button onClick={() => setMobileNavOpen(!mobileNavOpen)}
+                className="w-full flex items-center justify-between h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-black uppercase tracking-widest transition-all"
                 style={{ color: raffleAccent }}>
-                {section.icon} {section.label}
+                <span className="flex items-center gap-2">{navItems.find(i => i.id === activeSection)?.icon} {activeLabel}</span>
+                <motion.div animate={{ rotate: mobileNavOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                  <ChevronDown size={14} />
+                </motion.div>
               </button>
-            ))}
+              <AnimatePresence>
+                {mobileNavOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-4 right-4 mt-1 rounded-xl bg-[#191414] border border-white/10 shadow-2xl overflow-hidden z-50"
+                  >
+                    {navItems.map((section, i) => (
+                      <React.Fragment key={section.id}>
+                        {i > 0 && <div className="h-px bg-white/5 mx-3" />}
+                        <button onClick={() => {
+                          const el = document.getElementById(section.id);
+                          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          setMobileNavOpen(false);
+                        }}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all ${activeSection === section.id ? "bg-white/10" : "hover:bg-white/5"}`}
+                          style={{ color: activeSection === section.id ? raffleAccent : "rgba(255,255,255,0.6)" }}>
+                          {section.icon} {section.label}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ===== CAMPAIGN STATISTICS ===== */}
       <section id="stats" className="py-12 px-4">
@@ -1573,7 +1640,7 @@ export default function RafflePage() {
       )}
 
       {/* ===== LEADERBOARD ===== */}
-      <section className="py-16 px-4">
+      <section id="leaderboard" className="py-16 px-4">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

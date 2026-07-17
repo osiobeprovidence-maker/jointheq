@@ -76,6 +76,7 @@ function BannerUpload({ currentUrl, onUpload, onRemove }: { currentUrl?: string;
 
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const resolveUploadUrl = useMutation(api.storage.resolveUploadUrl);
+  const deleteFileMutation = useMutation(api.storage.deleteFile);
 
   const hasImage = preview || currentUrl;
 
@@ -87,6 +88,10 @@ function BannerUpload({ currentUrl, onUpload, onRemove }: { currentUrl?: string;
     setPreview(URL.createObjectURL(file));
     setUploading(true);
     try {
+      if (currentUrl) {
+        const match = currentUrl.match(/\/storage\/([^/?]+)/);
+        if (match) await deleteFileMutation({ storageId: match[1] }).catch(() => {});
+      }
       const url = await uploadCampaignImage(
         file,
         () => generateUploadUrl(),
@@ -100,14 +105,14 @@ function BannerUpload({ currentUrl, onUpload, onRemove }: { currentUrl?: string;
       setPreview(null);
       setUploading(false);
     }
-  }, [generateUploadUrl, resolveUploadUrl, onUpload]);
+  }, [generateUploadUrl, resolveUploadUrl, deleteFileMutation, onUpload, currentUrl]);
 
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Banner Image</label>
+      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Image</label>
       {hasImage && !uploading ? (
         <div className="relative rounded-xl border border-black/10 overflow-hidden group">
-          <img src={preview || currentUrl} alt="Banner" className="w-full h-40 object-cover" />
+          <img src={preview || currentUrl} alt="" className="w-full h-40 object-cover" loading="lazy" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
             <button type="button" onClick={() => inputRef.current?.click()} className="h-9 px-4 rounded-xl bg-white text-zinc-900 text-[10px] font-black">Replace</button>
             <button type="button" onClick={() => { if (preview) URL.revokeObjectURL(preview); setPreview(null); onRemove(); }} className="h-9 w-9 rounded-xl bg-red-500 text-white flex items-center justify-center"><X size={14} /></button>
@@ -124,12 +129,12 @@ function BannerUpload({ currentUrl, onUpload, onRemove }: { currentUrl?: string;
       ) : (
         <div onClick={() => inputRef.current?.click()} className="rounded-xl border-2 border-dashed border-black/10 hover:border-black/30 bg-zinc-50 cursor-pointer p-8 text-center">
           <ImageIcon size={28} className="mx-auto mb-2 text-zinc-300" />
-          <div className="text-sm font-bold text-zinc-500">Click to upload banner</div>
-          <div className="text-[10px] font-semibold text-zinc-400 mt-1">JPG, PNG, WebP (max 5MB)</div>
+          <div className="text-sm font-bold text-zinc-500">Click to upload</div>
+          <div className="text-[10px] font-semibold text-zinc-400 mt-1">JPG, PNG, SVG, WebP (max 5MB)</div>
         </div>
       )}
       {error && <div className="flex items-center gap-1.5 text-red-500 text-[10px] font-black"><AlertCircle size={12} /> {error}</div>}
-      <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => handleFile(e.target.files?.[0] ?? null)} className="hidden" />
+      <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.svg" onChange={e => handleFile(e.target.files?.[0] ?? null)} className="hidden" />
     </div>
   );
 }
@@ -567,6 +572,7 @@ export default function AdminRafflePage() {
           <div className="flex-1 min-w-0">
             <div className="bg-white border border-black/5 rounded-[2rem] p-6 space-y-6">
               {activeTab === "overview" && (
+                <>
                 <div className="space-y-5">
                   <div>
                     <h4 className="text-sm font-black flex items-center gap-2"><Settings size={16} /> Overview</h4>
@@ -626,6 +632,21 @@ export default function AdminRafflePage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="border-t border-black/5 pt-5 space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5"><Image size={14} /> Page Branding</h4>
+                  <p className="text-[10px] text-zinc-500 leading-relaxed">Upload a custom logo to brand this raffle. Displayed in the header, hero section, share cards, and live preview.</p>
+                  <div className="max-w-xs">
+                    <BannerUpload currentUrl={logoUrl} onUpload={(url) => { setLogoUrl(url); markDirty(); }} onRemove={() => { setLogoUrl(undefined); markDirty(); }} />
+                  </div>
+                  {logoUrl && (
+                    <div className="max-w-[200px] border border-black/5 rounded-xl p-3 bg-zinc-50">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2">Preview</p>
+                      <img src={logoUrl} alt="Logo preview" className="w-full h-auto max-h-16 object-contain" loading="lazy" />
+                    </div>
+                  )}
+                </div>
+                </>
               )}
 
               {activeTab === "schedule" && (
@@ -810,11 +831,6 @@ export default function AdminRafflePage() {
                           {maxReferralsPerUser && (
                             <div className="text-[10px] text-amber-600 font-bold flex items-center gap-1">👤 Max {maxReferralsPerUser} referrals per user</div>
                           )}
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-zinc-700">Logo</label>
-                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5 mb-1.5">Small brand logo displayed in the raffle header. PNG, JPG, SVG or WebP under 5 MB.</p>
-                    <BannerUpload currentUrl={logoUrl} onUpload={(url) => { setLogoUrl(url); markDirty(); }} onRemove={() => { setLogoUrl(undefined); markDirty(); }} />
                   </div>
                 </div>
               )}
@@ -1181,7 +1197,7 @@ export default function AdminRafflePage() {
               <div className="bg-white border border-black/5 rounded-[2rem] overflow-hidden shadow-sm">
                 {logoUrl && (
                   <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                    <img src={logoUrl} alt="Raffle Logo" className="h-6 w-auto object-contain" />
+                    <img src={logoUrl} alt="Raffle Logo" className="h-6 w-auto object-contain" loading="lazy" />
                     <span className="text-[11px] font-bold text-zinc-400 truncate">{title || "Raffle Title"}</span>
                   </div>
                 )}
