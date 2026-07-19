@@ -376,6 +376,39 @@ export const createUser = mutation({
                 earnings: 0,
                 created_at: Date.now(),
             });
+
+            const activeRaffle = await ctx.db
+                .query("raffles")
+                .withIndex("by_status", (q: any) => q.eq("status", "published"))
+                .order("desc")
+                .first();
+
+            if (activeRaffle && activeRaffle.drawDate > Date.now()) {
+                const existingRaffleReferral = await ctx.db
+                    .query("raffle_referrals")
+                    .withIndex("by_inviter", (q: any) => q.eq("inviterId", referredById))
+                    .filter((q: any) =>
+                        q.and(
+                            q.eq(q.field("raffleId"), activeRaffle._id),
+                            q.eq(q.field("inviteeUserId"), userId)
+                        )
+                    )
+                    .first();
+
+                if (!existingRaffleReferral) {
+                    await ctx.db.insert("raffle_referrals", {
+                        raffleId: activeRaffle._id,
+                        inviterId: referredById,
+                        inviteeName: args.full_name,
+                        inviteeEmail: hasEmail ? normalizedEmail : undefined,
+                        inviteeUserId: userId,
+                        status: "pending",
+                        rewardGranted: false,
+                        rewardTickets: activeRaffle.referralReward,
+                        createdAt: Date.now(),
+                    });
+                }
+            }
         }
 
         try { createUserActivityLog(ctx, { userId, category: "account", action: "Account created", status: "success" }); } catch (e) { console.error("Failed to log activity:", e); }
