@@ -226,6 +226,7 @@ export default function DashboardPage() {
     const invitedUsers = useQuery(api.users.getInvitedUsers, currentUser ? { userId: currentUser._id } : "skip") || [];
     const referrer = useQuery(api.users.getById, currentUser?.referred_by ? { id: currentUser.referred_by } : "skip");
     const referralStats = useQuery(api.referrals.getUserReferralStats, currentUser ? { userId: currentUser._id } : "skip");
+    const partnerRecord = useQuery(api.partners.getPartnerByUserId, currentUser?._id ? { userId: currentUser._id as any } : "skip");
     const adminsList = useQuery(api.users.getAdmins) || [];
 
     // Sync local auth with Convex state
@@ -1092,6 +1093,7 @@ export default function DashboardPage() {
                 setActiveTab(tab as typeof activeTab);
             }}
             qScore={currentUser?.q_score || 0}
+            isPartner={!!partnerRecord}
         >
             {/* Verification Warning Banner */}
             {showVerificationWarning && daysRemaining !== null && daysRemaining > 0 && (

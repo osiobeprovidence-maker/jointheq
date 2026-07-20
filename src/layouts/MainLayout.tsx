@@ -36,6 +36,7 @@ interface MainLayoutProps {
     activeTab: string;
     setActiveTab: (tab: any) => void;
     qScore?: number;
+    isPartner?: boolean;
 }
 
 type NavGroup = {
@@ -72,7 +73,7 @@ function isChildActive(group: NavGroup, activeTab: string): boolean {
     return group.children.some(c => c.id === activeTab) || group.id === activeTab;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab, qScore: qScoreOverride }) => {
+export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, setActiveTab, qScore: qScoreOverride, isPartner }) => {
     const user = auth.getCurrentUser();
     const navigate = useNavigate();
     const location = useLocation();
@@ -84,7 +85,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const unreadCount = useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id as Id<"users"> } : "skip") || 0;
 
     const adminGroupIds = new Set(['wallet', 'referrals', 'notifications', 'qhub', 'profile', 'settings']);
-    const visibleGroups = navGroups.filter(g => !isAdminMode || adminGroupIds.has(g.id));
+    const visibleGroups = navGroups.filter(g => !isAdminMode || adminGroupIds.has(g.id)).filter(g => !isPartner || g.id !== 'referrals');
 
     const getRank = (score: number) => {
         if (score >= 1000) return 'Elite';
