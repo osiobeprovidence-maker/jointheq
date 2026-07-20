@@ -1143,9 +1143,14 @@ export const backfillHistoricalReferrals = mutation({
 
     // 2. Find all users referred by this user who made their first payment
     const allUsers = await ctx.db.query("users").collect();
-    const qualifiedReferrals = allUsers.filter(
-      (u: any) => u.referred_by === user_id && u.has_first_payment === true
-    );
+    const qualifiedReferrals = allUsers.filter((u: any) => {
+      if (u.referred_by !== user_id) return false;
+      // Check if they have any payment in boots_history
+      const payments = (u.boots_history || []).filter(
+        (b: any) => b.type === "payment" || b.description?.toLowerCase().includes("joined")
+      );
+      return payments.length > 0;
+    });
 
     // 3. Active raffle
     const raffle = await ctx.db
@@ -1155,6 +1160,11 @@ export const backfillHistoricalReferrals = mutation({
       .first();
 
     for (const refUser of qualifiedReferrals) {
+      // Find first payment timestamp
+      const firstPayment = (refUser.boots_history || []).find(
+        (b: any) => b.type === "payment" || b.description?.toLowerCase().includes("joined")
+      );
+
       // Check if partner_referral already exists
       const existingRef = await ctx.db
         .query("partner_referrals")
@@ -1172,7 +1182,7 @@ export const backfillHistoricalReferrals = mutation({
           username: refUser.username,
           source: "direct",
           qualified: true,
-          qualifiedAt: refUser.first_payment_at || Date.now(),
+          qualifiedAt: firstPayment?.created_at || refUser.created_at,
           status: "active",
           commission: partner.commissionPerQualified,
           createdAt: refUser.created_at,
