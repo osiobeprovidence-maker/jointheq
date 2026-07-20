@@ -247,6 +247,7 @@ export const create = mutation({
     args: {
         name: v.string(),
         type: v.string(),
+        campaign_type: v.optional(v.string()),
         description: v.string(),
         about: v.optional(v.string()),
         rules: v.optional(v.array(v.string())),
@@ -262,11 +263,33 @@ export const create = mutation({
         image_url: v.optional(v.string()),
         banner_url: v.optional(v.string()),
         created_by: v.optional(v.id("users")),
-        // Fraud / limit controls
         max_boots_per_user_per_day: v.optional(v.number()),
         max_referrals_per_user_per_day: v.optional(v.number()),
         max_total_referrals_per_user: v.optional(v.number()),
         require_payment_for_reward: v.optional(v.boolean()),
+        visibility: v.optional(v.string()),
+        eligible_countries: v.optional(v.array(v.string())),
+        eligible_user_types: v.optional(v.array(v.string())),
+        min_rank: v.optional(v.string()),
+        verification_required: v.optional(v.boolean()),
+        subscription_required: v.optional(v.boolean()),
+        max_rewards: v.optional(v.number()),
+        approval_method: v.optional(v.string()),
+        duplicate_protection: v.optional(v.boolean()),
+        leaderboard_enabled: v.optional(v.boolean()),
+        leaderboard_size: v.optional(v.number()),
+        ranking_method: v.optional(v.string()),
+        notify_participants: v.optional(v.boolean()),
+        reminder_schedule: v.optional(v.string()),
+        social_tasks_enabled: v.optional(v.boolean()),
+        prize_pool: v.optional(v.number()),
+        number_of_winners: v.optional(v.number()),
+        draw_date: v.optional(v.number()),
+        draw_method: v.optional(v.string()),
+        entry_rules: v.optional(v.array(v.string())),
+        bonus_entry_rules: v.optional(v.array(v.string())),
+        min_requirements: v.optional(v.array(v.string())),
+        winner_announcement_date: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("campaigns", {
@@ -323,6 +346,7 @@ export const participate = mutation({
     handler: async (ctx, args) => {
         const campaign = await ctx.db.get(args.campaign_id);
         if (!campaign || campaign.status !== "active") throw new Error("Campaign is not active");
+        if (campaign.visibility === "invite_only") throw new Error("This campaign is invite-only");
 
         // ── 1. Block fraud-flagged users from earning ──────────────────────────
         const user = await ctx.db.get(args.user_id);
@@ -391,6 +415,10 @@ export const participate = mutation({
             progress: 0,
             entries: 1,
             referral_count: 0,
+            qualified_referrals: 0,
+            pending_referrals: 0,
+            rejected_referrals: 0,
+            campaign_earnings: 0,
             boots_earned: 0,
             cash_earned: 0,
             joined_at: Date.now(),
@@ -720,6 +748,424 @@ export const buyRaffleTicket = mutation({
         });
 
         return { success: true };
+    },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEW CAMPAIGN ENGINE QUERIES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Get campaigns available for a partner to join (public + active) */
+export const getAvailableCampaigns = query({
+    args: { user_id: v.optional(v.id("users")) },
+    handler: async (ctx, { user_id }) => {
+        const now = Date.now();
+        const campaigns = await ctx.db
+            .query("campaigns")
+            .withIndex("by_status", (q) => q.eq("status", "active"))
+            .collect();
+
+        const enriched = await Promise.all(
+            campaigns.map(async (c) => {
+                const participantCount = await ctx.db
+                    .query("campaign_participants")
+                    .withIndex("by_campaign", (q) => q.eq("campaign_id", c._id))
+                    .collect();
+                let hasJoined = false;
+                if (user_id) {
+                    const existing = participantCount.find((p) => p.user_id === user_id);
+                    hasJoined = !!existing;
+                }
+                const socialTasks = await ctx.db
+                    .query("campaign_social_tasks")
+                    .withIndex("by_campaign", (q) => q.eq("campaign_id", c._id))
+                    .collect();
+                return {
+                    ...c,
+                    participant_count: participantCount.length,
+                    has_joined: hasJoined,
+                    social_task_count: socialTasks.length,
+                    time_remaining: c.end_date ? Math.max(0, (c.end_date as number) - now) : 0,
+                };
+            })
+        );
+
+        // Show public first, then invite-only
+        return enriched.sort((a, b) => {
+            if (a.visibility === "public" && b.visibility !== "public") return -1;
+            if (a.visibility !== "public" && b.visibility === "public") return 1;
+            return (a.created_at ?? 0) - (b.created_at ?? 0);
+        });
+    },
+});
+
+/** Full campaign detail with current user's participation data */
+export const getCampaignDetail = query({
+    args: { campaign_id: v.id("campaigns"), user_id: v.optional(v.id("users")) },
+    handler: async (ctx, { campaign_id, user_id }) => {
+        const campaign = await ctx.db.get(campaign_id);
+        if (!campaign) return null;
+
+        const participants = await ctx.db
+            .query("campaign_participants")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
+            .collect();
+
+        const socialTasks = await ctx.db
+            .query("campaign_social_tasks")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
+            .collect();
+
+        const achievements = await ctx.db
+            .query("campaign_achievements")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
+            .collect();
+
+        // Leaderboard
+        const sorted = [...participants].sort(
+            (a, b) => (b.referral_count ?? 0) - (a.referral_count ?? 0)
+        );
+        const leaderboard = await Promise.all(
+            sorted.slice(0, campaign.leaderboard_size ?? 20).map(async (p, i) => {
+                const user = await ctx.db.get(p.user_id);
+                return {
+                    rank: i + 1,
+                    user_id: p.user_id,
+                    full_name: user?.full_name ?? "Unknown",
+                    username: user?.username ?? "",
+                    avatar: user?.full_name?.[0] ?? "?",
+                    referral_count: p.referral_count ?? 0,
+                    qualified_referrals: p.qualified_referrals ?? 0,
+                    campaign_earnings: p.campaign_earnings ?? 0,
+                    entries: p.entries ?? 0,
+                };
+            })
+        );
+
+        let myParticipation = null;
+        let myRank = null;
+        if (user_id) {
+            const my = participants.find((p) => p.user_id === user_id) ?? null;
+            if (my) {
+                myParticipation = my;
+                myRank = sorted.findIndex((p) => p.user_id === user_id) + 1;
+            }
+            const userAchievements = await ctx.db
+                .query("user_campaign_achievements")
+                .withIndex("by_user", (q) => q.eq("user_id", user_id))
+                .filter((q) => q.eq(q.field("campaign_id"), campaign_id))
+                .collect();
+            return {
+                ...campaign,
+                participant_count: participants.length,
+                leaderboard,
+                my_participation: { ...myParticipation, rank: myRank, total_participants: participants.length },
+                social_tasks: socialTasks,
+                achievements,
+                my_achievements: userAchievements.map((a) => a.achievement_id),
+                time_remaining: campaign.end_date ? Math.max(0, (campaign.end_date as number) - Date.now()) : 0,
+            };
+        }
+
+        return {
+            ...campaign,
+            participant_count: participants.length,
+            leaderboard,
+            my_participation: null,
+            social_tasks: socialTasks,
+            achievements,
+            my_achievements: [],
+            time_remaining: campaign.end_date ? Math.max(0, (campaign.end_date as number) - Date.now()) : 0,
+        };
+    },
+});
+
+/** Get all campaigns a user has joined */
+export const getMyCampaigns = query({
+    args: { user_id: v.id("users") },
+    handler: async (ctx, { user_id }) => {
+        const myParticipants = await ctx.db
+            .query("campaign_participants")
+            .withIndex("by_user", (q) => q.eq("user_id", user_id))
+            .collect();
+
+        return await Promise.all(
+            myParticipants.map(async (p) => {
+                const campaign = await ctx.db.get(p.campaign_id);
+                const allParticipants = await ctx.db
+                    .query("campaign_participants")
+                    .withIndex("by_campaign", (q) => q.eq("campaign_id", p.campaign_id))
+                    .collect();
+                const sorted = [...allParticipants].sort(
+                    (a, b) => (b.referral_count ?? 0) - (a.referral_count ?? 0)
+                );
+                const rank = sorted.findIndex((s) => s.user_id === user_id) + 1;
+                return {
+                    ...p,
+                    campaign_name: campaign?.name ?? "Unknown",
+                    campaign_type: campaign?.campaign_type ?? campaign?.type,
+                    campaign_banner: campaign?.banner_url,
+                    campaign_end_date: campaign?.end_date,
+                    campaign_status: campaign?.status,
+                    total_participants: allParticipants.length,
+                    rank,
+                    time_remaining: campaign?.end_date ? Math.max(0, (campaign.end_date as number) - Date.now()) : 0,
+                };
+            })
+        );
+    },
+});
+
+/** Get campaign leaderboard with pagination */
+export const getCampaignLeaderboardPaginated = query({
+    args: { campaign_id: v.id("campaigns"), offset: v.optional(v.number()), limit: v.optional(v.number()) },
+    handler: async (ctx, { campaign_id, offset = 0, limit = 20 }) => {
+        const participants = await ctx.db
+            .query("campaign_participants")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
+            .collect();
+
+        const sorted = participants.sort(
+            (a, b) => (b.referral_count ?? 0) - (a.referral_count ?? 0)
+        );
+
+        const page = sorted.slice(offset, offset + limit);
+        const enriched = await Promise.all(
+            page.map(async (p, i) => {
+                const user = await ctx.db.get(p.user_id);
+                return {
+                    rank: offset + i + 1,
+                    user_id: p.user_id,
+                    full_name: user?.full_name ?? "Unknown",
+                    username: user?.username ?? "",
+                    avatar: user?.full_name?.[0] ?? "?",
+                    referral_count: p.referral_count ?? 0,
+                    qualified_referrals: p.qualified_referrals ?? 0,
+                    campaign_earnings: p.campaign_earnings ?? 0,
+                    entries: p.entries ?? 0,
+                    conversion_rate: p.conversion_rate ?? 0,
+                };
+            })
+        );
+
+        return { leaderboard: enriched, total: sorted.length };
+    },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAMPAIGN MUTATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Admin: invite a partner to an invite-only campaign */
+export const invitePartnerToCampaign = mutation({
+    args: {
+        campaign_id: v.id("campaigns"),
+        partner_id: v.id("users"),
+        invited_by: v.id("users"),
+        invitation_code: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const campaign = await ctx.db.get(args.campaign_id);
+        if (!campaign) throw new Error("Campaign not found");
+        if (campaign.visibility !== "invite_only") throw new Error("Campaign is not invite-only");
+
+        const existing = await ctx.db
+            .query("campaign_participants")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", args.campaign_id))
+            .filter((q) => q.eq(q.field("user_id"), args.partner_id))
+            .first();
+        if (existing) throw new Error("Partner already in campaign");
+
+        const referralCode = `${args.partner_id.slice(-6).toUpperCase()}-${args.campaign_id.slice(-4).toUpperCase()}`;
+        await ctx.db.insert("campaign_participants", {
+            campaign_id: args.campaign_id,
+            user_id: args.partner_id,
+            referral_code: referralCode,
+            progress: 0,
+            entries: 0,
+            referral_count: 0,
+            qualified_referrals: 0,
+            pending_referrals: 0,
+            rejected_referrals: 0,
+            campaign_earnings: 0,
+            boots_earned: 0,
+            cash_earned: 0,
+            joined_at: Date.now(),
+            last_active: Date.now(),
+            invited_by: args.invited_by,
+            invitation_code: args.invitation_code,
+        });
+
+        return { referral_code: referralCode };
+    },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOCIAL TASKS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const createSocialTask = mutation({
+    args: {
+        campaign_id: v.id("campaigns"),
+        name: v.string(),
+        description: v.optional(v.string()),
+        platform: v.optional(v.string()),
+        icon: v.optional(v.string()),
+        reward_type: v.optional(v.string()),
+        reward_amount: v.optional(v.number()),
+        verification_method: v.optional(v.string()),
+        destination_url: v.optional(v.string()),
+        display_order: v.optional(v.number()),
+        created_by: v.optional(v.id("users")),
+    },
+    handler: async (ctx, args) => {
+        return await ctx.db.insert("campaign_social_tasks", {
+            ...args,
+            is_active: true,
+            created_at: Date.now(),
+        });
+    },
+});
+
+export const updateSocialTask = mutation({
+    args: {
+        task_id: v.id("campaign_social_tasks"),
+        name: v.optional(v.string()),
+        description: v.optional(v.string()),
+        platform: v.optional(v.string()),
+        icon: v.optional(v.string()),
+        reward_type: v.optional(v.string()),
+        reward_amount: v.optional(v.number()),
+        verification_method: v.optional(v.string()),
+        destination_url: v.optional(v.string()),
+        is_active: v.optional(v.boolean()),
+        display_order: v.optional(v.number()),
+    },
+    handler: async (ctx, { task_id, ...updates }) => {
+        const patch = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
+        await ctx.db.patch(task_id, patch);
+    },
+});
+
+export const deleteSocialTask = mutation({
+    args: { task_id: v.id("campaign_social_tasks") },
+    handler: async (ctx, { task_id }) => {
+        await ctx.db.delete(task_id);
+    },
+});
+
+export const getSocialTasks = query({
+    args: { campaign_id: v.id("campaigns") },
+    handler: async (ctx, { campaign_id }) => {
+        return await ctx.db
+            .query("campaign_social_tasks")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
+            .collect();
+    },
+});
+
+/** Complete a social task and earn the reward */
+export const completeSocialTask = mutation({
+    args: {
+        task_id: v.id("campaign_social_tasks"),
+        user_id: v.id("users"),
+    },
+    handler: async (ctx, { task_id, user_id }) => {
+        const task = await ctx.db.get(task_id);
+        if (!task) throw new Error("Task not found");
+        if (!task.is_active) throw new Error("Task is no longer active");
+
+        // Check not already completed
+        const participant = await ctx.db
+            .query("campaign_participants")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", task.campaign_id))
+            .filter((q) => q.eq(q.field("user_id"), user_id))
+            .first();
+        if (!participant) throw new Error("You must join the campaign first");
+
+        const completed = participant.social_tasks_completed ?? [];
+        if (completed.includes(task_id)) throw new Error("Task already completed");
+
+        // Mark complete
+        await ctx.db.patch(participant._id, {
+            social_tasks_completed: [...completed, task_id],
+            entries: (participant.entries ?? 0) + (task.reward_type === "entries" ? (task.reward_amount ?? 0) : 0),
+            campaign_earnings: (participant.campaign_earnings ?? 0) + (
+                task.reward_type === "cash" ? (task.reward_amount ?? 0) : 0
+            ),
+            boots_earned: (participant.boots_earned ?? 0) + (
+                task.reward_type === "boots" ? (task.reward_amount ?? 0) : 0
+            ),
+            last_active: Date.now(),
+        });
+
+        // Credit wallet if boots or cash
+        if (task.reward_type === "boots" && task.reward_amount) {
+            const user = await ctx.db.get(user_id);
+            if (user) {
+                await ctx.db.patch(user_id, {
+                    boots_balance: (user.boots_balance ?? 0) + task.reward_amount,
+                });
+            }
+        }
+
+        return { completed: true };
+    },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAMPAIGN ACHIEVEMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const createCampaignAchievement = mutation({
+    args: {
+        campaign_id: v.id("campaigns"),
+        name: v.string(),
+        description: v.optional(v.string()),
+        icon: v.optional(v.string()),
+        criteria_type: v.optional(v.string()),
+        criteria_value: v.optional(v.number()),
+        reward_type: v.optional(v.string()),
+        reward_amount: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        return await ctx.db.insert("campaign_achievements", {
+            ...args,
+            created_at: Date.now(),
+        });
+    },
+});
+
+export const getCampaignAchievements = query({
+    args: { campaign_id: v.id("campaigns") },
+    handler: async (ctx, { campaign_id }) => {
+        return await ctx.db
+            .query("campaign_achievements")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
+            .collect();
+    },
+});
+
+export const earnAchievement = mutation({
+    args: {
+        achievement_id: v.id("campaign_achievements"),
+        user_id: v.id("users"),
+        campaign_id: v.id("campaigns"),
+    },
+    handler: async (ctx, args) => {
+        const existing = await ctx.db
+            .query("user_campaign_achievements")
+            .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
+            .filter((q) => q.eq(q.field("achievement_id"), args.achievement_id))
+            .first();
+        if (existing) throw new Error("Achievement already earned");
+
+        await ctx.db.insert("user_campaign_achievements", {
+            user_id: args.user_id,
+            campaign_id: args.campaign_id,
+            achievement_id: args.achievement_id,
+            earned_at: Date.now(),
+        });
     },
 });
 
