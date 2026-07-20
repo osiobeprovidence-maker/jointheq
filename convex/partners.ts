@@ -1001,3 +1001,91 @@ export const getMarketingAssets = query({
     return await ctx.db.query("partner_marketing_assets").order("desc").collect();
   },
 });
+
+/** One-time backfill: find all qualified partner_referrals and create raffle_referrals + raffle_entries */
+export const backfillRaffleReferrals = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const raffle = await ctx.db
+      .query("raffles")
+      .withIndex("by_status", (q: any) => q.eq("status", "published"))
+      .order("desc")
+      .first();
+
+    if (!raffle) return { processed: 0, reason: "no_active_raffle" };
+
+    const partners = await ctx.db.query("partners").collect();
+    let totalCreated = 0;
+
+    for (const partner of partners) {
+      if (!partner.userId) continue;
+
+      const qualifiedRefs = await ctx.db
+        .query("partner_referrals")
+        .withIndex("by_partner", (q: any) => q.eq("partnerId", partner._id))
+        .filter((q: any) => q.eq(q.field("qualified"), true))
+        .collect();
+
+      for (const ref of qualifiedRefs) {
+        if (!ref.userId) continue;
+
+        // Skip if raffle_referral already exists
+        const existing = await ctx.db
+          .query("raffle_referrals")
+          .withIndex("by_inviter", (q: any) => q.eq("inviterId", partner.userId))
+          .filter((q: any) =>
+            q.and(
+              q.eq(q.field("raffleId"), raffle._id),
+              q.eq(q.field("inviteeUserId"), ref.userId as any)
+            )
+          )
+          .first();
+
+        if (existing) continue;
+
+        const referredUser = await ctx.db.get(ref.userId as any);
+        const referredName = referredUser?.full_name || referredUser?.email || "Unknown";
+
+        await ctx.db.insert("raffle_referrals", {
+          raffleId: raffle._id,
+          inviterId: partner.userId,
+          inviteeName: referredName,
+          inviteeEmail: referredUser?.email || undefined,
+          inviteeUserId: ref.userId as any,
+          status: "completed",
+          rewardGranted: true,
+          rewardTickets: raffle.referralReward,
+          createdAt: Date.now(),
+          completedAt: Date.now(),
+        });
+
+        // Update or create raffle entry
+        const existingEntry = await ctx.db
+          .query("raffle_entries")
+          .withIndex("by_raffle_user", (q: any) =>
+            q.eq("raffleId", raffle._id).eq("userId", partner.userId)
+          )
+          .unique();
+
+        if (existingEntry) {
+          await ctx.db.patch(existingEntry._id, {
+            ticketCount: existingEntry.ticketCount + raffle.referralReward,
+          });
+        } else {
+          await ctx.db.insert("raffle_entries", {
+            raffleId: raffle._id,
+            userId: partner.userId,
+            raffleNumber: `${raffle.slug}-${Date.now()}`,
+            ticketCount: raffle.referralReward,
+            enteredAt: Date.now(),
+            referralSource: "partner_referral_backfill",
+          });
+        }
+
+        totalCreated++;
+      }
+    }
+
+    return { processed: totalCreated };
+  },
+});
