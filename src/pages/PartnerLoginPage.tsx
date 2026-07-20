@@ -19,15 +19,10 @@ export default function PartnerLoginPage() {
     if (!email || !password) { toast.error("Please enter email and password"); return; }
     setLoading(true);
     try {
-      const result = await partnerLogin({ email, password });
-      if (result.success) {
-        localStorage.setItem("partner_token", result.token!);
-        localStorage.setItem("partner_id", result.partner!._id);
-        toast.success("Welcome back!");
-        navigate("/dashboard");
-      } else {
-        toast.error(result.error || "Login failed");
-      }
+      const partner = await partnerLogin({ email, password });
+      localStorage.setItem("partner_id", partner._id);
+      toast.success("Welcome back!");
+      navigate("/partner");
     } catch (err: any) {
       toast.error(err.message || "Login failed");
     }

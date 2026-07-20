@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +41,15 @@ export default function QHubPage() {
         api.qhub.checkHubAccess,
         user?._id ? { userId: user._id as any } : "skip"
     );
+
+    const partnerRecord = useQuery(
+        api.partners.getPartnerByUserId,
+        user?._id ? { userId: user._id as any } : "skip"
+    );
+
+    useEffect(() => {
+        if (partnerRecord) navigate("/partner", { replace: true });
+    }, [partnerRecord, navigate]);
 
     if (!user || accessCheck === undefined) {
         return (

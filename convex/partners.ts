@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import bcrypt from "bcryptjs";
 
@@ -15,57 +15,121 @@ function generateReferralCode(username: string): string {
   return username.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-// ─── ADMIN: CREATE PARTNER ───
+// ─── SEARCH EXISTING USERS (for admin assignment) ───
+
+export const searchUsers = query({
+  args: { query: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const q = args.query.trim().toLowerCase();
+    if (q.length < 2) return [];
+
+    // Collect existing partner userIds to exclude
+    const existingPartners = await ctx.db.query("partners").collect();
+    const existingUserIds = new Set(
+      existingPartners
+        .filter((p) => p.userId)
+        .map((p) => p.userId!.toString())
+    );
+
+    const users = await ctx.db.query("users").take(500);
+
+    return users
+      .filter((u) => {
+        if (existingUserIds.has(u._id.toString())) return false;
+        const name = (u.full_name || "").toLowerCase();
+        const email = (u.email || "").toLowerCase();
+        const username = (u.username || "").toLowerCase();
+        const phone = (u.phone || "").toLowerCase();
+        return (
+          name.includes(q) ||
+          email.includes(q) ||
+          username.includes(q) ||
+          phone.includes(q)
+        );
+      })
+      .slice(0, 20)
+      .map((u) => ({
+        _id: u._id,
+        full_name: u.full_name,
+        username: u.username,
+        email: u.email,
+        phone: u.phone,
+        profile_image_url: u.profile_image_url,
+      }));
+  },
+});
+
+// ─── LIST ALL REGISTERED USERS (for admin assignment) ───
+
+export const listUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const existingPartners = await ctx.db.query("partners").collect();
+    const existingUserIds = new Set(
+      existingPartners
+        .filter((p) => p.userId)
+        .map((p) => p.userId!.toString())
+    );
+
+    const users = await ctx.db.query("users").collect();
+
+    return users
+      .filter((u) => !existingUserIds.has(u._id.toString()))
+      .map((u) => ({
+        _id: u._id,
+        full_name: u.full_name,
+        username: u.username,
+        email: u.email,
+        phone: u.phone,
+        profile_image_url: u.profile_image_url,
+      }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+  },
+});
 
 export const createPartner = mutation({
   args: {
-    fullName: v.string(),
-    username: v.string(),
-    email: v.string(),
-    phone: v.optional(v.string()),
-    profileImageUrl: v.optional(v.string()),
+    userId: v.id("users"),
+    adminId: v.id("users"),
     partnerType: v.string(),
-    referralCode: v.optional(v.string()),
     commissionPerQualified: v.number(),
     paymentSchedule: v.string(),
     status: v.string(),
     notes: v.optional(v.string()),
-    password: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
 
-    const existingPartner = await ctx.db
+    // Verify user exists
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // Check not already a partner
+    const existing = await ctx.db
       .query("partners")
-      .withIndex("by_username", (q: any) => q.eq("username", args.username))
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .first();
-    if (existingPartner) throw new Error("Username already taken");
+    if (existing) throw new Error("This user is already registered as a partner");
 
-    const existingEmail = await ctx.db
-      .query("partners")
-      .withIndex("by_email", (q: any) => q.eq("email", args.email))
-      .first();
-    if (existingEmail) throw new Error("Email already in use");
-
-    const passwordHash = await bcrypt.hash(args.password, 10);
     const partnerId = await generatePartnerId(ctx);
-    const referralCode = args.referralCode || generateReferralCode(args.username);
+    const referralCode = generateReferralCode(user.username || user.email);
     const now = Date.now();
 
-    await ctx.db.insert("partners", {
-      fullName: args.fullName,
-      username: args.username,
-      email: args.email,
-      phone: args.phone,
-      profileImageUrl: args.profileImageUrl,
+    const partnerDocId = await ctx.db.insert("partners", {
+      userId: args.userId,
       partnerType: args.partnerType,
       referralCode,
       commissionPerQualified: args.commissionPerQualified,
       paymentSchedule: args.paymentSchedule,
       status: args.status,
       notes: args.notes,
-      passwordHash,
       partnerId,
       totalClicks: 0,
       totalRegistrations: 0,
@@ -76,7 +140,7 @@ export const createPartner = mutation({
       totalEarnings: 0,
       createdAt: now,
       updatedAt: now,
-      createdBy: identity.subject as Id<"users">,
+      createdBy: admin._id,
     });
 
     // Create default campaign assignments
@@ -89,13 +153,13 @@ export const createPartner = mutation({
 
     for (const campaign of defaultCampaigns) {
       await ctx.db.insert("partner_campaigns", {
-        partnerId: "" as any, // will update after getting the partner
+        partnerId: partnerDocId,
         campaignName: campaign.name,
         campaignSlug: campaign.slug,
         commission: args.commissionPerQualified,
         status: "active",
         createdAt: now,
-        createdBy: identity.subject as Id<"users">,
+        createdBy: admin._id,
       });
     }
 
@@ -108,9 +172,7 @@ export const createPartner = mutation({
 export const updatePartner = mutation({
   args: {
     partnerId: v.id("partners"),
-    fullName: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    profileImageUrl: v.optional(v.string()),
+    adminId: v.id("users"),
     partnerType: v.optional(v.string()),
     commissionPerQualified: v.optional(v.number()),
     paymentSchedule: v.optional(v.string()),
@@ -118,16 +180,13 @@ export const updatePartner = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
 
     const existing = await ctx.db.get(args.partnerId);
     if (!existing) throw new Error("Partner not found");
 
     const updates: any = { updatedAt: Date.now() };
-    if (args.fullName !== undefined) updates.fullName = args.fullName;
-    if (args.phone !== undefined) updates.phone = args.phone;
-    if (args.profileImageUrl !== undefined) updates.profileImageUrl = args.profileImageUrl;
     if (args.partnerType !== undefined) updates.partnerType = args.partnerType;
     if (args.commissionPerQualified !== undefined) updates.commissionPerQualified = args.commissionPerQualified;
     if (args.paymentSchedule !== undefined) updates.paymentSchedule = args.paymentSchedule;
@@ -141,10 +200,10 @@ export const updatePartner = mutation({
 // ─── ADMIN: DELETE PARTNER ───
 
 export const deletePartner = mutation({
-  args: { partnerId: v.id("partners") },
+  args: { partnerId: v.id("partners"), adminId: v.id("users") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
     await ctx.db.delete(args.partnerId);
   },
 });
@@ -154,7 +213,27 @@ export const deletePartner = mutation({
 export const listPartners = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("partners").order("desc").collect();
+    const partners = await ctx.db.query("partners").order("desc").collect();
+
+    // Enrich with user data for userId-linked partners
+    return await Promise.all(
+      partners.map(async (p) => {
+        if (p.userId) {
+          const user = await ctx.db.get(p.userId);
+          if (user) {
+            return {
+              ...p,
+              fullName: user.full_name,
+              username: user.username,
+              email: user.email,
+              phone: user.phone,
+              profileImageUrl: user.profile_image_url,
+            };
+          }
+        }
+        return p;
+      })
+    );
   },
 });
 
@@ -163,7 +242,22 @@ export const listPartners = query({
 export const getPartner = query({
   args: { partnerId: v.id("partners") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.partnerId);
+    const p = await ctx.db.get(args.partnerId);
+    if (!p) return null;
+    if (p.userId) {
+      const user = await ctx.db.get(p.userId);
+      if (user) {
+        return {
+          ...p,
+          fullName: user.full_name,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          profileImageUrl: user.profile_image_url,
+        };
+      }
+    }
+    return p;
   },
 });
 
@@ -212,6 +306,18 @@ export const partnerLogin = mutation({
       commissionPerQualified: partner.commissionPerQualified,
       paymentSchedule: partner.paymentSchedule,
     };
+  },
+});
+
+// ─── PARTNER: GET BY USER ID ───
+
+export const getPartnerByUserId = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("partners")
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
+      .first();
   },
 });
 

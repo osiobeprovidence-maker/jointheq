@@ -1575,19 +1575,20 @@ export default defineSchema({
     // ─── PARTNER PORTAL ───
 
     partners: defineTable({
-        fullName: v.string(),
-        username: v.string(),
-        email: v.string(),
+        userId: v.optional(v.id("users")),
+        fullName: v.optional(v.string()),
+        username: v.optional(v.string()),
+        email: v.optional(v.string()),
         phone: v.optional(v.string()),
         profileImageUrl: v.optional(v.string()),
-        partnerType: v.string(), // "creator" | "influencer" | "campus_ambassador" | "brand_partner" | "community_leader"
+        partnerType: v.string(),
         referralCode: v.string(),
         commissionPerQualified: v.number(),
-        paymentSchedule: v.string(), // "weekly" | "monthly"
-        status: v.string(), // "active" | "paused" | "suspended"
+        paymentSchedule: v.string(),
+        status: v.string(),
         notes: v.optional(v.string()),
-        passwordHash: v.string(),
-        partnerId: v.string(), // auto-generated e.g., "PTN-0001"
+        passwordHash: v.optional(v.string()),
+        partnerId: v.string(),
         totalClicks: v.number(),
         totalRegistrations: v.number(),
         qualifiedReferrals: v.number(),
@@ -1599,7 +1600,7 @@ export default defineSchema({
         createdAt: v.number(),
         updatedAt: v.number(),
         createdBy: v.id("users"),
-    }).index("by_username", ["username"])
+    }).index("by_userId", ["userId"])
         .index("by_email", ["email"])
         .index("by_referral_code", ["referralCode"])
         .index("by_status", ["status"])

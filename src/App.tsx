@@ -32,6 +32,7 @@ const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const RafflePage = lazy(() => import("./pages/RafflePage"));
 const AdminRafflePage = lazy(() => import("./pages/AdminRafflePage"));
 const PartnerLoginPage = lazy(() => import("./pages/PartnerLoginPage"));
+const PartnerDashboardPage = lazy(() => import("./pages/PartnerDashboardPage"));
 
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
@@ -68,6 +69,14 @@ export default function App() {
           <Route path="/r/:refCode" element={<ReferralRedirect />} />
           <Route path="/raffle" element={<RafflePage />} />
           <Route path="/partner-login" element={<PartnerLoginPage />} />
+          <Route
+            path="/partner"
+            element={
+              <ProtectedRoute>
+                <PartnerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/guest-onboarding" element={<GuestOnboardingPage />} />
           <Route path="/console" element={<ConsoleLogin />} />
           {/* Protected Routes */}

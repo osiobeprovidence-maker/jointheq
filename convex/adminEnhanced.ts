@@ -678,6 +678,8 @@ export const searchAllUsers = query({
             full_name: u.full_name,
             email: u.email,
             image: u.profile_image_url,
+            username: u.username,
+            phone: u.phone,
         }));
     },
 });
