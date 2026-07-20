@@ -407,6 +407,18 @@ export const createUser = mutation({
                         rewardTickets: activeRaffle.referralReward,
                         createdAt: Date.now(),
                     });
+
+                    await ctx.db.insert("event_referrals", {
+                        eventId: activeRaffle._id,
+                        inviterId: referredById,
+                        inviteeName: args.full_name,
+                        inviteeEmail: hasEmail ? normalizedEmail : undefined,
+                        inviteeUserId: userId,
+                        status: "pending",
+                        rewardGranted: false,
+                        rewardTickets: activeRaffle.referralReward,
+                        createdAt: Date.now(),
+                    });
                 }
             }
         }

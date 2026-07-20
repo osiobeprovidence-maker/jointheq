@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import bcrypt from "bcryptjs";
+import { awardReputation } from "./reputation";
 
 // ─── HELPERS ───
 
@@ -621,6 +622,28 @@ export const qualifyReferral = mutation({
       }
     }
 
+    // ─── STANDARD REFERRAL SYSTEM: Award boots for every qualifying referral ───
+    if (partnerUserId) {
+      const referredUser = await ctx.db.get(referral.userId as any);
+      const referredName = referredUser?.full_name || referredUser?.email || "Someone";
+      const bootsReward = 50;
+
+      await ctx.db.insert("standard_referrals", {
+        inviterId: partnerUserId,
+        inviteeId: referral.userId as any,
+        inviteeName: referredName,
+        rewardBoots: bootsReward,
+        createdAt: Date.now(),
+      });
+
+      await awardReputation(ctx, partnerUserId, {
+        score: 0,
+        boots: bootsReward,
+        type: "referral",
+        description: `You earned ${bootsReward} Boots for referring ${referredName}`,
+      });
+    }
+
     // ─── RAFFLE SYSTEM: Also create raffle_referrals for the active raffle ───
     try {
       const activeRaffle = await ctx.db
@@ -633,53 +656,72 @@ export const qualifyReferral = mutation({
         const referredUser = referral.userId ? await ctx.db.get(referral.userId as any) : null;
         const referredName = referredUser?.full_name || referredUser?.email || "Unknown";
 
-        // Check if a raffle_referral already exists for this inviter + invitee + raffle
-        const existingRaffleRef = await ctx.db
-          .query("raffle_referrals")
-          .withIndex("by_inviter", (q: any) => q.eq("inviterId", partnerUserId))
-          .filter((q: any) =>
-            q.and(
-              q.eq(q.field("raffleId"), activeRaffle._id),
-              q.eq(q.field("inviteeUserId"), referral.userId as any)
+        // Only count referrals made after the raffle started
+        if (referral.createdAt < (activeRaffle.startDate || activeRaffle.createdAt)) {
+          // Skip old referrals — new raffle starts fresh
+        } else {
+          // Check if a raffle_referral already exists for this inviter + invitee + raffle
+          const existingRaffleRef = await ctx.db
+            .query("raffle_referrals")
+            .withIndex("by_inviter", (q: any) => q.eq("inviterId", partnerUserId))
+            .filter((q: any) =>
+              q.and(
+                q.eq(q.field("raffleId"), activeRaffle._id),
+                q.eq(q.field("inviteeUserId"), referral.userId as any)
+              )
             )
-          )
-          .first();
+            .first();
 
-        if (!existingRaffleRef) {
-          const refId = await ctx.db.insert("raffle_referrals", {
-            raffleId: activeRaffle._id,
-            inviterId: partnerUserId,
-            inviteeName: referredName,
-            inviteeEmail: referredUser?.email || undefined,
-            inviteeUserId: referral.userId as any,
-            status: "completed",
-            rewardGranted: true,
-            rewardTickets: activeRaffle.referralReward,
-            createdAt: Date.now(),
-            completedAt: Date.now(),
-          });
-
-          // Update or create raffle entry
-          const existingEntry = await ctx.db
-            .query("raffle_entries")
-            .withIndex("by_raffle_user", (q: any) =>
-              q.eq("raffleId", activeRaffle._id).eq("userId", partnerUserId)
-            )
-            .unique();
-
-          if (existingEntry) {
-            await ctx.db.patch(existingEntry._id, {
-              ticketCount: existingEntry.ticketCount + activeRaffle.referralReward,
-            });
-          } else {
-            await ctx.db.insert("raffle_entries", {
+          if (!existingRaffleRef) {
+            const refId = await ctx.db.insert("raffle_referrals", {
               raffleId: activeRaffle._id,
-              userId: partnerUserId,
-              raffleNumber: `${activeRaffle.slug}-${Date.now()}`,
-              ticketCount: activeRaffle.referralReward,
-              enteredAt: Date.now(),
-              referralSource: "partner_referral",
+              inviterId: partnerUserId,
+              inviteeName: referredName,
+              inviteeEmail: referredUser?.email || undefined,
+              inviteeUserId: referral.userId as any,
+              status: "completed",
+              rewardGranted: true,
+              rewardTickets: activeRaffle.referralReward,
+              createdAt: Date.now(),
+              completedAt: Date.now(),
             });
+
+            // Also write to generic event_referrals for the event system
+            await ctx.db.insert("event_referrals", {
+              eventId: activeRaffle._id,
+              inviterId: partnerUserId,
+              inviteeName: referredName,
+              inviteeEmail: referredUser?.email || undefined,
+              inviteeUserId: referral.userId as any,
+              status: "completed",
+              rewardGranted: true,
+              rewardTickets: activeRaffle.referralReward,
+              createdAt: Date.now(),
+              completedAt: Date.now(),
+            });
+
+            // Update or create raffle entry
+            const existingEntry = await ctx.db
+              .query("raffle_entries")
+              .withIndex("by_raffle_user", (q: any) =>
+                q.eq("raffleId", activeRaffle._id).eq("userId", partnerUserId)
+              )
+              .unique();
+
+            if (existingEntry) {
+              await ctx.db.patch(existingEntry._id, {
+                ticketCount: existingEntry.ticketCount + activeRaffle.referralReward,
+              });
+            } else {
+              await ctx.db.insert("raffle_entries", {
+                raffleId: activeRaffle._id,
+                userId: partnerUserId,
+                raffleNumber: `${activeRaffle.slug}-${Date.now()}`,
+                ticketCount: activeRaffle.referralReward,
+                enteredAt: Date.now(),
+                referralSource: "partner_referral",
+              });
+            }
           }
         }
       }
@@ -1043,11 +1085,27 @@ export const backfillRaffleReferrals = mutation({
 
         if (existing) continue;
 
+        // Only backfill referrals made after the raffle started
+        if (ref.createdAt < (raffle.startDate || raffle.createdAt)) continue;
+
         const referredUser = await ctx.db.get(ref.userId as any);
         const referredName = referredUser?.full_name || referredUser?.email || "Unknown";
 
         await ctx.db.insert("raffle_referrals", {
           raffleId: raffle._id,
+          inviterId: partner.userId,
+          inviteeName: referredName,
+          inviteeEmail: referredUser?.email || undefined,
+          inviteeUserId: ref.userId as any,
+          status: "completed",
+          rewardGranted: true,
+          rewardTickets: raffle.referralReward,
+          createdAt: Date.now(),
+          completedAt: Date.now(),
+        });
+
+        await ctx.db.insert("event_referrals", {
+          eventId: raffle._id,
           inviterId: partner.userId,
           inviteeName: referredName,
           inviteeEmail: referredUser?.email || undefined,
@@ -1202,8 +1260,24 @@ export const backfillHistoricalReferrals = mutation({
           .first();
 
         if (!existingRaffleRef) {
+          // Only count referrals made after the raffle started
+          if (refUser.created_at < (raffle.startDate || raffle.createdAt)) continue;
+
           await ctx.db.insert("raffle_referrals", {
             raffleId: raffle._id,
+            inviterId: user_id,
+            inviteeName: refUser.full_name || refUser.email,
+            inviteeEmail: refUser.email,
+            inviteeUserId: refUser._id as any,
+            status: "completed",
+            rewardGranted: true,
+            rewardTickets: raffle.referralReward,
+            createdAt: Date.now(),
+            completedAt: Date.now(),
+          });
+
+          await ctx.db.insert("event_referrals", {
+            eventId: raffle._id,
             inviterId: user_id,
             inviteeName: refUser.full_name || refUser.email,
             inviteeEmail: refUser.email,

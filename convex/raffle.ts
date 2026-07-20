@@ -246,6 +246,20 @@ export const getUserReferrals = query({
   },
 });
 
+export const getUserEventReferrals = query({
+  args: { eventId: v.id("raffles"), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const referrals = await ctx.db
+      .query("event_referrals")
+      .withIndex("by_inviter", (q: any) => q.eq("inviterId", args.userId))
+      .filter((q: any) => q.eq(q.field("eventId"), args.eventId))
+      .order("desc")
+      .collect();
+
+    return referrals;
+  },
+});
+
 export const checkEligibility = query({
   args: { raffleId: v.id("raffles"), userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -402,6 +416,19 @@ export const createReferral = mutation({
 
     const referralId = await ctx.db.insert("raffle_referrals", {
       raffleId: args.raffleId,
+      inviterId: args.inviterId,
+      inviteeName: args.inviteeName.trim(),
+      inviteeEmail: args.inviteeEmail?.toLowerCase().trim() || undefined,
+      inviteePhone: args.inviteePhone?.trim() || undefined,
+      inviteeUserId: undefined,
+      status: "pending",
+      rewardGranted: false,
+      rewardTickets: raffle.referralReward,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("event_referrals", {
+      eventId: args.raffleId,
       inviterId: args.inviterId,
       inviteeName: args.inviteeName.trim(),
       inviteeEmail: args.inviteeEmail?.toLowerCase().trim() || undefined,
@@ -1322,6 +1349,28 @@ export const processRaffleReferralOnPurchase = internalMutation({
         rewardGranted: true,
         completedAt: Date.now(),
       });
+
+      // Also complete the corresponding event_referral
+      const pendingEventRef = await ctx.db
+        .query("event_referrals")
+        .withIndex("by_inviter", (q: any) => q.eq("inviterId", ref.inviterId))
+        .filter((q: any) =>
+          q.and(
+            q.eq(q.field("eventId"), raffle._id),
+            q.eq(q.field("inviteeUserId"), args.userId),
+            q.eq(q.field("status"), "pending")
+          )
+        )
+        .first();
+
+      if (pendingEventRef) {
+        await ctx.db.patch(pendingEventRef._id, {
+          status: "completed",
+          inviteeUserId: args.userId,
+          rewardGranted: true,
+          completedAt: Date.now(),
+        });
+      }
 
       const entry = await ctx.db
         .query("raffle_entries")

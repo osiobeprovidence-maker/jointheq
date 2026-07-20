@@ -1778,5 +1778,31 @@ export default defineSchema({
         updatedBy: v.optional(v.id("users")),
     }).index("by_key", ["key"])
         .index("by_enabled", ["enabled"]),
+
+    standard_referrals: defineTable({
+        inviterId: v.id("users"),
+        inviteeId: v.id("users"),
+        inviteeName: v.string(),
+        rewardBoots: v.number(),
+        createdAt: v.number(),
+    }).index("by_inviter", ["inviterId"])
+        .index("by_invitee", ["inviteeId"]),
+
+    event_referrals: defineTable({
+        eventId: v.id("raffles"),
+        inviterId: v.id("users"),
+        inviteeName: v.string(),
+        inviteeEmail: v.optional(v.string()),
+        inviteePhone: v.optional(v.string()),
+        inviteeUserId: v.optional(v.id("users")),
+        status: v.string(),
+        rewardGranted: v.boolean(),
+        rewardTickets: v.number(),
+        createdAt: v.number(),
+        completedAt: v.optional(v.number()),
+    }).index("by_inviter", ["inviterId"])
+        .index("by_event", ["eventId"])
+        .index("by_invitee_email", ["inviteeEmail"])
+        .index("by_invitee_phone", ["inviteePhone"]),
 });
 

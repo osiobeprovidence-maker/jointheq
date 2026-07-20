@@ -414,8 +414,8 @@ export default function RafflePage() {
     raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
   );
   const referralsQuery = useQuery(
-    api.raffle.getUserReferrals,
-    raffleId && currentUser ? { raffleId, userId: convexUserId } : "skip"
+    api.raffle.getUserEventReferrals,
+    raffleId && currentUser ? { eventId: raffleId, userId: convexUserId } : "skip"
   );
   const statsQuery = useQuery(
     api.raffle.getRaffleStats,
