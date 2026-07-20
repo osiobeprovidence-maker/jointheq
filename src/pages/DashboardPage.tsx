@@ -57,6 +57,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import { MainLayout } from "../layouts/MainLayout";
+import PartnerDashboardPage from "./PartnerDashboardPage";
 import { UserSlot, SlotType } from "../types";
 import QueueHub from "../components/queues/QueueHub";
 import toast from "react-hot-toast";
@@ -171,7 +172,7 @@ export default function DashboardPage() {
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
     ];
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'qhustle' | 'wallet' | 'referrals' | 'history' | 'profile' | 'support' | 'notifications' | 'settings'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'qhustle' | 'wallet' | 'referrals' | 'partnership' | 'history' | 'profile' | 'support' | 'notifications' | 'settings'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [enableAutoDebit, setEnableAutoDebit] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -199,6 +200,7 @@ export default function DashboardPage() {
             "qhustle",
             "wallet",
             "referrals",
+            "partnership",
             "history",
             "profile",
             "support",
@@ -1085,10 +1087,6 @@ export default function DashboardPage() {
             setActiveTab={(tab: string) => {
                 if (tab === 'admin') {
                     navigate('/admin');
-                    return;
-                }
-                if (tab === 'qhub') {
-                    navigate('/q-hub');
                     return;
                 }
                 setActiveTab(tab as typeof activeTab);
@@ -2786,6 +2784,11 @@ export default function DashboardPage() {
                                     </div>
                                 )}
                             </div>
+                        </motion.div>
+                    )}
+                    {activeTab === 'partnership' && (
+                        <motion.div key="partnership" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                            <PartnerDashboardPage compact />
                         </motion.div>
                     )}
                     {activeTab === 'settings' && (

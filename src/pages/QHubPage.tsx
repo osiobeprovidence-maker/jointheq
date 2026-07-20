@@ -48,7 +48,7 @@ export default function QHubPage() {
     );
 
     useEffect(() => {
-        if (partnerRecord) navigate("/partner", { replace: true });
+        if (partnerRecord) navigate("/dashboard?tab=partnership", { replace: true });
     }, [partnerRecord, navigate]);
 
     if (!user || accessCheck === undefined) {

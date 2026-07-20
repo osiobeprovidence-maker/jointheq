@@ -141,7 +141,7 @@ function NotificationItem({ icon, text, time }: { icon: React.ReactNode; text: s
   );
 }
 
-export default function PartnerDashboardPage() {
+export default function PartnerDashboardPage({ compact }: { compact?: boolean }) {
   const navigate = useNavigate();
   const currentUser = auth.getCurrentUser();
   const userId = currentUser?._id;
@@ -251,84 +251,86 @@ export default function PartnerDashboardPage() {
   ];
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f4f5f8]">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="h-8 w-48 rounded-lg bg-zinc-200 animate-pulse" />
-          <div className="mt-2 h-4 w-72 rounded bg-zinc-100 animate-pulse" />
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            <div className="h-48 rounded-2xl bg-zinc-200 animate-pulse" />
-            <div className="space-y-4">
-              {[1, 2, 3, 4].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-200 animate-pulse" />)}
-            </div>
+    const skeleton = (
+      <>
+        <div className="h-8 w-48 rounded-lg bg-zinc-200 animate-pulse" />
+        <div className="mt-2 h-4 w-72 rounded bg-zinc-100 animate-pulse" />
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="h-48 rounded-2xl bg-zinc-200 animate-pulse" />
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-200 animate-pulse" />)}
           </div>
         </div>
-      </div>
+      </>
     );
+    if (compact) return skeleton;
+    return <div className="min-h-screen bg-[#f4f5f8]"><div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{skeleton}</div></div>;
   }
 
   if (!partner) {
-    return (
-      <div className="min-h-screen bg-[#f4f5f8]">
-        <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-black/5 bg-white p-8 sm:p-12 shadow-sm text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-orange-50">
-              <Handshake size={40} className="text-orange-500" />
-            </div>
-            <h1 className="mt-6 text-2xl font-black text-zinc-900 sm:text-3xl">Become a JoinTheQ Partner</h1>
-            <p className="mx-auto mt-3 max-w-md text-sm font-semibold text-gray-500">
-              Invite friends to JoinTheQ and earn commissions whenever they subscribe. Turn your network into income.
-            </p>
-
-            <div className="mx-auto mt-8 grid max-w-sm gap-3 text-left">
-              {[
-                { icon: <TrendingUp size={16} />, text: "Flexible earnings — no cap" },
-                { icon: <Wallet size={16} />, text: "Weekly payouts directly to your bank" },
-                { icon: <Zap size={16} />, text: "Personal referral code & tracking" },
-                { icon: <Target size={16} />, text: "Real-time performance dashboard" },
-                { icon: <Gift size={16} />, text: "Exclusive campaigns & bonuses" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3">
-                  <div className="shrink-0 text-orange-500">{item.icon}</div>
-                  <span className="text-sm font-bold text-zinc-700">{item.text}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <button className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-black/10 transition-all hover:bg-zinc-800 active:scale-95">
-                Apply Now
-                <ArrowUpRight size={16} />
-              </button>
-              <button className="inline-flex items-center gap-2 rounded-xl border border-black/10 px-6 py-3 text-sm font-bold text-zinc-600 transition-colors hover:bg-zinc-50">
-                Learn More
-              </button>
-            </div>
-            <p className="mt-4 text-xs font-semibold text-gray-400">
-              Already a partner? <button onClick={() => navigate("/dashboard")} className="text-orange-500 underline hover:text-orange-600">Go to Dashboard</button>
-            </p>
-          </motion.div>
+    const nonPartnerContent = (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-black/5 bg-white p-8 sm:p-12 shadow-sm text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-orange-50">
+          <Handshake size={40} className="text-orange-500" />
         </div>
-      </div>
+        <h1 className="mt-6 text-2xl font-black text-zinc-900 sm:text-3xl">Become a JoinTheQ Partner</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm font-semibold text-gray-500">
+          Invite friends to JoinTheQ and earn commissions whenever they subscribe. Turn your network into income.
+        </p>
+
+        <div className="mx-auto mt-8 grid max-w-sm gap-3 text-left">
+          {[
+            { icon: <TrendingUp size={16} />, text: "Flexible earnings — no cap" },
+            { icon: <Wallet size={16} />, text: "Weekly payouts directly to your bank" },
+            { icon: <Zap size={16} />, text: "Personal referral code & tracking" },
+            { icon: <Target size={16} />, text: "Real-time performance dashboard" },
+            { icon: <Gift size={16} />, text: "Exclusive campaigns & bonuses" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl bg-zinc-50 px-4 py-3">
+              <div className="shrink-0 text-orange-500">{item.icon}</div>
+              <span className="text-sm font-bold text-zinc-700">{item.text}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <button className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-black/10 transition-all hover:bg-zinc-800 active:scale-95">
+            Apply Now
+            <ArrowUpRight size={16} />
+          </button>
+          <button className="inline-flex items-center gap-2 rounded-xl border border-black/10 px-6 py-3 text-sm font-bold text-zinc-600 transition-colors hover:bg-zinc-50">
+            Learn More
+          </button>
+        </div>
+        {!compact && (
+          <p className="mt-4 text-xs font-semibold text-gray-400">
+            Already a partner? <button onClick={() => navigate("/dashboard")} className="text-orange-500 underline hover:text-orange-600">Go to Dashboard</button>
+          </p>
+        )}
+      </motion.div>
     );
+
+    if (compact) return nonPartnerContent;
+    return <div className="min-h-screen bg-[#f4f5f8]"><div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">{nonPartnerContent}</div></div>;
   }
 
-  return (
-    <div className="min-h-screen bg-[#f4f5f8]">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-zinc-900 sm:text-3xl">Partnership</h1>
-              {partner.partnerType && partnerTypeBadge(partner.partnerType)}
-            </div>
-            <p className="mt-1 text-sm font-bold text-gray-500">Earn commissions by helping more people discover JoinTheQ.</p>
+  const partnerContent = (
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-zinc-900 sm:text-3xl">Partnership</h1>
+            {partner.partnerType && partnerTypeBadge(partner.partnerType)}
           </div>
+          <p className="mt-1 text-sm font-bold text-gray-500">Earn commissions by helping more people discover JoinTheQ.</p>
+        </div>
+        {!compact && (
           <button onClick={() => navigate("/dashboard")} className="inline-flex items-center gap-2 self-start rounded-xl border border-black/10 px-4 py-2 text-xs font-bold text-zinc-600 transition-colors hover:bg-zinc-50">
             Main Dashboard
           </button>
-        </motion.div>
+        )}
+      </motion.div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left column */}
@@ -648,8 +650,10 @@ export default function PartnerDashboardPage() {
               )}
             </motion.div>
           </div>
-        </div>
       </div>
     </div>
   );
+
+  if (compact) return partnerContent;
+  return <div className="min-h-screen bg-[#f4f5f8]">{partnerContent}</div>;
 }

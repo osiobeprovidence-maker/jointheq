@@ -17,9 +17,9 @@ import {
     ChevronRight,
     ChevronDown,
     Settings,
-    GraduationCap,
     TrendingUp,
     Headphones,
+    Handshake,
 } from "lucide-react";
 
 import { useQuery } from "convex/react";
@@ -52,6 +52,7 @@ const navGroups: NavGroup[] = [
         { id: 'queues', label: 'Queues' },
     ]},
     { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} />, children: [] },
+    { id: 'partnership', label: 'Partnership', icon: <Handshake size={20} />, children: [] },
     { id: 'referrals', label: 'Referrals', icon: <Users size={20} />, children: [
         { id: 'referrals', label: 'Referrals' },
         { id: 'qhustle', label: 'Q Hustle' },
@@ -59,9 +60,6 @@ const navGroups: NavGroup[] = [
     { id: 'notifications', label: 'Notifications', icon: <Bell size={20} />, children: [
         { id: 'notifications', label: 'Notifications' },
         { id: 'support', label: 'Support' },
-    ]},
-    { id: 'qhub', label: 'Qmunity', icon: <GraduationCap size={20} />, children: [
-        { id: 'qhub', label: 'Q Hub' },
     ]},
     { id: 'profile', label: 'Profile', icon: <UserIcon size={20} />, children: [
         { id: 'profile', label: 'Profile' },
@@ -99,10 +97,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const adminNavItem = { id: 'admin', label: 'Admin', icon: <Lock size={20} /> };
 
     const handleNavItemClick = (itemId: string) => {
-        if (itemId === 'qhub') {
-            navigate('/q-hub');
-            return;
-        }
         if (itemId === 'settings') {
             setActiveTab('settings');
             return;
@@ -141,13 +135,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
                     <Logo className="w-10 h-10" />
                     <span className="text-xl font-bold tracking-tight">jointheq</span>
                 </div>
-                <div className="mb-10 px-1">
+                <div className="mb-3 px-1">
                     <div className="text-xs font-bold text-black/30 bg-black/5 px-2 py-0.5 rounded-md inline-block uppercase tracking-tight">
                         @{user?.username || 'member'}
                     </div>
                 </div>
 
-                <div className="space-y-1 flex-1 overflow-y-auto">
+                <div className="space-y-0.5 flex-1 overflow-y-auto">
                     {visibleGroups.map((group) => {
                         const groupActive = isChildActive(group, activeTab);
 
