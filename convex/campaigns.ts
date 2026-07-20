@@ -813,6 +813,26 @@ export const getCampaignDetail = query({
             .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
             .collect();
 
+        const allReferrals = await ctx.db
+            .query("campaign_referrals")
+            .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
+            .collect();
+
+        // Group referrals by referrer_id for real-time calculation
+        const referralsByReferrer: Record<string, typeof allReferrals> = {};
+        for (const r of allReferrals) {
+            if (!referralsByReferrer[r.referrer_id]) referralsByReferrer[r.referrer_id] = [];
+            referralsByReferrer[r.referrer_id].push(r);
+        }
+
+        const qualifiedCount = (referrerId: string) =>
+            referralsByReferrer[referrerId]?.filter((r) => r.status === "active").length ?? 0;
+
+        const entriesFor = (referrerId: string) => {
+            const qualified = qualifiedCount(referrerId);
+            return qualified * (campaign.entries_per_referral ?? 1);
+        };
+
         const socialTasks = await ctx.db
             .query("campaign_social_tasks")
             .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign_id))
@@ -825,7 +845,7 @@ export const getCampaignDetail = query({
 
         // Leaderboard
         const sorted = [...participants].sort(
-            (a, b) => (b.referral_count ?? 0) - (a.referral_count ?? 0)
+            (a, b) => qualifiedCount(b.user_id) - qualifiedCount(a.user_id)
         );
         const leaderboard = await Promise.all(
             sorted.slice(0, campaign.leaderboard_size ?? 20).map(async (p, i) => {
@@ -837,9 +857,9 @@ export const getCampaignDetail = query({
                     username: user?.username ?? "",
                     avatar: user?.full_name?.[0] ?? "?",
                     referral_count: p.referral_count ?? 0,
-                    qualified_referrals: p.qualified_referrals ?? 0,
+                    qualified_referrals: qualifiedCount(p.user_id),
                     campaign_earnings: p.campaign_earnings ?? 0,
-                    entries: p.entries ?? 0,
+                    entries: entriesFor(p.user_id),
                 };
             })
         );
@@ -849,7 +869,11 @@ export const getCampaignDetail = query({
         if (user_id) {
             const my = participants.find((p) => p.user_id === user_id) ?? null;
             if (my) {
-                myParticipation = my;
+                myParticipation = {
+                    ...my,
+                    qualified_referrals: qualifiedCount(user_id),
+                    entries: entriesFor(user_id),
+                };
                 myRank = sorted.findIndex((p) => p.user_id === user_id) + 1;
             }
             const userAchievements = await ctx.db
@@ -1189,9 +1213,6 @@ export const backfillCampaignTickets = mutation({
         let totalUpdated = 0;
 
         for (const campaign of campaigns) {
-            const isRaffle = campaign.campaign_type === "q_raffle" || campaign.type === "raffle";
-            if (!isRaffle) continue;
-
             const participants = await ctx.db
                 .query("campaign_participants")
                 .withIndex("by_campaign", (q) => q.eq("campaign_id", campaign._id))
@@ -1209,8 +1230,6 @@ export const backfillCampaignTickets = mutation({
                         )
                     )
                     .collect();
-
-                const referralCount = referrals.length;
 
                 // Also check partner_referrals that might not yet have campaign_referral records
                 const partner = await ctx.db
@@ -1248,26 +1267,37 @@ export const backfillCampaignTickets = mutation({
                                 commission_earned: pr.commission ?? 0,
                                 created_at: Date.now(),
                             });
-                            referralCount + 1;
                             totalUpdated++;
                         }
                     }
                 }
 
-                // Recalculate entries/tickets
+                // Recount ALL campaign_referrals now (including newly inserted)
+                const allActiveRefs = await ctx.db
+                    .query("campaign_referrals")
+                    .withIndex("by_referrer", (q) => q.eq("referrer_id", participant.user_id))
+                    .filter((q) =>
+                        q.and(
+                            q.eq(q.field("campaign_id"), campaign._id),
+                            q.eq(q.field("status"), "active")
+                        )
+                    )
+                    .collect();
+
+                const finalCount = allActiveRefs.length;
                 const entriesPerRef = (campaign as any).entries_per_referral ?? 1;
-                const newEntries = referralCount * entriesPerRef;
-                const newEarnings = referrals.reduce((sum, r) => sum + (r.commission_earned ?? 0), 0);
+                const newEntries = finalCount * entriesPerRef;
+                const newEarnings = allActiveRefs.reduce((sum, r) => sum + (r.commission_earned ?? 0), 0);
 
                 await ctx.db.patch(participant._id, {
-                    referral_count: referralCount,
-                    qualified_referrals: referralCount,
+                    referral_count: finalCount,
+                    qualified_referrals: finalCount,
                     entries: Math.max(newEntries, participant.entries ?? 0),
                     campaign_earnings: Math.max(newEarnings, participant.campaign_earnings ?? 0),
                     last_active: Date.now(),
                 });
 
-                if (referralCount > 0) {
+                if (finalCount > 0) {
                     totalUpdated++;
                 }
             }
