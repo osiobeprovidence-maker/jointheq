@@ -331,9 +331,9 @@ export function PartnersAdmin() {
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Commission (%)</label>
+              <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Default Commission (₦)</label>
               <input type="number" value={config.commission} onChange={e => setConfig(f => ({ ...f, commission: Number(e.target.value) }))}
-                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-semibold text-zinc-900 outline-none focus:border-zinc-900" min={0} max={100} />
+                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-semibold text-zinc-900 outline-none focus:border-zinc-900" min={0} />
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-400">Payment Schedule</label>
@@ -383,7 +383,7 @@ export function PartnersAdmin() {
                 <th className="px-4 py-3.5 sm:px-5">Email</th>
                 <th className="px-4 py-3.5 sm:px-5 hidden sm:table-cell">Type</th>
                 <th className="px-4 py-3.5 sm:px-5">Code</th>
-                <th className="px-4 py-3.5 sm:px-5 hidden md:table-cell">Commission</th>
+                <th className="px-4 py-3.5 sm:px-5 hidden md:table-cell">Default Rate</th>
                 <th className="px-4 py-3.5 sm:px-5 hidden md:table-cell">Schedule</th>
                 <th className="px-4 py-3.5 sm:px-5">Status</th>
                 <th className="px-4 py-3.5 sm:px-5">Actions</th>
@@ -429,7 +429,7 @@ export function PartnersAdmin() {
                     </span>
                   </td>
                   <td className="px-4 py-3 sm:px-5 font-mono text-xs font-bold text-indigo-600">{p.referralCode}</td>
-                  <td className="px-4 py-3 sm:px-5 hidden md:table-cell font-bold text-zinc-900">{p.commissionPerQualified}%</td>
+                  <td className="px-4 py-3 sm:px-5 hidden md:table-cell font-bold text-zinc-900">₦{p.commissionPerQualified}</td>
                   <td className="px-4 py-3 sm:px-5 hidden md:table-cell text-sm font-semibold text-gray-500 capitalize">{p.paymentSchedule}</td>
                   <td className="px-4 py-3 sm:px-5">{statusBadge(p.status)}</td>
                   <td className="px-4 py-3 sm:px-5">
