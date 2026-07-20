@@ -1173,21 +1173,18 @@ export const backfillHistoricalReferrals = mutation({
         .first();
 
       if (!existingRef) {
-        await ctx.db.insert("partner_referrals", {
-          partnerId: partner._id,
-          userId: refUser._id as any,
-          email: refUser.email,
-          phone: refUser.phone || "",
-          fullName: refUser.full_name || refUser.email,
-          username: refUser.username,
-          source: "direct",
-          qualified: true,
-          qualifiedAt: firstPayment?.created_at || refUser.created_at,
-          status: "active",
-          commission: partner.commissionPerQualified,
-          createdAt: refUser.created_at,
-          updatedAt: Date.now(),
-        });
+          await ctx.db.insert("partner_referrals", {
+            partnerId: partner._id,
+            campaignSlug: "direct",
+            userId: refUser._id as any,
+            userEmail: refUser.email,
+            qualified: true,
+            qualifiedAt: firstPayment?.created_at || refUser.created_at,
+            status: "active",
+            commission: partner.commissionPerQualified,
+            createdAt: refUser.created_at,
+            updatedAt: Date.now(),
+          });
         results.referralsCreated++;
       }
 
