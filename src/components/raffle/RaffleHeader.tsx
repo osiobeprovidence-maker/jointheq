@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Bell, LogIn, UserPlus, ChevronDown, Ticket, Share2, Music, ShoppingBag, Settings, LogOut } from "lucide-react";
+import { Menu, X, Bell, LogIn, UserPlus, ChevronDown, Ticket, Share2, Music, LogOut } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -62,8 +62,6 @@ export function RaffleHeader({ currentUser, onUserChange, showLogin, setShowLogi
         { icon: <Share2 size={16} />, label: "My Referrals", action: () => { document.getElementById("my-tickets")?.scrollIntoView({ behavior: "smooth" }); setShowMobileMenu(false); } },
         { icon: <Bell size={16} />, label: "Notifications", action: () => { setShowMobileMenu(false); setShowNotifications(true); }, badge: unreadCount },
         { icon: <Music size={16} />, label: "Spotify Subscription", action: () => { window.location.href = "/dashboard?tab=marketplace"; } },
-        { icon: <ShoppingBag size={16} />, label: "Purchase History", action: () => { window.location.href = "/dashboard?tab=history"; } },
-        { icon: <Settings size={16} />, label: "Account Settings", action: () => { window.location.href = "/dashboard"; } },
         { type: "divider" as const },
         { icon: <LogOut size={16} />, label: "Logout", action: handleLogout, danger: true },
       ]

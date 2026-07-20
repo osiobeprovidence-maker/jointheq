@@ -172,7 +172,7 @@ export default function DashboardPage() {
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Rex",
         "https://api.dicebear.com/9.x/adventurer/svg?seed=Luna"
     ];
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'qhustle' | 'wallet' | 'referrals' | 'partnership' | 'history' | 'profile' | 'support' | 'notifications' | 'settings'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'marketplace' | 'queues' | 'qhustle' | 'wallet' | 'referrals' | 'partnership' | 'profile' | 'support' | 'notifications'>('dashboard');
     const [useBootsForPayment, setUseBootsForPayment] = useState(false);
     const [enableAutoDebit, setEnableAutoDebit] = useState(false);
     const [checkoutSlot, setCheckoutSlot] = useState<SlotType | null>(null);
@@ -201,7 +201,6 @@ export default function DashboardPage() {
             "wallet",
             "referrals",
             "partnership",
-            "history",
             "profile",
             "support",
             "notifications",
@@ -1704,88 +1703,6 @@ export default function DashboardPage() {
                     </motion.div>
                 )}
 
-                {activeTab === 'history' && (
-                    <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        <header>
-                            <h1 className="text-3xl font-bold tracking-tight">Activity History</h1>
-                            <p className="text-gray-500 mt-1">Track your reputation growth and rewards.</p>
-                        </header>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Score History */}
-                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] ">
-                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                    <ShieldCheck className="text-blue-600" size={20} /> Q Score Log
-                                </h3>
-                                <div className="space-y-4">
-                                    {currentUser?.score_history && currentUser.score_history.length > 0 ? (
-                                        currentUser.score_history.slice().reverse().map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between p-4 bg-[#fdfdfd] rounded-[2rem]">
-                                                <div>
-                                                    <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
-                                                    <div className="text-xs text-gray-400">{item.description}</div>
-                                                </div>
-                                                <div className={`font-bold ${item.amount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                    {item.amount >= 0 ? '+' : ''}{item.amount}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-center text-black/20 py-8">No score history yet.</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Boots History */}
-                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] ">
-                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                    <Sparkles className="text-amber-500" size={20} /> Boots Log
-                                </h3>
-                                <div className="space-y-4">
-                                    {currentUser?.boots_history && currentUser.boots_history.length > 0 ? (
-                                        currentUser.boots_history.slice().reverse().map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between p-4 bg-[#fdfdfd] rounded-[2rem]">
-                                                <div>
-                                                    <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
-                                                    <div className="text-xs text-gray-400">{item.description}</div>
-                                                </div>
-                                                <div className={`font-bold ${item.amount >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                                                    {item.amount >= 0 ? '+' : ''}{item.amount}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-center text-black/20 py-8">No rewards yet.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Penalties */}
-                        {currentUser?.penalty_history && currentUser.penalty_history.length > 0 && (
-                            <section className="bg-red-50 p-8 rounded-[2rem] border border-red-100">
-                                <h3 className="text-xl font-bold text-red-700 mb-6 flex items-center gap-2">
-                                    <X className="text-red-600" size={20} /> Penalty Records
-                                </h3>
-                                <div className="space-y-4">
-                                    {currentUser?.penalty_history?.slice().reverse().map((item, i) => (
-                                        <div key={i} className="bg-white p-4 rounded-[2rem] flex items-center justify-between border border-red-100 ">
-                                            <div>
-                                                <div className="font-bold text-red-600 text-sm">{item.type}</div>
-                                                <div className="text-xs text-gray-500">{item.description}</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-xs font-bold text-red-600">-{item.score_penalty} Score</div>
-                                                <div className="text-xs font-bold text-red-400">-{item.boots_penalty} Boots</div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-                    </motion.div>
-                )}
-
                 {activeTab === 'support' && (
                     <motion.div key="support" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 sm:p-8">
                         <div className="max-w-4xl mx-auto">
@@ -1932,6 +1849,77 @@ export default function DashboardPage() {
                                 )}
                             </div>
                         </div>
+
+                        {/* Activity History */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] ">
+                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                    <ShieldCheck className="text-blue-600" size={20} /> Q Score Log
+                                </h3>
+                                <div className="space-y-4">
+                                    {currentUser?.score_history && currentUser.score_history.length > 0 ? (
+                                        currentUser.score_history.slice().reverse().map((item, i) => (
+                                            <div key={i} className="flex items-center justify-between p-4 bg-[#fdfdfd] rounded-[2rem]">
+                                                <div>
+                                                    <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
+                                                    <div className="text-xs text-gray-400">{item.description}</div>
+                                                </div>
+                                                <div className={`font-bold ${item.amount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                    {item.amount >= 0 ? '+' : ''}{item.amount}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-center text-black/20 py-8">No score history yet.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] ">
+                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                    <Sparkles className="text-amber-500" size={20} /> Boots Log
+                                </h3>
+                                <div className="space-y-4">
+                                    {currentUser?.boots_history && currentUser.boots_history.length > 0 ? (
+                                        currentUser.boots_history.slice().reverse().map((item, i) => (
+                                            <div key={i} className="flex items-center justify-between p-4 bg-[#fdfdfd] rounded-[2rem]">
+                                                <div>
+                                                    <div className="font-bold text-sm capitalize">{item.type?.replace('_', ' ')}</div>
+                                                    <div className="text-xs text-gray-400">{item.description}</div>
+                                                </div>
+                                                <div className={`font-bold ${item.amount >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                                    {item.amount >= 0 ? '+' : ''}{item.amount}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-center text-black/20 py-8">No rewards yet.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {currentUser?.penalty_history && currentUser.penalty_history.length > 0 && (
+                            <section className="bg-red-50 p-8 rounded-[2rem] border border-red-100">
+                                <h3 className="text-xl font-bold text-red-700 mb-6 flex items-center gap-2">
+                                    <X className="text-red-600" size={20} /> Penalty Records
+                                </h3>
+                                <div className="space-y-4">
+                                    {currentUser?.penalty_history?.slice().reverse().map((item, i) => (
+                                        <div key={i} className="bg-white p-4 rounded-[2rem] flex items-center justify-between border border-red-100 ">
+                                            <div>
+                                                <div className="font-bold text-red-600 text-sm">{item.type}</div>
+                                                <div className="text-xs text-gray-500">{item.description}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs font-bold text-red-600">-{item.score_penalty} Score</div>
+                                                <div className="text-xs font-bold text-red-400">-{item.boots_penalty} Boots</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
 
                         {/* 9. Campus Rep Panel (Conditional) */}
                         {campusRepInfo && (
@@ -2791,17 +2779,6 @@ export default function DashboardPage() {
                     {activeTab === 'partnership' && (
                         <motion.div key="partnership" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                             <PartnerDashboardPage compact />
-                        </motion.div>
-                    )}
-                    {activeTab === 'settings' && (
-                        <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                            <header>
-                                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                                <p className="text-gray-500 mt-1">Manage your account preferences and configuration.</p>
-                            </header>
-                            <div className="bg-white rounded-[3rem] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
-                                <p className="text-gray-500">Settings panel coming soon.</p>
-                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>

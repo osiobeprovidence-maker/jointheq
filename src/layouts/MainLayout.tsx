@@ -62,11 +62,7 @@ const navGroups: NavGroup[] = [
         { id: 'notifications', label: 'Notifications' },
         { id: 'support', label: 'Support' },
     ]},
-    { id: 'profile', label: 'Profile', icon: <UserIcon size={20} />, children: [
-        { id: 'profile', label: 'Profile' },
-        { id: 'history', label: 'History' },
-    ]},
-    { id: 'settings', label: 'Settings', icon: <Settings size={20} />, children: [] },
+    { id: 'profile', label: 'Profile', icon: <UserIcon size={20} />, children: [] },
 ];
 
 function isChildActive(group: NavGroup, activeTab: string): boolean {
@@ -84,7 +80,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const isAdminMode = location.pathname.startsWith('/admin');
     const unreadCount = useQuery(api.notifications.getUnreadCount, user?._id ? { user_id: user._id as Id<"users"> } : "skip") || 0;
 
-    const adminGroupIds = new Set(['wallet', 'referrals', 'notifications', 'qhub', 'profile', 'settings']);
+    const adminGroupIds = new Set(['wallet', 'referrals', 'notifications', 'qhub', 'profile']);
     const visibleGroups = navGroups.filter(g => !isAdminMode || adminGroupIds.has(g.id)).filter(g => !isPartner || g.id !== 'referrals');
 
     const getRank = (score: number) => {
@@ -98,10 +94,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children, activeTab, set
     const adminNavItem = { id: 'admin', label: 'Admin', icon: <Lock size={20} /> };
 
     const handleNavItemClick = (itemId: string) => {
-        if (itemId === 'settings') {
-            setActiveTab('settings');
-            return;
-        }
         setActiveTab(itemId);
     };
 

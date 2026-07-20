@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  User, Ticket, Share2, Bell, Music, ShoppingBag, Settings, LogOut, ChevronRight,
+  User, Ticket, Share2, Bell, Music, LogOut, ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../lib/auth";
@@ -34,8 +34,6 @@ export function ProfileDropdown({ isOpen, onClose, user, onOpenNotifications }: 
     { icon: <Share2 size={15} />, label: "My Referrals", action: () => { document.getElementById("my-tickets")?.scrollIntoView({ behavior: "smooth" }); onClose(); } },
     { icon: <Bell size={15} />, label: "Notifications", action: () => { onClose(); onOpenNotifications(); } },
     { icon: <Music size={15} />, label: "Spotify Subscription", action: () => handleNav("/dashboard?tab=marketplace") },
-    { icon: <ShoppingBag size={15} />, label: "Purchase History", action: () => handleNav("/dashboard?tab=history") },
-    { icon: <Settings size={15} />, label: "Account Settings", action: () => handleNav("/dashboard") },
     { type: "divider" as const },
     { icon: <LogOut size={15} />, label: "Logout", action: handleLogout, danger: true },
   ];
