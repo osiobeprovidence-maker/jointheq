@@ -620,6 +620,72 @@ export const qualifyReferral = mutation({
         }
       }
     }
+
+    // ─── RAFFLE SYSTEM: Also create raffle_referrals for the active raffle ───
+    try {
+      const activeRaffle = await ctx.db
+        .query("raffles")
+        .withIndex("by_status", (q: any) => q.eq("status", "published"))
+        .order("desc")
+        .first();
+
+      if (activeRaffle && partnerUserId) {
+        const referredUser = referral.userId ? await ctx.db.get(referral.userId as any) : null;
+        const referredName = referredUser?.full_name || referredUser?.email || "Unknown";
+
+        // Check if a raffle_referral already exists for this inviter + invitee + raffle
+        const existingRaffleRef = await ctx.db
+          .query("raffle_referrals")
+          .withIndex("by_inviter", (q: any) => q.eq("inviterId", partnerUserId))
+          .filter((q: any) =>
+            q.and(
+              q.eq(q.field("raffleId"), activeRaffle._id),
+              q.eq(q.field("inviteeUserId"), referral.userId as any)
+            )
+          )
+          .first();
+
+        if (!existingRaffleRef) {
+          const refId = await ctx.db.insert("raffle_referrals", {
+            raffleId: activeRaffle._id,
+            inviterId: partnerUserId,
+            inviteeName: referredName,
+            inviteeEmail: referredUser?.email || undefined,
+            inviteeUserId: referral.userId as any,
+            status: "completed",
+            rewardGranted: true,
+            rewardTickets: activeRaffle.referralReward,
+            createdAt: Date.now(),
+            completedAt: Date.now(),
+          });
+
+          // Update or create raffle entry
+          const existingEntry = await ctx.db
+            .query("raffle_entries")
+            .withIndex("by_raffle_user", (q: any) =>
+              q.eq("raffleId", activeRaffle._id).eq("userId", partnerUserId)
+            )
+            .unique();
+
+          if (existingEntry) {
+            await ctx.db.patch(existingEntry._id, {
+              ticketCount: existingEntry.ticketCount + activeRaffle.referralReward,
+            });
+          } else {
+            await ctx.db.insert("raffle_entries", {
+              raffleId: activeRaffle._id,
+              userId: partnerUserId,
+              raffleNumber: `${activeRaffle.slug}-${Date.now()}`,
+              ticketCount: activeRaffle.referralReward,
+              enteredAt: Date.now(),
+              referralSource: "partner_referral",
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Raffle system is optional — don't break the main flow
+    }
   },
 });
 
