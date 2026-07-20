@@ -494,6 +494,132 @@ export const qualifyReferral = mutation({
         createdAt: Date.now(),
       });
     }
+
+    // ─── CAMPAIGN ENGINE: Evaluate this referral against all active campaigns ───
+    // The partner's user ID links the partners table to the campaigns system
+    const partnerUserId = partner.userId;
+    if (partnerUserId) {
+      const myCampaignParticipants = await ctx.db
+        .query("campaign_participants")
+        .withIndex("by_user", (q) => q.eq("user_id", partnerUserId))
+        .collect();
+
+      for (const participant of myCampaignParticipants) {
+        const campaign = await ctx.db.get(participant.campaign_id);
+        if (!campaign || campaign.status !== "active") continue;
+        if (campaign.end_date && (campaign.end_date as number) < Date.now()) continue;
+
+        // Dedup: check if this referred user already has a campaign_referral for this campaign
+        const existingCampaignRef = await ctx.db
+          .query("campaign_referrals")
+          .withIndex("by_referrer", (q) => q.eq("referrer_id", partnerUserId))
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("campaign_id"), participant.campaign_id),
+              q.eq(q.field("referred_id"), referral.userId as any)
+            )
+          )
+          .first();
+
+        if (existingCampaignRef) continue; // Already tracked in this campaign
+
+        // Calculate campaign-specific rewards
+        let ticketsAwarded = 0;
+        let campaignCash = 0;
+        let campaignBoots = 0;
+
+        const isRaffle = campaign.campaign_type === "q_raffle" || campaign.type === "raffle";
+
+        if (isRaffle) {
+          // Raffle campaigns award entries per qualified referral
+          ticketsAwarded = (campaign as any).entries_per_referral ?? 1;
+        }
+
+        // Check if campaign has its own reward rules
+        if (campaign.referral_boots) {
+          campaignBoots = campaign.referral_boots;
+        }
+
+        // Create campaign_referral record
+        await ctx.db.insert("campaign_referrals", {
+          campaign_id: participant.campaign_id,
+          referrer_id: partnerUserId,
+          referred_id: referral.userId as any,
+          status: "active",
+          commission_earned: referral.commission,
+          created_at: Date.now(),
+        });
+
+        // Update campaign participant stats
+        const updates: Record<string, any> = {
+          referral_count: (participant.referral_count ?? 0) + 1,
+          qualified_referrals: (participant.qualified_referrals ?? 0) + 1,
+          campaign_earnings: (participant.campaign_earnings ?? 0) + (referral.commission ?? 0),
+          last_active: Date.now(),
+        };
+
+        if (ticketsAwarded > 0) {
+          updates.entries = (participant.entries ?? 0) + ticketsAwarded;
+        }
+        if (campaignBoots > 0) {
+          updates.boots_earned = (participant.boots_earned ?? 0) + campaignBoots;
+        }
+
+        await ctx.db.patch(participant._id, updates);
+
+        // Credit boots to the user's wallet if applicable
+        if (campaignBoots > 0) {
+          const partnerUser = await ctx.db.get(partnerUserId);
+          if (partnerUser) {
+            await ctx.db.patch(partnerUserId, {
+              boots_balance: (partnerUser.boots_balance ?? 0) + campaignBoots,
+            });
+          }
+        }
+
+        // Send notification about campaign reward
+        const referredUser = await ctx.db.get(referral.userId as any);
+        const referredName = referredUser?.full_name || referredUser?.email || "Someone";
+
+        if (ticketsAwarded > 0) {
+          try {
+            const { createNotification } = await import("./notificationHelpers");
+            await createNotification(ctx, {
+              userId: partnerUserId,
+              title: "🎉 Raffle Ticket Earned",
+              message: `${referredName} completed a qualifying action. You earned ${ticketsAwarded} ticket(s) in "${campaign.name}"!`,
+              type: "promotion",
+              ctaText: "View Campaign",
+              ctaUrl: `/dashboard?tab=partnership`,
+            });
+          } catch (e) {
+            // Notification helper might not be importable in mutation context
+            // Fallback: insert directly
+            try {
+              await ctx.db.insert("notifications", {
+                user_id: partnerUserId,
+                title: "🎉 Raffle Ticket Earned",
+                message: `${referredName} completed a qualifying action. You earned ${ticketsAwarded} ticket(s) in "${campaign.name}"!`,
+                type: "promotion",
+                is_read: false,
+                created_at: Date.now(),
+              });
+            } catch {}
+          }
+        } else {
+          try {
+            await ctx.db.insert("notifications", {
+              user_id: partnerUserId,
+              title: "🎉 Campaign Reward Earned",
+              message: `${referredName} qualified for "${campaign.name}". Your campaign progress has been updated.`,
+              type: "promotion",
+              is_read: false,
+              created_at: Date.now(),
+            });
+          } catch {}
+        }
+      }
+    }
   },
 });
 

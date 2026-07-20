@@ -1005,7 +1005,13 @@ function CampaignDetailView({ campaign, onBack, userId }: { campaign: any; onBac
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
               <h3 className="text-sm font-black text-zinc-900 mb-3">My Performance</h3>
               <div className="space-y-3">
-                {[
+                {isRaffle ? [
+                  { label: "Successful Referrals", value: detail.my_participation.qualified_referrals ?? 0 },
+                  { label: "Total Tickets", value: detail.my_participation.entries ?? 0 },
+                  { label: "Qualified", value: detail.my_participation.referral_count ?? 0 },
+                  { label: "Rank", value: `#${detail.my_participation.rank}` },
+                  { label: "Winning Chance", value: detail.my_participation.total_participants > 0 ? `${((detail.my_participation.entries ?? 0) / Math.max(1, detail.leaderboard.reduce((s: number, e: any) => s + (e.entries ?? 0), 0)) * 100).toFixed(1)}%` : "0%" },
+                ] : [
                   { label: "Referrals", value: detail.my_participation.referral_count ?? 0 },
                   { label: "Qualified", value: detail.my_participation.qualified_referrals ?? 0 },
                   { label: "Earnings", value: fmt(detail.my_participation.campaign_earnings || 0) },

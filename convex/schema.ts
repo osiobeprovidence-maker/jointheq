@@ -600,6 +600,7 @@ export default defineSchema({
         bonus_entry_rules: v.optional(v.array(v.string())),
         min_requirements: v.optional(v.array(v.string())),
         winner_announcement_date: v.optional(v.number()),
+        entries_per_referral: v.optional(v.number()),
     }).index("by_status", ["status"]).index("by_type", ["campaign_type"]).index("by_visibility", ["visibility"]),
 
     campaign_participants: defineTable({
