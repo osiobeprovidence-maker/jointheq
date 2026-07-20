@@ -250,6 +250,11 @@ export default defineSchema({
         category: v.optional(v.string()),
         is_active: v.boolean(),
         base_cost: v.number(),
+        commissionEnabled: v.optional(v.boolean()),
+        commissionType: v.optional(v.string()), // "fixed" | "percentage"
+        commissionValue: v.optional(v.number()),
+        commissionAppliesTo: v.optional(v.string()), // "first_payment" | "every_payment"
+        maxCommission: v.optional(v.number()),
     }),
 
         // ─── QUEUE MARKETPLACE SYSTEM ────────────────────────────────────────
@@ -1712,12 +1717,14 @@ export default defineSchema({
         qualifiedAt: v.optional(v.number()),
         status: v.string(), // "registered" | "email_verified" | "phone_verified" | "subscribed" | "qualified" | "rejected"
         commission: v.number(),
+        subscriptionCatalogId: v.optional(v.id("subscription_catalog")),
         createdAt: v.number(),
         updatedAt: v.number(),
     }).index("by_partner", ["partnerId"])
         .index("by_user", ["userId"])
         .index("by_campaign", ["campaignSlug"])
         .index("by_partner_campaign", ["partnerId", "campaignSlug"])
+        .index("by_catalog", ["subscriptionCatalogId"])
         .index("by_qualified", ["qualified"]),
 
     partner_earnings: defineTable({
@@ -1804,5 +1811,15 @@ export default defineSchema({
         .index("by_event", ["eventId"])
         .index("by_invitee_email", ["inviteeEmail"])
         .index("by_invitee_phone", ["inviteePhone"]),
+
+    standard_config: defineTable({
+        enabled: v.boolean(),
+        rewardType: v.string(), // "boots"
+        rewardAmount: v.number(),
+        maxReward: v.optional(v.number()),
+        qualificationRule: v.string(), // "first_subscription"
+        updatedAt: v.number(),
+        updatedBy: v.optional(v.id("users")),
+    }),
 });
 

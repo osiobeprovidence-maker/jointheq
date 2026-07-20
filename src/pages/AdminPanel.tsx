@@ -93,13 +93,198 @@ import { RaffleAdmin } from "../components/admin/RaffleAdmin";
 import { PartnersAdmin } from "../components/admin/PartnersAdmin";
 import { ActivityTimeline } from "../components/admin/ActivityTimeline";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
+import { getUserFacingErrorMessage } from "../lib/errors";
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Types ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs" | "referral_campaigns" | "qhustle" | "raffle" | "partnerships";
-const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs", "referral_campaigns", "qhustle", "raffle", "partnerships"]);
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs" | "referral_campaigns" | "qhustle" | "raffle" | "partnerships" | "standard_referrals";
+const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs", "referral_campaigns", "qhustle", "raffle", "partnerships", "standard_referrals"]);
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Helpers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const fmt = fmtCurrency;
+
+function StandardReferralConfigSection() {
+  const config = useQuery(api.partners.getStandardConfig);
+  const updateConfig = useMutation(api.partners.updateStandardConfig);
+  const user = useQuery(api.users.getCurrentUser);
+  const [enabled, setEnabled] = useState(true);
+  const [rewardAmount, setRewardAmount] = useState(50);
+  const [qualificationRule, setQualificationRule] = useState("first_subscription");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (config) { setEnabled(config.enabled); setRewardAmount(config.rewardAmount); setQualificationRule(config.qualificationRule); }
+  }, [config]);
+  const handleSave = async () => {
+    if (!user?._id) return; setSaving(true);
+    try { await updateConfig({ adminId: user._id as Id<"users">, enabled, rewardAmount, qualificationRule }); toast.success("Standard referral config saved"); }
+    catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to save config")); }
+    setSaving(false);
+  };
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-[2rem] p-10 shadow-sm">
+        <h2 className="text-2xl font-black mb-2">Standard Referral Config</h2>
+        <p className="text-gray-400 text-sm mb-8">Award Boots for every qualifying referral. All users automatically participate.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</label>
+            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-[2rem]">
+              <button onClick={() => setEnabled(!enabled)} className={`w-14 h-7 rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-gray-300'} relative`}>
+                <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform ${enabled ? 'translate-x-8' : 'translate-x-1'}`} />
+              </button>
+              <span className="font-bold text-sm">{enabled ? 'Active' : 'Disabled'}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Reward Type</label>
+            <div className="p-4 bg-gray-50 rounded-[2rem] font-bold text-sm text-gray-600">Boots</div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Boots per Referral</label>
+            <input type="number" value={rewardAmount} onChange={e => setRewardAmount(Math.max(0, parseInt(e.target.value) || 0))} className="w-full p-4 bg-gray-50 rounded-[2rem] font-bold text-lg outline-none focus:ring-2 ring-blue-600/20" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Qualification Rule</label>
+            <select value={qualificationRule} onChange={e => setQualificationRule(e.target.value)} className="w-full p-4 bg-gray-50 rounded-[2rem] font-bold text-sm outline-none focus:ring-2 ring-blue-600/20">
+              <option value="first_subscription">First successful subscription</option>
+              <option value="first_payment">First payment</option>
+              <option value="account_created">Account created</option>
+            </select>
+          </div>
+        </div>
+        <button onClick={handleSave} disabled={saving} className="w-full py-5 bg-zinc-900 text-white rounded-[2rem] font-bold hover:scale-[1.01] transition-transform disabled:opacity-50">{saving ? "Saving..." : "Save Config"}</button>
+      </div>
+    </div>
+  );
+}
+
+function ServiceCommissionEditor() {
+  const catalogs = useQuery(api.partners.listCatalogCommissions);
+  const updateCatalog = useMutation(api.partners.updateCatalogCommission);
+  const user = useQuery(api.users.getCurrentUser);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [commEnabled, setCommEnabled] = useState(true);
+  const [commType, setCommType] = useState("fixed");
+  const [commValue, setCommValue] = useState(0);
+  const [commAppliesTo, setCommAppliesTo] = useState("first_payment");
+  const [maxComm, setMaxComm] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = (c: any) => {
+    setEditingId(c._id);
+    setCommEnabled(c.commissionEnabled);
+    setCommType(c.commissionType);
+    setCommValue(c.commissionValue);
+    setCommAppliesTo(c.commissionAppliesTo);
+    setMaxComm(c.maxCommission);
+  };
+
+  const handleSave = async () => {
+    if (!user?._id || !editingId) return;
+    setSaving(true);
+    try {
+      await updateCatalog({
+        adminId: user._id as Id<"users">,
+        catalogId: editingId as Id<"subscription_catalog">,
+        commissionEnabled: commEnabled,
+        commissionType: commType,
+        commissionValue: commValue,
+        commissionAppliesTo: commAppliesTo,
+        maxCommission: maxComm ?? undefined,
+      });
+      toast.success("Commission updated");
+      setEditingId(null);
+    } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to update commission")); }
+    setSaving(false);
+  };
+
+  const displayValue = (c: any) => {
+    if (!c.commissionEnabled) return "Disabled";
+    if (c.commissionType === "fixed") return `₦${c.commissionValue.toLocaleString()}`;
+    return `${c.commissionValue}%`;
+  };
+
+  return (
+    <div className="space-y-6 mb-8">
+      <div className="bg-white rounded-[2rem] p-10 shadow-sm">
+        <h2 className="text-2xl font-black mb-2">Service Commissions</h2>
+        <p className="text-gray-400 text-sm mb-8">Configure per-service partnership commission rules.</p>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-black/5">
+                <th className="py-3 pr-4">Service</th>
+                <th className="py-3 pr-4">Price</th>
+                <th className="py-3 pr-4">Commission</th>
+                <th className="py-3 pr-4">Applies To</th>
+                <th className="py-3 pr-4">Max Cap</th>
+                <th className="py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {catalogs?.map((c) => (
+                <tr key={c._id} className="border-b border-black/5">
+                  <td className="py-4 pr-4 font-bold text-sm">{c.name}</td>
+                  <td className="py-4 pr-4 text-sm text-gray-500">₦{c.base_cost.toLocaleString()}</td>
+                  <td className="py-4 pr-4">
+                    {editingId === c._id ? (
+                      <div className="flex gap-2 items-center">
+                        <select value={commType} onChange={e => setCommType(e.target.value)} className="p-2 bg-gray-50 rounded-xl text-xs font-bold outline-none focus:ring-2 ring-blue-600/20">
+                          <option value="fixed">Fixed</option>
+                          <option value="percentage">%</option>
+                        </select>
+                        <div className="flex items-center gap-1">
+                          {commType === "fixed" && <span className="text-xs text-gray-400">₦</span>}
+                          <input type="number" value={commValue} onChange={e => setCommValue(Math.max(0, parseInt(e.target.value) || 0))} className="w-20 p-2 bg-gray-50 rounded-xl text-xs font-bold text-center outline-none focus:ring-2 ring-blue-600/20" />
+                          {commType === "percentage" && <span className="text-xs text-gray-400">%</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className={`text-sm font-bold ${!c.commissionEnabled ? 'text-gray-300' : ''}`}>{displayValue(c)}</span>
+                    )}
+                  </td>
+                  <td className="py-4 pr-4">
+                    {editingId === c._id ? (
+                      <select value={commAppliesTo} onChange={e => setCommAppliesTo(e.target.value)} className="p-2 bg-gray-50 rounded-xl text-xs font-bold outline-none focus:ring-2 ring-blue-600/20">
+                        <option value="first_payment">First Payment</option>
+                        <option value="every_payment">Every Payment</option>
+                      </select>
+                    ) : (
+                      <span className="text-sm text-gray-500">{c.commissionAppliesTo === "first_payment" ? "First Payment" : "Every Payment"}</span>
+                    )}
+                  </td>
+                  <td className="py-4 pr-4">
+                    {editingId === c._id ? (
+                      <input type="number" value={maxComm ?? ""} onChange={e => setMaxComm(e.target.value ? parseInt(e.target.value) : null)} placeholder="No cap" className="w-20 p-2 bg-gray-50 rounded-xl text-xs font-bold text-center outline-none focus:ring-2 ring-blue-600/20" />
+                    ) : (
+                      <span className="text-sm text-gray-500">{c.maxCommission ? `₦${c.maxCommission.toLocaleString()}` : "—"}</span>
+                    )}
+                  </td>
+                  <td className="py-4">
+                    <div className="flex items-center gap-2">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={editingId === c._id ? commEnabled : c.commissionEnabled} onChange={editingId === c._id ? (e) => setCommEnabled(e.target.checked) : undefined} className="sr-only peer" />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500" />
+                      </label>
+                      {editingId === c._id ? (
+                        <div className="flex gap-1">
+                          <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-xs font-bold disabled:opacity-50">{saving ? "..." : "Save"}</button>
+                          <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-gray-100 rounded-xl text-xs font-bold">Cancel</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => startEdit(c)} className="px-3 py-1.5 bg-gray-100 rounded-xl text-xs font-bold hover:bg-gray-200">Edit</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type SupportContact = {
     name: string;
@@ -4040,7 +4225,14 @@ export default function AdminPanel() {
 
                         {activeTab === "partnerships" && (
                             <motion.div key="partnerships" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
+                                <ServiceCommissionEditor />
                                 <PartnersAdmin />
+                            </motion.div>
+                        )}
+
+                        {activeTab === "standard_referrals" && (
+                            <motion.div key="standard_referrals" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
+                                <StandardReferralConfigSection />
                             </motion.div>
                         )}
                     </AnimatePresence>

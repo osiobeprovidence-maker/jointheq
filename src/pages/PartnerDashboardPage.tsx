@@ -195,6 +195,7 @@ export default function PartnerDashboardPage({ compact }: { compact?: boolean })
   const dashboard = useQuery(api.partners.getPartnerDashboard, partner?._id ? { partnerId: partner._id as any } : "skip");
   const announcements = useQuery(api.partners.getAnnouncements);
   const assets = useQuery(api.partners.getMarketingAssets);
+  const catalogCommissions = useQuery(api.partners.listCatalogCommissions);
 
   const campaigns = useQuery(api.campaigns.getAvailableCampaigns, userId ? { user_id: userId as any } : "skip") || [];
   const myCampaigns = useQuery(api.campaigns.getMyCampaigns, userId ? { user_id: userId as any } : "skip") || [];
@@ -542,6 +543,25 @@ export default function PartnerDashboardPage({ compact }: { compact?: boolean })
                             <div className="text-xs font-semibold text-gray-400">{c.referral_count} referrals · Rank #{c.rank}</div>
                           </div>
                           <span className="text-xs font-black text-emerald-600">+{fmt(c.campaign_earnings || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Commission Rates */}
+                {catalogCommissions && catalogCommissions.length > 0 && (
+                  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+                    <h3 className="mb-3 text-base font-black text-zinc-900">Commission per Service</h3>
+                    <div className="space-y-1">
+                      {catalogCommissions.filter(c => c.commissionEnabled).map((c: any) => (
+                        <div key={c._id} className="flex items-center justify-between rounded-xl px-4 py-2.5">
+                          <span className="text-sm font-bold text-zinc-800">{c.name}</span>
+                          <span className="text-sm font-black text-emerald-600">
+                            {c.commissionType === "fixed"
+                              ? fmt(c.commissionValue)
+                              : `${c.commissionValue}%`}
+                          </span>
                         </div>
                       ))}
                     </div>

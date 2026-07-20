@@ -41,7 +41,8 @@ export type AdminMenuKey =
   | "referral_campaigns"
   | "qhustle"
   | "raffle"
-  | "partnerships";
+  | "partnerships"
+  | "standard_referrals";
 
 type AdminShellProps = {
   activeItem: AdminMenuKey;
@@ -77,6 +78,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { id: "qhustle", label: "Q Hustle", sub: "Referral & Earnings", path: "/admin?tab=qhustle", icon: <TrendingUp size={18} /> },
   { id: "raffle", label: "Raffle", sub: "Spotify Giveaways", path: "/admin?tab=raffle", icon: <Award size={18} /> },
   { id: "partnerships", label: "Partnerships", sub: "Partner & Affiliate Mgmt", path: "/admin?tab=partnerships", icon: <Handshake size={18} /> },
+  { id: "standard_referrals", label: "Standard Referral", sub: "Boots Reward Config", path: "/admin?tab=standard_referrals", icon: <Gift size={18} /> },
 ];
 
 export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
@@ -86,7 +88,7 @@ export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Reviews", items: ["user_listings"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins", "login_logs"] },
   { label: "Engagement", items: ["notifications", "queues"] },
-  { label: "Marketing", items: ["referral_campaigns", "qhustle", "raffle", "partnerships"] },
+  { label: "Marketing", items: ["referral_campaigns", "qhustle", "raffle", "partnerships", "standard_referrals"] },
 ];
 
 const menuItemById = new Map(adminMenuItems.map((item) => [item.id, item]));

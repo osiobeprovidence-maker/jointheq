@@ -417,6 +417,7 @@ export const recordReferral = mutation({
     campaignSlug: v.string(),
     userId: v.id("users"),
     userEmail: v.optional(v.string()),
+    subscriptionCatalogId: v.optional(v.id("subscription_catalog")),
   },
   handler: async (ctx, args) => {
     const partner = await ctx.db.get(args.partnerId);
@@ -430,6 +431,7 @@ export const recordReferral = mutation({
       qualified: false,
       status: "registered",
       commission: partner.commissionPerQualified,
+      subscriptionCatalogId: args.subscriptionCatalogId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -446,6 +448,7 @@ export const qualifyReferral = mutation({
   args: {
     referralId: v.id("partner_referrals"),
     status: v.string(),
+    subscriptionCatalogId: v.optional(v.id("subscription_catalog")),
   },
   handler: async (ctx, args) => {
     const referral = await ctx.db.get(args.referralId);
@@ -454,10 +457,47 @@ export const qualifyReferral = mutation({
     const partner = await ctx.db.get(referral.partnerId);
     if (!partner) throw new Error("Partner not found");
 
+    // Determine commission: try per-service first, then fall back to referral snapshot
+    let commission = referral.commission;
+    let catalogId = args.subscriptionCatalogId || referral.subscriptionCatalogId;
+
+    // If no catalog id from args or referral, try to find it from the user's subscription
+    if (!catalogId) {
+      const userSlot = await ctx.db
+        .query("subscription_slots")
+        .withIndex("by_user", (q: any) => q.eq("user_id", referral.userId))
+        .first();
+      if (userSlot) {
+        const sub = userSlot.subscription_id ? await ctx.db.get(userSlot.subscription_id) : null;
+        if (sub?.platform_catalog_id) catalogId = sub.platform_catalog_id;
+      }
+    }
+
+    if (catalogId) {
+      const catalog = await ctx.db.get(catalogId);
+      if (catalog && (catalog as any).commissionEnabled) {
+        const ct = (catalog as any).commissionType;
+        const cv = (catalog as any).commissionValue;
+        if (ct === "fixed") {
+          commission = cv;
+        } else if (ct === "percentage") {
+          commission = Math.round((catalog.base_cost * cv) / 100);
+        }
+        const maxCom = (catalog as any).maxCommission;
+        if (maxCom && commission > maxCom) commission = maxCom;
+
+        // Update the referral record with the catalog id and calculated commission
+        await ctx.db.patch(args.referralId, {
+          subscriptionCatalogId: catalogId,
+        });
+      }
+    }
+
     await ctx.db.patch(args.referralId, {
       qualified: true,
       qualifiedAt: Date.now(),
       status: args.status,
+      commission,
       updatedAt: Date.now(),
     });
 
@@ -467,8 +507,8 @@ export const qualifyReferral = mutation({
     // Update partner stats
     await ctx.db.patch(referral.partnerId, {
       qualifiedReferrals: partner.qualifiedReferrals + 1,
-      pendingEarnings: partner.pendingEarnings + referral.commission,
-      totalEarnings: partner.totalEarnings + referral.commission,
+      pendingEarnings: partner.pendingEarnings + commission,
+      totalEarnings: partner.totalEarnings + commission,
     });
 
     // Upsert monthly earnings
@@ -482,7 +522,7 @@ export const qualifyReferral = mutation({
     if (existingEarning) {
       await ctx.db.patch(existingEarning._id, {
         qualifiedReferrals: existingEarning.qualifiedReferrals + 1,
-        total: existingEarning.total + referral.commission,
+        total: existingEarning.total + commission,
       });
     } else {
       await ctx.db.insert("partner_earnings", {
@@ -490,7 +530,7 @@ export const qualifyReferral = mutation({
         period,
         qualifiedReferrals: 1,
         commission: partner.commissionPerQualified,
-        total: referral.commission,
+        total: commission,
         status: "pending",
         createdAt: Date.now(),
       });
@@ -580,7 +620,7 @@ export const qualifyReferral = mutation({
 
         // Send notification about campaign reward
         const referredUser = await ctx.db.get(referral.userId as any);
-        const referredName = referredUser?.full_name || referredUser?.email || "Someone";
+        const referredName = (referredUser as any)?.full_name || (referredUser as any)?.email || "Someone";
 
         if (ticketsAwarded > 0) {
           try {
@@ -625,23 +665,27 @@ export const qualifyReferral = mutation({
     // ─── STANDARD REFERRAL SYSTEM: Award boots for every qualifying referral ───
     if (partnerUserId) {
       const referredUser = await ctx.db.get(referral.userId as any);
-      const referredName = referredUser?.full_name || referredUser?.email || "Someone";
-      const bootsReward = 50;
+      const referredName = (referredUser as any)?.full_name || (referredUser as any)?.email || "Someone";
+      const stdConfigs = await ctx.db.query("standard_config").collect();
+      const stdConfig = stdConfigs[0];
+      const bootsReward = stdConfig?.enabled !== false ? (stdConfig?.rewardAmount ?? 50) : 0;
 
-      await ctx.db.insert("standard_referrals", {
-        inviterId: partnerUserId,
-        inviteeId: referral.userId as any,
-        inviteeName: referredName,
-        rewardBoots: bootsReward,
-        createdAt: Date.now(),
-      });
+      if (bootsReward > 0) {
+        await ctx.db.insert("standard_referrals", {
+          inviterId: partnerUserId,
+          inviteeId: referral.userId as any,
+          inviteeName: referredName,
+          rewardBoots: bootsReward,
+          createdAt: Date.now(),
+        });
 
-      await awardReputation(ctx, partnerUserId, {
-        score: 0,
-        boots: bootsReward,
-        type: "referral",
-        description: `You earned ${bootsReward} Boots for referring ${referredName}`,
-      });
+        await awardReputation(ctx, partnerUserId, {
+          score: 0,
+          boots: bootsReward,
+          type: "referral",
+          description: `You earned ${bootsReward} Boots for referring ${referredName}`,
+        });
+      }
     }
 
     // ─── RAFFLE SYSTEM: Also create raffle_referrals for the active raffle ───
@@ -654,7 +698,7 @@ export const qualifyReferral = mutation({
 
       if (activeRaffle && partnerUserId) {
         const referredUser = referral.userId ? await ctx.db.get(referral.userId as any) : null;
-        const referredName = referredUser?.full_name || referredUser?.email || "Unknown";
+        const referredName = (referredUser as any)?.full_name || (referredUser as any)?.email || "Unknown";
 
         // Only count referrals made after the raffle started
         if (referral.createdAt < (activeRaffle.startDate || activeRaffle.createdAt)) {
@@ -677,7 +721,7 @@ export const qualifyReferral = mutation({
               raffleId: activeRaffle._id,
               inviterId: partnerUserId,
               inviteeName: referredName,
-              inviteeEmail: referredUser?.email || undefined,
+              inviteeEmail: (referredUser as any)?.email || undefined,
               inviteeUserId: referral.userId as any,
               status: "completed",
               rewardGranted: true,
@@ -691,7 +735,7 @@ export const qualifyReferral = mutation({
               eventId: activeRaffle._id,
               inviterId: partnerUserId,
               inviteeName: referredName,
-              inviteeEmail: referredUser?.email || undefined,
+              inviteeEmail: (referredUser as any)?.email || undefined,
               inviteeUserId: referral.userId as any,
               status: "completed",
               rewardGranted: true,
@@ -1089,13 +1133,13 @@ export const backfillRaffleReferrals = mutation({
         if (ref.createdAt < (raffle.startDate || raffle.createdAt)) continue;
 
         const referredUser = await ctx.db.get(ref.userId as any);
-        const referredName = referredUser?.full_name || referredUser?.email || "Unknown";
+        const referredName = (referredUser as any)?.full_name || (referredUser as any)?.email || "Unknown";
 
         await ctx.db.insert("raffle_referrals", {
           raffleId: raffle._id,
           inviterId: partner.userId,
           inviteeName: referredName,
-          inviteeEmail: referredUser?.email || undefined,
+          inviteeEmail: (referredUser as any)?.email || undefined,
           inviteeUserId: ref.userId as any,
           status: "completed",
           rewardGranted: true,
@@ -1108,7 +1152,7 @@ export const backfillRaffleReferrals = mutation({
           eventId: raffle._id,
           inviterId: partner.userId,
           inviteeName: referredName,
-          inviteeEmail: referredUser?.email || undefined,
+          inviteeEmail: (referredUser as any)?.email || undefined,
           inviteeUserId: ref.userId as any,
           status: "completed",
           rewardGranted: true,
@@ -1325,5 +1369,93 @@ export const backfillHistoricalReferrals = mutation({
     });
 
     return results;
+  },
+});
+
+// ─── REFERRAL CONFIGURATION ───
+
+export const getStandardConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    const configs = await ctx.db.query("standard_config").collect();
+    return configs[0] || null;
+  },
+});
+
+export const updateStandardConfig = mutation({
+  args: {
+    adminId: v.id("users"),
+    enabled: v.boolean(),
+    rewardAmount: v.number(),
+    maxReward: v.optional(v.number()),
+    qualificationRule: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
+    const configs = await ctx.db.query("standard_config").collect();
+    const data = {
+      enabled: args.enabled,
+      rewardType: "boots",
+      rewardAmount: args.rewardAmount,
+      maxReward: args.maxReward,
+      qualificationRule: args.qualificationRule,
+      updatedAt: Date.now(),
+      updatedBy: args.adminId,
+    };
+    if (configs[0]) {
+      await ctx.db.patch(configs[0]._id, data);
+    } else {
+      await ctx.db.insert("standard_config", data);
+    }
+    return { success: true };
+  },
+});
+
+export const listCatalogCommissions = query({
+  args: {},
+  handler: async (ctx) => {
+    const catalogs = await ctx.db.query("subscription_catalog").collect();
+    return catalogs.map((c) => ({
+      _id: c._id,
+      name: c.name,
+      logo_url: c.logo_url,
+      category: c.category,
+      base_cost: c.base_cost,
+      commissionEnabled: (c as any).commissionEnabled ?? false,
+      commissionType: (c as any).commissionType ?? "fixed",
+      commissionValue: (c as any).commissionValue ?? 0,
+      commissionAppliesTo: (c as any).commissionAppliesTo ?? "first_payment",
+      maxCommission: (c as any).maxCommission ?? null,
+    }));
+  },
+});
+
+export const updateCatalogCommission = mutation({
+  args: {
+    adminId: v.id("users"),
+    catalogId: v.id("subscription_catalog"),
+    commissionEnabled: v.boolean(),
+    commissionType: v.string(),
+    commissionValue: v.number(),
+    commissionAppliesTo: v.string(),
+    maxCommission: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
+
+    const catalog = await ctx.db.get(args.catalogId);
+    if (!catalog) throw new Error("Catalog item not found");
+
+    await ctx.db.patch(args.catalogId, {
+      commissionEnabled: args.commissionEnabled,
+      commissionType: args.commissionType,
+      commissionValue: args.commissionValue,
+      commissionAppliesTo: args.commissionAppliesTo,
+      maxCommission: args.maxCommission,
+    } as any);
+
+    return { success: true };
   },
 });
