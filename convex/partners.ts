@@ -1089,3 +1089,160 @@ export const backfillRaffleReferrals = mutation({
     return { processed: totalCreated };
   },
 });
+
+/** Backfill: create partner record + raffle entries for historical referred users */
+export const backfillHistoricalReferrals = mutation({
+  args: { user_id: v.id("users"), admin_id: v.id("users") },
+  handler: async (ctx, { user_id, admin_id }) => {
+    const admin = await ctx.db.get(admin_id);
+    if (!admin?.is_admin) throw new Error("Unauthorized");
+
+    const user = await ctx.db.get(user_id);
+    if (!user) throw new Error("User not found");
+
+    const results: { partnerCreated: boolean; referralsCreated: number; raffleEntriesCreated: number } = {
+      partnerCreated: false,
+      referralsCreated: 0,
+      raffleEntriesCreated: 0,
+    };
+
+    // 1. Create partner record if not exists
+    let partner = await ctx.db
+      .query("partners")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user_id))
+      .first();
+
+    if (!partner) {
+      const partnerId = await generatePartnerId(ctx);
+      const referralCode = generateReferralCode(user.username || user.email);
+      const now = Date.now();
+      const partnerDocId = await ctx.db.insert("partners", {
+        userId: user_id,
+        partnerType: "affiliate",
+        referralCode,
+        commissionPerQualified: 10,
+        paymentSchedule: "monthly",
+        status: "active",
+        partnerId,
+        totalClicks: 0,
+        totalRegistrations: 0,
+        qualifiedReferrals: 0,
+        activeSubscribers: 0,
+        pendingEarnings: 0,
+        paidEarnings: 0,
+        totalEarnings: 0,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: admin_id,
+      });
+      partner = await ctx.db.get(partnerDocId);
+      results.partnerCreated = true;
+    }
+
+    if (!partner) throw new Error("Failed to create/find partner");
+
+    // 2. Find all users referred by this user who made their first payment
+    const allUsers = await ctx.db.query("users").collect();
+    const qualifiedReferrals = allUsers.filter(
+      (u: any) => u.referred_by === user_id && u.has_first_payment === true
+    );
+
+    // 3. Active raffle
+    const raffle = await ctx.db
+      .query("raffles")
+      .withIndex("by_status", (q: any) => q.eq("status", "published"))
+      .order("desc")
+      .first();
+
+    for (const refUser of qualifiedReferrals) {
+      // Check if partner_referral already exists
+      const existingRef = await ctx.db
+        .query("partner_referrals")
+        .withIndex("by_partner", (q: any) => q.eq("partnerId", partner._id))
+        .filter((q: any) => q.eq(q.field("userId"), refUser._id))
+        .first();
+
+      if (!existingRef) {
+        await ctx.db.insert("partner_referrals", {
+          partnerId: partner._id,
+          userId: refUser._id as any,
+          email: refUser.email,
+          phone: refUser.phone || "",
+          fullName: refUser.full_name || refUser.email,
+          username: refUser.username,
+          source: "direct",
+          qualified: true,
+          qualifiedAt: refUser.first_payment_at || Date.now(),
+          status: "active",
+          commission: partner.commissionPerQualified,
+          createdAt: refUser.created_at,
+          updatedAt: Date.now(),
+        });
+        results.referralsCreated++;
+      }
+
+      // Create raffle_referral + entry if raffle is active
+      if (raffle) {
+        const existingRaffleRef = await ctx.db
+          .query("raffle_referrals")
+          .withIndex("by_inviter", (q: any) => q.eq("inviterId", user_id))
+          .filter((q: any) =>
+            q.and(
+              q.eq(q.field("raffleId"), raffle._id),
+              q.eq(q.field("inviteeUserId"), refUser._id)
+            )
+          )
+          .first();
+
+        if (!existingRaffleRef) {
+          await ctx.db.insert("raffle_referrals", {
+            raffleId: raffle._id,
+            inviterId: user_id,
+            inviteeName: refUser.full_name || refUser.email,
+            inviteeEmail: refUser.email,
+            inviteeUserId: refUser._id as any,
+            status: "completed",
+            rewardGranted: true,
+            rewardTickets: raffle.referralReward,
+            createdAt: Date.now(),
+            completedAt: Date.now(),
+          });
+
+          // Update or create raffle entry
+          const existingEntry = await ctx.db
+            .query("raffle_entries")
+            .withIndex("by_raffle_user", (q: any) =>
+              q.eq("raffleId", raffle._id).eq("userId", user_id)
+            )
+            .unique();
+
+          if (existingEntry) {
+            await ctx.db.patch(existingEntry._id, {
+              ticketCount: existingEntry.ticketCount + raffle.referralReward,
+            });
+          } else {
+            await ctx.db.insert("raffle_entries", {
+              raffleId: raffle._id,
+              userId: user_id,
+              raffleNumber: `${raffle.slug}-${Date.now()}`,
+              ticketCount: raffle.referralReward,
+              enteredAt: Date.now(),
+              referralSource: "historical_backfill",
+            });
+          }
+
+          results.raffleEntriesCreated++;
+        }
+      }
+    }
+
+    // Update partner stats
+    await ctx.db.patch(partner._id, {
+      qualifiedReferrals: (partner.qualifiedReferrals || 0) + results.referralsCreated,
+      totalRegistrations: (partner.totalRegistrations || 0) + qualifiedReferrals.length,
+      updatedAt: Date.now(),
+    });
+
+    return results;
+  },
+});
