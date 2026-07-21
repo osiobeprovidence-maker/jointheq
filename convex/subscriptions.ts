@@ -1915,17 +1915,31 @@ export const getBundleListings = query({
             ))
             .collect();
 
-        return bundles.map((b) => ({
-            _id: b._id,
-            name: b.name,
-            description: b.description,
-            price: b.base_cost,
-            original_price: (b as any).original_price ?? undefined,
-            launch_badge: (b as any).launch_badge ?? undefined,
-            tagline: (b as any).tagline ?? undefined,
-            bundle_tools: (b as any).bundle_tools ?? undefined,
-            is_active: b.is_active,
-        }));
+        const results = [];
+        for (const b of bundles) {
+            const marketplaceEntry = await ctx.db.query("marketplace")
+                .withIndex("by_catalog", q => q.eq("subscription_catalog_id", b._id))
+                .first();
+
+            results.push({
+                _id: b._id,
+                catalog_id: b._id,
+                marketplace_id: marketplaceEntry?._id,
+                name: b.name,
+                description: b.description,
+                price: b.base_cost,
+                original_price: (b as any).original_price ?? undefined,
+                launch_badge: (b as any).launch_badge ?? undefined,
+                tagline: (b as any).tagline ?? undefined,
+                bundle_tools: (b as any).bundle_tools ?? undefined,
+                pack_name: (marketplaceEntry as any)?.pack_name ?? undefined,
+                pack_description: (marketplaceEntry as any)?.pack_description ?? undefined,
+                included_subscriptions: (marketplaceEntry as any)?.included_subscriptions ?? undefined,
+                price_per_slot: (marketplaceEntry as any)?.price_per_slot ?? undefined,
+                is_active: b.is_active,
+            });
+        }
+        return results;
     },
 });
 

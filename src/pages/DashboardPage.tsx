@@ -65,7 +65,7 @@ import SupportChatUser from "../components/chat/SupportChatUser";
 import { getUserFacingErrorMessage } from "../lib/errors";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 import QHustleTab from "../components/dashboard/QHustleTab";
-import PremiumMarketplaceCard from "../components/marketplace/PremiumMarketplaceCard";
+
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import CampusJoinCard from "../components/campus/CampusJoinCard";
@@ -270,6 +270,7 @@ export default function DashboardPage() {
     const [isCreatingListing, setIsCreatingListing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+    const [activeCategoryTab, setActiveCategoryTab] = useState('all');
     const [taskTab, setTaskTab] = useState<'available' | 'my' | 'create'>('available');
     const [myTaskFilter, setMyTaskFilter] = useState<typeof MY_TASK_FILTERS[number]>('Active');
     const [selectedTask, setSelectedTask] = useState<any | null>(null);
@@ -1247,91 +1248,132 @@ export default function DashboardPage() {
 
                 {/* ... Other tabs (Marketplace, Wallet, Referrals, Profile, Support) ... */}
                 {activeTab === 'marketplace' && (
-                    <motion.div key="marketplace" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Marketplace</h1>
-                            <p className="text-xs sm:text-sm text-gray-500 mt-1">Discover premium subscription slots tailored for you.</p>
-                        </div>
-
-                        {/* Premium Bundle Card */}
-                        {bundleListings.length > 0 && bundleListings.map((bundle) => (
-                            <PremiumMarketplaceCard
-                                key={bundle._id}
-                                price={bundle.price}
-                                originalPrice={bundle.original_price}
-                                launchBadge={bundle.launch_badge}
-                                tagline={bundle.tagline}
-                                bundleTools={bundle.bundle_tools}
-                                onSubscribe={() => {
-                                    const firstSlot = subscriptions.find((s: any) => (s.sub_name || "").includes(bundle.name));
-                                    if (firstSlot) {
-                                        setCheckoutSlot(firstSlot as unknown as SlotType);
-                                        setUseBootsForPayment(false);
-                                        setEnableAutoDebit(false);
-                                    } else {
-                                        toast.error("This bundle is not available right now. Please contact support.");
-                                    }
-                                }}
-                                disabled={!subscriptions.some((s: any) => (s.sub_name || "").includes(bundle.name))}
-                                disabledReason="Currently unavailable"
-                            />
-                        ))}
-
-                        {/* Search & Filter */}
-                        <div className="space-y-4">
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-gray-400 group-focus-within:text-black transition-colors">
-                                    <ShoppingBag size={18} />
+                    <motion.div key="marketplace" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                        {/* Promotional Banner */}
+                        {bundleListings.length > 0 && (
+                            <div className="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 rounded-[2rem] p-5 sm:p-6 flex items-center justify-between gap-4 shadow-lg shadow-black/10" style={{ minHeight: 180, maxHeight: 250 }}>
+                                <div className="flex items-center gap-4 sm:gap-6">
+                                    <div className="hidden sm:flex w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-500 rounded-2xl items-center justify-center text-2xl shadow-lg shrink-0">
+                                        🚀
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-400/15 text-amber-300 rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-400/20">
+                                                <Sparkles size={10} /> New
+                                            </span>
+                                            <span className="text-white font-black text-sm sm:text-base">{bundleListings[0]?.name}</span>
+                                        </div>
+                                        <p className="text-zinc-400 text-xs font-medium">
+                                            {bundleListings[0]?.tagline || bundleListings[0]?.description}
+                                        </p>
+                                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                                            Save up to {bundleListings[0]?.original_price ? Math.round((1 - bundleListings[0].price / bundleListings[0].original_price) * 100) : 0}%
+                                        </p>
+                                    </div>
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder="Search subscriptions..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-white/50 backdrop-blur-sm border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] py-5 pl-14 pr-6 rounded-[2rem] font-medium focus:ring-2 focus:ring-black/5 transition-all outline-none"
-                                />
+                                <button
+                                    onClick={() => navigate(`/dashboard/bundle/${bundleListings[0].catalog_id}`)}
+                                    className="shrink-0 px-5 py-3 bg-white text-zinc-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-zinc-100 transition-all shadow-lg"
+                                >
+                                    Learn More
+                                </button>
                             </div>
+                        )}
 
-                            <select
-                                value={activeFilter}
-                                onChange={(e) => setActiveFilter(e.target.value)}
-                                className="md:hidden w-full bg-white border border-black/10 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-black/10"
-                                aria-label="Filter marketplace categories"
-                            >
-                                {['All', ...MARKETPLACE_CATEGORIES].map((filter) => (
-                                    <option key={filter} value={filter}>
-                                        {filter}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                                {['All', ...MARKETPLACE_CATEGORIES].map((filter) => (
+                        {/* Category Tabs */}
+                        <div className="overflow-x-auto pb-1 scrollbar-none">
+                            <div className="flex items-center gap-2 min-w-max">
+                                {[
+                                    { id: 'all', label: 'All' },
+                                    { id: 'subscriptions', label: 'Subscriptions' },
+                                    { id: 'bundles', label: 'Bundles' },
+                                    { id: 'student', label: 'Student' },
+                                    { id: 'creator', label: 'Creator' },
+                                    { id: 'business', label: 'Business' },
+                                    { id: 'entertainment', label: 'Entertainment' },
+                                ].map(tab => (
                                     <button
-                                        key={filter}
-                                        onClick={() => setActiveFilter(filter)}
-                                        className={`px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeFilter === filter ? 'bg-zinc-900 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-black/5'}`}
+                                        key={tab.id}
+                                        onClick={() => setActiveCategoryTab(tab.id)}
+                                        className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                                            activeCategoryTab === tab.id
+                                                ? 'bg-zinc-900 text-white shadow-lg'
+                                                : 'bg-white text-zinc-400 hover:bg-black/5'
+                                        }`}
                                     >
-                                        {filter}
+                                        {tab.label}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
+                        {/* Search */}
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-gray-400 group-focus-within:text-black transition-colors">
+                                <ShoppingBag size={18} />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search subscriptions..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-white/50 backdrop-blur-sm border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] py-5 pl-14 pr-6 rounded-[2rem] font-medium focus:ring-2 focus:ring-black/5 transition-all outline-none"
+                            />
+                        </div>
+
                         {/* Marketplace Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {/* Bundle Cards */}
+                            {bundleListings
+                                .filter((bundle: any) => {
+                                    if (activeCategoryTab === 'subscriptions') return false;
+                                    if (activeCategoryTab === 'bundles') return true;
+                                    if (activeCategoryTab === 'student') return false;
+                                    if (activeCategoryTab === 'creator') return true;
+                                    if (activeCategoryTab === 'business') return false;
+                                    if (activeCategoryTab === 'entertainment') return false;
+                                    return true; // 'all'
+                                })
+                                .filter((bundle: any) => {
+                                    const q = searchQuery.toLowerCase();
+                                    if (!q) return true;
+                                    return (bundle.name || '').toLowerCase().includes(q)
+                                        || (bundle.description || '').toLowerCase().includes(q)
+                                        || (bundle.bundle_tools || []).some((t: any) => (t.name || '').toLowerCase().includes(q));
+                                })
+                                .map((bundle: any) => (
+                                    <BundleCard
+                                        key={bundle._id}
+                                        bundle={bundle}
+                                        onViewDetails={() => navigate(`/dashboard/bundle/${bundle.catalog_id}`)}
+                                    />
+                                ))}
+
+                            {/* Subscription Cards */}
                             {subscriptions
                                 .filter((listing: any) => listing && (listing.marketplace_id || listing.group_id || listing._id))
+                                .filter((listing: any) => {
+                                    if (activeCategoryTab === 'bundles') return false;
+                                    return true;
+                                })
                                 .map((listing: any) => {
                                     const listingCategory = normalizeMarketplaceCategory(listing.category, listing.platform_category);
-                                    const selectedFilter = activeFilter === 'All' ? 'All' : normalizeMarketplaceCategory(activeFilter);
                                     const searchableName = (listing.name || '').toLowerCase();
                                     const searchableSubName = (listing.sub_name || '').toLowerCase();
                                     const primaryListingId = listing.marketplace_id || listing.group_id || listing._id;
 
-                                    // Each listing is now a single entry (no aggregation)
-                                    // Prefer marketplace_id because getActiveSubscriptions is sourced from marketplace rows
-                                    const listingCard = {
+                                    const tabCategoryMap: Record<string, string[]> = {
+                                        student: ['Education'],
+                                        creator: ['AI', 'Design'],
+                                        business: ['Productivity', 'Software', 'Utility'],
+                                        entertainment: ['Streaming', 'Music', 'Gaming'],
+                                    };
+                                    const allowedCategories = tabCategoryMap[activeCategoryTab];
+                                    if (allowedCategories && !allowedCategories.includes(listingCategory)) return null;
+
+                                    const matchesSearch = searchableName.includes(searchQuery.toLowerCase()) || searchableSubName.includes(searchQuery.toLowerCase());
+
+                                    return matchesSearch ? {
                                         _id: primaryListingId,
                                         card_key: `${primaryListingId}:${listing._id}`,
                                         slot_type_id: listing._id,
@@ -1349,11 +1391,7 @@ export default function DashboardPage() {
                                         owner_profile_image_url: listing.owner_profile_image_url,
                                         account_email: listing.account_email,
                                         billing_cycle_start: listing.billing_cycle_start,
-                                    };
-
-                                    const matchesSearch = searchableName.includes(searchQuery.toLowerCase()) || searchableSubName.includes(searchQuery.toLowerCase());
-                                    const matchesFilter = selectedFilter === 'All' || listingCard.category === selectedFilter;
-                                    return matchesSearch && matchesFilter ? listingCard : null;
+                                    } : null;
                                 })
                                 .filter((listingCard: any) => !!listingCard)
                                 .map((listingCard: any) => (
@@ -3310,6 +3348,87 @@ function ActiveSlotCard({ slot, onUpdateAllocation, onSupportClick, onLeave, onR
             </div>
 
         </motion.div>
+    );
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+    AI: "🤖", Design: "🎨", Streaming: "📺", Music: "🎵",
+    Gaming: "🎮", Productivity: "📊", VPN: "🔒", Software: "💻",
+    Utility: "🔧", Education: "📚",
+};
+
+function BundleCard({ bundle, onViewDetails }: { bundle: any, onViewDetails: () => void }) {
+    const tools = bundle.bundle_tools || [];
+    const savingsPercent = bundle.original_price && bundle.original_price > bundle.price
+        ? Math.round((1 - bundle.price / bundle.original_price) * 100)
+        : 0;
+    const isPopular = savingsPercent > 20;
+    const isBestValue = savingsPercent > 30;
+
+    return (
+        <div className="bg-white border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-5 sm:p-7 rounded-[2.5rem] flex flex-col hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-black/5">
+            {/* Bundle Icon + Badge */}
+            <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center text-xl shadow-sm">
+                        📦
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="font-black text-base">{bundle.name}</h3>
+                            {isBestValue && (
+                                <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-black">Best Value</span>
+                            )}
+                            {isPopular && !isBestValue && (
+                                <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-black">Popular</span>
+                            )}
+                        </div>
+                        <span className="text-xs text-black/40 font-bold">{tools.length} Premium Tools</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Short description */}
+            <p className="text-xs text-black/50 font-medium mb-4 line-clamp-2 leading-relaxed">
+                {bundle.tagline || bundle.description}
+            </p>
+
+            {/* Tool icons row */}
+            {tools.length > 0 && (
+                <div className="flex items-center gap-1.5 mb-5">
+                    {tools.slice(0, 5).map((tool: any, i: number) => (
+                        <div key={i} className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-xs shadow-sm" title={tool.name}>
+                            {tool.icon || "✨"}
+                        </div>
+                    ))}
+                    {tools.length > 5 && (
+                        <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-[9px] font-black text-zinc-500">
+                            +{tools.length - 5}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Pricing */}
+            <div className="mb-auto">
+                <div className="text-[10px] font-black uppercase tracking-widest text-black/20 mb-1">Bundle Price</div>
+                <div className="flex items-baseline gap-2">
+                    {bundle.original_price && bundle.original_price > bundle.price && (
+                        <span className="text-sm text-black/30 line-through font-bold">{fmtCurrency(bundle.original_price)}</span>
+                    )}
+                    <span className="text-2xl font-black">{fmtCurrency(bundle.price)}</span>
+                    <span className="text-xs font-bold text-black/30">/ month</span>
+                </div>
+            </div>
+
+            {/* CTA */}
+            <button
+                onClick={onViewDetails}
+                className="w-full mt-5 py-4 rounded-[2rem] font-black text-sm transition-all active:scale-[0.98] bg-zinc-900 text-white shadow-xl shadow-black/10 hover:shadow-2xl hover:bg-black"
+            >
+                View Bundle
+            </button>
+        </div>
     );
 }
 

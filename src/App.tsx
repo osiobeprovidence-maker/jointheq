@@ -32,6 +32,7 @@ const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const RafflePage = lazy(() => import("./pages/RafflePage"));
 const AdminRafflePage = lazy(() => import("./pages/AdminRafflePage"));
 const PartnerLoginPage = lazy(() => import("./pages/PartnerLoginPage"));
+const BundleDetailPage = lazy(() => import("./pages/BundleDetailPage"));
 
 const AdminAcceptPage = lazy(() => import("./pages/AdminAcceptPage"));
 
@@ -196,12 +197,19 @@ export default function App() {
           <Route
             path="/list-subscription"
             element={
-              <ProtectedRoute>
+              <Suspense fallback={<RouteFallback />}>
                 <ListSubscriptionPage />
-              </ProtectedRoute>
+              </Suspense>
             }
           />
-
+          <Route
+            path="/dashboard/bundle/:bundleId"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <BundleDetailPage />
+              </Suspense>
+            }
+          />
           <Route
             path="/q-hub"
             element={
