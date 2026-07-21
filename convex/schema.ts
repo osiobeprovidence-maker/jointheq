@@ -822,6 +822,15 @@ export default defineSchema({
         slot_price: v.number(),
         owner_payout: v.optional(v.number()),
 
+        // Listing type
+        type: v.optional(v.string()), // "subscription" (default) or "pack"
+
+        // Pack-specific fields (when type === "pack")
+        pack_name: v.optional(v.string()),
+        pack_description: v.optional(v.string()),
+        included_subscriptions: v.optional(v.array(v.string())),
+        price_per_slot: v.optional(v.number()),
+
         // Metadata
         category: v.optional(v.string()),
         admin_note: v.optional(v.string()),
@@ -836,7 +845,8 @@ export default defineSchema({
         .index("by_owner", ["owner_user_id"])
         .index("by_request_id", ["request_id"])
         .index("by_account_email", ["account_email"])
-        .index("by_subscription_displayOrder", ["subscription_catalog_id", "display_order"]),
+        .index("by_subscription_displayOrder", ["subscription_catalog_id", "display_order"])
+        .index("by_type", ["type"]),
 
     reputation: defineTable({
         user_id: v.id("users"),

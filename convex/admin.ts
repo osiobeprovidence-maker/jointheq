@@ -527,8 +527,37 @@ export const getPendingLeaveRequests = query({
             .withIndex("by_status", q => q.eq("status", "closing"))
             .collect();
 
+        // --- Validate overdue auto-leaves against current subscription status ---
+        // For automatic overdue requests (removal_scheduled_at set), verify the user
+        // hasn't already paid since the request was created. If they have, skip them.
+        const validSlots: typeof slots = [];
+        for (const slot of slots) {
+            if (!slot.removal_scheduled_at) {
+                // User-initiated leave — always keep regardless of payment status
+                validSlots.push(slot);
+                continue;
+            }
+
+            const payments = await ctx.db.query("subscription_payments")
+                .withIndex("by_user", q => q.eq("user_id", slot.user_id!))
+                .filter(q => q.eq(q.field("status"), "completed"))
+                .collect();
+
+            const hasRecentPayment = payments.some(p =>
+                p.created_at > slot.removal_scheduled_at! &&
+                p.slot_id === slot._id
+            );
+
+            const renewalDate = slot.renewal_date ? new Date(slot.renewal_date) : null;
+            const isRenewed = renewalDate && renewalDate > new Date();
+
+            if (hasRecentPayment || isRenewed) continue;
+
+            validSlots.push(slot);
+        }
+
         // Enrich slot requests with user and subscription info
-        const enrichedSlots = await Promise.all(slots.map(async (slot) => {
+        const enrichedSlots = await Promise.all(validSlots.map(async (slot) => {
             const user = slot.user_id ? await ctx.db.get(slot.user_id) : null;
             const slotType = slot.slot_type_id ? await ctx.db.get(slot.slot_type_id) : null;
             const subscription = slotType?.subscription_id ? await ctx.db.get(slotType.subscription_id as any) : null;
@@ -570,6 +599,65 @@ export const getPendingLeaveRequests = query({
         const canceled = await enrichCanceledSubscriptions(ctx, canceledRecords);
 
         return { slots: enrichedSlots, migrations: enrichedMigrations, canceled };
+    }
+});
+
+/**
+ * Iterate all pending leave requests and auto-clean stale overdue entries.
+ * For every automatic overdue leave request (removal_scheduled_at set):
+ * - If the user has made a completed payment since the request was created, revert the slot.
+ * - If the slot's renewal date is now in the future, revert the slot.
+ * User-initiated leaves are never auto-cleaned.
+ * Call this from the frontend when the Leave Requests page loads,
+ * and from payment-related mutations after a successful payment.
+ */
+export const refreshLeaveRequests = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const slots = await ctx.db.query("subscription_slots")
+            .withIndex("by_status", q => q.eq("status", "closing"))
+            .collect();
+
+        const cleaned: Array<{ slotId: string; userName: string }> = [];
+
+        for (const slot of slots) {
+            if (!slot.removal_scheduled_at) continue;
+
+            const user = slot.user_id ? await ctx.db.get(slot.user_id) : null;
+
+            const payments = await ctx.db.query("subscription_payments")
+                .withIndex("by_user", q => q.eq("user_id", slot.user_id!))
+                .filter(q => q.eq(q.field("status"), "completed"))
+                .collect();
+
+            const hasRecentPayment = payments.some(p =>
+                p.created_at > slot.removal_scheduled_at! &&
+                p.slot_id === slot._id
+            );
+
+            const renewalDate = slot.renewal_date ? new Date(slot.renewal_date) : null;
+            const isRenewed = renewalDate && renewalDate > new Date();
+
+            if (hasRecentPayment || isRenewed) {
+                await ctx.db.patch(slot._id, {
+                    status: "filled",
+                    removal_scheduled_at: undefined,
+                });
+
+                cleaned.push({
+                    slotId: String(slot._id),
+                    userName: user?.full_name || user?.email || "Unknown",
+                });
+            }
+        }
+
+        return {
+            cleaned,
+            count: cleaned.length,
+            message: cleaned.length > 0
+                ? `Auto-cleaned ${cleaned.length} stale leave request(s): ${cleaned.map(c => c.userName).join(", ")}`
+                : "All leave requests are current — no cleanup needed.",
+        };
     }
 });
 

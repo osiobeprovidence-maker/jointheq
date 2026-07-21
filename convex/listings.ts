@@ -293,6 +293,7 @@ export const approveListing = mutation({
         subscription_catalog_id: catalog!._id,
         owner_user_id: listing.owner_id,
         admin_creator_id: args.admin_id,
+        type: "subscription",
 
         platform_name: listing.platform,
         account_email: listing.login_email,

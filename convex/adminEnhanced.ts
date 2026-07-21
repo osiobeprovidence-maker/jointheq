@@ -407,7 +407,11 @@ export const adminBulkUpdatePaymentStatus = mutation({
             try {
                 const slot = await ctx.db.get(slotId);
                 if (slot && slot.user_id) {
-                    await ctx.db.patch(slotId, { status: args.newStatus });
+                    const patch: Record<string, any> = { status: args.newStatus };
+                    if (args.newStatus === "filled" && slot.removal_scheduled_at) {
+                        patch.removal_scheduled_at = undefined;
+                    }
+                    await ctx.db.patch(slotId, patch);
 
                     await ctx.db.insert("payment_overrides", {
                         slot_id: slotId,

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
     LayoutDashboard,
@@ -592,6 +592,7 @@ export default function AdminPanel() {
 
     // Listing state
     const [showListingModal, setShowListingModal] = useState(false);
+    const [listingType, setListingType] = useState<"subscription" | "pack">("subscription");
     const [listingData, setListingData] = useState({
         platform_name: "",
         account_email: "",
@@ -602,7 +603,12 @@ export default function AdminPanel() {
         base_cost: 0,
         instructions_text: "",
         instructions_image_url: "",
-        slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
+        slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }],
+        pack_name: "",
+        pack_description: "",
+        included_subscriptions: "",
+        pack_price: 0,
+        original_price: 0,
     });
     const [editingSlot, setEditingSlot] = useState<any>(null);  // { slot_type_id, name, price, capacity, access_type }
     const [editingListing, setEditingListing] = useState<any>(null);
@@ -734,6 +740,7 @@ export default function AdminPanel() {
     const [overrideAmount, setOverrideAmount] = useState("");
     const [marketplaceSearch, setMarketplaceSearch] = useState("");
     const [marketplaceServiceFilter, setMarketplaceServiceFilter] = useState("All");
+    const [marketplaceTypeFilter, setMarketplaceTypeFilter] = useState<"all" | "subscription" | "pack">("all");
     const [marketplaceSort, setMarketplaceSort] = useState<MarketplaceSort>("service");
     const [selectedMarketplaceIds, setSelectedMarketplaceIds] = useState<Id<"marketplace">[]>([]);
     const [collapsedMarketplaceServices, setCollapsedMarketplaceServices] = useState<Record<string, boolean>>({});
@@ -762,6 +769,7 @@ export default function AdminPanel() {
     const updateTicketMut = useMutation(api.admin.updateTicketStatus);
     const addCampusRepMut = useMutation(api.admin.addCampusRep);
     const adminCreateListingMutation = useMutation(api.subscriptions.adminCreateListing);
+    const adminCreateBundleListingMut = useMutation(api.subscriptions.adminCreateBundleListing);
     const adminUpdateSlotMut = useMutation(api.subscriptions.adminUpdateSlotType);
     const adminDeleteGroupMut = useMutation(api.subscriptions.adminDeleteGroup);
     const adminUpdateFullListingMut = useMutation(api.subscriptions.adminUpdateFullListing);
@@ -785,6 +793,7 @@ export default function AdminPanel() {
     const adminSendNotification = useMutation(api.admin.adminSendNotification);
     const approveLeaveRequest = useMutation(api.admin.approveLeaveRequest);
     const keepOverdueSubscriptionActiveMut = useMutation(api.admin.keepOverdueSubscriptionActive);
+    const refreshLeaveRequestsMut = useMutation(api.admin.refreshLeaveRequests);
     // Workforce Queries
     const workforceAdmins = useQuery(api.adminWorkforce.getAdminTeam) || [];
     const invitations = useQuery(api.adminWorkforce.getInvitations) || [];
@@ -858,6 +867,23 @@ export default function AdminPanel() {
         localStorage.setItem("marketplace_group_sort_modes", JSON.stringify(serviceGroupSortModes));
     }, [serviceGroupSortModes]);
 
+    // Auto-refresh leave requests when tab is active — clears stale overdue entries
+    const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    useEffect(() => {
+        if (activeTab === "leave_requests") {
+            refreshLeaveRequestsMut();
+            refreshIntervalRef.current = setInterval(() => {
+                refreshLeaveRequestsMut();
+            }, 15000);
+        }
+        return () => {
+            if (refreshIntervalRef.current) {
+                clearInterval(refreshIntervalRef.current);
+                refreshIntervalRef.current = null;
+            }
+        };
+    }, [activeTab]);
+
     const marketplaceInventory = useMemo(() => {
         const query = marketplaceSearch.trim().toLowerCase();
         const now = Date.now();
@@ -900,6 +926,8 @@ export default function AdminPanel() {
 
         const visible = decorated.filter((item) => {
             if (marketplaceServiceFilter !== "All" && item.service.name !== marketplaceServiceFilter) return false;
+            const listingType = item.listing.type || "subscription";
+            if (marketplaceTypeFilter !== "all" && listingType !== marketplaceTypeFilter) return false;
             return !query || item.searchText.includes(query);
         });
 
@@ -1220,57 +1248,70 @@ export default function AdminPanel() {
         if (isCreatingListing) return;
         setIsCreatingListing(true);
         try {
-            const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
-            
-            if (editingListing) {
-                // Update mode
-                await adminUpdateFullListingMut({
-                    marketplace_id: editingListing._id,
-                    platform_name: listingData.platform_name,
-                    account_email: listingData.account_email,
-                    login_password: listingData.account_password || undefined,
-                    plan_owner: normalizedPlanOwner,
-                    admin_renewal_date: listingData.admin_renewal_date,
-                    category: listingData.category,
-                    base_cost: Number(listingData.base_cost),
-                    instructions_text: listingData.instructions_text,
-                    slot_types: listingData.slots.map((s: any) => ({
-                        id: s._id || undefined,
-                        name: s.name,
-                        price: s.price,
-                        capacity: s.capacity,
-                        access_type: s.access_type,
-                        downloads_enabled: s.downloads_enabled ?? true,
-                    })),
+            if (listingType === "pack") {
+                const tools = listingData.included_subscriptions.split("\n").map(s => s.trim()).filter(Boolean);
+                const bundleTools = tools.map((name: string) => ({ name }));
+                await adminCreateBundleListingMut({
+                    adminId: currentUser!._id as any,
+                    name: listingData.pack_name,
+                    description: listingData.pack_description,
+                    price: Number(listingData.pack_price),
+                    original_price: Number(listingData.original_price) || undefined,
+                    bundle_tools: bundleTools,
+                    is_active: true,
                 });
-                toast.success("Listing updated successfully!");
+                toast.success("Pack created and published to marketplace!");
             } else {
-                // Create mode
-                // Generate a short unique request id to send to the backend for idempotency
-                (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-                await adminCreateListingMutation({
-                    platform_name: listingData.platform_name,
-                    account_email: listingData.account_email,
-                    plan_owner: normalizedPlanOwner,
-                    admin_renewal_date: listingData.admin_renewal_date,
-                    category: listingData.category,
-                    login_password: listingData.account_password,
-                    base_cost: Number(listingData.base_cost),
-                    instructions_text: listingData.instructions_text,
-                    instructions_image_url: listingData.instructions_image_url,
-                    slot_types: listingData.slots,
-                    // frontend should generate a unique request id per user action
-                    request_id: (window as any).__listingRequestId || undefined,
-                });
-                toast.success("Listing published to marketplace!");
+                const normalizedPlanOwner = listingData.plan_owner.trim().replace(/^@+/, "") || "admin";
+
+                if (editingListing) {
+                    await adminUpdateFullListingMut({
+                        marketplace_id: editingListing._id,
+                        platform_name: listingData.platform_name,
+                        account_email: listingData.account_email,
+                        login_password: listingData.account_password || undefined,
+                        plan_owner: normalizedPlanOwner,
+                        admin_renewal_date: listingData.admin_renewal_date,
+                        category: listingData.category,
+                        base_cost: Number(listingData.base_cost),
+                        instructions_text: listingData.instructions_text,
+                        slot_types: listingData.slots.map((s: any) => ({
+                            id: s._id || undefined,
+                            name: s.name,
+                            price: s.price,
+                            capacity: s.capacity,
+                            access_type: s.access_type,
+                            downloads_enabled: s.downloads_enabled ?? true,
+                        })),
+                    });
+                    toast.success("Listing updated successfully!");
+                } else {
+                    (window as any).__listingRequestId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+                    await adminCreateListingMutation({
+                        platform_name: listingData.platform_name,
+                        account_email: listingData.account_email,
+                        plan_owner: normalizedPlanOwner,
+                        admin_renewal_date: listingData.admin_renewal_date,
+                        category: listingData.category,
+                        login_password: listingData.account_password,
+                        base_cost: Number(listingData.base_cost),
+                        instructions_text: listingData.instructions_text,
+                        instructions_image_url: listingData.instructions_image_url,
+                        slot_types: listingData.slots,
+                        request_id: (window as any).__listingRequestId || undefined,
+                    });
+                    toast.success("Listing published to marketplace!");
+                }
             }
-            
+
             setShowListingModal(false);
             setEditingListing(null);
+            setListingType("subscription");
             setListingData({
                 platform_name: "", account_email: "", account_password: "", plan_owner: "",
                 admin_renewal_date: "", category: "Streaming", base_cost: 0, instructions_text: "", instructions_image_url: "",
-                slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }]
+                slots: [{ name: "", price: 0, capacity: 1, access_type: "code_access", downloads_enabled: true }],
+                pack_name: "", pack_description: "", included_subscriptions: "", pack_price: 0, original_price: 0,
             });
         } catch (error: any) {
             toast.error(error.message || "Failed to save listing");
@@ -1468,6 +1509,7 @@ export default function AdminPanel() {
     const handleApproveLeave = async (id: Id<"subscription_slots" | "migrated_subscriptions">, type: "slot" | "migration") => {
         try {
             await approveLeaveRequest({ id, type, adminId: currentUser!._id });
+            await refreshLeaveRequestsMut();
             toast.success("Leave request approved");
         } catch (e: any) { toast.error(e.message); }
     };
@@ -1478,6 +1520,7 @@ export default function AdminPanel() {
 
         try {
             await keepOverdueSubscriptionActiveMut({ slotId, adminId: currentUser._id });
+            await refreshLeaveRequestsMut();
             toast.success("Subscription kept active");
         } catch (e: any) {
             toast.error(e.message || "Failed to keep subscription active");
@@ -2422,6 +2465,18 @@ export default function AdminPanel() {
 
                                 <div className="sticky top-0 z-20 space-y-3 rounded-3xl border border-black/5 bg-[#f7f7f9]/95 p-3 shadow-sm shadow-black/[0.03] backdrop-blur">
                                     <div className="flex gap-2 overflow-x-auto pb-1">
+                                        {(["all", "subscription", "pack"] as const).map(t => (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                onClick={() => setMarketplaceTypeFilter(t)}
+                                                className={`flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[10px] font-black uppercase tracking-wider transition ${marketplaceTypeFilter === t ? "bg-zinc-900 text-white shadow-lg shadow-black/10" : "border border-black/5 bg-white text-zinc-500 hover:border-zinc-300 hover:text-zinc-900"}`}
+                                            >
+                                                {t === "all" ? "All Types" : t === "subscription" ? "Subscriptions" : "Packs"}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2 overflow-x-auto pb-1">
                                         {["All", ...MARKETPLACE_SERVICES.filter(service => service.name !== "CapCut").map(service => service.name)].map(serviceName => {
                                             const count = serviceName === "All"
                                                 ? allSubscriptions.length
@@ -2568,7 +2623,17 @@ export default function AdminPanel() {
                                                                 <div className="min-w-0">
                                                                     <div className="truncate text-sm font-black text-zinc-950">{group.subscription_name || group.platform_name}</div>
                                                                     <div className="truncate text-xs font-bold text-gray-400">{planName} - {group.owner_email || group.account_email}</div>
-                                                                    <div className="mt-1 inline-flex rounded-lg bg-zinc-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-500">{group.category || "Other"}</div>
+                                                                    <div className="mt-1 flex flex-wrap gap-1.5">
+                                                                        {(group.type === "pack") && (
+                                                                            <>
+                                                                                <span className="inline-flex rounded-lg bg-purple-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-purple-600">PACK</span>
+                                                                                {group.included_subscriptions?.length > 0 && (
+                                                                                    <span className="inline-flex rounded-lg bg-purple-50 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-purple-500">{group.included_subscriptions.length} tools</span>
+                                                                                )}
+                                                                            </>
+                                                                        )}
+                                                                        <span className="inline-flex rounded-lg bg-zinc-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-500">{group.category || "Other"}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                             <div>
@@ -2837,14 +2902,19 @@ export default function AdminPanel() {
                                                                                 setListingData({
                                                                                     platform_name: group.subscription_name,
                                                                                     account_email: group.account_email,
-                                                                                    account_password: "", // We don't show the password for security, but allow changing it
+                                                                                    account_password: "",
                                                                                     plan_owner: group.plan_owner || "admin",
                                                                                     admin_renewal_date: group.billing_cycle_start,
                                                                                     category: group.category || "Streaming",
                                                                                     base_cost: group.base_cost || 0,
                                                                                     instructions_text: group.instructions_text || "",
                                                                                     instructions_image_url: group.instructions_image_url || "",
-                                                                                    slots: group.slot_types || []
+                                                                                    slots: group.slot_types || [],
+                                                                                    pack_name: "",
+                                                                                    pack_description: "",
+                                                                                    included_subscriptions: "",
+                                                                                    pack_price: 0,
+                                                                                    original_price: 0,
                                                                                 });
                                                                                 setShowListingModal(true);
                                                                             }}
@@ -4430,7 +4500,35 @@ export default function AdminPanel() {
                             </div>
 
                             <div className="p-10 space-y-8">
-                                {/* Account Info */}
+                                {/* Listing Type Selector */}
+                                <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                                    <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest flex items-center gap-2 mb-4">
+                                        <span>📋</span> Listing Type
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setListingType("subscription")}
+                                            className={`px-5 py-3 rounded-xl text-[11px] font-black uppercase transition-all border ${listingType === "subscription"
+                                                ? 'bg-black text-white border-black shadow-md'
+                                                : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
+                                            }`}
+                                        >
+                                            <span className="flex items-center gap-2"><span>🔑</span> Subscription</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setListingType("pack")}
+                                            className={`px-5 py-3 rounded-xl text-[11px] font-black uppercase transition-all border ${listingType === "pack"
+                                                ? 'bg-purple-700 text-white border-purple-700 shadow-md'
+                                                : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
+                                            }`}
+                                        >
+                                            <span className="flex items-center gap-2"><span>📦</span> Pack / Bundle</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {listingType === "subscription" ? (
+                                <>
                                 <div className="bg-white rounded-2xl border border-gray-100 p-8 space-y-8 shadow-sm">
                                     <h3 className="font-bold text-gray-900 flex items-center gap-2 uppercase text-[10px] tracking-[0.2em] text-gray-400">
                                         <div className="w-1.5 h-6 bg-black rounded-full" /> Account Details
@@ -4647,6 +4745,86 @@ export default function AdminPanel() {
                                 >
                                     {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : (editingListing ? 'Save Changes & Update Marketplace' : 'Confirm & Publish to Marketplace')}
                                 </button>
+                                </>
+                                ) : (
+                                <>
+                                <div className="bg-white rounded-2xl border border-gray-100 p-8 space-y-8 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                        <div className="w-1.5 h-6 bg-purple-500 rounded-full" /> Pack Details
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Pack Name</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Q AI Pack"
+                                                value={listingData.pack_name}
+                                                onChange={e => setListingData({ ...listingData, pack_name: e.target.value })}
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-purple-500 transition-all text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Description</label>
+                                            <textarea
+                                                placeholder="Premium bundle of powerful AI tools..."
+                                                value={listingData.pack_description}
+                                                onChange={e => setListingData({ ...listingData, pack_description: e.target.value })}
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-medium outline-none focus:ring-2 ring-purple-500 transition-all text-sm min-h-[80px] resize-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Price (NGN)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">NGN</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={listingData.pack_price === 0 ? "" : listingData.pack_price}
+                                                    onChange={e => setListingData({ ...listingData, pack_price: Number(e.target.value) })}
+                                                    className="w-full py-4.5 pl-10 pr-6 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-purple-500 transition-all text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Original Price (for discount badge)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">NGN</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={listingData.original_price === 0 ? "" : listingData.original_price}
+                                                    onChange={e => setListingData({ ...listingData, original_price: Number(e.target.value) })}
+                                                    className="w-full py-4.5 pl-10 pr-6 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none focus:ring-2 ring-purple-500 transition-all text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Included Tools (one per line)</label>
+                                            <textarea
+                                                placeholder={"ChatGPT Plus\nClaude Pro\nPerplexity Pro\nMidjourney"}
+                                                value={listingData.included_subscriptions}
+                                                onChange={e => setListingData({ ...listingData, included_subscriptions: e.target.value })}
+                                                className="w-full p-4.5 bg-gray-50 border border-gray-100 rounded-xl font-medium outline-none focus:ring-2 ring-purple-500 transition-all text-sm min-h-[120px] resize-none"
+                                            />
+                                            {listingData.included_subscriptions.trim() && (
+                                                <p className="text-[10px] text-gray-400 mt-1 ml-1">
+                                                    {listingData.included_subscriptions.split("\n").filter(s => s.trim()).length} tools listed
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Submit */}
+                                <button
+                                    onClick={handleCreateListing}
+                                    disabled={isCreatingListing || !listingData.pack_name || !listingData.pack_description || !listingData.pack_price || !listingData.included_subscriptions.trim()}
+                                    className="w-full py-5 bg-purple-700 text-white rounded-2xl font-bold text-base hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-purple-700/20"
+                                >
+                                    {isCreatingListing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : 'Create Pack & Publish to Marketplace'}
+                                </button>
+                            </>
+                            )}
                             </div>
                         </motion.div>
                     </motion.div>

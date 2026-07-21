@@ -330,6 +330,7 @@ export const createMarketplaceListing = mutation({
         const marketplaceId = await ctx.db.insert("marketplace", {
             subscription_catalog_id: args.subscription_catalog_id,
             admin_creator_id: args.admin_id,
+            type: "subscription",
             
             platform_name: catalog.name,
             account_email: args.account_email,
@@ -366,6 +367,11 @@ export const updateMarketplaceListing = mutation({
         slot_price: v.optional(v.number()),
         owner_payout: v.optional(v.number()),
         admin_note: v.optional(v.string()),
+        type: v.optional(v.string()),
+        pack_name: v.optional(v.string()),
+        pack_description: v.optional(v.string()),
+        included_subscriptions: v.optional(v.array(v.string())),
+        price_per_slot: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const admin = await ctx.db.get(args.admin_id);
@@ -384,6 +390,11 @@ export const updateMarketplaceListing = mutation({
         if (args.slot_price !== undefined) patchData.slot_price = args.slot_price;
         if (args.owner_payout !== undefined) patchData.owner_payout = args.owner_payout;
         if (args.admin_note !== undefined) patchData.admin_note = args.admin_note;
+        if (args.type !== undefined) patchData.type = args.type;
+        if (args.pack_name !== undefined) patchData.pack_name = args.pack_name;
+        if (args.pack_description !== undefined) patchData.pack_description = args.pack_description;
+        if (args.included_subscriptions !== undefined) patchData.included_subscriptions = args.included_subscriptions;
+        if (args.price_per_slot !== undefined) patchData.price_per_slot = args.price_per_slot;
 
         await ctx.db.patch(args.marketplace_id, patchData);
 

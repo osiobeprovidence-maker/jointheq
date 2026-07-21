@@ -957,6 +957,7 @@ export const adminCreateListing = mutation({
         await ctx.db.insert("marketplace", {
             subscription_catalog_id: catalogId,
             admin_creator_id: adminUser?._id,
+            type: "subscription",
 
             platform_name: args.platform_name,
             account_email: args.account_email,
@@ -1993,9 +1994,16 @@ export const adminCreateBundleListing = mutation({
             const allListings = await ctx.db.query("marketplace").collect();
             const maxOrder = allListings.reduce((max, m) => Math.max(max, m.display_order ?? 0), 0);
 
+            const toolNames = (args.bundle_tools || []).map(t => t.name);
+
             await ctx.db.insert("marketplace", {
                 subscription_catalog_id: catalogId,
                 admin_creator_id: args.adminId,
+                type: "pack",
+                pack_name: args.name,
+                pack_description: args.description,
+                included_subscriptions: toolNames,
+                price_per_slot: args.price,
                 platform_name: args.name,
                 account_email: "bundle@jointheq.sbs",
                 plan_owner: "admin",
