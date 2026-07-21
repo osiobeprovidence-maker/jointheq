@@ -92,6 +92,7 @@ import type { GroupSortMode } from "../components/admin/MarketplaceSortableList"
 import { ReferralCampaignsAdmin } from "../components/admin/ReferralCampaignsAdmin";
 import { RaffleAdmin } from "../components/admin/RaffleAdmin";
 import { PartnersAdmin } from "../components/admin/PartnersAdmin";
+import { PartnershipAdmin } from "../components/admin/PartnershipAdmin";
 import { ActivityTimeline } from "../components/admin/ActivityTimeline";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 import { getUserFacingErrorMessage } from "../lib/errors";
@@ -4803,9 +4804,7 @@ export default function AdminPanel() {
 
                         {activeTab === "partnerships" && (
                             <motion.div key="partnerships" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
-                                <BundleAdminEditor />
-                                <ServiceCommissionEditor />
-                                <PartnersAdmin />
+                                <PartnershipAdmin />
                             </motion.div>
                         )}
 

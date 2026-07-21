@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import { auth } from "../lib/auth";
 import {
   Handshake, Copy, Share2, ExternalLink, TrendingUp, Wallet,
@@ -635,151 +636,17 @@ export default function PartnerDashboardPage({ compact }: { compact?: boolean })
 
         {/* ─── PAYOUTS TAB ─── */}
         {partnerTab === "payouts" && (
-          <motion.div key="payouts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="space-y-6 lg:col-span-2">
-                {/* Payout History */}
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-white shadow-sm">
-                  <div className="border-b border-black/5 px-5 py-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-base font-black text-zinc-900">Payout History</h3>
-                      <div className="relative">
-                        <input value={payoutSearch} onChange={e => { setPayoutSearch(e.target.value); setPayoutPage(0); }}
-                          className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 pl-9 text-sm font-semibold text-zinc-900 outline-none placeholder:text-gray-300 focus:border-zinc-900 sm:w-56"
-                          placeholder="Search..." />
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="divide-y divide-black/5">
-                    {paginatedPayouts.length === 0 && (
-                      <div className="px-5 py-12 text-center">
-                        <Wallet size={24} className="mx-auto text-gray-200 mb-2" />
-                        <p className="text-sm font-bold text-gray-400">{payoutSearch ? "No payouts match your search" : "No payouts yet"}</p>
-                      </div>
-                    )}
-                    {paginatedPayouts.map((p: any) => (
-                      <div key={p._id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-zinc-50">
-                        <div>
-                          <div className="font-bold text-zinc-900">{fmt(p.amount)}</div>
-                          <div className="text-xs font-semibold text-gray-400">
-                            {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            {p.transactionReference && ` · ${p.transactionReference.slice(0, 8)}...`}
-                          </div>
-                        </div>
-                        {statusBadge(p.status)}
-                      </div>
-                    ))}
-                  </div>
-                  {payoutTotalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-black/5 px-5 py-3">
-                      <button disabled={payoutPage === 0} onClick={() => setPayoutPage(p => p - 1)}
-                        className="rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-600 transition-colors hover:bg-zinc-100 disabled:opacity-30">Previous</button>
-                      <span className="text-xs font-bold text-gray-400">Page {payoutPage + 1} of {payoutTotalPages}</span>
-                      <button disabled={payoutPage >= payoutTotalPages - 1} onClick={() => setPayoutPage(p => p + 1)}
-                        className="rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-600 transition-colors hover:bg-zinc-100 disabled:opacity-30">Next</button>
-                    </div>
-                  )}
-                </motion.div>
-              </div>
-              <div className="space-y-6">
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-gradient-to-br from-zinc-900 to-zinc-800 p-6 shadow-sm">
-                  <Wallet size={24} className="text-orange-400" />
-                  <div className="mt-4">
-                    <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Available Balance</div>
-                    <div className="mt-1 text-3xl font-black text-white">{fmt(partner.pendingEarnings || 0)}</div>
-                  </div>
-                  <div className="mt-4 space-y-2 text-xs font-semibold text-zinc-400">
-                    <div className="flex justify-between"><span>Total Earned</span><span className="text-white">{fmt(partner.totalEarnings || 0)}</span></div>
-                    <div className="flex justify-between"><span>Withdrawn</span><span className="text-white">{fmt(partner.paidEarnings || 0)}</span></div>
-                    <div className="flex justify-between"><span>Next Payout</span><span className="text-white">{nextPaymentDate}</span></div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-          </motion.div>
+          <PayoutsSection partner={partner} userId={userId} />
         )}
 
         {/* ─── ACHIEVEMENTS TAB ─── */}
         {partnerTab === "achievements" && (
-          <motion.div key="achievements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Affiliate Achievements */}
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-                <h3 className="mb-4 text-base font-black text-zinc-900">Affiliate Achievements</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {achievements.map((a, i) => <AchievementBadge key={i} {...a} />)}
-                </div>
-              </motion.div>
-
-              {/* Campaign Achievements */}
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-                <h3 className="mb-4 text-base font-black text-zinc-900">Campaign Achievements</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {campaignAchievements.map((a, i) => <AchievementBadge key={i} {...a} />)}
-                </div>
-              </motion.div>
-
-              {/* Notifications */}
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-black text-zinc-900">Notifications</h3>
-                  <Bell size={16} className="text-gray-300" />
-                </div>
-                <div className="mt-4 space-y-2">
-                  {notifications.map((n, i) => <NotificationItem key={i} {...n} />)}
-                </div>
-              </motion.div>
-
-              {/* Resources */}
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
-                <h3 className="mb-4 text-base font-black text-zinc-900">Resources</h3>
-                <div className="space-y-2">
-                  {resources.map((r, i) => <ResourceCard key={i} {...r} />)}
-                </div>
-                {assets && assets.length > 0 && (
-                  <div className="mt-3">
-                    <p className="mb-2 text-xs font-black uppercase tracking-widest text-gray-400">Marketing Assets ({assets.length})</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {assets.slice(0, 4).map((a: any) => (
-                        <button key={a._id} className="flex items-center gap-2 rounded-xl border border-black/5 bg-zinc-50 p-3 text-left transition-colors hover:bg-zinc-100">
-                          <Download size={14} className="shrink-0 text-gray-400" />
-                          <span className="min-w-0 truncate text-xs font-bold text-zinc-700">{a.title}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            </div>
-          </motion.div>
+          <AchievementsSection userId={userId} />
         )}
 
         {/* ─── SETTINGS TAB ─── */}
         {partnerTab === "settings" && (
-          <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-black text-zinc-900">Partner Settings</h2>
-              <p className="mt-1 text-sm font-semibold text-gray-400">Manage your partnership preferences.</p>
-              <div className="mt-6 space-y-4">
-                <div className="rounded-xl border border-black/5 bg-zinc-50 p-4">
-                  <label className="text-xs font-black uppercase tracking-wider text-gray-400">Referral Code</label>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-lg font-black text-zinc-900">{partner.referralCode}</span>
-                    <span className="rounded-lg bg-zinc-200 px-2 py-0.5 text-[10px] font-black text-zinc-500">Permanent</span>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-black/5 bg-zinc-50 p-4">
-                  <label className="text-xs font-black uppercase tracking-wider text-gray-400">Payment Schedule</label>
-                  <p className="mt-1 text-sm font-bold text-zinc-700 capitalize">{partner.paymentSchedule || "Monthly"}</p>
-                </div>
-                <div className="rounded-xl border border-black/5 bg-zinc-50 p-4">
-                  <label className="text-xs font-black uppercase tracking-wider text-gray-400">Commission Rate</label>
-                  <p className="mt-1 text-sm font-bold text-zinc-700">{partner.commissionPerQualified ? fmt(partner.commissionPerQualified) : "₦500"} per qualified referral</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+          <SettingsSection partner={partner} userId={userId} />
         )}
       </AnimatePresence>
     </div>
@@ -787,6 +654,233 @@ export default function PartnerDashboardPage({ compact }: { compact?: boolean })
 
   if (compact) return partnerContent;
   return <div className="min-h-screen bg-[#f4f5f8]">{partnerContent}</div>;
+}
+
+// ─── SETTINGS SECTION (with Bank Details) ─────────────
+function SettingsSection({ partner, userId }: { partner: any; userId: any }) {
+  const bankDetails = useQuery(api.partnership.getMyBankDetails);
+  const saveBankDetails = useMutation(api.partnership.saveBankDetails);
+  const [bankForm, setBankForm] = useState({ bank_name: "", account_number: "", account_name: "", preferred_currency: "NGN" });
+  const [savingBank, setSavingBank] = useState(false);
+
+  const handleSaveBank = async () => {
+    if (!userId) return;
+    if (!bankForm.bank_name.trim() || !bankForm.account_number.trim() || !bankForm.account_name.trim()) {
+      toast.error("Please fill in all bank fields"); return;
+    }
+    setSavingBank(true);
+    try { await saveBankDetails(bankForm); toast.success("Bank details saved"); } catch (e: any) { toast.error(e.message || "Failed"); }
+    setSavingBank(false);
+  };
+
+  return (
+    <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Partner Info */}
+        <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-black text-zinc-900">Partner Settings</h2>
+          <p className="mt-1 text-sm font-semibold text-gray-400">Manage your partnership preferences.</p>
+          <div className="mt-6 space-y-4">
+            <InfoRow label="Referral Code" value={partner.referralCode} badge="Permanent" />
+            <InfoRow label="Payment Schedule" value={partner.paymentSchedule || "Monthly"} />
+            <InfoRow label="Commission Rate" value={`${partner.commissionPerQualified ? fmt(partner.commissionPerQualified) : "₦500"} per qualified referral`} />
+          </div>
+        </div>
+
+        {/* Bank Details */}
+        <div className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-black text-zinc-900">Withdrawal Information</h2>
+          <p className="mt-1 text-sm font-semibold text-gray-400">Your bank details for receiving payouts.</p>
+
+          {bankDetails && (
+            <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-bold text-zinc-900">{bankDetails.bank_name}</div>
+                <div className="text-xs font-semibold text-zinc-500">{bankDetails.account_name} · {bankDetails.account_number}</div>
+              </div>
+              {statusBadge(bankDetails.verification_status || "pending")}
+            </div>
+          )}
+
+          <div className="mt-4 space-y-3">
+            <input value={bankForm.bank_name} onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })} placeholder="Bank Name" className="w-full rounded-xl border border-black/10 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900" />
+            <input value={bankForm.account_number} onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })} placeholder="Account Number" className="w-full rounded-xl border border-black/10 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900" />
+            <input value={bankForm.account_name} onChange={(e) => setBankForm({ ...bankForm, account_name: e.target.value })} placeholder="Account Name" className="w-full rounded-xl border border-black/10 bg-zinc-50 px-4 py-3 text-sm font-bold outline-none focus:border-zinc-900" />
+            <button onClick={handleSaveBank} disabled={savingBank} className="w-full rounded-xl bg-zinc-900 py-3 text-sm font-black text-white transition-all hover:bg-zinc-800 active:scale-[0.99] disabled:opacity-50">
+              {savingBank ? "Saving..." : bankDetails ? "Update Bank Details" : "Save Bank Details"}
+            </button>
+            {bankDetails && bankDetails.verification_status !== "verified" && (
+              <p className="text-xs font-semibold text-amber-600 text-center">Bank details pending verification by admin</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function InfoRow({ label, value, badge }: { label: string; value: string; badge?: string }) {
+  return (
+    <div className="rounded-xl border border-black/5 bg-zinc-50 p-4">
+      <label className="text-xs font-black uppercase tracking-wider text-gray-400">{label}</label>
+      <div className="mt-1 flex items-center justify-between">
+        <span className="text-lg font-black text-zinc-900">{value}</span>
+        {badge && <span className="rounded-lg bg-zinc-200 px-2 py-0.5 text-[10px] font-black text-zinc-500">{badge}</span>}
+      </div>
+    </div>
+  );
+}
+
+// ─── PAYOUTS SECTION (with Withdrawal Request) ────────
+function PayoutsSection({ partner, userId }: { partner: any; userId: any }) {
+  const payoutRequests = useQuery(api.partnership.getMyPayoutRequests) || [];
+  const createPayout = useMutation(api.partnership.createPayoutRequest);
+  const [withdrawAmount, setWithdrawAmount] = useState(5000);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 5;
+
+  const filtered = search.trim()
+    ? payoutRequests.filter((r: any) => r.amount?.toString().includes(search))
+    : payoutRequests;
+  const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+
+  const handleWithdraw = async () => {
+    if (!userId) return;
+    setWithdrawing(true);
+    try { await createPayout({ amount: withdrawAmount }); toast.success("Payout request submitted!"); } catch (e: any) { toast.error(e.message || "Failed"); }
+    setWithdrawing(false);
+  };
+
+  const totalPaid = payoutRequests.filter((r: any) => r.status === "completed").reduce((s: number, r: any) => s + r.amount, 0);
+  const totalPending = payoutRequests.filter((r: any) => r.status === "pending" || r.status === "approved" || r.status === "processing").reduce((s: number, r: any) => s + r.amount, 0);
+
+  return (
+    <motion.div key="payouts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Withdrawal Request */}
+          <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+            <h3 className="text-base font-black text-zinc-900 mb-4">Request Withdrawal</h3>
+            <div className="flex items-center gap-3">
+              <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(Math.max(0, Number(e.target.value)))}
+                className="flex-1 rounded-xl border border-black/10 bg-zinc-50 px-4 py-3 text-lg font-black outline-none focus:border-zinc-900" />
+              <button onClick={handleWithdraw} disabled={withdrawing || !partner?.pendingEarnings || partner.pendingEarnings < 5000}
+                className="rounded-xl bg-zinc-900 px-6 py-3 text-sm font-black text-white transition-all hover:bg-zinc-800 active:scale-95 disabled:opacity-50">
+                {withdrawing ? "..." : "Withdraw"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs font-semibold text-zinc-400">Minimum withdrawal: ₦5,000 · Available: {fmt(partner.pendingEarnings || 0)}</p>
+          </div>
+
+          {/* Payout History */}
+          <div className="rounded-2xl border border-black/5 bg-white shadow-sm">
+            <div className="border-b border-black/5 px-5 py-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-base font-black text-zinc-900">Payout History</h3>
+                <div className="relative">
+                  <input value={search} onChange={e => { setSearch(e.target.value); setPage(0); }}
+                    className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 pl-9 text-sm font-semibold outline-none focus:border-zinc-900 sm:w-56"
+                    placeholder="Search..." />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                </div>
+              </div>
+            </div>
+            <div className="divide-y divide-black/5">
+              {paginated.length === 0 ? (
+                <div className="px-5 py-12 text-center"><Wallet size={24} className="mx-auto text-gray-200 mb-2" /><p className="text-sm font-bold text-gray-400">{search ? "No matches" : "No payout requests yet"}</p></div>
+              ) : paginated.map((r: any) => (
+                <div key={r._id} className="flex items-center justify-between px-5 py-3 hover:bg-zinc-50 transition-colors">
+                  <div>
+                    <div className="font-bold text-zinc-900">{fmt(r.amount)}</div>
+                    <div className="text-xs font-semibold text-gray-400">
+                      {new Date(r.created_at).toLocaleDateString()} · {r.bank_name} · {r.account_number?.slice(-4)}
+                      {r.admin_note && ` · Note: ${r.admin_note}`}
+                    </div>
+                  </div>
+                  {statusBadge(r.status)}
+                </div>
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-black/5 px-5 py-3">
+                <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-600 hover:bg-zinc-100 disabled:opacity-30">Previous</button>
+                <span className="text-xs font-bold text-gray-400">Page {page + 1} of {totalPages}</span>
+                <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-zinc-600 hover:bg-zinc-100 disabled:opacity-30">Next</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Stats Sidebar */}
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-black/5 bg-gradient-to-br from-zinc-900 to-zinc-800 p-6 shadow-sm">
+            <Wallet size={24} className="text-orange-400" />
+            <div className="mt-4"><div className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Available Balance</div><div className="mt-1 text-3xl font-black text-white">{fmt(partner.pendingEarnings || 0)}</div></div>
+            <div className="mt-4 space-y-2 text-xs font-semibold text-zinc-400">
+              <div className="flex justify-between"><span>Lifetime Earnings</span><span className="text-white">{fmt(partner.totalEarnings || 0)}</span></div>
+              <div className="flex justify-between"><span>Paid</span><span className="text-white">{fmt(totalPaid)}</span></div>
+              <div className="flex justify-between"><span>Pending</span><span className="text-white">{fmt(totalPending)}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── ACHIEVEMENTS SECTION ─────────────────────────────
+function AchievementsSection({ userId }: { userId: any }) {
+  const liveAchievements = useQuery(api.partnership.getUserAchievements, userId ? { userId: userId as any } : "skip") || [];
+
+  const iconMap: Record<string, React.ReactNode> = {
+    trophy: <Trophy size={20} />, star: <Star size={20} />, zap: <Zap size={20} />,
+    flame: <Flame size={20} />, medal: <Medal size={20} />, crown: <Crown size={20} />,
+    gift: <Gift size={20} />, shield: <Shield size={20} />,
+  };
+
+  return (
+    <motion.div key="achievements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-base font-black text-zinc-900">Achievements</h3>
+          {liveAchievements.length === 0 ? (
+            <div className="py-8 text-center"><Trophy size={32} className="mx-auto text-gray-200 mb-2" /><p className="text-sm font-bold text-zinc-400">No achievements yet. Start referring to unlock!</p></div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {liveAchievements.map((a: any) => (
+                <div key={a._id} className={`flex flex-col items-center gap-1 rounded-xl border p-4 text-center transition-all ${a.unlocked ? "border-amber-200 bg-amber-50" : "border-black/5 bg-zinc-50 opacity-40"}`}>
+                  <div className={a.unlocked ? "text-amber-500" : "text-gray-300"}>{iconMap[a.icon] || <Trophy size={20} />}</div>
+                  <span className="text-[10px] font-bold leading-tight text-zinc-600">{a.name}</span>
+                  {a.unlocked && a.unlocked_at && <span className="text-[8px] font-semibold text-amber-600">{new Date(a.unlocked_at).toLocaleDateString()}</span>}
+                  {!a.unlocked && a.criteria_type && <span className="text-[8px] font-semibold text-zinc-400">{a.progress}/{a.max_progress}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Notifications */}
+        <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4"><h3 className="text-base font-black text-zinc-900">Notifications</h3><Bell size={16} className="text-gray-300" /></div>
+          <div className="space-y-2">
+            {[
+              { icon: <DollarSign size={14} />, text: "You earned ₦250 from John's Spotify subscription.", time: "2 hours ago" },
+              { icon: <CheckCircle size={14} />, text: "Your payout of ₦12,000 has been sent.", time: "3 days ago" },
+              { icon: <Zap size={14} />, text: "New campaign available: CapCut Premium.", time: "1 week ago" },
+            ].map((n, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-xl bg-zinc-50 px-4 py-3 transition-colors hover:bg-zinc-100">
+                <div className="mt-0.5 shrink-0 text-gray-400">{n.icon}</div>
+                <div className="min-w-0 flex-1"><p className="text-xs font-bold text-zinc-700">{n.text}</p><p className="mt-0.5 text-[10px] font-semibold text-gray-400">{n.time}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 function CampaignDetailView({ campaign, onBack, userId }: { campaign: any; onBack: () => void; userId: any }) {

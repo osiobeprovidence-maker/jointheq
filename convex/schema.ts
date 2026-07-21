@@ -1858,5 +1858,94 @@ export default defineSchema({
         updatedAt: v.number(),
         updatedBy: v.optional(v.id("users")),
     }),
+
+    // ─── PARTNERSHIP BANK DETAILS ───
+    partner_bank_details: defineTable({
+        userId: v.id("users"),
+        partnerId: v.optional(v.id("partners")),
+        bank_name: v.string(),
+        account_number: v.string(),
+        account_name: v.string(),
+        preferred_currency: v.optional(v.string()),
+        verification_status: v.string(), // "pending" | "verified" | "rejected" | "disabled"
+        verified_at: v.optional(v.number()),
+        verified_by: v.optional(v.id("users")),
+        admin_note: v.optional(v.string()),
+        created_at: v.number(),
+        updated_at: v.number(),
+    }).index("by_user", ["userId"])
+        .index("by_partner", ["partnerId"])
+        .index("by_verification_status", ["verification_status"]),
+
+    // ─── PARTNERSHIP PAYOUT REQUESTS ───
+    partner_payout_requests: defineTable({
+        userId: v.id("users"),
+        partnerId: v.optional(v.id("partners")),
+        amount: v.number(),
+        bank_name: v.string(),
+        account_number: v.string(),
+        account_name: v.string(),
+        status: v.string(), // "pending" | "approved" | "processing" | "completed" | "rejected"
+        admin_note: v.optional(v.string()),
+        processed_at: v.optional(v.number()),
+        processed_by: v.optional(v.id("users")),
+        transaction_reference: v.optional(v.string()),
+        created_at: v.number(),
+        updated_at: v.number(),
+    }).index("by_user", ["userId"])
+        .index("by_partner", ["partnerId"])
+        .index("by_status", ["status"])
+        .index("by_created_at", ["created_at"]),
+
+    // ─── PARTNERSHIP ACHIEVEMENTS ───
+    partnership_achievements: defineTable({
+        name: v.string(),
+        description: v.optional(v.string()),
+        icon: v.optional(v.string()),
+        badge_color: v.optional(v.string()),
+        criteria_type: v.optional(v.string()), // "referrals" | "earnings" | "subscriptions" | "clicks" | "manual"
+        criteria_value: v.optional(v.number()),
+        reward_boots: v.optional(v.number()),
+        reward_commission_bonus: v.optional(v.number()),
+        is_active: v.boolean(),
+        display_order: v.optional(v.number()),
+        created_at: v.number(),
+        created_by: v.id("users"),
+        updated_at: v.number(),
+    }).index("by_active", ["is_active", "display_order"]),
+
+    user_partnership_achievements: defineTable({
+        userId: v.id("users"),
+        achievementId: v.id("partnership_achievements"),
+        unlocked_at: v.number(),
+        progress: v.optional(v.number()),
+        max_progress: v.optional(v.number()),
+        awarded_by: v.optional(v.id("users")),
+    }).index("by_user", ["userId"])
+        .index("by_achievement", ["achievementId"]),
+
+    // ─── PARTNERSHIP COMMISSION RULES (per catalog) ───
+    partnership_commission_rules: defineTable({
+        subscription_catalog_id: v.id("subscription_catalog"),
+        commission_type: v.string(), // "fixed" | "percentage" | "recurring" | "first_payment_only"
+        commission_value: v.number(),
+        recurring_months: v.optional(v.number()),
+        max_commission: v.optional(v.number()),
+        min_purchase: v.optional(v.number()),
+        bonus_campaign_multiplier: v.optional(v.number()),
+        is_active: v.boolean(),
+        created_at: v.number(),
+        updated_at: v.number(),
+        updated_by: v.optional(v.id("users")),
+    }).index("by_catalog", ["subscription_catalog_id"])
+        .index("by_active", ["is_active"]),
+
+    // ─── PARTNERSHIP SETTINGS ───
+    partnership_settings: defineTable({
+        key: v.string(),
+        value: v.any(),
+        updated_at: v.number(),
+        updated_by: v.optional(v.id("users")),
+    }).index("by_key", ["key"]),
 });
 
