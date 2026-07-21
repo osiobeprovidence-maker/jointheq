@@ -105,7 +105,7 @@ const fmt = fmtCurrency;
 function StandardReferralConfigSection() {
   const config = useQuery(api.partners.getStandardConfig);
   const updateConfig = useMutation(api.partners.updateStandardConfig);
-  const user = useQuery(api.users.getCurrentUser);
+  const user = auth.getCurrentUser();
   const [enabled, setEnabled] = useState(true);
   const [rewardAmount, setRewardAmount] = useState(50);
   const [qualificationRule, setQualificationRule] = useState("first_subscription");
@@ -160,7 +160,7 @@ function StandardReferralConfigSection() {
 function ServiceCommissionEditor() {
   const catalogs = useQuery(api.partners.listCatalogCommissions);
   const updateCatalog = useMutation(api.partners.updateCatalogCommission);
-  const user = useQuery(api.users.getCurrentUser);
+  const user = auth.getCurrentUser();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [commEnabled, setCommEnabled] = useState(true);
   const [commType, setCommType] = useState("fixed");
