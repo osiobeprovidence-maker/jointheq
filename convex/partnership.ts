@@ -2,47 +2,31 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 
-// ─── HELPERS ───────────────────────────────────────────
-
-async function requireAdmin(ctx: any) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Unauthorized");
-  const user = await ctx.db.query("users").filter((q: any) => q.eq(q.field("email"), identity.email)).first();
-  if (!user?.is_admin) throw new Error("Not admin");
+async function requireAdmin(ctx: any, adminId: Id<"users">) {
+  const user = await ctx.db.get(adminId);
+  if (!user?.is_admin) throw new Error("Unauthorized");
   return user;
-}
-
-function getPartnerIdForUser(user: any): string | null {
-  return typeof window !== "undefined" ? localStorage.getItem("partner_id") : null;
 }
 
 // ─── BANK DETAILS ──────────────────────────────────────
 
 export const getMyBankDetails = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const user = await ctx.db.query("users").filter((q: any) => q.eq(q.field("email"), identity.email)).first();
-    if (!user) return null;
-    return await ctx.db.query("partner_bank_details").withIndex("by_user", (q: any) => q.eq("userId", user._id)).first();
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.query("partner_bank_details").withIndex("by_user", (q: any) => q.eq("userId", args.userId)).first();
   },
 });
 
 export const saveBankDetails = mutation({
   args: {
+    userId: v.id("users"),
     bank_name: v.string(),
     account_number: v.string(),
     account_name: v.string(),
     preferred_currency: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db.query("users").filter((q: any) => q.eq(q.field("email"), identity.email)).first();
-    if (!user) throw new Error("User not found");
-
-    const existing = await ctx.db.query("partner_bank_details").withIndex("by_user", (q: any) => q.eq("userId", user._id)).first();
+    const existing = await ctx.db.query("partner_bank_details").withIndex("by_user", (q: any) => q.eq("userId", args.userId)).first();
     const now = Date.now();
 
     if (existing) {
@@ -56,7 +40,7 @@ export const saveBankDetails = mutation({
       });
     } else {
       await ctx.db.insert("partner_bank_details", {
-        userId: user._id,
+        userId: args.userId,
         bank_name: args.bank_name,
         account_number: args.account_number,
         account_name: args.account_name,
@@ -71,9 +55,9 @@ export const saveBankDetails = mutation({
 });
 
 export const adminListBankDetails = query({
-  args: { status: v.optional(v.string()) },
+  args: { adminId: v.id("users"), status: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    await requireAdmin(ctx, args.adminId);
     let details = await ctx.db.query("partner_bank_details").collect();
     if (args.status) {
       details = details.filter((d) => d.verification_status === args.status);
@@ -90,12 +74,13 @@ export const adminListBankDetails = query({
 
 export const adminVerifyBankDetail = mutation({
   args: {
+    adminId: v.id("users"),
     detailId: v.id("partner_bank_details"),
     status: v.union(v.literal("verified"), v.literal("rejected"), v.literal("disabled")),
     adminNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx, args.adminId);
     const detail = await ctx.db.get(args.detailId);
     if (!detail) throw new Error("Bank detail not found");
     await ctx.db.patch(args.detailId, {
@@ -111,29 +96,20 @@ export const adminVerifyBankDetail = mutation({
 // ─── PAYOUT REQUESTS ───────────────────────────────────
 
 export const getMyPayoutRequests = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const user = await ctx.db.query("users").filter((q: any) => q.eq(q.field("email"), identity.email)).first();
-    if (!user) return [];
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
     return await ctx.db.query("partner_payout_requests")
-      .withIndex("by_user", (q: any) => q.eq("userId", user._id))
+      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
       .order("desc")
       .collect();
   },
 });
 
 export const createPayoutRequest = mutation({
-  args: { amount: v.number() },
+  args: { userId: v.id("users"), amount: v.number() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db.query("users").filter((q: any) => q.eq(q.field("email"), identity.email)).first();
-    if (!user) throw new Error("User not found");
-
     const bank = await ctx.db.query("partner_bank_details")
-      .withIndex("by_user", (q: any) => q.eq("userId", user._id))
+      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
       .first();
     if (!bank) throw new Error("Please save your bank details before requesting a payout");
     if (bank.verification_status !== "verified") throw new Error("Your bank details must be verified before requesting a payout");
@@ -142,11 +118,11 @@ export const createPayoutRequest = mutation({
     const minWithdrawal = settings.find((s) => s.key === "minimum_withdrawal")?.value || 5000;
     if (args.amount < minWithdrawal) throw new Error(`Minimum withdrawal is ₦${minWithdrawal.toLocaleString()}`);
 
-    const partner = await ctx.db.query("partners").withIndex("by_userId", (q: any) => q.eq("userId", user._id)).first();
+    const partner = await ctx.db.query("partners").withIndex("by_userId", (q: any) => q.eq("userId", args.userId)).first();
     const partnerId = partner?._id;
 
     await ctx.db.insert("partner_payout_requests", {
-      userId: user._id,
+      userId: args.userId,
       partnerId,
       amount: args.amount,
       bank_name: bank.bank_name,
@@ -161,9 +137,9 @@ export const createPayoutRequest = mutation({
 });
 
 export const adminListPayoutRequests = query({
-  args: { status: v.optional(v.string()) },
+  args: { adminId: v.id("users"), status: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    await requireAdmin(ctx, args.adminId);
     let requests = await ctx.db.query("partner_payout_requests")
       .withIndex("by_created_at", (q: any) => q.order("desc"))
       .collect();
@@ -182,13 +158,14 @@ export const adminListPayoutRequests = query({
 
 export const adminProcessPayoutRequest = mutation({
   args: {
+    adminId: v.id("users"),
     requestId: v.id("partner_payout_requests"),
     status: v.union(v.literal("approved"), v.literal("processing"), v.literal("completed"), v.literal("rejected")),
     adminNote: v.optional(v.string()),
     transactionReference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx, args.adminId);
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Payout request not found");
     await ctx.db.patch(args.requestId, {
@@ -215,13 +192,9 @@ export const listAchievements = query({
 });
 
 export const getUserAchievements = query({
-  args: { userId: v.optional(v.id("users")) },
+  args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const user = args.userId
-      ? await ctx.db.get(args.userId)
-      : await ctx.db.query("users").filter((q: any) => q.eq(q.field("email"), identity.email)).first();
+    const user = await ctx.db.get(args.userId);
     if (!user) return [];
 
     const achievements = await ctx.db.query("partnership_achievements").collect();
@@ -241,15 +214,16 @@ export const getUserAchievements = query({
 });
 
 export const adminListAllAchievements = query({
-  args: {},
-  handler: async (ctx) => {
-    const admin = await requireAdmin(ctx);
+  args: { adminId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminId);
     return await ctx.db.query("partnership_achievements").order("desc").collect();
   },
 });
 
 export const adminCreateAchievement = mutation({
   args: {
+    adminId: v.id("users"),
     name: v.string(),
     description: v.optional(v.string()),
     icon: v.optional(v.string()),
@@ -262,9 +236,10 @@ export const adminCreateAchievement = mutation({
     display_order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx, args.adminId);
+    const { adminId: _, ...fields } = args;
     await ctx.db.insert("partnership_achievements", {
-      ...args,
+      ...fields,
       created_by: admin._id,
       created_at: Date.now(),
       updated_at: Date.now(),
@@ -275,6 +250,7 @@ export const adminCreateAchievement = mutation({
 
 export const adminUpdateAchievement = mutation({
   args: {
+    adminId: v.id("users"),
     achievementId: v.id("partnership_achievements"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -288,17 +264,17 @@ export const adminUpdateAchievement = mutation({
     display_order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
-    const { achievementId, ...fields } = args;
+    await requireAdmin(ctx, args.adminId);
+    const { adminId, achievementId, ...fields } = args;
     await ctx.db.patch(achievementId, { ...fields, updated_at: Date.now() });
     return { success: true };
   },
 });
 
 export const adminDeleteAchievement = mutation({
-  args: { achievementId: v.id("partnership_achievements") },
+  args: { adminId: v.id("users"), achievementId: v.id("partnership_achievements") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    await requireAdmin(ctx, args.adminId);
     await ctx.db.delete(args.achievementId);
     return { success: true };
   },
@@ -306,11 +282,12 @@ export const adminDeleteAchievement = mutation({
 
 export const adminAwardAchievement = mutation({
   args: {
+    adminId: v.id("users"),
     userId: v.id("users"),
     achievementId: v.id("partnership_achievements"),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx, args.adminId);
     const existing = await ctx.db.query("user_partnership_achievements")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
       .collect();
@@ -345,6 +322,7 @@ export const listCommissionRules = query({
 
 export const adminSaveCommissionRule = mutation({
   args: {
+    adminId: v.id("users"),
     ruleId: v.optional(v.id("partnership_commission_rules")),
     subscription_catalog_id: v.id("subscription_catalog"),
     commission_type: v.string(),
@@ -356,13 +334,13 @@ export const adminSaveCommissionRule = mutation({
     is_active: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx, args.adminId);
     const now = Date.now();
     if (args.ruleId) {
-      const { ruleId, ...fields } = args;
+      const { adminId, ruleId, ...fields } = args;
       await ctx.db.patch(ruleId, { ...fields, updated_at: now, updated_by: admin._id });
     } else {
-      const { ruleId: _, ...fields } = args;
+      const { adminId, ruleId: _, ...fields } = args;
       await ctx.db.insert("partnership_commission_rules", {
         ...fields,
         created_at: now,
@@ -375,9 +353,9 @@ export const adminSaveCommissionRule = mutation({
 });
 
 export const adminDeleteCommissionRule = mutation({
-  args: { ruleId: v.id("partnership_commission_rules") },
+  args: { adminId: v.id("users"), ruleId: v.id("partnership_commission_rules") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    await requireAdmin(ctx, args.adminId);
     await ctx.db.delete(args.ruleId);
     return { success: true };
   },
@@ -395,11 +373,12 @@ export const getSettings = query({
 
 export const adminSaveSetting = mutation({
   args: {
+    adminId: v.id("users"),
     key: v.string(),
     value: v.any(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx, args.adminId);
     const existing = await ctx.db.query("partnership_settings")
       .withIndex("by_key", (q: any) => q.eq("key", args.key))
       .first();
@@ -420,9 +399,9 @@ export const adminSaveSetting = mutation({
 // ─── ANALYTICS ─────────────────────────────────────────
 
 export const getAdminAnalytics = query({
-  args: {},
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
+  args: { adminId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminId);
     const partners = await ctx.db.query("partners").collect();
     const payoutRequests = await ctx.db.query("partner_payout_requests").collect();
     const referrals = await ctx.db.query("partner_referrals").collect();
@@ -471,9 +450,9 @@ export const getAdminAnalytics = query({
 // ─── PARTNER PROFILE (full detail) ─────────────────────
 
 export const adminGetPartnerProfile = query({
-  args: { partnerId: v.id("partners") },
+  args: { adminId: v.id("users"), partnerId: v.id("partners") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    await requireAdmin(ctx, args.adminId);
     const partner = await ctx.db.get(args.partnerId);
     if (!partner) throw new Error("Partner not found");
 

@@ -104,7 +104,8 @@ export function PartnershipAdmin() {
 // ─── OVERVIEW ─────────────────────────────────────────
 
 function OverviewTab({ onViewPartner }: { onViewPartner: (id: Id<"partners">) => void }) {
-  const analytics = useQuery(api.partnership.getAdminAnalytics);
+  const user = auth.getCurrentUser();
+  const analytics = useQuery(api.partnership.getAdminAnalytics, user?._id ? { adminId: user._id as any } : "skip");
   const partners = useQuery(api.partners.listPartners) || [];
 
   if (!analytics) return <div className="h-64 rounded-2xl bg-white animate-pulse" />;
@@ -452,7 +453,7 @@ function PartnersTab({ onViewPartner }: { onViewPartner: (id: Id<"partners">) =>
 
 function BankDetailsTab() {
   const user = auth.getCurrentUser();
-  const bankDetails = useQuery(api.partnership.adminListBankDetails) || [];
+  const bankDetails = useQuery(api.partnership.adminListBankDetails, user?._id ? { adminId: user._id as any } : "skip") || [];
   const verifyBank = useMutation(api.partnership.adminVerifyBankDetail);
   const [filter, setFilter] = useState("all");
 
@@ -460,7 +461,7 @@ function BankDetailsTab() {
 
   const handleVerify = async (id: Id<"partner_bank_details">, status: "verified" | "rejected" | "disabled") => {
     if (!user?._id) return;
-    try { await verifyBank({ detailId: id, status, adminNote: prompt("Admin note (optional):") || undefined }); toast.success(`Bank ${status}`); } catch { toast.error("Failed"); }
+    try { await verifyBank({ adminId: user._id as any, detailId: id, status, adminNote: prompt("Admin note (optional):") || undefined }); toast.success(`Bank ${status}`); } catch { toast.error("Failed"); }
   };
 
   return (
@@ -510,7 +511,7 @@ function BankDetailsTab() {
 
 function PayoutRequestsTab() {
   const user = auth.getCurrentUser();
-  const requests = useQuery(api.partnership.adminListPayoutRequests) || [];
+  const requests = useQuery(api.partnership.adminListPayoutRequests, user?._id ? { adminId: user._id as any } : "skip") || [];
   const processRequest = useMutation(api.partnership.adminProcessPayoutRequest);
   const [filter, setFilter] = useState("all");
 
@@ -520,7 +521,7 @@ function PayoutRequestsTab() {
     if (!user?._id) return;
     try {
       await processRequest({
-        requestId: id, status,
+        adminId: user._id as any, requestId: id, status,
         adminNote: prompt("Admin note (optional):") || undefined,
         transactionReference: status === "completed" ? prompt("Transaction reference:") || undefined : undefined,
       });
@@ -584,7 +585,7 @@ function PayoutRequestsTab() {
 
 function AchievementsTab() {
   const user = auth.getCurrentUser();
-  const achievements = useQuery(api.partnership.adminListAllAchievements) || [];
+  const achievements = useQuery(api.partnership.adminListAllAchievements, user?._id ? { adminId: user._id as any } : "skip") || [];
   const createAchievement = useMutation(api.partnership.adminCreateAchievement);
   const updateAchievement = useMutation(api.partnership.adminUpdateAchievement);
   const deleteAchievement = useMutation(api.partnership.adminDeleteAchievement);
@@ -614,20 +615,20 @@ function AchievementsTab() {
   const handleSave = async () => {
     if (!user?._id) return;
     try {
-      if (editId) { await updateAchievement({ achievementId: editId, ...form }); toast.success("Updated"); }
-      else { await createAchievement({ ...form }); toast.success("Created"); }
+      if (editId) { await updateAchievement({ adminId: user._id as any, achievementId: editId, ...form }); toast.success("Updated"); }
+      else { await createAchievement({ adminId: user._id as any, ...form }); toast.success("Created"); }
       setShowForm(false);
     } catch (e: any) { toast.error(e.message || "Failed"); }
   };
 
   const handleDelete = async (id: Id<"partnership_achievements">) => {
     if (!confirm("Delete?")) return;
-    try { await deleteAchievement({ achievementId: id }); toast.success("Deleted"); } catch { toast.error("Failed"); }
+    try { await deleteAchievement({ adminId: user!._id as any, achievementId: id }); toast.success("Deleted"); } catch { toast.error("Failed"); }
   };
 
   const handleAward = async () => {
     if (!awardModal || !user?._id) return;
-    try { await awardAchievement({ userId: awardModal.userId as any, achievementId: awardModal.achievementId }); toast.success("Awarded!"); setAwardModal(null); } catch (e: any) { toast.error(e.message || "Failed"); }
+    try { await awardAchievement({ adminId: user._id as any, userId: awardModal.userId as any, achievementId: awardModal.achievementId }); toast.success("Awarded!"); setAwardModal(null); } catch (e: any) { toast.error(e.message || "Failed"); }
   };
 
   return (
@@ -827,7 +828,7 @@ function CommissionRulesTab() {
   const handleSave = async () => {
     if (!user?._id) return;
     try {
-      await saveRule({ ruleId: editId || undefined, ...form, subscription_catalog_id: form.subscription_catalog_id as any });
+      await saveRule({ adminId: user._id as any, ruleId: editId || undefined, ...form, subscription_catalog_id: form.subscription_catalog_id as any });
       toast.success(editId ? "Updated" : "Created"); setShowForm(false);
     } catch (e: any) { toast.error(e.message || "Failed"); }
   };
@@ -858,7 +859,7 @@ function CommissionRulesTab() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => openEdit(r)} className="rounded-xl bg-zinc-100 p-2 text-zinc-500 hover:bg-zinc-200"><Edit3 size={14} /></button>
-                  <button onClick={async () => { if (confirm("Delete?")) { try { await deleteRule({ ruleId: r._id }); toast.success("Deleted"); } catch {} } }} className="rounded-xl bg-red-50 p-2 text-red-500 hover:bg-red-100"><Trash2 size={14} /></button>
+                  <button onClick={async () => { if (confirm("Delete?")) { try { await deleteRule({ adminId: user!._id as any, ruleId: r._id }); toast.success("Deleted"); } catch {} } }} className="rounded-xl bg-red-50 p-2 text-red-500 hover:bg-red-100"><Trash2 size={14} /></button>
                 </div>
               </div>
             ))}
@@ -900,7 +901,8 @@ function CommissionRulesTab() {
 // ─── ANALYTICS ────────────────────────────────────────
 
 function AnalyticsTab() {
-  const analytics = useQuery(api.partnership.getAdminAnalytics);
+  const user = auth.getCurrentUser();
+  const analytics = useQuery(api.partnership.getAdminAnalytics, user?._id ? { adminId: user._id as any } : "skip");
 
   if (!analytics) return <div className="h-64 rounded-2xl bg-white animate-pulse" />;
 
@@ -980,7 +982,7 @@ function SettingsTab() {
     setSaving(true);
     try {
       for (const [key, value] of Object.entries(local)) {
-        await saveSetting({ key, value });
+        await saveSetting({ adminId: user._id as any, key, value });
       }
       toast.success("Settings saved");
     } catch { toast.error("Failed to save"); }
@@ -1017,11 +1019,12 @@ function SettingsTab() {
 // ─── PARTNER PROFILE ──────────────────────────────────
 
 function PartnerProfileTab({ partnerId, onBack }: { partnerId: Id<"partners">; onBack: () => void }) {
-  const profile = useQuery(api.partnership.adminGetPartnerProfile, { partnerId });
+  const user = auth.getCurrentUser();
+  const profile = useQuery(api.partnership.adminGetPartnerProfile, user?._id ? { adminId: user._id as any, partnerId } : "skip");
 
   if (!profile) return <div className="h-96 rounded-2xl bg-white animate-pulse" />;
 
-  const { partner, user, referrals, payments, earnings, bankDetails, achievements, payoutRequests, referredUsers } = profile;
+  const { partner, user: profileUser, referrals, payments, earnings, bankDetails, achievements, payoutRequests, referredUsers } = profile;
 
   return (
     <div className="space-y-6">

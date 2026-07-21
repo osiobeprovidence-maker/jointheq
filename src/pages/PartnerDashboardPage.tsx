@@ -14,7 +14,7 @@ import {
   AlertCircle, ArrowUpRight, ArrowDownRight,
   LayoutDashboard, Megaphone, PiggyBank, Trophy, Settings,
   UserPlus, Eye, ChevronLeft, Medal, Flame, Sparkles,
-  Globe, Lock, Timer, RefreshCw, List,
+  Globe, Lock, Timer, RefreshCw, List, Shield,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -658,7 +658,7 @@ export default function PartnerDashboardPage({ compact }: { compact?: boolean })
 
 // ─── SETTINGS SECTION (with Bank Details) ─────────────
 function SettingsSection({ partner, userId }: { partner: any; userId: any }) {
-  const bankDetails = useQuery(api.partnership.getMyBankDetails);
+  const bankDetails = useQuery(api.partnership.getMyBankDetails, userId ? { userId: userId as any } : "skip");
   const saveBankDetails = useMutation(api.partnership.saveBankDetails);
   const [bankForm, setBankForm] = useState({ bank_name: "", account_number: "", account_name: "", preferred_currency: "NGN" });
   const [savingBank, setSavingBank] = useState(false);
@@ -669,7 +669,7 @@ function SettingsSection({ partner, userId }: { partner: any; userId: any }) {
       toast.error("Please fill in all bank fields"); return;
     }
     setSavingBank(true);
-    try { await saveBankDetails(bankForm); toast.success("Bank details saved"); } catch (e: any) { toast.error(e.message || "Failed"); }
+    try { await saveBankDetails({ userId: userId as any, ...bankForm }); toast.success("Bank details saved"); } catch (e: any) { toast.error(e.message || "Failed"); }
     setSavingBank(false);
   };
 
@@ -733,7 +733,7 @@ function InfoRow({ label, value, badge }: { label: string; value: string; badge?
 
 // ─── PAYOUTS SECTION (with Withdrawal Request) ────────
 function PayoutsSection({ partner, userId }: { partner: any; userId: any }) {
-  const payoutRequests = useQuery(api.partnership.getMyPayoutRequests) || [];
+  const payoutRequests = useQuery(api.partnership.getMyPayoutRequests, userId ? { userId: userId as any } : "skip") || [];
   const createPayout = useMutation(api.partnership.createPayoutRequest);
   const [withdrawAmount, setWithdrawAmount] = useState(5000);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -750,7 +750,7 @@ function PayoutsSection({ partner, userId }: { partner: any; userId: any }) {
   const handleWithdraw = async () => {
     if (!userId) return;
     setWithdrawing(true);
-    try { await createPayout({ amount: withdrawAmount }); toast.success("Payout request submitted!"); } catch (e: any) { toast.error(e.message || "Failed"); }
+    try { await createPayout({ userId: userId as any, amount: withdrawAmount }); toast.success("Payout request submitted!"); } catch (e: any) { toast.error(e.message || "Failed"); }
     setWithdrawing(false);
   };
 
