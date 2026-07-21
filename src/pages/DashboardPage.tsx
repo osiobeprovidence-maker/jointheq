@@ -215,7 +215,7 @@ export default function DashboardPage() {
     // Convex Real-time Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const subscriptions = useQuery(api.subscriptions.getActiveSubscriptions) || [];
-    const bundleListings = useQuery(api.subscriptions.getBundleListings) || [];
+    const bundleListings = useQuery(api.bundles.getPublishedBundles) || [];
     const activeSlots = useQuery(api.subscriptions.getSlotsByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const availableTasks = useQuery(api.tasks.listAvailable, currentUser ? { userId: currentUser._id } : "skip") || [];
     const taskStats = useQuery(api.tasks.getStats, currentUser ? { userId: currentUser._id } : "skip");

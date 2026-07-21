@@ -266,6 +266,19 @@ export default defineSchema({
         original_price: v.optional(v.number()),
         launch_badge: v.optional(v.string()),
         tagline: v.optional(v.string()),
+
+        // Bundle lifecycle & presentation
+        banner_image: v.optional(v.string()),
+        thumbnail: v.optional(v.string()),
+        slug: v.optional(v.string()),
+        currency: v.optional(v.string()),
+        display_order: v.optional(v.number()),
+        badges: v.optional(v.array(v.string())),
+        bundle_status: v.optional(v.string()), // "draft" | "published" | "archived"
+        visibility: v.optional(v.string()),    // "public" | "hidden"
+        featured: v.optional(v.boolean()),
+        launch_date: v.optional(v.number()),
+        expiry_date: v.optional(v.number()),
     }),
 
         // ─── QUEUE MARKETPLACE SYSTEM ────────────────────────────────────────

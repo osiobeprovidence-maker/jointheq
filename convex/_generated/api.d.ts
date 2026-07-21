@@ -15,6 +15,7 @@ import type * as admin from "../admin.js";
 import type * as adminEnhanced from "../adminEnhanced.js";
 import type * as adminWorkforce from "../adminWorkforce.js";
 import type * as billing from "../billing.js";
+import type * as bundles from "../bundles.js";
 import type * as campaigns from "../campaigns.js";
 import type * as campus from "../campus.js";
 import type * as createSuperAdmin from "../createSuperAdmin.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   adminEnhanced: typeof adminEnhanced;
   adminWorkforce: typeof adminWorkforce;
   billing: typeof billing;
+  bundles: typeof bundles;
   campaigns: typeof campaigns;
   campus: typeof campus;
   createSuperAdmin: typeof createSuperAdmin;

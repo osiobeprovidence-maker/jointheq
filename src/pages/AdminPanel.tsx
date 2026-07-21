@@ -74,6 +74,7 @@ import {
     Percent,
     Copy,
     Settings,
+    Archive,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -158,133 +159,484 @@ function StandardReferralConfigSection() {
 }
 
 function BundleAdminEditor() {
-  const user = auth.getCurrentUser();
-  const bundleListings = useQuery(api.subscriptions.getBundleListings) || [];
-  const createBundle = useMutation(api.subscriptions.adminCreateBundleListing);
-  const updateBundle = useMutation(api.subscriptions.updateBundleListing);
-  const [bundleName, setBundleName] = useState("Q AI Pack");
-  const [bundleDesc, setBundleDesc] = useState("All your favorite AI tools. One subscription.");
-  const [bundlePrice, setBundlePrice] = useState(23000);
-  const [bundleOriginalPrice, setBundleOriginalPrice] = useState(27000);
-  const [bundleBadge, setBundleBadge] = useState("🔥 Launch Offer");
-  const [bundleTagline, setBundleTagline] = useState("All your favorite AI tools. One subscription.");
-  const [bundleTools, setBundleTools] = useState("ChatGPT,Gemini,Claude,Perplexity,Notion AI,Copilot");
-  const [bundleActive, setBundleActive] = useState(true);
-  const [bundleSaving, setBundleSaving] = useState(false);
-  const [editingBundleId, setEditingBundleId] = useState<string | null>(null);
+    const user = auth.getCurrentUser();
+    const adminId = user?._id as Id<"users"> | undefined;
+    const bundleList = useQuery(api.bundles.getAllBundles, adminId ? { adminId } : "skip") || [];
+    const createBundleMut = useMutation(api.bundles.adminCreateBundle);
+    const updateBundleMut = useMutation(api.bundles.adminUpdateBundle);
+    const deleteBundleMut = useMutation(api.bundles.adminDeleteBundle);
+    const archiveBundleMut = useMutation(api.bundles.adminArchiveBundle);
+    const duplicateBundleMut = useMutation(api.bundles.adminDuplicateBundle);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
 
-  const loadBundle = (b: any) => {
-    setEditingBundleId(b._id);
-    setBundleName(b.name);
-    setBundleDesc(b.description);
-    setBundlePrice(b.price);
-    setBundleOriginalPrice(b.original_price || 27000);
-    setBundleBadge(b.launch_badge || "🔥 Launch Offer");
-    setBundleTagline(b.tagline || "All your favorite AI tools. One subscription.");
-    setBundleTools((b.bundle_tools || []).map((t: any) => t.name).join(","));
-    setBundleActive(b.is_active);
-  };
+    const [showForm, setShowForm] = useState(false);
+    const [editId, setEditId] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const handleSaveBundle = async () => {
-    if (!user?._id) return;
-    setBundleSaving(true);
-    try {
-      const tools = bundleTools.split(",").map((name) => ({ name: name.trim() })).filter((t) => t.name);
-      if (editingBundleId) {
-        await updateBundle({
-          adminId: user._id as Id<"users">,
-          catalogId: editingBundleId as Id<"subscription_catalog">,
-          name: bundleName,
-          description: bundleDesc,
-          price: bundlePrice,
-          original_price: bundleOriginalPrice,
-          launch_badge: bundleBadge,
-          tagline: bundleTagline,
-          bundle_tools: tools,
-          is_active: bundleActive,
-        });
-      } else {
-        await createBundle({
-          adminId: user._id as Id<"users">,
-          name: bundleName,
-          description: bundleDesc,
-          price: bundlePrice,
-          original_price: bundleOriginalPrice,
-          launch_badge: bundleBadge,
-          tagline: bundleTagline,
-          bundle_tools: tools,
-          is_active: bundleActive,
-        });
-      }
-      toast.success("Bundle saved");
-      setEditingBundleId(null);
-    } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to save bundle")); }
-    setBundleSaving(false);
-  };
+    // Form state
+    const [formName, setFormName] = useState("");
+    const [formDesc, setFormDesc] = useState("");
+    const [formTagline, setFormTagline] = useState("");
+    const [formPrice, setFormPrice] = useState(0);
+    const [formOriginalPrice, setFormOriginalPrice] = useState(0);
+    const [formCategory, setFormCategory] = useState("AI");
+    const [formBadges, setFormBadges] = useState<string[]>([]);
+    const [formStatus, setFormStatus] = useState("draft");
+    const [formVisibility, setFormVisibility] = useState("public");
+    const [formFeatured, setFormFeatured] = useState(false);
+    const [formDisplayOrder, setFormDisplayOrder] = useState(0);
+    const [formTools, setFormTools] = useState<string[]>([]);
+    const [formBannerImage, setFormBannerImage] = useState("");
+    const [formThumbnail, setFormThumbnail] = useState("");
+    const [formSlug, setFormSlug] = useState("");
+    const [formCurrency, setFormCurrency] = useState("NGN");
+    const [formLaunchDate, setFormLaunchDate] = useState("");
+    const [formExpiryDate, setFormExpiryDate] = useState("");
 
-  return (
-    <div className="space-y-6 mb-8">
-      <div className="bg-white rounded-[2rem] p-10 shadow-sm">
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-2xl font-black mb-2">Premium Bundle</h2>
-            <p className="text-gray-400 text-sm">Configure the Q AI Pack premium bundle subscription.</p>
-          </div>
-          {bundleListings.length > 0 && (
-            <div className="flex gap-2">
-              <button onClick={() => loadBundle(bundleListings[0])} className="px-4 py-2 bg-gray-100 rounded-xl text-xs font-bold hover:bg-gray-200">Edit Existing</button>
-              <button onClick={() => { setEditingBundleId(null); setBundleName("Q AI Pack"); setBundlePrice(23000); setBundleOriginalPrice(27000); }} className="px-4 py-2 bg-gray-100 rounded-xl text-xs font-bold hover:bg-gray-200">New</button>
+    const availableBadges = ["Most Popular", "Best Value", "New", "Limited Offer", "Student Choice", "Hot"];
+    const CATEGORIES = ["AI", "Design", "Streaming", "Music", "Gaming", "Productivity", "VPN", "Software", "Utility", "Education", "Entertainment"];
+
+    const resetForm = () => {
+        setFormName(""); setFormDesc(""); setFormTagline(""); setFormPrice(0); setFormOriginalPrice(0);
+        setFormCategory("AI"); setFormBadges([]); setFormStatus("draft"); setFormVisibility("public");
+        setFormFeatured(false); setFormDisplayOrder(0); setFormTools([]); setFormBannerImage("");
+        setFormThumbnail(""); setFormSlug(""); setFormCurrency("NGN"); setFormLaunchDate(""); setFormExpiryDate("");
+    };
+
+    const openNewForm = () => {
+        resetForm();
+        setEditId(null);
+        setShowForm(true);
+    };
+
+    const openEditForm = (b: any) => {
+        setEditId(b.catalog_id || b._id);
+        setFormName(b.name || "");
+        setFormDesc(b.description || "");
+        setFormTagline(b.tagline || "");
+        setFormPrice(b.base_cost || b.price || 0);
+        setFormOriginalPrice(b.original_price || 0);
+        setFormCategory(b.category || "AI");
+        setFormBadges(b.badges || (b.launch_badge ? [b.launch_badge] : []));
+        setFormStatus(b.bundle_status || "draft");
+        setFormVisibility(b.visibility || "public");
+        setFormFeatured(b.featured || false);
+        setFormDisplayOrder(b.display_order ?? 0);
+        setFormTools((b.bundle_tools || []).map((t: any) => t.name));
+        setFormBannerImage(b.banner_image || "");
+        setFormThumbnail(b.thumbnail || "");
+        setFormSlug(b.slug || "");
+        setFormCurrency(b.currency || "NGN");
+        setFormLaunchDate(b.launch_date ? new Date(b.launch_date).toISOString().slice(0, 10) : "");
+        setFormExpiryDate(b.expiry_date ? new Date(b.expiry_date).toISOString().slice(0, 10) : "");
+        setShowForm(true);
+    };
+
+    const handleSave = async () => {
+        if (!adminId) return;
+        setSaving(true);
+        try {
+            const args = {
+                adminId,
+                name: formName,
+                description: formDesc,
+                tagline: formTagline || undefined,
+                price: formPrice,
+                original_price: formOriginalPrice || undefined,
+                bundle_tools: formTools.map(name => ({ name })),
+                category: formCategory,
+                badges: formBadges.length > 0 ? formBadges : undefined,
+                bundle_status: formStatus,
+                visibility: formVisibility,
+                featured: formFeatured || undefined,
+                display_order: formDisplayOrder || undefined,
+                banner_image: formBannerImage || undefined,
+                thumbnail: formThumbnail || undefined,
+                slug: formSlug || undefined,
+                currency: formCurrency,
+                launch_date: formLaunchDate ? new Date(formLaunchDate).getTime() : undefined,
+                expiry_date: formExpiryDate ? new Date(formExpiryDate).getTime() : undefined,
+            };
+
+            if (editId) {
+                await updateBundleMut({ ...args, catalogId: editId as Id<"subscription_catalog"> });
+                toast.success("Bundle updated");
+            } else {
+                await createBundleMut(args);
+                toast.success("Bundle created");
+            }
+            setShowForm(false);
+            resetForm();
+            setEditId(null);
+        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to save bundle")); }
+        setSaving(false);
+    };
+
+    const handleDuplicate = async (catalogId: string) => {
+        if (!adminId) return;
+        try {
+            await duplicateBundleMut({ adminId, catalogId: catalogId as Id<"subscription_catalog"> });
+            toast.success("Bundle duplicated");
+        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to duplicate")); }
+    };
+
+    const handleArchive = async (catalogId: string) => {
+        if (!adminId) return;
+        try {
+            await archiveBundleMut({ adminId, catalogId: catalogId as Id<"subscription_catalog"> });
+            toast.success("Bundle archived");
+        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to archive")); }
+    };
+
+    const handleDelete = async () => {
+        if (!adminId || !deleteConfirm) return;
+        try {
+            await deleteBundleMut({ adminId, catalogId: deleteConfirm as Id<"subscription_catalog"> });
+            toast.success("Bundle deleted");
+            setDeleteConfirm(null);
+        } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to delete")); }
+    };
+
+    const toggleBadge = (badge: string) => {
+        setFormBadges(prev => prev.includes(badge) ? prev.filter(b => b !== badge) : [...prev, badge]);
+    };
+
+    const toggleTool = (toolName: string) => {
+        setFormTools(prev => prev.includes(toolName) ? prev.filter(t => t !== toolName) : [...prev, toolName]);
+    };
+
+    const filtered = bundleList.filter((b: any) => {
+        if (statusFilter !== "all" && (b.bundle_status || "draft") !== statusFilter) return false;
+        if (search) {
+            const q = search.toLowerCase();
+            return (b.name || "").toLowerCase().includes(q) || (b.category || "").toLowerCase().includes(q);
+        }
+        return true;
+    });
+
+    const statusColor: Record<string, string> = {
+        draft: "bg-gray-100 text-gray-600",
+        published: "bg-emerald-50 text-emerald-600",
+        archived: "bg-red-50 text-red-500",
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                <div className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Total Bundles</div>
+                    <div className="text-2xl font-black">{bundleList.length}</div>
+                </div>
+                {[
+                    { label: "Published", status: "published" },
+                    { label: "Drafts", status: "draft" },
+                    { label: "Archived", status: "archived" },
+                ].map(s => (
+                    <div key={s.status} className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{s.label}</div>
+                        <div className="text-2xl font-black">{bundleList.filter((b: any) => (b.bundle_status || "draft") === s.status).length}</div>
+                    </div>
+                ))}
+                <div className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Featured</div>
+                    <div className="text-2xl font-black">{bundleList.filter((b: any) => b.featured).length}</div>
+                </div>
+                <div className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Subscribers</div>
+                    <div className="text-2xl font-black">{bundleList.reduce((s: number, b: any) => s + (b.subscriber_count || 0), 0)}</div>
+                </div>
             </div>
-          )}
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Bundle Name</label>
-            <input type="text" value={bundleName} onChange={e => setBundleName(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Launch Badge</label>
-            <input type="text" value={bundleBadge} onChange={e => setBundleBadge(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Current Price (₦)</label>
-            <input type="number" value={bundlePrice} onChange={e => setBundlePrice(Math.max(0, parseInt(e.target.value) || 0))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Original Price (₦)</label>
-            <input type="number" value={bundleOriginalPrice} onChange={e => setBundleOriginalPrice(Math.max(0, parseInt(e.target.value) || 0))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Description</label>
-            <textarea value={bundleDesc} onChange={e => setBundleDesc(e.target.value)} rows={2} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20 resize-none" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tagline</label>
-            <input type="text" value={bundleTagline} onChange={e => setBundleTagline(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Included Tools (comma-separated)</label>
-            <input type="text" value={bundleTools} onChange={e => setBundleTools(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
-            <p className="text-[10px] text-gray-400 mt-1">e.g. ChatGPT,Gemini,Claude,Perplexity,Notion AI,Copilot</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Active</label>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked={bundleActive} onChange={e => setBundleActive(e.target.checked)} className="sr-only peer" />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500" />
-            </label>
-          </div>
-        </div>
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                    {["all", ...["draft", "published", "archived"]].map(s => (
+                        <button key={s} onClick={() => setStatusFilter(s)}
+                            className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s ? 'bg-zinc-900 text-white' : 'bg-white text-gray-400 hover:bg-black/5'}`}
+                        >{s === "all" ? "All" : s}</button>
+                    ))}
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:flex-initial">
+                        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bundles..." className="w-full sm:w-48 pl-10 pr-4 py-2.5 bg-white rounded-xl text-sm font-bold outline-none focus:ring-2 ring-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.04)]" />
+                    </div>
+                    <button onClick={openNewForm} className="px-5 py-2.5 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2">
+                        <Plus size={14} /> Create Bundle
+                    </button>
+                </div>
+            </div>
 
-        <div className="mt-8 flex gap-3">
-          <button onClick={handleSaveBundle} disabled={bundleSaving} className="px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold text-sm disabled:opacity-50 hover:bg-black transition-colors">
-            {bundleSaving ? "Saving..." : editingBundleId ? "Update Bundle" : "Create Bundle"}
-          </button>
+            {/* Table */}
+            <div className="bg-white rounded-[2rem] shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="border-b border-black/5">
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Bundle</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Category</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Price</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Tools</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Subs</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Created</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.length === 0 && (
+                            <tr><td colSpan={8} className="p-10 text-center text-sm text-gray-400 font-medium">No bundles found</td></tr>
+                        )}
+                        {filtered.map((b: any) => (
+                            <tr key={b._id} className="border-b border-black/[0.02] hover:bg-zinc-50 transition-colors">
+                                <td className="p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center text-sm shrink-0 overflow-hidden">
+                                            {b.thumbnail ? <img src={b.thumbnail} className="w-full h-full object-cover" /> : "📦"}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-sm flex items-center gap-1.5">
+                                                {b.name}
+                                                {b.featured && <span className="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full font-black">FEATURED</span>}
+                                            </div>
+                                            <div className="text-[10px] text-gray-400 font-medium truncate max-w-[200px]">{b.tagline || b.description}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="p-4">
+                                    <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full font-black uppercase tracking-widest">{b.category || "AI"}</span>
+                                </td>
+                                <td className="p-4">
+                                    <div className="font-black text-sm">₦{b.base_cost?.toLocaleString() || b.price?.toLocaleString()}</div>
+                                    {b.original_price > b.base_cost && (
+                                        <div className="text-[10px] text-gray-400 line-through">₦{b.original_price?.toLocaleString()}</div>
+                                    )}
+                                </td>
+                                <td className="p-4">
+                                    <div className="flex items-center gap-1">
+                                        {(b.bundle_tools || []).slice(0, 4).map((t: any, i: number) => (
+                                            <div key={i} className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center text-xs" title={t.name}>{t.icon || "✨"}</div>
+                                        ))}
+                                        {(b.bundle_tools || []).length > 4 && (
+                                            <span className="text-[10px] font-bold text-gray-400 ml-1">+{b.bundle_tools.length - 4}</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="p-4">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${statusColor[b.bundle_status || "draft"] || "bg-gray-100 text-gray-600"}`}>
+                                            {b.bundle_status || "draft"}
+                                        </span>
+                                        {(b.badges || []).length > 0 && (
+                                            <span className="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full font-black">{(b.badges || [])[0]}</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="p-4 font-bold text-sm">{b.subscriber_count || 0}</td>
+                                <td className="p-4 text-xs text-gray-400 font-medium">{new Date(b._creationTime).toLocaleDateString()}</td>
+                                <td className="p-4">
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => window.open(`/dashboard/bundle/${b.catalog_id || b._id}`, "_blank")} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View"><Eye size={14} /></button>
+                                        <button onClick={() => openEditForm(b)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Edit"><Edit3 size={14} /></button>
+                                        <button onClick={() => handleDuplicate(b.catalog_id || b._id)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Duplicate"><Copy size={14} /></button>
+                                        {(b.bundle_status || "draft") !== "archived" && (
+                                            <button onClick={() => handleArchive(b.catalog_id || b._id)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Archive"><Archive size={14} /></button>
+                                        )}
+                                        <button onClick={() => setDeleteConfirm(b.catalog_id || b._id)} className="p-2 hover:bg-red-50 text-red-400 rounded-lg transition-colors" title="Delete"><Trash2 size={14} /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Create/Edit Modal */}
+            <AnimatePresence>
+                {showForm && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+                        <motion.div initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                            className="bg-[#f5f5f7] w-full sm:max-w-4xl sm:rounded-[3rem] rounded-t-[3rem] max-h-[90vh] overflow-y-auto shadow-2xl">
+                            <div className="sticky top-0 z-10 bg-white px-8 pt-8 pb-5 border-b border-gray-100">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-xl font-bold tracking-tight">{editId ? "Edit Bundle" : "Create Bundle"}</h2>
+                                        <p className="text-xs text-gray-500 mt-0.5">{editId ? "Update bundle details and settings" : "Add a new bundle product to the marketplace"}</p>
+                                    </div>
+                                    <button onClick={() => { setShowForm(false); resetForm(); setEditId(null); }} className="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all"><X size={18} /></button>
+                                </div>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                {/* Basic Info */}
+                                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                        <div className="w-1.5 h-6 bg-zinc-900 rounded-full" /> Basic Information
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-1.5 md:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Bundle Name</label>
+                                            <input value={formName} onChange={e => setFormName(e.target.value)} placeholder="e.g. Q AI Pack" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="space-y-1.5 md:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tagline</label>
+                                            <input value={formTagline} onChange={e => setFormTagline(e.target.value)} placeholder="Short promotional line" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="space-y-1.5 md:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</label>
+                                            <textarea value={formDesc} onChange={e => setFormDesc(e.target.value)} rows={3} placeholder="Full bundle description" className="w-full p-4 bg-gray-50 rounded-xl font-medium text-sm outline-none focus:ring-2 ring-black/5 resize-none" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Slug</label>
+                                            <input value={formSlug} onChange={e => setFormSlug(e.target.value)} placeholder="q-ai-pack" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</label>
+                                            <select value={formCategory} onChange={e => setFormCategory(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5 appearance-none">
+                                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monthly Price</label>
+                                            <input type="number" value={formPrice || ""} onChange={e => setFormPrice(Number(e.target.value))} placeholder="23000" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Original Price (for discount)</label>
+                                            <input type="number" value={formOriginalPrice || ""} onChange={e => setFormOriginalPrice(Number(e.target.value))} placeholder="27000" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Currency</label>
+                                            <select value={formCurrency} onChange={e => setFormCurrency(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5 appearance-none">
+                                                <option value="NGN">NGN (₦)</option>
+                                                <option value="USD">USD ($)</option>
+                                                <option value="EUR">EUR (€)</option>
+                                                <option value="GBP">GBP (£)</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Display Order</label>
+                                            <input type="number" value={formDisplayOrder} onChange={e => setFormDisplayOrder(Number(e.target.value))} placeholder="0" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Images */}
+                                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                        <div className="w-1.5 h-6 bg-purple-500 rounded-full" /> Images
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Banner Image URL</label>
+                                            <input value={formBannerImage} onChange={e => setFormBannerImage(e.target.value)} placeholder="https://..." className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Thumbnail URL</label>
+                                            <input value={formThumbnail} onChange={e => setFormThumbnail(e.target.value)} placeholder="https://..." className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Included Services */}
+                                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                        <div className="w-1.5 h-6 bg-emerald-500 rounded-full" /> Included Services
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {["ChatGPT Plus", "Claude Pro", "Perplexity Pro", "Midjourney", "Canva Pro", "Copilot Pro", "Netflix Premium", "Spotify Premium", "YouTube Premium", "Adobe CC", "Figma Pro", "Notion AI"].map(tool => (
+                                            <button key={tool} onClick={() => toggleTool(tool)}
+                                                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${formTools.includes(tool) ? 'bg-emerald-50 text-emerald-600 border-emerald-300' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'}`}
+                                            >{formTools.includes(tool) ? "☑" : "☐"} {tool}</button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-gray-400">{formTools.length} tool{formTools.length !== 1 && "s"} selected</p>
+                                </div>
+
+                                {/* Badges */}
+                                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                        <div className="w-1.5 h-6 bg-amber-500 rounded-full" /> Badges & Labels
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableBadges.map(badge => (
+                                            <button key={badge} onClick={() => toggleBadge(badge)}
+                                                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${formBadges.includes(badge) ? 'bg-amber-50 text-amber-600 border-amber-300' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'}`}
+                                            >{formBadges.includes(badge) ? "☑" : "☐"} {badge}</button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Status & Visibility */}
+                                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                                        <div className="w-1.5 h-6 bg-blue-500 rounded-full" /> Publishing
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</label>
+                                            <select value={formStatus} onChange={e => setFormStatus(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5 appearance-none">
+                                                <option value="draft">Draft</option>
+                                                <option value="published">Published</option>
+                                                <option value="archived">Archived</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Visibility</label>
+                                            <select value={formVisibility} onChange={e => setFormVisibility(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5 appearance-none">
+                                                <option value="public">Public</option>
+                                                <option value="hidden">Hidden</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Launch Date</label>
+                                            <input type="date" value={formLaunchDate} onChange={e => setFormLaunchDate(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Expiry Date</label>
+                                            <input type="date" value={formExpiryDate} onChange={e => setFormExpiryDate(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none focus:ring-2 ring-black/5" />
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Featured</label>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" checked={formFeatured} onChange={e => setFormFeatured(e.target.checked)} className="sr-only peer" />
+                                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center justify-end gap-3 pb-4">
+                                    <button onClick={() => { setShowForm(false); resetForm(); setEditId(null); }} className="px-6 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all">Cancel</button>
+                                    <button onClick={handleSave} disabled={saving || !formName || !formPrice}
+                                        className="px-8 py-3 bg-zinc-900 text-white rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 hover:bg-black transition-all">
+                                        {saving ? "Saving..." : editId ? "Update Bundle" : "Create Bundle"}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation */}
+            <AnimatePresence>
+                {deleteConfirm && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl">
+                            <h3 className="font-black text-lg mb-2">Delete Bundle?</h3>
+                            <p className="text-sm text-gray-500 font-medium mb-6">This action cannot be undone. The bundle and its marketplace listing will be permanently removed.</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 bg-gray-100 rounded-xl text-sm font-bold hover:bg-gray-200 transition-all">Cancel</button>
+                                <button onClick={handleDelete} className="flex-1 py-3 bg-red-500 text-white rounded-xl text-sm font-black hover:bg-red-600 transition-all">Delete</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function ServiceCommissionEditor() {

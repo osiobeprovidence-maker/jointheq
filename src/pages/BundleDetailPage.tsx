@@ -11,7 +11,7 @@ export default function BundleDetailPage() {
     const navigate = useNavigate();
     const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
-    const bundles = useQuery(api.subscriptions.getBundleListings) || [];
+    const bundles = useQuery(api.bundles.getPublishedBundles) || [];
     const bundle = bundles.find((b: any) => b.catalog_id === bundleId);
     const currentUser = useQuery(api.users.getCurrentUser);
 
