@@ -262,6 +262,7 @@ export const create = mutation({
         target_goal: v.number(),
         image_url: v.optional(v.string()),
         banner_url: v.optional(v.string()),
+        status: v.optional(v.string()),
         created_by: v.optional(v.id("users")),
         max_boots_per_user_per_day: v.optional(v.number()),
         max_referrals_per_user_per_day: v.optional(v.number()),
@@ -296,7 +297,7 @@ export const create = mutation({
         return await ctx.db.insert("campaigns", {
             ...args,
             current_progress: 0,
-            status: "active",
+            status: args.status || "active",
             referral_boots: args.referral_boots ?? 5,
             commission_months: args.commission_months ?? 3,
             entries_per_referral: args.entries_per_referral ?? 1,
@@ -335,6 +336,44 @@ export const updateStatus = mutation({
     args: { id: v.id("campaigns"), status: v.string() },
     handler: async (ctx, args) => {
         await ctx.db.patch(args.id, { status: args.status });
+    },
+});
+
+/** Admin: List all campaigns (for Partnership admin panel) */
+export const listAdmin = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("campaigns").order("desc").collect();
+    },
+});
+
+/** Admin: Update campaign (extended version for Partnership admin panel) */
+export const update = mutation({
+    args: {
+        id: v.id("campaigns"),
+        adminId: v.optional(v.id("users")),
+        name: v.optional(v.string()),
+        description: v.optional(v.string()),
+        status: v.optional(v.string()),
+        campaign_type: v.optional(v.string()),
+        reward_amount: v.optional(v.number()),
+        reward_type: v.optional(v.string()),
+        start_date: v.optional(v.any()),
+        end_date: v.optional(v.any()),
+        banner_url: v.optional(v.string()),
+        visibility: v.optional(v.string()),
+    },
+    handler: async (ctx, { id, adminId: _, ...updates }) => {
+        const patch = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
+        if (Object.keys(patch).length > 0) await ctx.db.patch(id, patch);
+    },
+});
+
+/** Admin: Delete a campaign */
+export const deleteCampaign = mutation({
+    args: { id: v.id("campaigns") },
+    handler: async (ctx, { id }) => {
+        await ctx.db.delete(id);
     },
 });
 
