@@ -166,6 +166,7 @@ function ServiceCommissionEditor() {
   const [commType, setCommType] = useState("fixed");
   const [commValue, setCommValue] = useState(0);
   const [commAppliesTo, setCommAppliesTo] = useState("first_payment");
+  const [commPaymentCount, setCommPaymentCount] = useState(1);
   const [maxComm, setMaxComm] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -175,6 +176,7 @@ function ServiceCommissionEditor() {
     setCommType(c.commissionType);
     setCommValue(c.commissionValue);
     setCommAppliesTo(c.commissionAppliesTo);
+    setCommPaymentCount(c.commissionPaymentCount || 1);
     setMaxComm(c.maxCommission);
   };
 
@@ -189,6 +191,7 @@ function ServiceCommissionEditor() {
         commissionType: commType,
         commissionValue: commValue,
         commissionAppliesTo: commAppliesTo,
+        commissionPaymentCount: commAppliesTo === "first_x" ? commPaymentCount : undefined,
         maxCommission: maxComm ?? undefined,
       });
       toast.success("Commission updated");
@@ -203,11 +206,17 @@ function ServiceCommissionEditor() {
     return `${c.commissionValue}%`;
   };
 
+  const displayAppliesTo = (c: any) => {
+    if (c.commissionAppliesTo === "first_payment") return "First Payment";
+    if (c.commissionAppliesTo === "first_x") return `First ${c.commissionPaymentCount || 1} Payments`;
+    return "Every Payment";
+  };
+
   return (
     <div className="space-y-6 mb-8">
       <div className="bg-white rounded-[2rem] p-10 shadow-sm">
         <h2 className="text-2xl font-black mb-2">Service Commissions</h2>
-        <p className="text-gray-400 text-sm mb-8">Configure per-service partnership commission rules.</p>
+        <p className="text-gray-400 text-sm mb-8">Commission rules are sourced automatically from active Marketplace services.</p>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -245,12 +254,21 @@ function ServiceCommissionEditor() {
                   </td>
                   <td className="py-4 pr-4">
                     {editingId === c._id ? (
-                      <select value={commAppliesTo} onChange={e => setCommAppliesTo(e.target.value)} className="p-2 bg-gray-50 rounded-xl text-xs font-bold outline-none focus:ring-2 ring-blue-600/20">
-                        <option value="first_payment">First Payment</option>
-                        <option value="every_payment">Every Payment</option>
-                      </select>
+                      <div className="flex gap-2 items-center">
+                        <select value={commAppliesTo} onChange={e => {
+                          setCommAppliesTo(e.target.value);
+                          if (e.target.value !== "first_x") setCommPaymentCount(1);
+                        }} className="p-2 bg-gray-50 rounded-xl text-xs font-bold outline-none focus:ring-2 ring-blue-600/20">
+                          <option value="first_payment">First Payment</option>
+                          <option value="every_payment">Every Payment</option>
+                          <option value="first_x">First X Payments</option>
+                        </select>
+                        {commAppliesTo === "first_x" && (
+                          <input type="number" value={commPaymentCount} onChange={e => setCommPaymentCount(Math.max(1, parseInt(e.target.value) || 1))} className="w-14 p-2 bg-gray-50 rounded-xl text-xs font-bold text-center outline-none focus:ring-2 ring-blue-600/20" min={1} />
+                        )}
+                      </div>
                     ) : (
-                      <span className="text-sm text-gray-500">{c.commissionAppliesTo === "first_payment" ? "First Payment" : "Every Payment"}</span>
+                      <span className="text-sm text-gray-500">{displayAppliesTo(c)}</span>
                     )}
                   </td>
                   <td className="py-4 pr-4">
@@ -278,6 +296,14 @@ function ServiceCommissionEditor() {
                   </td>
                 </tr>
               ))}
+              {(!catalogs || catalogs.length === 0) && (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center">
+                    <p className="text-sm font-bold text-gray-400">No active Marketplace services found.</p>
+                    <p className="text-xs text-gray-300 mt-1">Services appear here automatically when added to the Marketplace.</p>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -1415,19 +1415,28 @@ export const updateStandardConfig = mutation({
 export const listCatalogCommissions = query({
   args: {},
   handler: async (ctx) => {
-    const catalogs = await ctx.db.query("subscription_catalog").collect();
-    return catalogs.map((c) => ({
-      _id: c._id,
-      name: c.name,
-      logo_url: c.logo_url,
-      category: c.category,
-      base_cost: c.base_cost,
-      commissionEnabled: (c as any).commissionEnabled ?? false,
-      commissionType: (c as any).commissionType ?? "fixed",
-      commissionValue: (c as any).commissionValue ?? 0,
-      commissionAppliesTo: (c as any).commissionAppliesTo ?? "first_payment",
-      maxCommission: (c as any).maxCommission ?? null,
-    }));
+    // Get distinct catalog IDs from active marketplace listings (single source of truth)
+    const activeListings = await ctx.db
+      .query("marketplace")
+      .withIndex("by_status", (q: any) => q.eq("status", "active"))
+      .collect();
+    const catalogIds = [...new Set(activeListings.map((l) => l.subscription_catalog_id))];
+    const catalogs = await Promise.all(catalogIds.map((id) => ctx.db.get(id)));
+    return catalogs
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+      .map((c) => ({
+        _id: c._id,
+        name: c.name,
+        logo_url: c.logo_url,
+        category: c.category,
+        base_cost: c.base_cost,
+        commissionEnabled: (c as any).commissionEnabled ?? false,
+        commissionType: (c as any).commissionType ?? "fixed",
+        commissionValue: (c as any).commissionValue ?? 0,
+        commissionAppliesTo: (c as any).commissionAppliesTo ?? "first_payment",
+        commissionPaymentCount: (c as any).commissionPaymentCount ?? undefined,
+        maxCommission: (c as any).maxCommission ?? null,
+      }));
   },
 });
 
@@ -1439,6 +1448,7 @@ export const updateCatalogCommission = mutation({
     commissionType: v.string(),
     commissionValue: v.number(),
     commissionAppliesTo: v.string(),
+    commissionPaymentCount: v.optional(v.number()),
     maxCommission: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -1453,6 +1463,7 @@ export const updateCatalogCommission = mutation({
       commissionType: args.commissionType,
       commissionValue: args.commissionValue,
       commissionAppliesTo: args.commissionAppliesTo,
+      commissionPaymentCount: args.commissionPaymentCount,
       maxCommission: args.maxCommission,
     } as any);
 

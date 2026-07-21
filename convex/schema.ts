@@ -253,7 +253,8 @@ export default defineSchema({
         commissionEnabled: v.optional(v.boolean()),
         commissionType: v.optional(v.string()), // "fixed" | "percentage"
         commissionValue: v.optional(v.number()),
-        commissionAppliesTo: v.optional(v.string()), // "first_payment" | "every_payment"
+        commissionAppliesTo: v.optional(v.string()), // "first_payment" | "every_payment" | "first_x"
+        commissionPaymentCount: v.optional(v.number()),
         maxCommission: v.optional(v.number()),
     }),
 
