@@ -1436,6 +1436,13 @@ export const listCatalogCommissions = query({
         commissionAppliesTo: (c as any).commissionAppliesTo ?? "first_payment",
         commissionPaymentCount: (c as any).commissionPaymentCount ?? undefined,
         maxCommission: (c as any).maxCommission ?? null,
+
+        // Bundle fields
+        is_bundle: (c as any).is_bundle ?? false,
+        bundle_tools: (c as any).bundle_tools ?? undefined,
+        original_price: (c as any).original_price ?? undefined,
+        launch_badge: (c as any).launch_badge ?? undefined,
+        tagline: (c as any).tagline ?? undefined,
       }));
   },
 });

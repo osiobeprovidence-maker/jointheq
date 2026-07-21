@@ -65,6 +65,7 @@ import SupportChatUser from "../components/chat/SupportChatUser";
 import { getUserFacingErrorMessage } from "../lib/errors";
 import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 import QHustleTab from "../components/dashboard/QHustleTab";
+import PremiumMarketplaceCard from "../components/marketplace/PremiumMarketplaceCard";
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import CampusJoinCard from "../components/campus/CampusJoinCard";
@@ -214,6 +215,7 @@ export default function DashboardPage() {
     // Convex Real-time Queries
     const currentUser = useQuery(api.users.getById, user?._id ? { id: user._id as Id<"users"> } : "skip");
     const subscriptions = useQuery(api.subscriptions.getActiveSubscriptions) || [];
+    const bundleListings = useQuery(api.subscriptions.getBundleListings) || [];
     const activeSlots = useQuery(api.subscriptions.getSlotsByUserId, currentUser ? { user_id: currentUser._id } : "skip") || [];
     const availableTasks = useQuery(api.tasks.listAvailable, currentUser ? { userId: currentUser._id } : "skip") || [];
     const taskStats = useQuery(api.tasks.getStats, currentUser ? { userId: currentUser._id } : "skip");
@@ -1250,6 +1252,30 @@ export default function DashboardPage() {
                             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Marketplace</h1>
                             <p className="text-xs sm:text-sm text-gray-500 mt-1">Discover premium subscription slots tailored for you.</p>
                         </div>
+
+                        {/* Premium Bundle Card */}
+                        {bundleListings.length > 0 && bundleListings.map((bundle) => (
+                            <PremiumMarketplaceCard
+                                key={bundle._id}
+                                price={bundle.price}
+                                originalPrice={bundle.original_price}
+                                launchBadge={bundle.launch_badge}
+                                tagline={bundle.tagline}
+                                bundleTools={bundle.bundle_tools}
+                                onSubscribe={() => {
+                                    const firstSlot = subscriptions.find((s: any) => (s.sub_name || "").includes(bundle.name));
+                                    if (firstSlot) {
+                                        setCheckoutSlot(firstSlot as unknown as SlotType);
+                                        setUseBootsForPayment(false);
+                                        setEnableAutoDebit(false);
+                                    } else {
+                                        toast.error("This bundle is not available right now. Please contact support.");
+                                    }
+                                }}
+                                disabled={!subscriptions.some((s: any) => (s.sub_name || "").includes(bundle.name))}
+                                disabledReason="Currently unavailable"
+                            />
+                        ))}
 
                         {/* Search & Filter */}
                         <div className="space-y-4">

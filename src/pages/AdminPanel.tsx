@@ -96,8 +96,8 @@ import { fmtCurrency, fmtCurrencyShort } from "../lib/utils";
 import { getUserFacingErrorMessage } from "../lib/errors";
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Types ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs" | "referral_campaigns" | "qhustle" | "raffle" | "partnerships" | "standard_referrals";
-const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs", "referral_campaigns", "qhustle", "raffle", "partnerships", "standard_referrals"]);
+type AdminTab = "dashboard" | "users" | "marketplace" | "payments" | "support" | "admins" | "security" | "review_payments" | "user_listings" | "notifications" | "leave_requests" | "queues" | "login_logs" | "referral_campaigns" | "qhustle" | "raffle" | "partnerships" | "standard_referrals" | "bundles";
+const adminTabs = new Set<AdminTab>(["dashboard", "users", "marketplace", "payments", "support", "admins", "security", "review_payments", "user_listings", "notifications", "leave_requests", "queues", "login_logs", "referral_campaigns", "qhustle", "raffle", "partnerships", "standard_referrals", "bundles"]);
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Helpers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const fmt = fmtCurrency;
@@ -152,6 +152,136 @@ function StandardReferralConfigSection() {
           </div>
         </div>
         <button onClick={handleSave} disabled={saving} className="w-full py-5 bg-zinc-900 text-white rounded-[2rem] font-bold hover:scale-[1.01] transition-transform disabled:opacity-50">{saving ? "Saving..." : "Save Config"}</button>
+      </div>
+    </div>
+  );
+}
+
+function BundleAdminEditor() {
+  const user = auth.getCurrentUser();
+  const bundleListings = useQuery(api.subscriptions.getBundleListings) || [];
+  const createBundle = useMutation(api.subscriptions.adminCreateBundleListing);
+  const updateBundle = useMutation(api.subscriptions.updateBundleListing);
+  const [bundleName, setBundleName] = useState("Q AI Pack");
+  const [bundleDesc, setBundleDesc] = useState("All your favorite AI tools. One subscription.");
+  const [bundlePrice, setBundlePrice] = useState(23000);
+  const [bundleOriginalPrice, setBundleOriginalPrice] = useState(27000);
+  const [bundleBadge, setBundleBadge] = useState("🔥 Launch Offer");
+  const [bundleTagline, setBundleTagline] = useState("All your favorite AI tools. One subscription.");
+  const [bundleTools, setBundleTools] = useState("ChatGPT,Gemini,Claude,Perplexity,Notion AI,Copilot");
+  const [bundleActive, setBundleActive] = useState(true);
+  const [bundleSaving, setBundleSaving] = useState(false);
+  const [editingBundleId, setEditingBundleId] = useState<string | null>(null);
+
+  const loadBundle = (b: any) => {
+    setEditingBundleId(b._id);
+    setBundleName(b.name);
+    setBundleDesc(b.description);
+    setBundlePrice(b.price);
+    setBundleOriginalPrice(b.original_price || 27000);
+    setBundleBadge(b.launch_badge || "🔥 Launch Offer");
+    setBundleTagline(b.tagline || "All your favorite AI tools. One subscription.");
+    setBundleTools((b.bundle_tools || []).map((t: any) => t.name).join(","));
+    setBundleActive(b.is_active);
+  };
+
+  const handleSaveBundle = async () => {
+    if (!user?._id) return;
+    setBundleSaving(true);
+    try {
+      const tools = bundleTools.split(",").map((name) => ({ name: name.trim() })).filter((t) => t.name);
+      if (editingBundleId) {
+        await updateBundle({
+          adminId: user._id as Id<"users">,
+          catalogId: editingBundleId as Id<"subscription_catalog">,
+          name: bundleName,
+          description: bundleDesc,
+          price: bundlePrice,
+          original_price: bundleOriginalPrice,
+          launch_badge: bundleBadge,
+          tagline: bundleTagline,
+          bundle_tools: tools,
+          is_active: bundleActive,
+        });
+      } else {
+        await createBundle({
+          adminId: user._id as Id<"users">,
+          name: bundleName,
+          description: bundleDesc,
+          price: bundlePrice,
+          original_price: bundleOriginalPrice,
+          launch_badge: bundleBadge,
+          tagline: bundleTagline,
+          bundle_tools: tools,
+          is_active: bundleActive,
+        });
+      }
+      toast.success("Bundle saved");
+      setEditingBundleId(null);
+    } catch (e: any) { toast.error(getUserFacingErrorMessage(e, "Failed to save bundle")); }
+    setBundleSaving(false);
+  };
+
+  return (
+    <div className="space-y-6 mb-8">
+      <div className="bg-white rounded-[2rem] p-10 shadow-sm">
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl font-black mb-2">Premium Bundle</h2>
+            <p className="text-gray-400 text-sm">Configure the Q AI Pack premium bundle subscription.</p>
+          </div>
+          {bundleListings.length > 0 && (
+            <div className="flex gap-2">
+              <button onClick={() => loadBundle(bundleListings[0])} className="px-4 py-2 bg-gray-100 rounded-xl text-xs font-bold hover:bg-gray-200">Edit Existing</button>
+              <button onClick={() => { setEditingBundleId(null); setBundleName("Q AI Pack"); setBundlePrice(23000); setBundleOriginalPrice(27000); }} className="px-4 py-2 bg-gray-100 rounded-xl text-xs font-bold hover:bg-gray-200">New</button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Bundle Name</label>
+            <input type="text" value={bundleName} onChange={e => setBundleName(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Launch Badge</label>
+            <input type="text" value={bundleBadge} onChange={e => setBundleBadge(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Current Price (₦)</label>
+            <input type="number" value={bundlePrice} onChange={e => setBundlePrice(Math.max(0, parseInt(e.target.value) || 0))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Original Price (₦)</label>
+            <input type="number" value={bundleOriginalPrice} onChange={e => setBundleOriginalPrice(Math.max(0, parseInt(e.target.value) || 0))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Description</label>
+            <textarea value={bundleDesc} onChange={e => setBundleDesc(e.target.value)} rows={2} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20 resize-none" />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tagline</label>
+            <input type="text" value={bundleTagline} onChange={e => setBundleTagline(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Included Tools (comma-separated)</label>
+            <input type="text" value={bundleTools} onChange={e => setBundleTools(e.target.value)} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-600/20" />
+            <p className="text-[10px] text-gray-400 mt-1">e.g. ChatGPT,Gemini,Claude,Perplexity,Notion AI,Copilot</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Active</label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={bundleActive} onChange={e => setBundleActive(e.target.checked)} className="sr-only peer" />
+              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500" />
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-8 flex gap-3">
+          <button onClick={handleSaveBundle} disabled={bundleSaving} className="px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold text-sm disabled:opacity-50 hover:bg-black transition-colors">
+            {bundleSaving ? "Saving..." : editingBundleId ? "Update Bundle" : "Create Bundle"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -4251,6 +4381,7 @@ export default function AdminPanel() {
 
                         {activeTab === "partnerships" && (
                             <motion.div key="partnerships" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
+                                <BundleAdminEditor />
                                 <ServiceCommissionEditor />
                                 <PartnersAdmin />
                             </motion.div>
@@ -4259,6 +4390,12 @@ export default function AdminPanel() {
                         {activeTab === "standard_referrals" && (
                             <motion.div key="standard_referrals" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
                                 <StandardReferralConfigSection />
+                            </motion.div>
+                        )}
+
+                        {activeTab === "bundles" && (
+                            <motion.div key="bundles" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}>
+                                <BundleAdminEditor />
                             </motion.div>
                         )}
                     </AnimatePresence>

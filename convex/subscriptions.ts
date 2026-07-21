@@ -1903,3 +1903,241 @@ export const getUserSubscriptionStatus = query({
         };
     },
 });
+
+/** Get active premium bundle listings for the marketplace */
+export const getBundleListings = query({
+    handler: async (ctx) => {
+        const bundles = await ctx.db.query("subscription_catalog")
+            .filter(q => q.and(
+                q.eq(q.field("is_bundle"), true),
+                q.eq(q.field("is_active"), true),
+            ))
+            .collect();
+
+        return bundles.map((b) => ({
+            _id: b._id,
+            name: b.name,
+            description: b.description,
+            price: b.base_cost,
+            original_price: (b as any).original_price ?? undefined,
+            launch_badge: (b as any).launch_badge ?? undefined,
+            tagline: (b as any).tagline ?? undefined,
+            bundle_tools: (b as any).bundle_tools ?? undefined,
+            is_active: b.is_active,
+        }));
+    },
+});
+
+/** Create (or update) a premium bundle listing like "Q AI Pack" */
+export const adminCreateBundleListing = mutation({
+    args: {
+        adminId: v.id("users"),
+        name: v.string(),
+        description: v.string(),
+        price: v.number(),
+        original_price: v.optional(v.number()),
+        launch_badge: v.optional(v.string()),
+        tagline: v.optional(v.string()),
+        bundle_tools: v.optional(v.array(v.object({
+            name: v.string(),
+            icon: v.optional(v.string()),
+        }))),
+        is_active: v.optional(v.boolean()),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        // Check if a bundle listing already exists for this name
+        const existingCatalog = await ctx.db.query("subscription_catalog")
+            .filter(q => q.and(
+                q.eq(q.field("name"), args.name),
+                q.eq(q.field("is_bundle"), true),
+            ))
+            .first();
+
+        let catalogId: Id<"subscription_catalog">;
+        if (existingCatalog) {
+            // Update existing
+            await ctx.db.patch(existingCatalog._id, {
+                description: args.description,
+                base_cost: args.price,
+                original_price: args.original_price,
+                launch_badge: args.launch_badge,
+                tagline: args.tagline,
+                bundle_tools: args.bundle_tools,
+                is_active: args.is_active ?? true,
+            } as any);
+            catalogId = existingCatalog._id;
+        } else {
+            catalogId = await ctx.db.insert("subscription_catalog", {
+                name: args.name,
+                description: args.description,
+                category: "AI",
+                is_active: args.is_active ?? true,
+                base_cost: args.price,
+                is_bundle: true,
+                original_price: args.original_price,
+                launch_badge: args.launch_badge,
+                tagline: args.tagline,
+                bundle_tools: args.bundle_tools,
+            } as any);
+        }
+
+        // Find or create marketplace listing
+        const existingMarketplace = await ctx.db.query("marketplace")
+            .withIndex("by_catalog", q => q.eq("subscription_catalog_id", catalogId))
+            .first();
+
+        if (!existingMarketplace) {
+            const allListings = await ctx.db.query("marketplace").collect();
+            const maxOrder = allListings.reduce((max, m) => Math.max(max, m.display_order ?? 0), 0);
+
+            await ctx.db.insert("marketplace", {
+                subscription_catalog_id: catalogId,
+                admin_creator_id: args.adminId,
+                platform_name: args.name,
+                account_email: "bundle@jointheq.sbs",
+                plan_owner: "admin",
+                billing_cycle_start: new Date().toISOString().slice(0, 10),
+                status: "active",
+                total_slots: 99999,
+                filled_slots: 0,
+                available_slots: 99999,
+                slot_price: args.price,
+                category: "AI",
+                display_order: 1,
+                created_at: Date.now(),
+                updated_at: Date.now(),
+            });
+
+            // Create slot type for bundle
+            const slotTypeId = await ctx.db.insert("slot_types", {
+                subscription_id: catalogId,
+                name: args.name,
+                price: args.price,
+                device_limit: 1,
+                downloads_enabled: false,
+                min_q_score: 0,
+                capacity: 99999,
+                access_type: "code_access",
+                features: ["Q AI Pack Bundle Access"],
+            });
+
+            // Create a group & subscription to hold the slots
+            const groupId = await ctx.db.insert("groups", {
+                subscription_catalog_id: catalogId,
+                billing_cycle_start: new Date().toISOString().slice(0, 10),
+                status: "active",
+                account_email: "bundle@jointheq.sbs",
+                plan_owner: "admin",
+            });
+
+            const subscriptionId = await ctx.db.insert("subscriptions", {
+                owner_id: args.adminId,
+                platform: args.name,
+                platform_catalog_id: catalogId,
+                login_email: "bundle@jointheq.sbs",
+                login_password: "ADMIN_MANAGED",
+                base_cost: args.price,
+                category: "AI",
+                renewal_date: new Date().toISOString().slice(0, 10),
+                total_slots: 99999,
+                slot_price: args.price,
+                status: "active",
+                group_id: groupId,
+                created_at: Date.now(),
+                updated_at: Date.now(),
+            });
+
+            // Pre-generate some open slots (many - 100 to start)
+            for (let i = 1; i <= 100; i++) {
+                await ctx.db.insert("subscription_slots", {
+                    subscription_id: subscriptionId,
+                    group_id: groupId,
+                    slot_type_id: slotTypeId,
+                    slot_number: i,
+                    status: "open",
+                    renewal_date: "",
+                    created_at: Date.now(),
+                });
+            }
+        } else {
+            // Update marketplace price
+            const slotType = await ctx.db.query("slot_types")
+                .withIndex("by_subscription", q => q.eq("subscription_id", catalogId))
+                .first();
+
+            if (slotType) {
+                await ctx.db.patch(slotType._id, { price: args.price });
+            }
+
+            await ctx.db.patch(existingMarketplace._id, {
+                slot_price: args.price,
+                updated_at: Date.now(),
+            });
+        }
+
+        return { success: true, catalogId };
+    }
+});
+
+/** Update bundle-specific fields */
+export const updateBundleListing = mutation({
+    args: {
+        adminId: v.id("users"),
+        catalogId: v.id("subscription_catalog"),
+        name: v.optional(v.string()),
+        description: v.optional(v.string()),
+        price: v.optional(v.number()),
+        original_price: v.optional(v.number()),
+        launch_badge: v.optional(v.string()),
+        tagline: v.optional(v.string()),
+        bundle_tools: v.optional(v.array(v.object({
+            name: v.string(),
+            icon: v.optional(v.string()),
+        }))),
+        is_active: v.optional(v.boolean()),
+    },
+    handler: async (ctx, args) => {
+        const admin = await ctx.db.get(args.adminId);
+        if (!admin?.is_admin) throw new Error("Unauthorized");
+
+        const catalog = await ctx.db.get(args.catalogId);
+        if (!catalog) throw new Error("Catalog not found");
+
+        const patch: Record<string, any> = {};
+        if (args.name !== undefined) patch.name = args.name;
+        if (args.description !== undefined) patch.description = args.description;
+        if (args.price !== undefined) patch.base_cost = args.price;
+        if (args.original_price !== undefined) patch.original_price = args.original_price;
+        if (args.launch_badge !== undefined) patch.launch_badge = args.launch_badge;
+        if (args.tagline !== undefined) patch.tagline = args.tagline;
+        if (args.bundle_tools !== undefined) patch.bundle_tools = args.bundle_tools;
+        if (args.is_active !== undefined) patch.is_active = args.is_active;
+
+        await ctx.db.patch(args.catalogId, patch as any);
+
+        // Update marketplace and slot type price if price changed
+        if (args.price !== undefined) {
+            const marketplace = await ctx.db.query("marketplace")
+                .withIndex("by_catalog", q => q.eq("subscription_catalog_id", args.catalogId))
+                .first();
+            if (marketplace) {
+                await ctx.db.patch(marketplace._id, {
+                    slot_price: args.price,
+                    updated_at: Date.now(),
+                });
+            }
+
+            const slotType = await ctx.db.query("slot_types")
+                .withIndex("by_subscription", q => q.eq("subscription_id", args.catalogId))
+                .first();
+            if (slotType) {
+                await ctx.db.patch(slotType._id, { price: args.price });
+            }
+        }
+
+        return { success: true };
+    }
+});

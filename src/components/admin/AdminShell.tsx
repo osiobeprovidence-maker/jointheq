@@ -7,6 +7,7 @@ import {
   Layers,
   LayoutDashboard,
   Menu,
+  Package,
   Shield,
   ShieldCheck,
   ShoppingBag,
@@ -42,7 +43,8 @@ export type AdminMenuKey =
   | "qhustle"
   | "raffle"
   | "partnerships"
-  | "standard_referrals";
+  | "standard_referrals"
+  | "bundles";
 
 type AdminShellProps = {
   activeItem: AdminMenuKey;
@@ -79,6 +81,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { id: "raffle", label: "Raffle", sub: "Spotify Giveaways", path: "/admin?tab=raffle", icon: <Award size={18} /> },
   { id: "partnerships", label: "Partnerships", sub: "Partner & Affiliate Mgmt", path: "/admin?tab=partnerships", icon: <Handshake size={18} /> },
   { id: "standard_referrals", label: "Standard Referral", sub: "Boots Reward Config", path: "/admin?tab=standard_referrals", icon: <Gift size={18} /> },
+  { id: "bundles", label: "Bundles", sub: "Premium Bundle Mgmt", path: "/admin?tab=bundles", icon: <Package size={18} /> },
 ];
 
 export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
@@ -88,7 +91,7 @@ export const adminMenuSections: { label: string; items: AdminMenuKey[] }[] = [
   { label: "Reviews", items: ["user_listings"] },
   { label: "People & Trust", items: ["users", "support", "security", "admins", "login_logs"] },
   { label: "Engagement", items: ["notifications", "queues"] },
-  { label: "Marketing", items: ["referral_campaigns", "qhustle", "raffle", "partnerships", "standard_referrals"] },
+  { label: "Marketing", items: ["referral_campaigns", "qhustle", "raffle", "partnerships", "standard_referrals", "bundles"] },
 ];
 
 const menuItemById = new Map(adminMenuItems.map((item) => [item.id, item]));

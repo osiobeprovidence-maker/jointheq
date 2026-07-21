@@ -256,6 +256,16 @@ export default defineSchema({
         commissionAppliesTo: v.optional(v.string()), // "first_payment" | "every_payment" | "first_x"
         commissionPaymentCount: v.optional(v.number()),
         maxCommission: v.optional(v.number()),
+
+        // Premium bundle fields
+        is_bundle: v.optional(v.boolean()),
+        bundle_tools: v.optional(v.array(v.object({
+            name: v.string(),
+            icon: v.optional(v.string()),
+        }))),
+        original_price: v.optional(v.number()),
+        launch_badge: v.optional(v.string()),
+        tagline: v.optional(v.string()),
     }),
 
         // ─── QUEUE MARKETPLACE SYSTEM ────────────────────────────────────────
