@@ -553,6 +553,11 @@ export default function DashboardPage() {
             toast.error("Please complete all required fields.");
             return;
         }
+        if ((currentUser.wallet_balance ?? 0) < 0) {
+            toast.error("You have an outstanding balance. Please clear it before creating a quest.");
+            return;
+        }
+
         if (taskTotalCost > (currentUser.wallet_balance || 0)) {
             const amountToPay = Math.max(taskTotalCost - (currentUser.wallet_balance || 0), WALLET_FUNDING_MIN_AMOUNT);
             startPaystackWalletPayment({
@@ -735,6 +740,11 @@ export default function DashboardPage() {
 
         if (requiredBootsAmount > 0 && (currentUser.boots_balance || 0) < requiredBootsAmount) {
             toast.error("You do not have enough BOOTS for the 50/50 payment split.");
+            return;
+        }
+
+        if ((currentUser.wallet_balance ?? 0) < 0) {
+            toast.error("You have an outstanding balance. Please clear it before joining a slot.");
             return;
         }
 
@@ -1022,6 +1032,11 @@ export default function DashboardPage() {
         const slotToRenew = activeSlots.find((slot: any) => slot._id === slotId);
         const renewalPrice = Number((slotToRenew as any)?.price ?? 0);
 
+        if ((currentUser?.wallet_balance ?? 0) < 0) {
+            toast.error("You have an outstanding balance. Please clear it before renewing.");
+            return;
+        }
+
         if (renewalPrice > 0 && (currentUser?.wallet_balance || 0) < renewalPrice) {
             toast.error("Insufficient wallet balance. Fund your wallet to renew this subscription.");
             return;
@@ -1138,8 +1153,17 @@ export default function DashboardPage() {
                                         <Wallet size={20} />
                                     </div>
                                     <div>
-                                        <div className="text-xs font-semibold uppercase tracking-wider opacity-50">Coins</div>
-                                        <div className="text-xl font-bold">{"\u20A6"}{currentUser?.wallet_balance?.toLocaleString() || 0}</div>
+                                        {(currentUser?.wallet_balance ?? 0) < 0 ? (
+                                            <>
+                                                <div className="text-xs font-semibold uppercase tracking-wider opacity-50 text-red-500">Outstanding Balance</div>
+                                                <div className="text-xl font-bold text-red-500">{"\u20A6"}{Math.abs(currentUser!.wallet_balance).toLocaleString()}</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="text-xs font-semibold uppercase tracking-wider opacity-50">Coins</div>
+                                                <div className="text-xl font-bold">{"\u20A6"}{currentUser?.wallet_balance?.toLocaleString() || 0}</div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 rounded-[2rem] border-none shadow-[0_4px_24px_rgba(0,0,0,0.04)]  flex items-center gap-4">
@@ -1463,20 +1487,41 @@ export default function DashboardPage() {
                         <div className="rounded-[2rem] border border-black/5 bg-white p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] sm:p-8">
                             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
-                                        Current Balance
-                                    </div>
-                                    <motion.div
-                                        key={currentUser?.wallet_balance}
-                                        animate={{ scale: [1, 1.03, 1] }}
-                                        transition={{ duration: 0.3 }}
-                                        className="mt-3 text-5xl font-black tracking-tight text-zinc-950"
-                                    >
-                                        {fmtCurrency(currentUser?.wallet_balance || 0)}
-                                    </motion.div>
-                                    <p className="mt-3 max-w-md text-sm font-medium text-zinc-500">
-                                        Fund your wallet or link a card for seamless payments.
-                                    </p>
+                                    {(currentUser?.wallet_balance ?? 0) < 0 ? (
+                                        <>
+                                            <div className="text-xs font-black uppercase tracking-[0.24em] text-red-500">
+                                                Outstanding Balance
+                                            </div>
+                                            <motion.div
+                                                key={currentUser?.wallet_balance}
+                                                animate={{ scale: [1, 1.03, 1] }}
+                                                transition={{ duration: 0.3 }}
+                                                className="mt-3 text-5xl font-black tracking-tight text-red-500"
+                                            >
+                                                {fmtCurrency(Math.abs(currentUser!.wallet_balance))}
+                                            </motion.div>
+                                            <p className="mt-3 max-w-md text-sm font-medium text-red-400">
+                                                Please clear your outstanding balance to continue using subscriptions.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
+                                                Current Balance
+                                            </div>
+                                            <motion.div
+                                                key={currentUser?.wallet_balance}
+                                                animate={{ scale: [1, 1.03, 1] }}
+                                                transition={{ duration: 0.3 }}
+                                                className="mt-3 text-5xl font-black tracking-tight text-zinc-950"
+                                            >
+                                                {fmtCurrency(currentUser?.wallet_balance || 0)}
+                                            </motion.div>
+                                            <p className="mt-3 max-w-md text-sm font-medium text-zinc-500">
+                                                Fund your wallet or link a card for seamless payments.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="flex w-full max-w-sm flex-col gap-3 sm:w-auto">
                                     <label className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400">
@@ -2084,7 +2129,7 @@ export default function DashboardPage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
                                 <div>
                                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Total Earned</div>
-                                    <div className="text-2xl font-bold text-emerald-400">{"\u20A6"}{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
+                                    <div className="text-2xl font-bold text-emerald-400">{"\u20A6"}{Math.abs(currentUser?.wallet_balance || 0).toLocaleString()}</div>
                                 </div>
                                 <div>
                                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Pending</div>
@@ -2092,14 +2137,14 @@ export default function DashboardPage() {
                                 </div>
                                 <div>
                                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Available</div>
-                                    <div className="text-2xl font-bold">{"\u20A6"}{(currentUser?.wallet_balance || 0).toLocaleString()}</div>
+                                    <div className="text-2xl font-bold">{"\u20A6"}{Math.max(0, currentUser?.wallet_balance || 0).toLocaleString()}</div>
                                 </div>
                             </div>
                             <button
-                                disabled={(currentUser?.wallet_balance || 0) < 5000}
+                                disabled={(currentUser?.wallet_balance ?? 0) < 5000}
                                 className="w-full py-5 bg-white text-zinc-900 rounded-[2.5rem] font-bold hover:scale-[1.01] transition-transform disabled:opacity-30"
                             >
-                                {(currentUser?.wallet_balance || 0) < 5000 ? "Minimum withdrawal \u20A65,000" : "Withdraw Funds"}
+                                {(currentUser?.wallet_balance ?? 0) < 0 ? "Outstanding balance — withdrawals unavailable" : (currentUser?.wallet_balance || 0) < 5000 ? "Minimum withdrawal \u20A65,000" : "Withdraw Funds"}
                             </button>
                         </div>
 

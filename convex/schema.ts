@@ -192,6 +192,9 @@ export default defineSchema({
         related_quest_id: v.optional(v.id("quests")),
         fee: v.optional(v.number()),
         wallet_balance: v.optional(v.number()),
+        previous_balance: v.optional(v.number()),
+        new_balance: v.optional(v.number()),
+        admin_id: v.optional(v.id("users")),
         created_at: v.number(),
     }).index("by_user", ["user_id"])
         .index("by_type", ["type"])

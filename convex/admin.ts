@@ -857,20 +857,21 @@ export const adjustUserBalance = mutation({
             ? currentBalance + normalizedAmount
             : currentBalance - normalizedAmount;
 
-        if (newBalance < 0 && args.type === "remove") throw new Error("Insufficient balance");
-
         await ctx.db.patch(args.userId, {
             wallet_balance: newBalance,
         });
 
-        // Record transaction
+        // Record transaction with full balance metadata
         await ctx.db.insert("wallet_transactions", {
             user_id: args.userId,
-            amount: normalizedAmount,
+            amount: args.type === "add" ? normalizedAmount : -normalizedAmount,
             type: args.type === "add" ? "funding" : "payment",
             source: "admin_adjustment",
             status: "completed",
             description: `Admin adjustment: ${args.reason}`,
+            previous_balance: currentBalance,
+            new_balance: newBalance,
+            admin_id: args.executorId,
             created_at: Date.now(),
         });
 
